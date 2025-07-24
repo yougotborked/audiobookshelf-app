@@ -62,7 +62,7 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+          <span class="material-icons-outlined text-3xl text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click="openQueue">list</span>
         </div>
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
@@ -80,7 +80,6 @@
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpForward">{{ jumpForwardIcon }}</span>
           <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="nextChapter && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapter">last_page</span>
           <span v-show="showFullscreen && !playerSettings.lockUi" class="material-icons-outlined next-icon text-fg cursor-pointer" :class="hasNextQueueItem ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="skipNextQueue">skip_next</span>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-icons-outlined next-icon text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="openQueue">list</span>
         </div>
       </div>
 
