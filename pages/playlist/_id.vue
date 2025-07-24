@@ -110,6 +110,9 @@ export default {
         return this.$store.getters['getIsMediaStreaming'](i.libraryItemId, i.episodeId)
       })
     },
+    autoContinuePlaylists() {
+      return this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists
+    },
     showPlayButton() {
       return this.playableItems.length
     },
@@ -140,10 +143,18 @@ export default {
       }
     },
     playNextItem() {
-      const nextItem = this.playableItems.find((i) => {
+      const nowIndex = this.playableItems.findIndex((i) => {
+        return this.$store.getters['getIsMediaStreaming'](
+          i.localLibraryItem?.id || i.libraryItemId,
+          i.localEpisode?.id || i.episodeId
+        )
+      })
+
+      const nextItem = this.playableItems.slice(nowIndex + 1).find((i) => {
         const prog = this.$store.getters['user/getUserMediaProgress'](i.libraryItemId, i.episodeId)
         return !prog?.isFinished
       })
+
       if (nextItem) {
         this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
         this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
@@ -152,6 +163,11 @@ export default {
         } else {
           this.$eventBus.$emit('play-item', { libraryItemId: nextItem.libraryItemId, episodeId: nextItem.episodeId })
         }
+      }
+    },
+    onPlaybackEnded() {
+      if (this.autoContinuePlaylists) {
+        this.playNextItem()
       }
     },
     playlistUpdated(playlist) {
@@ -167,10 +183,12 @@ export default {
   mounted() {
     this.$socket.$on('playlist_updated', this.playlistUpdated)
     this.$socket.$on('playlist_removed', this.playlistRemoved)
+    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
   },
   beforeDestroy() {
     this.$socket.$off('playlist_updated', this.playlistUpdated)
     this.$socket.$off('playlist_removed', this.playlistRemoved)
+    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
   }
 }
 </script>

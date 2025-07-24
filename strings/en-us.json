@@ -106,6 +106,7 @@
   "LabelAuthorFirstLast": "Author (First Last)",
   "LabelAuthorLastFirst": "Author (Last, First)",
   "LabelAuthors": "Authors",
+  "LabelAutoContinuePlaylists": "Auto continue playlists",
   "LabelAutoDownloadEpisodes": "Auto Download Episodes",
   "LabelAutoRewindTime": "Auto rewind time",
   "LabelAutoSleepTimer": "Auto sleep timer",
