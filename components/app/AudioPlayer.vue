@@ -79,6 +79,8 @@
           </div>
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpForward">{{ jumpForwardIcon }}</span>
           <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="nextChapter && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapter">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-icons-outlined next-icon text-fg cursor-pointer" :class="hasNextQueueItem ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="skipNextQueue">skip_next</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-icons-outlined next-icon text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="openQueue">list</span>
         </div>
       </div>
 
@@ -384,6 +386,12 @@ export default {
       if (!localLibraryItem) return null
 
       return this.playbackSession.localEpisodeId ? `${localLibraryItem.id}-${this.playbackSession.localEpisodeId}` : localLibraryItem.id
+    },
+    queueLength() {
+      return this.$store.state.playQueue.length
+    },
+    hasNextQueueItem() {
+      return !!this.$store.getters['getNextQueueItem']
     }
   },
   methods: {
@@ -496,6 +504,16 @@ export default {
       await this.$hapticsImpact()
       if (this.isLoading) return
       AbsAudioPlayer.seekForward({ value: this.jumpForwardTime })
+    },
+    skipNextQueue() {
+      if (this.hasNextQueueItem) {
+        this.$emit('skipNextQueue')
+      }
+    },
+    openQueue() {
+      if (this.queueLength > 1) {
+        this.$emit('openQueue')
+      }
     },
     setStreamReady() {
       this.readyTrackWidth = this.trackWidth

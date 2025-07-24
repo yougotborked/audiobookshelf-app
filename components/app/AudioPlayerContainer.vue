@@ -1,10 +1,11 @@
 <template>
   <div>
-    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" />
+    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @skipNextQueue="onSkipNextRequest" @openQueue="showQueueModal = true" />
 
     <modals-playback-speed-modal v-model="showPlaybackSpeedModal" :playback-rate.sync="playbackSpeed" @update:playbackRate="updatePlaybackSpeed" @change="changePlaybackSpeed" />
     <modals-sleep-timer-modal v-model="showSleepTimerModal" :current-time="sleepTimeRemaining" :sleep-timer-running="isSleepTimerRunning" :current-end-of-chapter-time="currentEndOfChapterTime" :is-auto="isAutoSleepTimer" @change="selectSleepTimeout" @cancel="cancelSleepTimer" @increase="increaseSleepTimer" @decrease="decreaseSleepTimer" />
     <modals-bookmarks-modal v-model="showBookmarksModal" :bookmarks="bookmarks" :current-time="currentTime" :library-item-id="serverLibraryItemId" :playback-rate="playbackSpeed" @select="selectBookmark" />
+    <modals-queue-modal v-model="showQueueModal" :queue="playQueue" :current-index="queueIndex" @select="selectQueueItem" />
   </div>
 </template>
 
@@ -23,6 +24,7 @@ export default {
       download: null,
       showPlaybackSpeedModal: false,
       showBookmarksModal: false,
+      showQueueModal: false,
       showSleepTimerModal: false,
       playbackSpeed: 1,
       currentTime: 0,
@@ -50,6 +52,12 @@ export default {
     },
     isIos() {
       return this.$platform === 'ios'
+    },
+    playQueue() {
+      return this.$store.state.playQueue
+    },
+    queueIndex() {
+      return this.$store.state.queueIndex
     }
   },
   methods: {
@@ -393,6 +401,19 @@ export default {
           queueIndex: idx - 1
         })
       }
+    },
+    selectQueueItem(index) {
+      const item = this.$store.state.playQueue[index]
+      if (!item) return
+      this.playLibraryItem({
+        libraryItemId: item.localLibraryItem?.id || item.libraryItemId,
+        episodeId: item.localEpisode?.id || item.episodeId,
+        serverLibraryItemId: item.libraryItemId,
+        serverEpisodeId: item.episodeId,
+        queue: this.$store.state.playQueue,
+        queueIndex: index
+      })
+      this.showQueueModal = false
     },
     onPlaybackEnded() {
       if (!this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists) return

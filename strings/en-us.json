@@ -215,6 +215,7 @@
   "LabelPlaybackTranscode": "Transcode",
   "LabelPodcast": "Podcast",
   "LabelPodcasts": "Podcasts",
+  "LabelQueue": "Queue",
   "LabelPreventIndexing": "Prevent your feed from being indexed by iTunes and Google podcast directories",
   "LabelProgress": "Progress",
   "LabelPubDate": "Pub Date",
