@@ -96,6 +96,9 @@ export default {
         return this.$store.getters['getIsMediaStreaming'](i.id)
       })
     },
+    autoContinuePlaylists() {
+      return this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists
+    },
     playerIsStartingPlayback() {
       // Play has been pressed and waiting for native play response
       return this.$store.state.playerIsStartingPlayback
@@ -135,8 +138,18 @@ export default {
           this.$eventBus.$emit('play-item', { libraryItemId: nextBookNotRead.id })
         }
       }
+    },
+    onPlaybackEnded() {
+      if (this.autoContinuePlaylists && this.isOpenInPlayer) {
+        this.playNextItem()
+      }
     }
   },
-  mounted() {}
+  mounted() {
+    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+  },
+  beforeDestroy() {
+    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
+  }
 }
 </script>
