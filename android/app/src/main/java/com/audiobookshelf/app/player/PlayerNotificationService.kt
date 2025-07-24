@@ -278,12 +278,14 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     playerNotificationManager = builder.build()
     playerNotificationManager.setMediaSessionToken(mediaSession.sessionToken)
     playerNotificationManager.setUsePlayPauseActions(true)
-    playerNotificationManager.setUseNextAction(false)
-    playerNotificationManager.setUsePreviousAction(false)
+    playerNotificationManager.setUseNextAction(true)
+    playerNotificationManager.setUsePreviousAction(true)
     playerNotificationManager.setUseChronometer(false)
     playerNotificationManager.setUseStopAction(false)
     playerNotificationManager.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
     playerNotificationManager.setPriority(NotificationCompat.PRIORITY_MAX)
+    playerNotificationManager.setUseNextActionInCompactView(true)
+    playerNotificationManager.setUsePreviousActionInCompactView(true)
     playerNotificationManager.setUseFastForwardActionInCompactView(true)
     playerNotificationManager.setUseRewindActionInCompactView(true)
     playerNotificationManager.setSmallIcon(R.drawable.icon_monochrome)
@@ -581,7 +583,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.ACTION_PAUSE or
                     PlaybackStateCompat.ACTION_FAST_FORWARD or
                     PlaybackStateCompat.ACTION_REWIND or
-                    PlaybackStateCompat.ACTION_STOP
+                    PlaybackStateCompat.ACTION_STOP or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
 
     if (deviceSettings.allowSeekingOnMediaControls) {
       playbackActions = playbackActions or PlaybackStateCompat.ACTION_SEEK_TO
