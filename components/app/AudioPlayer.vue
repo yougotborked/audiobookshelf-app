@@ -643,6 +643,7 @@ export default {
     },
     startPlayInterval() {
       clearInterval(this.playInterval)
+      if (this.$platform === 'web') return
       this.playInterval = setInterval(async () => {
         var data = await AbsAudioPlayer.getCurrentTime()
         this.currentTime = Number(data.value.toFixed(2))
@@ -837,6 +838,12 @@ export default {
 
       this.timeupdate()
     },
+    onTimeUpdate(data) {
+      if (!data) return
+      this.currentTime = Number((data.currentTime || 0).toFixed(2))
+      this.bufferedTime = Number((data.bufferedTime || 0).toFixed(2))
+      this.timeupdate()
+    },
     // When a playback session is started the native android/ios will send the session
     onPlaybackSession(playbackSession) {
       console.log('onPlaybackSession received', JSON.stringify(playbackSession))
@@ -882,6 +889,7 @@ export default {
       AbsAudioPlayer.addListener('onPlaybackFailed', this.onPlaybackFailed)
       AbsAudioPlayer.addListener('onPlayingUpdate', this.onPlayingUpdate)
       AbsAudioPlayer.addListener('onMetadata', this.onMetadata)
+      AbsAudioPlayer.addListener('onTimeUpdate', this.onTimeUpdate)
       AbsAudioPlayer.addListener('onProgressSyncFailing', this.showProgressSyncIsFailing)
       AbsAudioPlayer.addListener('onProgressSyncSuccess', this.showProgressSyncSuccess)
       AbsAudioPlayer.addListener('onPlaybackSpeedChanged', this.onPlaybackSpeedChanged)
