@@ -20,6 +20,7 @@ class DeviceSettings: Object {
     @Persisted var downloadUsingCellular: String = "ALWAYS"
     @Persisted var streamingUsingCellular: String = "ALWAYS"
     @Persisted var disableSleepTimerFadeOut: Bool = false
+    @Persisted var autoContinuePlaylists: Bool = false
 }
 
 func getDefaultDeviceSettings() -> DeviceSettings {
@@ -38,6 +39,7 @@ func deviceSettingsToJSON(settings: DeviceSettings) -> Dictionary<String, Any> {
         "languageCode": settings.languageCode,
         "downloadUsingCellular": settings.downloadUsingCellular,
         "streamingUsingCellular": settings.streamingUsingCellular,
-        "disableSleepTimerFadeOut": settings.disableSleepTimerFadeOut
+        "disableSleepTimerFadeOut": settings.disableSleepTimerFadeOut,
+        "autoContinuePlaylists": settings.autoContinuePlaylists
     ]
 }

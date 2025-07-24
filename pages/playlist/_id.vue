@@ -110,6 +110,9 @@ export default {
         return this.$store.getters['getIsMediaStreaming'](i.libraryItemId, i.episodeId)
       })
     },
+    autoContinuePlaylists() {
+      return this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists
+    },
     showPlayButton() {
       return this.playableItems.length
     },
@@ -154,6 +157,11 @@ export default {
         }
       }
     },
+    onPlaybackEnded() {
+      if (this.autoContinuePlaylists && this.isOpenInPlayer) {
+        this.playNextItem()
+      }
+    },
     playlistUpdated(playlist) {
       if (this.playlist.id !== playlist.id) return
       this.playlist = playlist
@@ -167,10 +175,12 @@ export default {
   mounted() {
     this.$socket.$on('playlist_updated', this.playlistUpdated)
     this.$socket.$on('playlist_removed', this.playlistRemoved)
+    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
   },
   beforeDestroy() {
     this.$socket.$off('playlist_updated', this.playlistUpdated)
     this.$socket.$off('playlist_removed', this.playlistRemoved)
+    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
   }
 }
 </script>
