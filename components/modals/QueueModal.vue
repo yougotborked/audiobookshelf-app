@@ -40,7 +40,11 @@ export default {
   },
   methods: {
     itemTitle(item) {
-      return item.libraryItem?.title || item.localLibraryItem?.media?.title || ''
+      if (item.episode) return item.episode.title
+      if (item.localEpisode) return item.localEpisode.title
+      if (item.libraryItem?.media?.metadata?.title) return item.libraryItem.media.metadata.title
+      if (item.localLibraryItem?.media?.metadata?.title) return item.localLibraryItem.media.metadata.title
+      return ''
     },
     select(idx) {
       this.$emit('select', idx)

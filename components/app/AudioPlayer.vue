@@ -62,14 +62,15 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span class="material-icons-outlined text-3xl text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click="openQueue">list</span>
+          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click="openQueue">format_list_bulleted</span>
         </div>
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpChapterStart">first_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="prevQueueOrChapterStart">first_page</span>
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpBackwards">{{ jumpBackwardsIcon }}</span>
           <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
             <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white bg-opacity-20 pointer-events-none" />
@@ -78,8 +79,7 @@
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpForward">{{ jumpForwardIcon }}</span>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="nextChapter && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapter">last_page</span>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-icons-outlined next-icon text-fg cursor-pointer" :class="hasNextQueueItem ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="skipNextQueue">skip_next</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="(hasNextQueueItem || nextChapter) && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="nextQueueOrChapter">last_page</span>
         </div>
       </div>
 
@@ -391,6 +391,9 @@ export default {
     },
     hasNextQueueItem() {
       return !!this.$store.getters['getNextQueueItem']
+    },
+    hasPreviousQueueItem() {
+      return !!this.$store.getters['getPreviousQueueItem']
     }
   },
   methods: {
@@ -507,6 +510,27 @@ export default {
     skipNextQueue() {
       if (this.hasNextQueueItem) {
         this.$emit('skipNextQueue')
+      }
+    },
+    skipPreviousQueue() {
+      if (this.hasPreviousQueueItem) {
+        this.$emit('skipPreviousQueue')
+      }
+    },
+    nextQueueOrChapter() {
+      if (this.isLoading) return
+      if (this.hasNextQueueItem) {
+        this.skipNextQueue()
+      } else {
+        this.jumpNextChapter()
+      }
+    },
+    prevQueueOrChapterStart() {
+      if (this.isLoading) return
+      if (this.hasPreviousQueueItem) {
+        this.skipPreviousQueue()
+      } else {
+        this.jumpChapterStart()
       }
     },
     openQueue() {

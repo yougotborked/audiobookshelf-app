@@ -107,6 +107,11 @@ export const getters = {
   getNextQueueItem: (state) => {
     if (state.queueIndex === null) return null
     return state.playQueue[state.queueIndex + 1] || null
+  },
+  getPreviousQueueItem: (state) => {
+    if (state.queueIndex === null) return null
+    if (state.queueIndex === 0) return null
+    return state.playQueue[state.queueIndex - 1] || null
   }
 }
 
