@@ -615,13 +615,12 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
   fun handlePlaybackEnded() {
     Log.d(tag, "handlePlaybackEnded")
-    if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
-      Log.d(tag, "Podcast playback ended on android auto")
-      val libraryItem = currentPlaybackSession?.libraryItem ?: return
+    val afterSync = {
+      if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
+        Log.d(tag, "Podcast playback ended on android auto")
+        val libraryItem = currentPlaybackSession?.libraryItem ?: return@afterSync
 
-      // Need to sync with server to set as finished
-      mediaProgressSyncer.finished {
-        // Need to reload media progress
+        // Need to reload media progress then start next episode
         mediaManager.loadServerUserMediaProgress {
           val podcast = libraryItem.media as Podcast
           val nextEpisode = podcast.getNextUnfinishedEpisode(libraryItem.id, mediaManager)
@@ -639,6 +638,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
         }
       }
     }
+
+    // Always send a final progress sync when playback ends so the next item can
+    // start with the most up-to-date progress.
+    mediaProgressSyncer.finished(afterSync)
   }
 
   fun startNewPlaybackSession() {

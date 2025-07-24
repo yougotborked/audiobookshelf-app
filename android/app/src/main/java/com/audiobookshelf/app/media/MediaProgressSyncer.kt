@@ -30,7 +30,9 @@ class MediaProgressSyncer(
         private val apiHandler: ApiHandler
 ) {
   private val tag = "MediaProgressSync"
-  private val METERED_CONNECTION_SYNC_INTERVAL = 60000
+  // Default sync interval when on a metered network. Reduced from 60s so
+  // progress updates happen sooner when auto continuing playback.
+  private val METERED_CONNECTION_SYNC_INTERVAL = 30000
 
   private var listeningTimerTask: TimerTask? = null
   var listeningTimerRunning: Boolean = false
@@ -75,8 +77,10 @@ class MediaProgressSyncer(
             "start: init last sync time $lastSyncTime with playback session id=${currentPlaybackSession?.id}"
     )
 
+    // Sync progress more frequently to improve responsiveness when
+    // auto continuing playback.
     listeningTimerTask =
-            Timer("ListeningTimer", false).schedule(15000L, 15000L) {
+            Timer("ListeningTimer", false).schedule(5000L, 5000L) {
               Handler(Looper.getMainLooper()).post() {
                 if (playerNotificationService.currentPlayer.isPlaying) {
                   // Set auto sleep timer if enabled and within start/end time
