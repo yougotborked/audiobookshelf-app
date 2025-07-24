@@ -615,7 +615,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
   fun handlePlaybackEnded() {
     Log.d(tag, "handlePlaybackEnded")
-    val afterSync = {
+    val afterSync = afterSync@{
       if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
         Log.d(tag, "Podcast playback ended on android auto")
         val libraryItem = currentPlaybackSession?.libraryItem ?: return@afterSync
