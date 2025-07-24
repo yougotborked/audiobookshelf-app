@@ -37,14 +37,48 @@ export default {
     if (!store.state.user.user) {
       return redirect(`/connect?redirect=${route.path}`)
     }
+    let playlist
+    if (params.id === 'unfinished') {
+      const progress = (store.state.user.user.mediaProgress || []).filter((mp) => mp.episodeId && !mp.isFinished)
+      const items = []
+      for (const mp of progress) {
+        const li = await app.$nativeHttp.get(`/api/items/${mp.libraryItemId}`).catch(() => null)
+        if (!li) continue
+        const ep = li.media?.episodes?.find((e) => e.id === mp.episodeId || e.serverEpisodeId === mp.episodeId)
+        if (!ep) continue
+        items.push({ libraryItem: li, episode: ep, libraryItemId: mp.libraryItemId, episodeId: mp.episodeId })
+      }
+      items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
+      playlist = { id: 'unfinished', name: app.$strings.LabelAutoUnfinishedPodcasts, description: '', items }
+    } else {
+      playlist = await app.$nativeHttp.get(`/api/playlists/${params.id}`).catch((error) => {
+        console.error('Failed', error)
+        return false
+      })
 
-    const playlist = await app.$nativeHttp.get(`/api/playlists/${params.id}`).catch((error) => {
-      console.error('Failed', error)
-      return false
-    })
+      if (!playlist) {
+        return redirect('/bookshelf/playlists')
+      }
 
-    if (!playlist) {
-      return redirect('/bookshelf/playlists')
+      // Lookup matching local items & episodes and attach to playlist items
+      if (playlist.items.length) {
+        const localLibraryItems = (await app.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
+        if (localLibraryItems.length) {
+          playlist.items.forEach((playlistItem) => {
+            const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
+            if (!matchingLocalLibraryItem) return
+            if (playlistItem.episode) {
+              const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
+              if (matchingLocalEpisode) {
+                playlistItem.localLibraryItem = matchingLocalLibraryItem
+                playlistItem.localEpisode = matchingLocalEpisode
+              }
+            } else {
+              playlistItem.localLibraryItem = matchingLocalLibraryItem
+            }
+          })
+        }
+      }
     }
 
     // Lookup matching local items & episodes and attach to playlist items
@@ -173,9 +207,7 @@ export default {
       }
     },
     onPlaybackEnded() {
-      if (this.autoContinuePlaylists) {
-        this.playNextItem()
-      }
+      this.playNextItem()
     },
     playlistUpdated(playlist) {
       if (this.playlist.id !== playlist.id) return

@@ -416,7 +416,6 @@ export default {
       this.showQueueModal = false
     },
     onPlaybackEnded() {
-      if (!this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists) return
       const nextItem = this.$store.getters['getNextQueueItem']
       if (nextItem) {
         this.onSkipNextRequest()

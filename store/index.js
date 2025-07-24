@@ -237,6 +237,28 @@ export const mutations = {
   setQueueIndex(state, index) {
     state.queueIndex = index
   },
+  reorderQueue(state, { oldIndex, newIndex }) {
+    const item = state.playQueue.splice(oldIndex, 1)[0]
+    state.playQueue.splice(newIndex, 0, item)
+    if (state.queueIndex === oldIndex) {
+      state.queueIndex = newIndex
+    } else if (state.queueIndex > oldIndex && state.queueIndex <= newIndex) {
+      state.queueIndex--
+    } else if (state.queueIndex < oldIndex && state.queueIndex >= newIndex) {
+      state.queueIndex++
+    }
+  },
+  removeQueueItem(state, index) {
+    state.playQueue.splice(index, 1)
+    if (state.queueIndex > index) {
+      state.queueIndex--
+    } else if (state.queueIndex === index) {
+      if (state.queueIndex >= state.playQueue.length) {
+        state.queueIndex = state.playQueue.length - 1
+      }
+    }
+    if (!state.playQueue.length) state.queueIndex = null
+  },
   clearPlayQueue(state) {
     state.playQueue = []
     state.queueIndex = null

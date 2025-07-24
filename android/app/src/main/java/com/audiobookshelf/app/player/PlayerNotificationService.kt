@@ -205,8 +205,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   override fun onTaskRemoved(rootIntent: Intent?) {
     super.onTaskRemoved(rootIntent)
     Log.d(tag, "onTaskRemoved")
-
-    stopSelf()
+    if (isClosed) stopSelf()
   }
 
   override fun onCreate() {

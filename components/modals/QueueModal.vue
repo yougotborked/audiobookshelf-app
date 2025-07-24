@@ -5,12 +5,16 @@
         <div class="sticky top-0 bg-primary px-4 py-2 border-b border-fg/10">
           <p class="text-lg text-white">{{ $strings.LabelQueue }}</p>
         </div>
-        <template v-for="(item, idx) in queue">
-          <div :key="idx" class="flex items-center px-4 py-2 border-b border-fg/10 cursor-pointer" :class="{ 'bg-primary bg-opacity-50': idx === currentIndex }" @click="select(idx)">
-            <p class="flex-grow truncate">{{ itemTitle(item) }}</p>
-            <span v-if="idx === currentIndex" class="material-symbols text-success">play_arrow</span>
-          </div>
-        </template>
+        <draggable v-model="localQueue" handle=".drag" tag="div" @end="dragEnd">
+          <transition-group type="transition" name="list">
+            <div v-for="(item, idx) in localQueue" :key="idx" class="flex items-center px-4 py-2 border-b border-fg/10 cursor-pointer" :class="{ 'bg-primary bg-opacity-50': idx === currentIndex }" @click="select(idx)">
+              <span class="material-symbols drag mr-2 text-fg-muted cursor-move">drag_handle</span>
+              <p class="flex-grow truncate">{{ itemTitle(item) }}</p>
+              <span v-if="idx === currentIndex" class="material-symbols text-success">play_arrow</span>
+              <span class="material-symbols text-error ml-2" @click.stop="remove(idx)">close</span>
+            </div>
+          </transition-group>
+        </draggable>
         <div v-if="!queue.length" class="flex items-center justify-center p-4">
           <p class="text-base text-fg-muted">{{ $strings.MessageNoItems }}</p>
         </div>
@@ -20,6 +24,7 @@
 </template>
 
 <script>
+import draggable from 'vuedraggable'
 export default {
   props: {
     value: Boolean,
@@ -30,6 +35,17 @@ export default {
     currentIndex: {
       type: Number,
       default: 0
+    }
+  },
+  components: { draggable },
+  data() {
+    return {
+      localQueue: [...this.queue]
+    }
+  },
+  watch: {
+    queue(newVal) {
+      this.localQueue = [...newVal]
     }
   },
   computed: {
@@ -48,6 +64,15 @@ export default {
     },
     select(idx) {
       this.$emit('select', idx)
+    }
+    ,
+    remove(idx) {
+      this.$store.commit('removeQueueItem', idx)
+      this.localQueue.splice(idx, 1)
+    },
+    dragEnd(evt) {
+      if (evt.oldIndex === evt.newIndex) return
+      this.$store.commit('reorderQueue', { oldIndex: evt.oldIndex, newIndex: evt.newIndex })
     }
   }
 }
