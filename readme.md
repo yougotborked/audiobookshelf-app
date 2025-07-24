@@ -35,7 +35,8 @@ Thank you to [Weblate](https://hosted.weblate.org/engage/audiobookshelf/) for ho
 Required Software:
 
 - [Git](https://git-scm.com/downloads)
-- [Node.js](https://nodejs.org/en/) (version 20)
+ - [Node.js](https://nodejs.org/en/) (version 20)
+   - After cloning this repo run `nvm use` to activate the required version
 - Code editor of choice([VSCode](https://code.visualstudio.com/download), etc)
 - [Android Studio](https://developer.android.com/studio)
 - [Android SDK](https://developer.android.com/studio)
@@ -67,6 +68,7 @@ Required Software:
 
 - [Android Studio](https://developer.android.com/studio)
 - [Node.js](https://nodejs.org/en/) (version 20)
+   - After cloning this repo run `nvm use` to activate the required version
 - [Cocoapods](https://guides.cocoapods.org/using/getting-started.html#installation)
 - [Android SDK](https://developer.android.com/studio)
 
@@ -149,7 +151,8 @@ Start coding!
 Required Software:
 
 - [Xcode](https://developer.apple.com/xcode/)
-- [Node.js](https://nodejs.org/en/)
+- [Node.js](https://nodejs.org/en/) (version 20)
+  - After cloning this repo run `nvm use` to activate the required version
 - [Cocoapods](https://guides.cocoapods.org/using/getting-started.html#installation)
 
 ### Start working on the iOS app

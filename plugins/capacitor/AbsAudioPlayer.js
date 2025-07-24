@@ -234,7 +234,19 @@ class AbsAudioPlayerWeb extends WebPlugin {
       this.player.play()
     }
   }
-  evtTimeupdate() {}
+  evtTimeupdate() {
+    if (!this.player) return
+    let buffered = 0
+    try {
+      if (this.player.buffered && this.player.buffered.length) {
+        buffered = this.player.buffered.end(0)
+      }
+    } catch (e) {}
+    this.notifyListeners('onTimeUpdate', {
+      currentTime: this.overallCurrentTime,
+      bufferedTime: buffered
+    })
+  }
 
   sendPlaybackMetadata(playerState) {
     this.notifyListeners('onMetadata', {
