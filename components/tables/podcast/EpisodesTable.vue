@@ -237,7 +237,7 @@ export default {
           .get(`/api/podcasts/${this.libraryItemId}/clear-queue`)
           .then(() => {
             this.$toast.success('Episode download queue cleared')
-            this.episodeDownloadQueued = []
+            this.episodeDownloadsQueued = []
           })
           .catch((error) => {
             console.error('Failed to clear queue', error)
