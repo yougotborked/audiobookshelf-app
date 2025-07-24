@@ -34,6 +34,8 @@ export default {
       onSleepTimerEndedListener: null,
       onSleepTimerSetListener: null,
       onMediaPlayerChangedListener: null,
+      onSkipNextRequestListener: null,
+      onSkipPreviousRequestListener: null,
       sleepInterval: null,
       currentEndOfChapterTime: 0,
       serverLibraryItemId: null,
@@ -242,6 +244,20 @@ export default {
         playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
       }
 
+      if (payload.queue) {
+        this.$store.commit('setPlayQueue', payload.queue)
+        if (payload.queueIndex !== undefined) {
+          this.$store.commit('setQueueIndex', payload.queueIndex)
+        } else {
+          const idx = payload.queue.findIndex((q) => {
+            const li = q.localLibraryItem?.id || q.libraryItemId
+            const ep = q.localEpisode?.id || q.episodeId
+            return li === libraryItemId && ep === episodeId
+          })
+          if (idx >= 0) this.$store.commit('setQueueIndex', idx)
+        }
+      }
+
       console.log('Called playLibraryItem', libraryItemId)
       const preparePayload = { libraryItemId, episodeId, playWhenReady: startWhenReady, playbackRate }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
@@ -349,6 +365,41 @@ export default {
           }
         }
       }
+    },
+
+    onSkipNextRequest() {
+      const nextItem = this.$store.getters['getNextQueueItem']
+      if (nextItem) {
+        this.playLibraryItem({
+          libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
+          episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
+          serverLibraryItemId: nextItem.libraryItemId,
+          serverEpisodeId: nextItem.episodeId,
+          queue: this.$store.state.playQueue,
+          queueIndex: this.$store.state.queueIndex + 1
+        })
+      }
+    },
+    onSkipPreviousRequest() {
+      const idx = this.$store.state.queueIndex
+      if (idx > 0) {
+        const prevItem = this.$store.state.playQueue[idx - 1]
+        this.playLibraryItem({
+          libraryItemId: prevItem.localLibraryItem?.id || prevItem.libraryItemId,
+          episodeId: prevItem.localEpisode?.id || prevItem.episodeId,
+          serverLibraryItemId: prevItem.libraryItemId,
+          serverEpisodeId: prevItem.episodeId,
+          queue: this.$store.state.playQueue,
+          queueIndex: idx - 1
+        })
+      }
+    },
+    onPlaybackEnded() {
+      if (!this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists) return
+      const nextItem = this.$store.getters['getNextQueueItem']
+      if (nextItem) {
+        this.onSkipNextRequest()
+      }
     }
   },
   async mounted() {
@@ -356,6 +407,8 @@ export default {
     this.onSleepTimerEndedListener = await AbsAudioPlayer.addListener('onSleepTimerEnded', this.onSleepTimerEnded)
     this.onSleepTimerSetListener = await AbsAudioPlayer.addListener('onSleepTimerSet', this.onSleepTimerSet)
     this.onMediaPlayerChangedListener = await AbsAudioPlayer.addListener('onMediaPlayerChanged', this.onMediaPlayerChanged)
+    this.onSkipNextRequestListener = await AbsAudioPlayer.addListener('onSkipNextRequest', this.onSkipNextRequest)
+    this.onSkipPreviousRequestListener = await AbsAudioPlayer.addListener('onSkipPreviousRequest', this.onSkipPreviousRequest)
 
     this.playbackSpeed = this.$store.getters['user/getUserSetting']('playbackRate')
     console.log(`[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`)
@@ -368,12 +421,15 @@ export default {
     this.$eventBus.$on('user-settings', this.settingsUpdated)
     this.$eventBus.$on('playback-time-update', this.playbackTimeUpdate)
     this.$eventBus.$on('device-focus-update', this.deviceFocused)
+    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
   },
   beforeDestroy() {
     this.onLocalMediaProgressUpdateListener?.remove()
     this.onSleepTimerEndedListener?.remove()
     this.onSleepTimerSetListener?.remove()
     this.onMediaPlayerChangedListener?.remove()
+    this.onSkipNextRequestListener?.remove()
+    this.onSkipPreviousRequestListener?.remove()
 
     this.$eventBus.$off('abs-ui-ready', this.onReady)
     this.$eventBus.$off('play-item', this.playLibraryItem)
@@ -383,6 +439,7 @@ export default {
     this.$eventBus.$off('user-settings', this.settingsUpdated)
     this.$eventBus.$off('playback-time-update', this.playbackTimeUpdate)
     this.$eventBus.$off('device-focus-update', this.deviceFocused)
+    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
   }
 }
 </script>

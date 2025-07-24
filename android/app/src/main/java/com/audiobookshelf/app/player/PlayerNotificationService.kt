@@ -85,6 +85,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     fun onNetworkMeteredChanged(isUnmetered: Boolean)
     fun onMediaItemHistoryUpdated(mediaItemHistory: MediaItemHistory)
     fun onPlaybackSpeedChanged(playbackSpeed: Float)
+    fun onSkipNextRequest()
+    fun onSkipPreviousRequest()
   }
   private val binder = LocalBinder()
 
@@ -940,11 +942,19 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun skipToPrevious() {
-    currentPlayer.seekToPrevious()
+    if (currentPlayer.hasPrevious()) {
+      currentPlayer.seekToPrevious()
+    } else {
+      clientEventEmitter?.onSkipPreviousRequest()
+    }
   }
 
   fun skipToNext() {
-    currentPlayer.seekToNext()
+    if (currentPlayer.hasNext()) {
+      currentPlayer.seekToNext()
+    } else {
+      clientEventEmitter?.onSkipNextRequest()
+    }
   }
 
   fun jumpForward() {

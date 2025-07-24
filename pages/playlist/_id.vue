@@ -156,13 +156,20 @@ export default {
       })
 
       if (nextItem) {
+        const nextIndex = this.playableItems.findIndex((i) => i === nextItem)
         this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
         this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
-        if (nextItem.localLibraryItem) {
-          this.$eventBus.$emit('play-item', { libraryItemId: nextItem.localLibraryItem.id, episodeId: nextItem.localEpisode?.id, serverLibraryItemId: nextItem.libraryItemId, serverEpisodeId: nextItem.episodeId })
-        } else {
-          this.$eventBus.$emit('play-item', { libraryItemId: nextItem.libraryItemId, episodeId: nextItem.episodeId })
+        this.$store.commit('setPlayQueue', this.playableItems)
+        this.$store.commit('setQueueIndex', nextIndex)
+        const payload = {
+          libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
+          episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
+          serverLibraryItemId: nextItem.libraryItemId,
+          serverEpisodeId: nextItem.episodeId,
+          queue: this.playableItems,
+          queueIndex: nextIndex
         }
+        this.$eventBus.$emit('play-item', payload)
       }
     },
     onPlaybackEnded() {
