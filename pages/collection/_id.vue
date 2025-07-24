@@ -124,7 +124,12 @@ export default {
       }
     },
     playNextItem() {
-      const nextBookNotRead = this.playableItems.find((pb) => {
+      const nowIndex = this.playableItems.findIndex((i) => {
+        return this.$store.getters['getIsMediaStreaming'](
+          i.localLibraryItem?.id || i.id
+        )
+      })
+      const nextBookNotRead = this.playableItems.slice(nowIndex + 1).find((pb) => {
         const prog = this.$store.getters['user/getUserMediaProgress'](pb.id)
         return !prog?.isFinished
       })
@@ -140,7 +145,7 @@ export default {
       }
     },
     onPlaybackEnded() {
-      if (this.autoContinuePlaylists && this.isOpenInPlayer) {
+      if (this.autoContinuePlaylists) {
         this.playNextItem()
       }
     }
