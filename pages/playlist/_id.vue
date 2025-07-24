@@ -32,6 +32,7 @@
 </template>
 
 <script>
+import { AbsDownloader } from '@/plugins/capacitor'
 export default {
   async asyncData({ store, params, app, redirect, route }) {
     if (!store.state.user.user) {
@@ -39,14 +40,22 @@ export default {
     }
     let playlist
     if (params.id === 'unfinished') {
-      const progress = (store.state.user.user.mediaProgress || []).filter((mp) => mp.episodeId && !mp.isFinished)
+      const progressMap = {}
+      ;(store.state.user.user.mediaProgress || []).forEach((mp) => {
+        if (mp.episodeId) progressMap[mp.episodeId] = mp
+      })
       const items = []
-      for (const mp of progress) {
-        const li = await app.$nativeHttp.get(`/api/items/${mp.libraryItemId}`).catch(() => null)
-        if (!li) continue
-        const ep = li.media?.episodes?.find((e) => e.id === mp.episodeId || e.serverEpisodeId === mp.episodeId)
-        if (!ep) continue
-        items.push({ libraryItem: li, episode: ep, libraryItemId: mp.libraryItemId, episodeId: mp.episodeId })
+      const libraries = store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
+      for (const lib of libraries) {
+        const payload = await app.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=50`).catch(() => null)
+        const episodes = payload?.episodes || []
+        for (const ep of episodes) {
+          const prog = progressMap[ep.id]
+          if (prog && prog.isFinished) continue
+          const li = await app.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
+          if (!li) continue
+          items.push({ libraryItem: li, episode: ep, libraryItemId: ep.libraryItemId, episodeId: ep.id })
+        }
       }
       items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
       playlist = { id: 'unfinished', name: app.$strings.LabelAutoUnfinishedPodcasts, description: '', items }
@@ -217,12 +226,26 @@ export default {
       if (this.playlist.id === playlist.id) {
         this.$router.replace('/bookshelf/playlists')
       }
+    },
+    async checkAutoDownload() {
+      if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+      const localItems = await this.$db.getLocalLibraryItems('podcast')
+      for (const qi of this.playlist.items) {
+        const liId = qi.libraryItem.id
+        const epId = qi.episode.id
+        const localLi = localItems.find((lli) => lli.libraryItemId === liId)
+        const localEp = localLi?.media?.episodes?.find((ep) => ep.serverEpisodeId === epId)
+        if (!localEp) {
+          AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
+        }
+      }
     }
   },
   mounted() {
     this.$socket.$on('playlist_updated', this.playlistUpdated)
     this.$socket.$on('playlist_removed', this.playlistRemoved)
     this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+    this.checkAutoDownload()
   },
   beforeDestroy() {
     this.$socket.$off('playlist_updated', this.playlistUpdated)

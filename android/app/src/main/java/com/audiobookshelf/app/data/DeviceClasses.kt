@@ -136,6 +136,7 @@ data class DeviceSettings(
   var autoSleepTimerAutoRewind: Boolean,
   var autoSleepTimerAutoRewindTime: Long, //Time in milliseconds
   var autoContinuePlaylists: Boolean,
+  var autoCacheUnplayedEpisodes: Boolean,
   var sleepTimerLength: Long, // Time in milliseconds
   var disableSleepTimerFadeOut: Boolean,
   var disableSleepTimerResetFeedback: Boolean,
@@ -166,6 +167,7 @@ data class DeviceSettings(
         autoSleepTimerAutoRewind = false,
         autoSleepTimerAutoRewindTime = 300000L, // 5 minutes
         autoContinuePlaylists = false,
+        autoCacheUnplayedEpisodes = false,
         sleepTimerLength = 900000L, // 15 minutes
         disableSleepTimerFadeOut = false,
         disableSleepTimerResetFeedback = false,
