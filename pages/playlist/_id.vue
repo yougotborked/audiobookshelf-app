@@ -126,7 +126,7 @@ export default {
         const items = []
         const libraries = this.$store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
         for (const lib of libraries) {
-          const payload = await this.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=50`).catch(() => null)
+          const payload = await this.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=200`).catch(() => null)
           const episodes = payload?.episodes || []
           for (const ep of episodes) {
             const prog = progressMap[ep.id]

@@ -173,6 +173,48 @@ class LocalStorage {
     }
   }
 
+  async setCachedPlaylists(libraryId, playlists) {
+    try {
+      await Preferences.set({
+        key: `playlists_${libraryId}`,
+        value: JSON.stringify(playlists)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache playlists', error)
+    }
+  }
+
+  async getCachedPlaylists(libraryId) {
+    try {
+      const obj = await Preferences.get({ key: `playlists_${libraryId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached playlists', error)
+      return []
+    }
+  }
+
+  async setCachedLatestEpisodes(libraryId, episodes) {
+    try {
+      await Preferences.set({
+        key: `latest_${libraryId}`,
+        value: JSON.stringify(episodes)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache latest episodes', error)
+    }
+  }
+
+  async getCachedLatestEpisodes(libraryId) {
+    try {
+      const obj = await Preferences.get({ key: `latest_${libraryId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached latest episodes', error)
+      return []
+    }
+  }
+
   /**
    * Get preference value by key
    * 
