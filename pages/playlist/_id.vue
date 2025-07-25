@@ -140,11 +140,12 @@ export default {
           }
         }
 
-        items.sort((a, b) => {
-          const aDate = new Date(a.episode.publishedAt || a.episode.pubDate || 0).getTime()
-          const bDate = new Date(b.episode.publishedAt || b.episode.pubDate || 0).getTime()
-          return aDate - bDate
-        })
+        const parseDate = (ep) => {
+          if (ep.publishedAt) return new Date(ep.publishedAt).getTime()
+          if (ep.pubDate) return new Date(ep.pubDate).getTime()
+          return 0
+        }
+        items.sort((a, b) => parseDate(a.episode) - parseDate(b.episode))
 
         playlist = {
           id: 'unfinished',

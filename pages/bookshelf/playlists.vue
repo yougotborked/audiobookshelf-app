@@ -1,10 +1,23 @@
 <template>
   <div class="w-full h-full overflow-y-auto">
     <div class="px-4 pt-4">
-      <nuxt-link to="/playlist/unfinished" class="block mb-4 border border-fg/20 rounded p-4 flex items-center">
-        <covers-playlist-cover :items="autoPlaylist.items" :width="64" :height="64" />
-        <p class="text-lg ml-4">{{ autoPlaylist.name }}</p>
-      </nuxt-link>
+      <div class="mb-4 border border-fg/20 rounded p-4 flex items-center">
+        <nuxt-link to="/playlist/unfinished" class="flex items-center flex-grow">
+          <covers-playlist-cover :items="autoPlaylist.items" :width="64" :height="64" />
+          <p class="text-lg ml-4">{{ autoPlaylist.name }}</p>
+        </nuxt-link>
+        <ui-btn
+          v-if="showAutoPlayButton"
+          color="success"
+          :padding-x="4"
+          small
+          class="flex items-center justify-center ml-2 w-24"
+          @click="playAutoPlaylist"
+        >
+          <span class="material-symbols text-2xl fill">play_arrow</span>
+          <span class="px-1 text-sm">{{ $strings.ButtonPlayAll }}</span>
+        </ui-btn>
+      </div>
     </div>
     <bookshelf-lazy-bookshelf page="playlists" />
   </div>
@@ -39,9 +52,37 @@ export default {
   computed: {
     networkConnected() {
       return this.$store.state.networkConnected
+    },
+    showAutoPlayButton() {
+      return this.autoPlaylist.items.length
     }
   },
   methods: {
+    playAutoPlaylist() {
+      if (!this.autoPlaylist.items.length) return
+      const nextItem = this.autoPlaylist.items.find((i) => {
+        const prog = this.$store.getters['user/getUserMediaProgress'](
+          i.libraryItemId,
+          i.episodeId
+        )
+        return !prog?.isFinished
+      }) || this.autoPlaylist.items[0]
+
+      const index = this.autoPlaylist.items.findIndex((i) => i === nextItem)
+      const mediaId = nextItem.episodeId || nextItem.libraryItemId
+      this.$store.commit('setPlayerIsStartingPlayback', mediaId)
+      this.$store.commit('setPlayQueue', this.autoPlaylist.items)
+      this.$store.commit('setQueueIndex', index)
+      const payload = {
+        libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
+        episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
+        serverLibraryItemId: nextItem.libraryItemId,
+        serverEpisodeId: nextItem.episodeId,
+        queue: this.autoPlaylist.items,
+        queueIndex: index
+      }
+      this.$eventBus.$emit('play-item', payload)
+    },
     async fetchAutoPlaylist() {
       const progressMap = {}
       ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
@@ -68,11 +109,12 @@ export default {
         }
       }
 
-      items.sort((a, b) => {
-        const aDate = new Date(a.episode.publishedAt || a.episode.pubDate || 0).getTime()
-        const bDate = new Date(b.episode.publishedAt || b.episode.pubDate || 0).getTime()
-        return aDate - bDate
-      })
+      const parseDate = (ep) => {
+        if (ep.publishedAt) return new Date(ep.publishedAt).getTime()
+        if (ep.pubDate) return new Date(ep.pubDate).getTime()
+        return 0
+      }
+      items.sort((a, b) => parseDate(a.episode) - parseDate(b.episode))
 
       this.autoPlaylist = {
         id: 'unfinished',
