@@ -52,7 +52,19 @@ export default {
       mediaIdStartingPlayback: null
     }
   },
+  watch: {
+    networkConnected(newVal) {
+      if (newVal && !this.playlist.items.length) {
+        setTimeout(() => {
+          this.fetchPlaylist()
+        }, 1000)
+      }
+    }
+  },
   computed: {
+    networkConnected() {
+      return this.$store.state.networkConnected
+    },
     bookCoverAspectRatio() {
       return this.$store.getters['libraries/getBookCoverAspectRatio']
     },

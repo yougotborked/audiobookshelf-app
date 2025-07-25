@@ -27,6 +27,20 @@ export default {
   mounted() {
     this.fetchAutoPlaylist()
   },
+  watch: {
+    networkConnected(newVal) {
+      if (newVal && !this.autoPlaylist.items.length) {
+        setTimeout(() => {
+          this.fetchAutoPlaylist()
+        }, 1000)
+      }
+    }
+  },
+  computed: {
+    networkConnected() {
+      return this.$store.state.networkConnected
+    }
+  },
   methods: {
     async fetchAutoPlaylist() {
       if (!this.$store.state.networkConnected) {
