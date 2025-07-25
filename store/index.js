@@ -116,6 +116,12 @@ export const getters = {
 }
 
 export const actions = {
+  async init({ commit }) {
+    const queue = await this.$localStore.getPlayQueue()
+    const index = await this.$localStore.getQueueIndex()
+    commit('setPlayQueue', queue)
+    commit('setQueueIndex', index)
+  },
   // Listen for network connection
   async setupNetworkListener({ state, commit }) {
     if (state.isNetworkListenerInit) return
@@ -233,9 +239,11 @@ export const mutations = {
   },
   setPlayQueue(state, queue) {
     state.playQueue = queue || []
+    this.$localStore.setPlayQueue(state.playQueue)
   },
   setQueueIndex(state, index) {
     state.queueIndex = index
+    this.$localStore.setQueueIndex(index)
   },
   reorderQueue(state, { oldIndex, newIndex }) {
     const item = state.playQueue.splice(oldIndex, 1)[0]

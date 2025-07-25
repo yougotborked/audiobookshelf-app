@@ -264,6 +264,9 @@ export default {
           })
           if (idx >= 0) this.$store.commit('setQueueIndex', idx)
         }
+      } else {
+        this.$store.commit('setPlayQueue', [payload])
+        this.$store.commit('setQueueIndex', 0)
       }
 
       console.log('Called playLibraryItem', libraryItemId)

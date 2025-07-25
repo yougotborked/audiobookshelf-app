@@ -215,7 +215,45 @@ class LocalStorage {
     }
   }
 
-  /**
+  async setPlayQueue(queue) {
+    try {
+      await Preferences.set({ key: 'playQueue', value: JSON.stringify(queue || []) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set play queue', error)
+    }
+  }
+
+  async getPlayQueue() {
+    try {
+      const obj = await Preferences.get({ key: 'playQueue' }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get play queue', error)
+      return []
+    }
+  }
+
+  async setQueueIndex(index) {
+    try {
+      await Preferences.set({ key: 'queueIndex', value: String(index) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set queue index', error)
+    }
+  }
+
+  async getQueueIndex() {
+    try {
+      const obj = await Preferences.get({ key: 'queueIndex' }) || {}
+      if (!obj.value) return null
+      const num = Number(obj.value)
+      return isNaN(num) ? null : num
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get queue index', error)
+      return null
+    }
+  }
+
+/**
    * Get preference value by key
    * 
    * @param {string} key 
