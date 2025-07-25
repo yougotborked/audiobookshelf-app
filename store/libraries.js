@@ -8,7 +8,8 @@ export const state = () => ({
   issues: 0,
   filterData: null,
   numUserPlaylists: 0,
-  ereaderDevices: []
+  ereaderDevices: [],
+  offlineMediaTypes: []
 })
 
 export const getters = {
@@ -19,8 +20,17 @@ export const getters = {
     return getters.getCurrentLibrary?.name || null
   },
   getCurrentLibraryMediaType: (state, getters) => {
-    return getters.getCurrentLibrary?.mediaType || null
+    const type = getters.getCurrentLibrary?.mediaType
+    if (type) return type
+    if (state.offlineMediaTypes.includes('podcast') && !state.offlineMediaTypes.includes('book')) {
+      return 'podcast'
+    }
+    if (state.offlineMediaTypes.includes('book') && !state.offlineMediaTypes.includes('podcast')) {
+      return 'book'
+    }
+    return null
   },
+  getOfflineMediaTypes: (state) => state.offlineMediaTypes,
   getCurrentLibrarySettings: (state, getters) => {
     return getters.getCurrentLibrary?.settings || null
   },
@@ -97,7 +107,11 @@ export const actions = {
         return false
       })
   },
-
+  async updateOfflineMediaTypes({ commit }) {
+    const items = await this.$db.getLocalLibraryItems();
+    const types = [...new Set(items.map(li => li.mediaType))];
+    commit("setOfflineMediaTypes", types);
+  }
 }
 
 export const mutations = {
@@ -178,6 +192,9 @@ export const mutations = {
         if (genre && !state.filterData.genres.includes(genre)) state.filterData.genres.push(genre)
       })
     }
+  },
+  setOfflineMediaTypes(state, types) {
+    state.offlineMediaTypes = types || []
   },
   setEReaderDevices(state, ereaderDevices) {
     state.ereaderDevices = ereaderDevices
