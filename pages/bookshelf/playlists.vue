@@ -43,42 +43,42 @@ export default {
   },
   methods: {
     async fetchAutoPlaylist() {
-      if (!this.$store.state.networkConnected) {
-        this.checkAutoDownload()
-        return
-      }
-
       const progressMap = {}
       ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
         if (mp.episodeId) progressMap[mp.episodeId] = mp
       })
+
       const items = []
-      const libraries = this.$store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
-      for (const lib of libraries) {
-        let page = 0
-        let fetched = 0
-        let total = Infinity
-        while (fetched < total) {
-          const payload = await this.$nativeHttp
-            .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=${page}`)
-            .catch(() => null)
-          if (!payload) break
-          const episodes = payload.episodes || []
-          fetched += episodes.length
-          total = payload.total || fetched
-          for (const ep of episodes) {
-            const prog = progressMap[ep.id]
-            if (prog && prog.isFinished) continue
-            const li = await this.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
-            if (!li) continue
-            items.push({ libraryItem: li, episode: ep })
-          }
-          if (episodes.length === 0) break
-          page++
+      const localLibraries = await this.$db.getLocalLibraryItems('podcast')
+      for (const li of localLibraries) {
+        const episodes = li.media?.episodes || []
+        for (const ep of episodes) {
+          const serverId = ep.serverEpisodeId
+          if (!serverId) continue
+          const prog = progressMap[serverId]
+          if (prog && prog.isFinished) continue
+          items.push({
+            libraryItem: li,
+            episode: ep,
+            libraryItemId: li.libraryItemId,
+            episodeId: serverId,
+            localLibraryItem: li,
+            localEpisode: ep
+          })
         }
       }
-      items.sort((a, b) => new Date(a.episode.pubDate || 0) - new Date(b.episode.pubDate || 0))
-      this.autoPlaylist = { id: 'unfinished', name: this.$strings.LabelAutoUnfinishedPodcasts, items }
+
+      items.sort((a, b) => {
+        const aDate = new Date(a.episode.publishedAt || a.episode.pubDate || 0).getTime()
+        const bDate = new Date(b.episode.publishedAt || b.episode.pubDate || 0).getTime()
+        return aDate - bDate
+      })
+
+      this.autoPlaylist = {
+        id: 'unfinished',
+        name: this.$strings.LabelAutoUnfinishedPodcasts,
+        items
+      }
       await this.$localStore.setCachedPlaylist(this.autoPlaylist)
       this.checkAutoDownload()
     },
