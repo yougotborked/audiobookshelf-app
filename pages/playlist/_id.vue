@@ -126,17 +126,29 @@ export default {
         const items = []
         const libraries = this.$store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
         for (const lib of libraries) {
-          const payload = await this.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=200`).catch(() => null)
-          const episodes = payload?.episodes || []
-          for (const ep of episodes) {
-            const prog = progressMap[ep.id]
-            if (prog && prog.isFinished) continue
-            const li = await this.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
-            if (!li) continue
-            items.push({ libraryItem: li, episode: ep, libraryItemId: ep.libraryItemId, episodeId: ep.id })
+          let page = 0
+          let fetched = 0
+          let total = Infinity
+          while (fetched < total) {
+            const payload = await this.$nativeHttp
+              .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=${page}`)
+              .catch(() => null)
+            if (!payload) break
+            const episodes = payload.episodes || []
+            fetched += episodes.length
+            total = payload.total || fetched
+            for (const ep of episodes) {
+              const prog = progressMap[ep.id]
+              if (prog && prog.isFinished) continue
+              const li = await this.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
+              if (!li) continue
+              items.push({ libraryItem: li, episode: ep, libraryItemId: ep.libraryItemId, episodeId: ep.id })
+            }
+            if (episodes.length === 0) break
+            page++
           }
         }
-        items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
+        items.sort((a, b) => new Date(a.episode.pubDate || 0) - new Date(b.episode.pubDate || 0))
         playlist = { id: 'unfinished', name: this.$strings.LabelAutoUnfinishedPodcasts, description: '', items }
       } else {
         playlist = await this.$nativeHttp.get(`/api/playlists/${id}`).catch(() => null)
