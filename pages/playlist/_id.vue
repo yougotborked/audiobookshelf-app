@@ -38,87 +38,10 @@ export default {
     if (!store.state.user.user) {
       return redirect(`/connect?redirect=${route.path}`)
     }
-    let playlist
+
     const cached = await app.$localStore.getCachedPlaylist(params.id)
-    if (!store.state.networkConnected && cached) {
-      return { playlist: cached }
-    }
-    if (params.id === 'unfinished') {
-      const progressMap = {}
-      ;(store.state.user.user.mediaProgress || []).forEach((mp) => {
-        if (mp.episodeId) progressMap[mp.episodeId] = mp
-      })
-      const items = []
-      const libraries = store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
-      for (const lib of libraries) {
-        const payload = await app.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=50`).catch(() => null)
-        const episodes = payload?.episodes || []
-        for (const ep of episodes) {
-          const prog = progressMap[ep.id]
-          if (prog && prog.isFinished) continue
-          const li = await app.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
-          if (!li) continue
-          items.push({ libraryItem: li, episode: ep, libraryItemId: ep.libraryItemId, episodeId: ep.id })
-        }
-      }
-      items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
-      playlist = { id: 'unfinished', name: app.$strings.LabelAutoUnfinishedPodcasts, description: '', items }
-    } else {
-      playlist = await app.$nativeHttp.get(`/api/playlists/${params.id}`).catch((error) => {
-        console.error('Failed', error)
-        return false
-      })
-
-      if (!playlist) {
-        return redirect('/bookshelf/playlists')
-      }
-
-      // Lookup matching local items & episodes and attach to playlist items
-      if (playlist.items.length) {
-        const localLibraryItems = (await app.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
-        if (localLibraryItems.length) {
-          playlist.items.forEach((playlistItem) => {
-            const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
-            if (!matchingLocalLibraryItem) return
-            if (playlistItem.episode) {
-              const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
-              if (matchingLocalEpisode) {
-                playlistItem.localLibraryItem = matchingLocalLibraryItem
-                playlistItem.localEpisode = matchingLocalEpisode
-              }
-            } else {
-              playlistItem.localLibraryItem = matchingLocalLibraryItem
-            }
-          })
-        }
-      }
-    }
-
-    await app.$localStore.setCachedPlaylist(playlist)
-
-    // Lookup matching local items & episodes and attach to playlist items
-    if (playlist.items.length) {
-      const localLibraryItems = (await app.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
-      if (localLibraryItems.length) {
-        playlist.items.forEach((playlistItem) => {
-          const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
-          if (!matchingLocalLibraryItem) return
-          if (playlistItem.episode) {
-            const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
-            if (matchingLocalEpisode) {
-              playlistItem.localLibraryItem = matchingLocalLibraryItem
-              playlistItem.localEpisode = matchingLocalEpisode
-            }
-          } else {
-            playlistItem.localLibraryItem = matchingLocalLibraryItem
-          }
-        })
-      }
-    }
-
-    return {
-      playlist
-    }
+    const playlist = cached || { id: params.id, name: '', description: '', items: [] }
+    return { playlist }
   },
   data() {
     return {
@@ -176,6 +99,60 @@ export default {
     }
   },
   methods: {
+    async fetchPlaylist() {
+      if (!this.$store.state.networkConnected) {
+        this.checkAutoDownload()
+        return
+      }
+      const id = this.$route.params.id
+      let playlist
+      if (id === 'unfinished') {
+        const progressMap = {}
+        ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
+          if (mp.episodeId) progressMap[mp.episodeId] = mp
+        })
+        const items = []
+        const libraries = this.$store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
+        for (const lib of libraries) {
+          const payload = await this.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=50`).catch(() => null)
+          const episodes = payload?.episodes || []
+          for (const ep of episodes) {
+            const prog = progressMap[ep.id]
+            if (prog && prog.isFinished) continue
+            const li = await this.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
+            if (!li) continue
+            items.push({ libraryItem: li, episode: ep, libraryItemId: ep.libraryItemId, episodeId: ep.id })
+          }
+        }
+        items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
+        playlist = { id: 'unfinished', name: this.$strings.LabelAutoUnfinishedPodcasts, description: '', items }
+      } else {
+        playlist = await this.$nativeHttp.get(`/api/playlists/${id}`).catch(() => null)
+        if (!playlist) return
+      }
+
+      if (playlist.items.length) {
+        const localLibraryItems = (await this.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
+        if (localLibraryItems.length) {
+          playlist.items.forEach((playlistItem) => {
+            const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
+            if (!matchingLocalLibraryItem) return
+            if (playlistItem.episode) {
+              const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
+              if (matchingLocalEpisode) {
+                playlistItem.localLibraryItem = matchingLocalLibraryItem
+                playlistItem.localEpisode = matchingLocalEpisode
+              }
+            } else {
+              playlistItem.localLibraryItem = matchingLocalLibraryItem
+            }
+          })
+        }
+      }
+      await this.$localStore.setCachedPlaylist(playlist)
+      this.playlist = playlist
+      this.checkAutoDownload()
+    },
     showMore(playlistItem) {
       this.selectedLibraryItem = playlistItem.libraryItem
       this.selectedEpisode = playlistItem.episode
@@ -253,7 +230,7 @@ export default {
     this.$socket.$on('playlist_updated', this.playlistUpdated)
     this.$socket.$on('playlist_removed', this.playlistRemoved)
     this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
-    this.checkAutoDownload()
+    this.fetchPlaylist()
   },
   beforeDestroy() {
     this.$socket.$off('playlist_updated', this.playlistUpdated)

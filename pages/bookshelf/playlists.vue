@@ -15,31 +15,9 @@ import { AbsDownloader } from '@/plugins/capacitor'
 export default {
   async asyncData({ store, app }) {
     const cached = await app.$localStore.getCachedPlaylist('unfinished')
-    if (!store.state.networkConnected && cached) {
-      return { autoPlaylist: cached }
-    }
-
-    const progressMap = {}
-    ;(store.state.user.user?.mediaProgress || []).forEach((mp) => {
-      if (mp.episodeId) progressMap[mp.episodeId] = mp
-    })
-    const items = []
-    const libraries = store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
-    for (const lib of libraries) {
-      const payload = await app.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=50`).catch(() => null)
-      const episodes = payload?.episodes || []
-      for (const ep of episodes) {
-        const prog = progressMap[ep.id]
-        if (prog && prog.isFinished) continue
-        const li = await app.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
-        if (!li) continue
-        items.push({ libraryItem: li, episode: ep })
-      }
-    }
-    items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
-    const autoPlaylist = { id: 'unfinished', name: app.$strings.LabelAutoUnfinishedPodcasts, items }
-    await app.$localStore.setCachedPlaylist(autoPlaylist)
-    return { autoPlaylist }
+    const name = app.$strings.LabelAutoUnfinishedPodcasts
+    if (cached) return { autoPlaylist: cached }
+    return { autoPlaylist: { id: 'unfinished', name, items: [] } }
   },
   data() {
     return {
@@ -47,9 +25,37 @@ export default {
     }
   },
   mounted() {
-    this.checkAutoDownload()
+    this.fetchAutoPlaylist()
   },
   methods: {
+    async fetchAutoPlaylist() {
+      if (!this.$store.state.networkConnected) {
+        this.checkAutoDownload()
+        return
+      }
+
+      const progressMap = {}
+      ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
+        if (mp.episodeId) progressMap[mp.episodeId] = mp
+      })
+      const items = []
+      const libraries = this.$store.state.libraries.libraries.filter((l) => l.mediaType === 'podcast')
+      for (const lib of libraries) {
+        const payload = await this.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=50`).catch(() => null)
+        const episodes = payload?.episodes || []
+        for (const ep of episodes) {
+          const prog = progressMap[ep.id]
+          if (prog && prog.isFinished) continue
+          const li = await this.$nativeHttp.get(`/api/items/${ep.libraryItemId}`).catch(() => null)
+          if (!li) continue
+          items.push({ libraryItem: li, episode: ep })
+        }
+      }
+      items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
+      this.autoPlaylist = { id: 'unfinished', name: this.$strings.LabelAutoUnfinishedPodcasts, items }
+      await this.$localStore.setCachedPlaylist(this.autoPlaylist)
+      this.checkAutoDownload()
+    },
     async checkAutoDownload() {
       if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
       const localItems = await this.$db.getLocalLibraryItems('podcast')
