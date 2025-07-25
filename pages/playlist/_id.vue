@@ -39,6 +39,10 @@ export default {
       return redirect(`/connect?redirect=${route.path}`)
     }
     let playlist
+    const cached = await app.$localStore.getCachedPlaylist(params.id)
+    if (!store.state.networkConnected && cached) {
+      return { playlist: cached }
+    }
     if (params.id === 'unfinished') {
       const progressMap = {}
       ;(store.state.user.user.mediaProgress || []).forEach((mp) => {
@@ -89,6 +93,8 @@ export default {
         }
       }
     }
+
+    await app.$localStore.setCachedPlaylist(playlist)
 
     // Lookup matching local items & episodes and attach to playlist items
     if (playlist.items.length) {
@@ -221,9 +227,11 @@ export default {
     playlistUpdated(playlist) {
       if (this.playlist.id !== playlist.id) return
       this.playlist = playlist
+      this.$localStore.setCachedPlaylist(playlist)
     },
     playlistRemoved(playlist) {
       if (this.playlist.id === playlist.id) {
+        this.$localStore.removeCachedPlaylist(playlist.id)
         this.$router.replace('/bookshelf/playlists')
       }
     },

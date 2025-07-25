@@ -202,18 +202,22 @@ export default {
     playlistAdded(playlist) {
       if (!this.playlists.some((p) => p.id === playlist.id)) {
         this.playlists.push(playlist)
+        this.$localStore.setCachedPlaylist(playlist)
       }
     },
     playlistUpdated(playlist) {
       const index = this.playlists.findIndex((p) => p.id === playlist.id)
       if (index >= 0) {
         this.playlists.splice(index, 1, playlist)
+        this.$localStore.setCachedPlaylist(playlist)
       } else {
         this.playlists.push(playlist)
+        this.$localStore.setCachedPlaylist(playlist)
       }
     },
     playlistRemoved(playlist) {
       this.playlists = this.playlists.filter((p) => p.id !== playlist.id)
+      this.$localStore.removeCachedPlaylist(playlist.id)
     },
     setListeners() {
       this.$socket.$on('playlist_added', this.playlistAdded)

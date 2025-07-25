@@ -144,6 +144,35 @@ class LocalStorage {
     }
   }
 
+  async setCachedPlaylist(playlist) {
+    try {
+      await Preferences.set({
+        key: `playlist_${playlist.id}`,
+        value: JSON.stringify(playlist)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache playlist', error)
+    }
+  }
+
+  async getCachedPlaylist(id) {
+    try {
+      const obj = await Preferences.get({ key: `playlist_${id}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached playlist', error)
+      return null
+    }
+  }
+
+  async removeCachedPlaylist(id) {
+    try {
+      await Preferences.remove({ key: `playlist_${id}` })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to remove cached playlist', error)
+    }
+  }
+
   /**
    * Get preference value by key
    * 

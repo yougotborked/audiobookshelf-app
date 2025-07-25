@@ -14,6 +14,11 @@
 import { AbsDownloader } from '@/plugins/capacitor'
 export default {
   async asyncData({ store, app }) {
+    const cached = await app.$localStore.getCachedPlaylist('unfinished')
+    if (!store.state.networkConnected && cached) {
+      return { autoPlaylist: cached }
+    }
+
     const progressMap = {}
     ;(store.state.user.user?.mediaProgress || []).forEach((mp) => {
       if (mp.episodeId) progressMap[mp.episodeId] = mp
@@ -33,6 +38,7 @@ export default {
     }
     items.sort((a, b) => new Date(b.episode.pubDate || 0) - new Date(a.episode.pubDate || 0))
     const autoPlaylist = { id: 'unfinished', name: app.$strings.LabelAutoUnfinishedPodcasts, items }
+    await app.$localStore.setCachedPlaylist(autoPlaylist)
     return { autoPlaylist }
   },
   data() {
