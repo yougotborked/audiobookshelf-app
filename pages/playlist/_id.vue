@@ -142,9 +142,23 @@ export default {
         const items = []
         const localLibraries = await this.$db.getLocalLibraryItems('podcast')
         for (const li of localLibraries) {
-          const episodes = li.media?.episodes || []
+          let episodes = li.media?.episodes || []
+          const missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
+          if (this.$store.state.networkConnected && missingDates) {
+            const serverItem = await this.$nativeHttp
+              .get(`/api/items/${li.libraryItemId}?expanded=1`)
+              .catch(() => null)
+            if (serverItem?.media?.episodes?.length) {
+              episodes = serverItem.media.episodes.map((se) => {
+                const localEp = li.media?.episodes?.find(
+                  (lep) => lep.serverEpisodeId === se.id
+                )
+                return localEp ? { ...se, localEpisode: localEp } : se
+              })
+            }
+          }
           for (const ep of episodes) {
-            const serverId = ep.serverEpisodeId
+            const serverId = ep.serverEpisodeId || ep.id
             if (!serverId) continue
             const prog = progressMap[serverId]
             if (prog && prog.isFinished) continue
@@ -154,12 +168,13 @@ export default {
               libraryItemId: li.libraryItemId,
               episodeId: serverId,
               localLibraryItem: li,
-              localEpisode: ep
+              localEpisode: ep.localEpisode || ep
             })
           }
         }
 
         const parseDate = (ep) => {
+          if (!ep) return 0
           let val = ep.publishedAt ?? ep.pubDate
           if (!val) return 0
           if (typeof val === 'string') {

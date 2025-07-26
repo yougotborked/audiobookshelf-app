@@ -6,17 +6,6 @@
           <covers-playlist-cover :items="autoPlaylist.items" :width="64" :height="64" />
           <p class="text-lg ml-4">{{ autoPlaylist.name }}</p>
         </nuxt-link>
-        <ui-btn
-          v-if="showAutoPlayButton"
-          color="success"
-          :padding-x="4"
-          small
-          class="flex items-center justify-center ml-2 w-24"
-          @click="playAutoPlaylist"
-        >
-          <span class="material-symbols text-2xl fill">play_arrow</span>
-          <span class="px-1 text-sm">{{ $strings.ButtonPlayAll }}</span>
-        </ui-btn>
       </div>
     </div>
     <bookshelf-lazy-bookshelf page="playlists" />
@@ -52,37 +41,9 @@ export default {
   computed: {
     networkConnected() {
       return this.$store.state.networkConnected
-    },
-    showAutoPlayButton() {
-      return this.autoPlaylist.items.length
     }
   },
   methods: {
-    playAutoPlaylist() {
-      if (!this.autoPlaylist.items.length) return
-      const nextItem = this.autoPlaylist.items.find((i) => {
-        const prog = this.$store.getters['user/getUserMediaProgress'](
-          i.libraryItemId,
-          i.episodeId
-        )
-        return !prog?.isFinished
-      }) || this.autoPlaylist.items[0]
-
-      const index = this.autoPlaylist.items.findIndex((i) => i === nextItem)
-      const mediaId = nextItem.episodeId || nextItem.libraryItemId
-      this.$store.commit('setPlayerIsStartingPlayback', mediaId)
-      this.$store.commit('setPlayQueue', this.autoPlaylist.items)
-      this.$store.commit('setQueueIndex', index)
-      const payload = {
-        libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
-        episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
-        serverLibraryItemId: nextItem.libraryItemId,
-        serverEpisodeId: nextItem.episodeId,
-        queue: this.autoPlaylist.items,
-        queueIndex: index
-      }
-      this.$eventBus.$emit('play-item', payload)
-    },
     async fetchAutoPlaylist() {
       const progressMap = {}
       ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
@@ -92,9 +53,24 @@ export default {
       const items = []
       const localLibraries = await this.$db.getLocalLibraryItems('podcast')
       for (const li of localLibraries) {
-        const episodes = li.media?.episodes || []
+        let episodes = li.media?.episodes || []
+        const missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
+        if (this.networkConnected && missingDates) {
+          const serverItem = await this.$nativeHttp
+            .get(`/api/items/${li.libraryItemId}?expanded=1`)
+            .catch(() => null)
+          if (serverItem?.media?.episodes?.length) {
+            episodes = serverItem.media.episodes.map((se) => {
+              const localEp = li.media?.episodes?.find(
+                (lep) => lep.serverEpisodeId === se.id
+              )
+              return localEp ? { ...se, localEpisode: localEp } : se
+            })
+          }
+        }
+
         for (const ep of episodes) {
-          const serverId = ep.serverEpisodeId
+          const serverId = ep.serverEpisodeId || ep.id
           if (!serverId) continue
           const prog = progressMap[serverId]
           if (prog && prog.isFinished) continue
@@ -104,12 +80,13 @@ export default {
             libraryItemId: li.libraryItemId,
             episodeId: serverId,
             localLibraryItem: li,
-            localEpisode: ep
+            localEpisode: ep.localEpisode || ep
           })
         }
       }
 
       const parseDate = (ep) => {
+        if (!ep) return 0
         let val = ep.publishedAt ?? ep.pubDate
         if (!val) return 0
         if (typeof val === 'string') {
