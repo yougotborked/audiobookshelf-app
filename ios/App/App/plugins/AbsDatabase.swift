@@ -312,6 +312,7 @@ public class AbsDatabase: CAPPlugin, CAPBridgedPlugin {
         let streamingUsingCellular = call.getString("streamingUsingCellular") ?? "ALWAYS"
         let disableSleepTimerFadeOut = call.getBool("disableSleepTimerFadeOut") ?? false
         let autoContinuePlaylists = call.getBool("autoContinuePlaylists") ?? false
+        let autoCacheUnplayedEpisodes = call.getBool("autoCacheUnplayedEpisodes") ?? false
         let settings = DeviceSettings()
         settings.disableAutoRewind = disableAutoRewind
         settings.enableAltView = enableAltView
@@ -325,6 +326,7 @@ public class AbsDatabase: CAPPlugin, CAPBridgedPlugin {
         settings.streamingUsingCellular = streamingUsingCellular
         settings.disableSleepTimerFadeOut = disableSleepTimerFadeOut
         settings.autoContinuePlaylists = autoContinuePlaylists
+        settings.autoCacheUnplayedEpisodes = autoCacheUnplayedEpisodes
 
         Database.shared.setDeviceSettings(deviceSettings: settings)
 

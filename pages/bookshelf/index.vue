@@ -231,6 +231,8 @@ export default {
 
       // Set local library items first
       this.localLibraryItems = await this.$db.getLocalLibraryItems()
+      const types = [...new Set(this.localLibraryItems.map((li) => li.mediaType))]
+      this.$store.commit('libraries/setOfflineMediaTypes', types)
       const localCategories = this.getLocalMediaItemCategories()
       this.shelves = localCategories
       console.log('[categories] Local shelves set', this.shelves.length, this.lastLocalFetch)

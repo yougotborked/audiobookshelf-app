@@ -140,6 +140,9 @@ export default {
     currentLibraryMediaType() {
       return this.$store.getters['libraries/getCurrentLibraryMediaType']
     },
+    networkConnected() {
+      return this.$store.state.networkConnected
+    },
     shelfHeight() {
       if (this.showBookshelfListView) return this.entityHeight + 16
       if (this.altViewEnabled) {
@@ -180,10 +183,19 @@ export default {
       const sfQueryString = this.currentSFQueryString ? this.currentSFQueryString + '&' : ''
       const fullQueryString = `?${sfQueryString}limit=${this.booksPerFetch}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
 
-      const payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}${fullQueryString}`).catch((error) => {
-        console.error('failed to fetch books', error)
-        return null
-      })
+      let payload
+      if (this.entityName === 'playlists' && !this.networkConnected) {
+        const cached = await this.$localStore.getCachedPlaylists(this.currentLibraryId)
+        payload = { results: cached.slice(startIndex, startIndex + this.booksPerFetch), total: cached.length }
+      } else {
+        payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}${fullQueryString}`).catch((error) => {
+          console.error('failed to fetch books', error)
+          return null
+        })
+        if (payload && this.entityName === 'playlists' && payload.results) {
+          this.$localStore.setCachedPlaylists(this.currentLibraryId, payload.results)
+        }
+      }
 
       this.isFetchingEntities = false
       if (this.pendingReset) {

@@ -338,6 +338,7 @@ export default {
 
       this.$setOrientationLock(this.$store.getters['getOrientationLockSetting'])
 
+      await this.$store.dispatch('init')
       await this.$store.dispatch('setupNetworkListener')
 
       if (this.$store.state.user.serverConnectionConfig) {

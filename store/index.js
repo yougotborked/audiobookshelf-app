@@ -27,7 +27,9 @@ export const state = () => ({
   isNetworkListenerInit: false,
   serverSettings: null,
   lastBookshelfScrollData: {},
-  lastItemScrollData: {}
+  lastItemScrollData: {},
+  playQueue: [],
+  queueIndex: null
 })
 
 export const getters = {
@@ -99,10 +101,27 @@ export const getters = {
     const majorVersion = parseInt(versionParts[0])
     const minorVersion = parseInt(versionParts[1])
     return majorVersion < 2 || (majorVersion == 2 && minorVersion < 17)
+  },
+  getPlayQueue: (state) => state.playQueue,
+  getQueueIndex: (state) => state.queueIndex,
+  getNextQueueItem: (state) => {
+    if (state.queueIndex === null) return null
+    return state.playQueue[state.queueIndex + 1] || null
+  },
+  getPreviousQueueItem: (state) => {
+    if (state.queueIndex === null) return null
+    if (state.queueIndex === 0) return null
+    return state.playQueue[state.queueIndex - 1] || null
   }
 }
 
 export const actions = {
+  async init({ commit }) {
+    const queue = await this.$localStore.getPlayQueue()
+    const index = await this.$localStore.getQueueIndex()
+    commit('setPlayQueue', queue)
+    commit('setQueueIndex', index)
+  },
   // Listen for network connection
   async setupNetworkListener({ state, commit }) {
     if (state.isNetworkListenerInit) return
@@ -139,6 +158,17 @@ export const mutations = {
     state.currentPlaybackSession = playbackSession
 
     state.isCasting = playbackSession?.mediaPlayer === 'cast-player'
+
+    if (playbackSession && state.playQueue.length) {
+      const idx = state.playQueue.findIndex((q) => {
+        const liId = q.localLibraryItem?.id || q.libraryItemId
+        const epId = q.localEpisode?.id || q.episodeId
+        const curLi = playbackSession.localLibraryItem?.id || playbackSession.libraryItemId
+        const curEp = playbackSession.localEpisodeId || playbackSession.episodeId
+        return liId === curLi && epId === curEp
+      })
+      if (idx >= 0) state.queueIndex = idx
+    }
   },
   setMediaPlayer(state, mediaPlayer) {
     state.isCasting = mediaPlayer === 'cast-player'
@@ -206,6 +236,40 @@ export const mutations = {
   },
   setShowSideDrawer(state, val) {
     state.showSideDrawer = val
+  },
+  setPlayQueue(state, queue) {
+    state.playQueue = queue || []
+    this.$localStore.setPlayQueue(state.playQueue)
+  },
+  setQueueIndex(state, index) {
+    state.queueIndex = index
+    this.$localStore.setQueueIndex(index)
+  },
+  reorderQueue(state, { oldIndex, newIndex }) {
+    const item = state.playQueue.splice(oldIndex, 1)[0]
+    state.playQueue.splice(newIndex, 0, item)
+    if (state.queueIndex === oldIndex) {
+      state.queueIndex = newIndex
+    } else if (state.queueIndex > oldIndex && state.queueIndex <= newIndex) {
+      state.queueIndex--
+    } else if (state.queueIndex < oldIndex && state.queueIndex >= newIndex) {
+      state.queueIndex++
+    }
+  },
+  removeQueueItem(state, index) {
+    state.playQueue.splice(index, 1)
+    if (state.queueIndex > index) {
+      state.queueIndex--
+    } else if (state.queueIndex === index) {
+      if (state.queueIndex >= state.playQueue.length) {
+        state.queueIndex = state.playQueue.length - 1
+      }
+    }
+    if (!state.playQueue.length) state.queueIndex = null
+  },
+  clearPlayQueue(state) {
+    state.playQueue = []
+    state.queueIndex = null
   },
   setServerSettings(state, val) {
     state.serverSettings = val
