@@ -10,9 +10,28 @@
             {{ playlistName }}
           </h1>
           <div class="flex-grow" />
-          <ui-btn v-if="showPlayButton" color="success" :padding-x="4" :loading="playerIsStartingForThisMedia" small class="flex items-center justify-center mx-1 w-24" @click="playClick">
+          <ui-btn
+            v-if="showPlayButton"
+            color="success"
+            :padding-x="4"
+            :loading="playerIsStartingForThisMedia"
+            small
+            class="flex items-center justify-center mx-1 w-24"
+            @click="playClick"
+          >
             <span class="material-symbols text-2xl fill">{{ playerIsPlaying ? 'pause' : 'play_arrow' }}</span>
             <span class="px-1 text-sm">{{ playerIsPlaying ? $strings.ButtonPause : $strings.ButtonPlay }}</span>
+          </ui-btn>
+          <ui-btn
+            v-if="showPlayButton"
+            color="success"
+            :padding-x="4"
+            small
+            class="flex items-center justify-center mx-1 w-24"
+            @click="playAll"
+          >
+            <span class="material-symbols text-2xl fill">play_arrow</span>
+            <span class="px-1 text-sm">{{ $strings.ButtonPlayAll }}</span>
           </ui-btn>
         </div>
 
@@ -141,9 +160,18 @@ export default {
         }
 
         const parseDate = (ep) => {
-          if (ep.publishedAt) return new Date(ep.publishedAt).getTime()
-          if (ep.pubDate) return new Date(ep.pubDate).getTime()
-          return 0
+          let val = ep.publishedAt ?? ep.pubDate
+          if (!val) return 0
+          if (typeof val === 'string') {
+            const num = Number(val)
+            if (!isNaN(num)) val = num
+          }
+          if (typeof val === 'number') {
+            if (val < 1e12) val *= 1000
+            return val
+          }
+          const parsed = Date.parse(val)
+          return isNaN(parsed) ? 0 : parsed
         }
         items.sort((a, b) => parseDate(a.episode) - parseDate(b.episode))
 
@@ -198,6 +226,23 @@ export default {
       } else {
         this.playNextItem()
       }
+    },
+    playAll() {
+      if (!this.playableItems.length) return
+      const nextItem = this.playableItems[0]
+      this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
+      this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
+      this.$store.commit('setPlayQueue', this.playableItems)
+      this.$store.commit('setQueueIndex', 0)
+      const payload = {
+        libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
+        episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
+        serverLibraryItemId: nextItem.libraryItemId,
+        serverEpisodeId: nextItem.episodeId,
+        queue: this.playableItems,
+        queueIndex: 0
+      }
+      this.$eventBus.$emit('play-item', payload)
     },
     playNextItem() {
       const nowIndex = this.playableItems.findIndex((i) => {

@@ -110,9 +110,18 @@ export default {
       }
 
       const parseDate = (ep) => {
-        if (ep.publishedAt) return new Date(ep.publishedAt).getTime()
-        if (ep.pubDate) return new Date(ep.pubDate).getTime()
-        return 0
+        let val = ep.publishedAt ?? ep.pubDate
+        if (!val) return 0
+        if (typeof val === 'string') {
+          const num = Number(val)
+          if (!isNaN(num)) val = num
+        }
+        if (typeof val === 'number') {
+          if (val < 1e12) val *= 1000
+          return val
+        }
+        const parsed = Date.parse(val)
+        return isNaN(parsed) ? 0 : parsed
       }
       items.sort((a, b) => parseDate(a.episode) - parseDate(b.episode))
 
