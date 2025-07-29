@@ -147,20 +147,32 @@ export const actions = {
     })
 
     const localLibraries = await this.$db.getLocalLibraryItems('podcast')
+    const downloadedMap = {}
     for (const li of localLibraries) {
-      const episodes = li.media?.episodes || []
+      for (const ep of li.media?.episodes || []) {
+        const sid = ep.serverEpisodeId || ep.id
+        if (sid) downloadedMap[`${li.libraryItemId}_${sid}`] = true
+      }
+    }
+
+    const libraries = state.libraries?.libraries || []
+    for (const lib of libraries) {
+      if (lib.mediaType !== 'podcast') continue
+      const payload = await this.$nativeHttp
+        .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=0`)
+        .catch(() => null)
+      const episodes = payload?.episodes || []
       for (const ep of episodes) {
-        const serverId = ep.serverEpisodeId || ep.id
-        if (!serverId) continue
+        const serverId = ep.id
+        const liId = ep.libraryItemId
+        if (!serverId || !liId) continue
         const prog = progressMap[serverId]
         if (prog && prog.isFinished) continue
-        const localLiEp = ep
-        if (!localLiEp?.audioFile) {
-          AbsDownloader.downloadLibraryItem({
-            libraryItemId: li.libraryItemId,
-            episodeId: ep.id
-          })
-        }
+        if (downloadedMap[`${liId}_${serverId}`]) continue
+        AbsDownloader.downloadLibraryItem({
+          libraryItemId: liId,
+          episodeId: serverId
+        })
       }
     }
   },

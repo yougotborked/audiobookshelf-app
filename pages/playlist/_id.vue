@@ -11,7 +11,6 @@
           </h1>
           <div class="flex-grow" />
           <ui-btn
-            v-if="showPlayButton"
             color="success"
             :padding-x="4"
             :loading="playerIsStartingForThisMedia"
@@ -104,9 +103,6 @@ export default {
     },
     autoContinuePlaylists() {
       return this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists
-    },
-    showPlayButton() {
-      return this.playableItems.length > 0
     },
     playerIsStartingPlayback() {
       // Play has been pressed and waiting for native play response
