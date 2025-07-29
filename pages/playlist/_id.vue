@@ -22,17 +22,6 @@
             <span class="material-symbols text-2xl fill">{{ playerIsPlaying ? 'pause' : 'play_arrow' }}</span>
             <span class="px-1 text-sm">{{ playerIsPlaying ? $strings.ButtonPause : $strings.ButtonPlay }}</span>
           </ui-btn>
-          <ui-btn
-            v-if="showPlayButton"
-            color="success"
-            :padding-x="4"
-            small
-            class="flex items-center justify-center mx-1 w-24"
-            @click="playAll"
-          >
-            <span class="material-symbols text-2xl fill">play_arrow</span>
-            <span class="px-1 text-sm">{{ $strings.ButtonPlayAll }}</span>
-          </ui-btn>
         </div>
 
         <div class="my-8 max-w-2xl px-3">
@@ -143,7 +132,27 @@ export default {
         const localLibraries = await this.$db.getLocalLibraryItems('podcast')
         for (const li of localLibraries) {
           let episodes = li.media?.episodes || []
-          const missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
+
+          const cachedMeta = await this.$localStore.getEpisodeMetadata(
+            li.libraryItemId
+          )
+          const metaMap = {}
+          cachedMeta.forEach((m) => {
+            if (m && m.id) metaMap[m.id] = m
+          })
+          episodes = episodes.map((ep) => {
+            const id = ep.serverEpisodeId || ep.id
+            if (id && (!ep.publishedAt && !ep.pubDate) && metaMap[id]) {
+              return {
+                ...ep,
+                publishedAt: metaMap[id].publishedAt,
+                pubDate: metaMap[id].pubDate
+              }
+            }
+            return ep
+          })
+
+          let missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
           if (this.$store.state.networkConnected && missingDates) {
             const serverItem = await this.$nativeHttp
               .get(`/api/items/${li.libraryItemId}?expanded=1`)
@@ -155,6 +164,12 @@ export default {
                 )
                 return localEp ? { ...se, localEpisode: localEp } : se
               })
+              const meta = serverItem.media.episodes.map((se) => ({
+                id: se.id,
+                pubDate: se.pubDate,
+                publishedAt: se.publishedAt
+              }))
+              await this.$localStore.setEpisodeMetadata(li.libraryItemId, meta)
             }
           }
           for (const ep of episodes) {
@@ -236,10 +251,10 @@ export default {
       if (this.playerIsStartingPlayback) return
       await this.$hapticsImpact()
 
-      if (this.playerIsPlaying) {
+      if (this.playerIsPlaying && this.isOpenInPlayer) {
         this.$eventBus.$emit('pause-item')
       } else {
-        this.playNextItem()
+        this.playAll()
       }
     },
     playAll() {

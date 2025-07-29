@@ -215,6 +215,27 @@ class LocalStorage {
     }
   }
 
+  async setEpisodeMetadata(libraryItemId, episodes) {
+    try {
+      await Preferences.set({
+        key: `epmeta_${libraryItemId}`,
+        value: JSON.stringify(episodes)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache episode metadata', error)
+    }
+  }
+
+  async getEpisodeMetadata(libraryItemId) {
+    try {
+      const obj = await Preferences.get({ key: `epmeta_${libraryItemId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get episode metadata', error)
+      return []
+    }
+  }
+
   async setPlayQueue(queue) {
     try {
       await Preferences.set({ key: 'playQueue', value: JSON.stringify(queue || []) })

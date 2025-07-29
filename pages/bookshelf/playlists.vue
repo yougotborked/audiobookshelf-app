@@ -54,7 +54,27 @@ export default {
       const localLibraries = await this.$db.getLocalLibraryItems('podcast')
       for (const li of localLibraries) {
         let episodes = li.media?.episodes || []
-        const missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
+
+        const cachedMeta = await this.$localStore.getEpisodeMetadata(
+          li.libraryItemId
+        )
+        const metaMap = {}
+        cachedMeta.forEach((m) => {
+          if (m && m.id) metaMap[m.id] = m
+        })
+        episodes = episodes.map((ep) => {
+          const id = ep.serverEpisodeId || ep.id
+          if (id && (!ep.publishedAt && !ep.pubDate) && metaMap[id]) {
+            return {
+              ...ep,
+              publishedAt: metaMap[id].publishedAt,
+              pubDate: metaMap[id].pubDate
+            }
+          }
+          return ep
+        })
+
+        let missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
         if (this.networkConnected && missingDates) {
           const serverItem = await this.$nativeHttp
             .get(`/api/items/${li.libraryItemId}?expanded=1`)
@@ -66,6 +86,12 @@ export default {
               )
               return localEp ? { ...se, localEpisode: localEp } : se
             })
+            const meta = serverItem.media.episodes.map((se) => ({
+              id: se.id,
+              pubDate: se.pubDate,
+              publishedAt: se.publishedAt
+            }))
+            await this.$localStore.setEpisodeMetadata(li.libraryItemId, meta)
           }
         }
 
