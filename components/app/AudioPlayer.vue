@@ -167,6 +167,11 @@ export default {
       this.$store.commit('setPlayerFullscreen', !!val)
       document.querySelector('body').style.backgroundColor = this.showFullscreen ? this.coverRgb : ''
     },
+    '$store.state.currentPlaybackSession'(val) {
+      if (val && (!this.playbackSession || this.playbackSession.id !== val.id)) {
+        this.onPlaybackSession(val)
+      }
+    },
     bookCoverAspectRatio() {
       this.updateScreenSize()
     },

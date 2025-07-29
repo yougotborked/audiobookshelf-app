@@ -289,6 +289,7 @@ export default {
             } else {
               this.serverEpisodeId = serverEpisodeId
             }
+            AbsAudioPlayer.requestSession()
           }
         })
         .catch((error) => {
@@ -445,6 +446,10 @@ export default {
     this.$eventBus.$on('playback-time-update', this.playbackTimeUpdate)
     this.$eventBus.$on('device-focus-update', this.deviceFocused)
     this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+
+    if (this.$store.state.currentPlaybackSession) {
+      AbsAudioPlayer.requestSession()
+    }
   },
   beforeDestroy() {
     this.onLocalMediaProgressUpdateListener?.remove()
