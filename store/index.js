@@ -120,8 +120,10 @@ export const actions = {
   async init({ commit, dispatch }) {
     const queue = await this.$localStore.getPlayQueue()
     const index = await this.$localStore.getQueueIndex()
+    const session = await this.$localStore.getPlaybackSession()
     commit('setPlayQueue', queue)
     commit('setQueueIndex', index)
+    commit('setPlaybackSession', session)
     dispatch('startAutoDownloadTimer')
   },
   startAutoDownloadTimer({ state, dispatch, commit }) {
@@ -212,6 +214,8 @@ export const mutations = {
     state.currentPlaybackSession = playbackSession
 
     state.isCasting = playbackSession?.mediaPlayer === 'cast-player'
+
+    this.$localStore.setPlaybackSession(playbackSession)
 
     if (playbackSession && state.playQueue.length) {
       const idx = state.playQueue.findIndex((q) => {

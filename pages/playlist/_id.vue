@@ -125,6 +125,7 @@ export default {
         })
 
         const items = []
+        const seen = new Set()
         const localLibraries = await this.$db.getLocalLibraryItems('podcast')
         for (const li of localLibraries) {
           let episodes = li.media?.episodes || []
@@ -173,6 +174,9 @@ export default {
             if (!serverId) continue
             const prog = progressMap[serverId]
             if (prog && prog.isFinished) continue
+            const key = `${li.libraryItemId}_${serverId}`
+            if (seen.has(key)) continue
+            seen.add(key)
             items.push({
               libraryItem: li,
               episode: ep,

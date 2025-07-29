@@ -274,6 +274,28 @@ class LocalStorage {
     }
   }
 
+  async setPlaybackSession(session) {
+    try {
+      if (session) {
+        await Preferences.set({ key: 'playbackSession', value: JSON.stringify(session) })
+      } else {
+        await Preferences.remove({ key: 'playbackSession' })
+      }
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set playback session', error)
+    }
+  }
+
+  async getPlaybackSession() {
+    try {
+      const obj = await Preferences.get({ key: 'playbackSession' }) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get playback session', error)
+      return null
+    }
+  }
+
 /**
    * Get preference value by key
    * 
