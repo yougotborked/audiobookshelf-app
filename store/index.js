@@ -1,5 +1,5 @@
 import { Network } from '@capacitor/network'
-import { AbsAudioPlayer } from '@/plugins/capacitor'
+import { AbsAudioPlayer, AbsDownloader } from '@/plugins/capacitor'
 import { PlayMethod } from '@/plugins/constants'
 
 export const state = () => ({
@@ -29,7 +29,8 @@ export const state = () => ({
   lastBookshelfScrollData: {},
   lastItemScrollData: {},
   playQueue: [],
-  queueIndex: null
+  queueIndex: null,
+  autoDownloadIntervalId: null
 })
 
 export const getters = {
@@ -116,11 +117,52 @@ export const getters = {
 }
 
 export const actions = {
-  async init({ commit }) {
+  async init({ commit, dispatch }) {
     const queue = await this.$localStore.getPlayQueue()
     const index = await this.$localStore.getQueueIndex()
     commit('setPlayQueue', queue)
     commit('setQueueIndex', index)
+    dispatch('startAutoDownloadTimer')
+  },
+  startAutoDownloadTimer({ state, dispatch, commit }) {
+    if (state.autoDownloadIntervalId) return
+    const id = setInterval(() => {
+      dispatch('autoDownloadCheck')
+    }, 30 * 60 * 1000)
+    commit('setAutoDownloadIntervalId', id)
+    dispatch('autoDownloadCheck')
+  },
+  stopAutoDownloadTimer({ state, commit }) {
+    if (state.autoDownloadIntervalId) {
+      clearInterval(state.autoDownloadIntervalId)
+      commit('setAutoDownloadIntervalId', null)
+    }
+  },
+  async autoDownloadCheck({ state }) {
+    if (!state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+
+    const progressMap = {}
+    ;(state.user?.user?.mediaProgress || []).forEach((mp) => {
+      if (mp.episodeId) progressMap[mp.episodeId] = mp
+    })
+
+    const localLibraries = await this.$db.getLocalLibraryItems('podcast')
+    for (const li of localLibraries) {
+      const episodes = li.media?.episodes || []
+      for (const ep of episodes) {
+        const serverId = ep.serverEpisodeId || ep.id
+        if (!serverId) continue
+        const prog = progressMap[serverId]
+        if (prog && prog.isFinished) continue
+        const localLiEp = ep
+        if (!localLiEp?.audioFile) {
+          AbsDownloader.downloadLibraryItem({
+            libraryItemId: li.libraryItemId,
+            episodeId: ep.id
+          })
+        }
+      }
+    }
   },
   // Listen for network connection
   async setupNetworkListener({ state, commit }) {
@@ -270,6 +312,9 @@ export const mutations = {
   clearPlayQueue(state) {
     state.playQueue = []
     state.queueIndex = null
+  },
+  setAutoDownloadIntervalId(state, id) {
+    state.autoDownloadIntervalId = id
   },
   setServerSettings(state, val) {
     state.serverSettings = val
