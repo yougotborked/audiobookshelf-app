@@ -168,8 +168,16 @@ export default {
       document.querySelector('body').style.backgroundColor = this.showFullscreen ? this.coverRgb : ''
     },
     '$store.state.currentPlaybackSession'(val) {
-      if (val && (!this.playbackSession || this.playbackSession.id !== val.id)) {
-        this.onPlaybackSession(val)
+      if (!val) {
+        this.playbackSession = null
+        return
+      }
+
+      if (!this.playbackSession || this.playbackSession.id !== val.id) {
+        // When restoring a saved session we just update the local data without
+        // triggering onPlaybackSession so the player doesn't enter a loading
+        // state waiting for metadata that may never arrive.
+        this.playbackSession = val
       }
     },
     bookCoverAspectRatio() {
