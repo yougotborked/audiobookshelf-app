@@ -179,6 +179,10 @@ export default {
         // state waiting for metadata that may never arrive.
         this.playbackSession = val
       }
+
+      this.totalDuration = Number((val.duration || 0).toFixed(2))
+      this.currentTime = Number((val.currentTime || 0).toFixed(2))
+      this.timeupdate()
     },
     bookCoverAspectRatio() {
       this.updateScreenSize()
