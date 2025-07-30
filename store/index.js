@@ -119,8 +119,30 @@ export const getters = {
 export const actions = {
   async init({ commit, dispatch }) {
     const queue = await this.$localStore.getPlayQueue()
-    const index = await this.$localStore.getQueueIndex()
-    const session = await this.$localStore.getPlaybackSession()
+    let index = await this.$localStore.getQueueIndex()
+    let session = await this.$localStore.getPlaybackSession()
+
+    // If the native layer has a more recent playback session use that instead
+    const deviceSession = this.state.deviceData?.lastPlaybackSession
+    if (deviceSession) {
+      if (!session || session.id !== deviceSession.id) {
+        session = deviceSession
+        await this.$localStore.setPlaybackSession(session)
+      }
+
+      const idx = queue.findIndex((q) => {
+        const liId = q.localLibraryItem?.id || q.libraryItemId
+        const epId = q.localEpisode?.id || q.episodeId
+        const curLi = deviceSession.localLibraryItem?.id || deviceSession.libraryItemId
+        const curEp = deviceSession.localEpisodeId || deviceSession.episodeId
+        return liId === curLi && epId === curEp
+      })
+      if (idx >= 0 && idx !== index) {
+        index = idx
+        await this.$localStore.setQueueIndex(index)
+      }
+    }
+
     commit('setPlayQueue', queue)
     commit('setQueueIndex', index)
     commit('setPlaybackSession', session)
