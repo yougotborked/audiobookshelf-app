@@ -160,21 +160,26 @@ export const actions = {
     const libraries = state.libraries?.libraries || []
     for (const lib of libraries) {
       if (lib.mediaType !== 'podcast') continue
-      const payload = await this.$nativeHttp
-        .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=0`)
-        .catch(() => null)
-      const episodes = payload?.episodes || []
-      for (const ep of episodes) {
-        const serverId = ep.id
-        const liId = ep.libraryItemId
-        if (!serverId || !liId) continue
-        const prog = progressMap[serverId]
-        if (prog && prog.isFinished) continue
-        if (downloadedMap[`${liId}_${serverId}`]) continue
-        AbsDownloader.downloadLibraryItem({
-          libraryItemId: liId,
-          episodeId: serverId
-        })
+      let page = 0
+      while (true) {
+        const payload = await this.$nativeHttp
+          .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=${page}`)
+          .catch(() => null)
+        const episodes = payload?.episodes || []
+        for (const ep of episodes) {
+          const serverId = ep.id
+          const liId = ep.libraryItemId
+          if (!serverId || !liId) continue
+          const prog = progressMap[serverId]
+          if (prog && prog.isFinished) continue
+          if (downloadedMap[`${liId}_${serverId}`]) continue
+          AbsDownloader.downloadLibraryItem({
+            libraryItemId: liId,
+            episodeId: serverId
+          })
+        }
+        if (episodes.length < 200) break
+        page++
       }
     }
   },
