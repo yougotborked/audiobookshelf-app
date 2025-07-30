@@ -88,7 +88,7 @@ export default {
       return this.playlistItems.filter((item) => {
         const libraryItem = item.libraryItem
         if (libraryItem.isMissing || libraryItem.isInvalid) return false
-        if (item.episode) return item.episode.audioFile
+        if (item.episode) return true
         return libraryItem.media.tracks.length
       })
     },
