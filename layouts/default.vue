@@ -206,6 +206,8 @@ export default {
 
       AbsLogger.info({ tag: 'default', message: `initLibraries loading library ${this.currentLibraryName}` })
       await this.$store.dispatch('libraries/fetch', this.currentLibraryId)
+      // Run auto download check now that libraries are loaded
+      await this.$store.dispatch('autoDownloadCheck')
       this.$eventBus.$emit('library-changed')
       this.inittingLibraries = false
     },
