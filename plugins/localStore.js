@@ -144,7 +144,159 @@ class LocalStorage {
     }
   }
 
-  /**
+  async setCachedPlaylist(playlist) {
+    try {
+      await Preferences.set({
+        key: `playlist_${playlist.id}`,
+        value: JSON.stringify(playlist)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache playlist', error)
+    }
+  }
+
+  async getCachedPlaylist(id) {
+    try {
+      const obj = await Preferences.get({ key: `playlist_${id}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached playlist', error)
+      return null
+    }
+  }
+
+  async removeCachedPlaylist(id) {
+    try {
+      await Preferences.remove({ key: `playlist_${id}` })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to remove cached playlist', error)
+    }
+  }
+
+  async setCachedPlaylists(libraryId, playlists) {
+    try {
+      await Preferences.set({
+        key: `playlists_${libraryId}`,
+        value: JSON.stringify(playlists)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache playlists', error)
+    }
+  }
+
+  async getCachedPlaylists(libraryId) {
+    try {
+      const obj = await Preferences.get({ key: `playlists_${libraryId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached playlists', error)
+      return []
+    }
+  }
+
+  async setCachedLatestEpisodes(libraryId, episodes) {
+    try {
+      await Preferences.set({
+        key: `latest_${libraryId}`,
+        value: JSON.stringify(episodes)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache latest episodes', error)
+    }
+  }
+
+  async getCachedLatestEpisodes(libraryId) {
+    try {
+      const obj = await Preferences.get({ key: `latest_${libraryId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached latest episodes', error)
+      return []
+    }
+  }
+
+  async setEpisodeMetadata(libraryItemId, episodes) {
+    try {
+      await Preferences.set({
+        key: `epmeta_${libraryItemId}`,
+        value: JSON.stringify(episodes)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache episode metadata', error)
+    }
+  }
+
+  async getEpisodeMetadata(libraryItemId) {
+    try {
+      const obj = await Preferences.get({ key: `epmeta_${libraryItemId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get episode metadata', error)
+      return []
+    }
+  }
+
+  async setPlayQueue(queue) {
+    try {
+      await Preferences.set({ key: 'playQueue', value: JSON.stringify(queue || []) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set play queue', error)
+    }
+  }
+
+  async getPlayQueue() {
+    try {
+      const obj = await Preferences.get({ key: 'playQueue' }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get play queue', error)
+      return []
+    }
+  }
+
+  async setQueueIndex(index) {
+    try {
+      await Preferences.set({ key: 'queueIndex', value: String(index) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set queue index', error)
+    }
+  }
+
+  async getQueueIndex() {
+    try {
+      const obj = await Preferences.get({ key: 'queueIndex' }) || {}
+      if (!obj.value) return null
+      const num = Number(obj.value)
+      return isNaN(num) ? null : num
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get queue index', error)
+      return null
+    }
+  }
+
+  async setPlaybackSession(session) {
+    try {
+      if (session) {
+        await Preferences.set({ key: 'playbackSession', value: JSON.stringify(session) })
+      } else {
+        await Preferences.remove({ key: 'playbackSession' })
+      }
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set playback session', error)
+    }
+  }
+
+  async getPlaybackSession() {
+    try {
+      const obj = await Preferences.get({ key: 'playbackSession' }) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get playback session', error)
+      return null
+    }
+  }
+
+/**
    * Get preference value by key
    * 
    * @param {string} key 

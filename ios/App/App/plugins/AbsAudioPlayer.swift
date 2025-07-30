@@ -49,6 +49,8 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
         NotificationCenter.default.addObserver(self, selector: #selector(sendSleepTimerEnded), name: NSNotification.Name(PlayerEvents.sleepEnded.rawValue), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onPlaybackFailed), name: NSNotification.Name(PlayerEvents.failed.rawValue), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onLocalMediaProgressUpdate), name: NSNotification.Name(PlayerEvents.localProgress.rawValue), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(sendSkipNextRequest), name: NSNotification.Name(PlayerEvents.skipNextRequest.rawValue), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(sendSkipPreviousRequest), name: NSNotification.Name(PlayerEvents.skipPreviousRequest.rawValue), object: nil)
 
         self.bridge?.webView?.allowsBackForwardNavigationGestures = true;
         self.bridge?.webView?.scrollView.alwaysBounceVertical = false;
@@ -256,6 +258,14 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
         self.notifyListeners("onSleepTimerSet", data: [
             "value": PlayerHandler.getSleepTimeRemaining() ?? 0
         ])
+    }
+
+    @objc func sendSkipNextRequest() {
+        self.notifyListeners("onSkipNextRequest", data: [:])
+    }
+
+    @objc func sendSkipPreviousRequest() {
+        self.notifyListeners("onSkipPreviousRequest", data: [:])
     }
 
     @objc func onLocalMediaProgressUpdate() {

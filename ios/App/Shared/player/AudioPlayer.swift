@@ -743,20 +743,14 @@ class AudioPlayer: NSObject {
         
         commandCenter.nextTrackCommand.isEnabled = true
         commandCenter.nextTrackCommand.removeTarget(nil)
-        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            guard let currentTime = self?.getCurrentTime() else {
-                return .commandFailed
-            }
-            self?.seek(currentTime + Double(jumpForwardTime), from: "remote")
+        commandCenter.nextTrackCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name(PlayerEvents.skipNextRequest.rawValue), object: nil)
             return .success
         }
         commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.removeTarget(nil)
-        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            guard let currentTime = self?.getCurrentTime() else {
-                return .commandFailed
-            }
-            self?.seek(currentTime - Double(jumpBackwardsTime), from: "remote")
+        commandCenter.previousTrackCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name(PlayerEvents.skipPreviousRequest.rawValue), object: nil)
             return .success
         }
 

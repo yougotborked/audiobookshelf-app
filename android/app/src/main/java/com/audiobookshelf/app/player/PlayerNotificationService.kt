@@ -85,6 +85,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     fun onNetworkMeteredChanged(isUnmetered: Boolean)
     fun onMediaItemHistoryUpdated(mediaItemHistory: MediaItemHistory)
     fun onPlaybackSpeedChanged(playbackSpeed: Float)
+    fun onSkipNextRequest()
+    fun onSkipPreviousRequest()
   }
   private val binder = LocalBinder()
 
@@ -203,8 +205,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   override fun onTaskRemoved(rootIntent: Intent?) {
     super.onTaskRemoved(rootIntent)
     Log.d(tag, "onTaskRemoved")
-
-    stopSelf()
+    if (isClosed) stopSelf()
   }
 
   override fun onCreate() {
@@ -276,12 +277,14 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     playerNotificationManager = builder.build()
     playerNotificationManager.setMediaSessionToken(mediaSession.sessionToken)
     playerNotificationManager.setUsePlayPauseActions(true)
-    playerNotificationManager.setUseNextAction(false)
-    playerNotificationManager.setUsePreviousAction(false)
+    playerNotificationManager.setUseNextAction(true)
+    playerNotificationManager.setUsePreviousAction(true)
     playerNotificationManager.setUseChronometer(false)
     playerNotificationManager.setUseStopAction(false)
     playerNotificationManager.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
     playerNotificationManager.setPriority(NotificationCompat.PRIORITY_MAX)
+    playerNotificationManager.setUseNextActionInCompactView(true)
+    playerNotificationManager.setUsePreviousActionInCompactView(true)
     playerNotificationManager.setUseFastForwardActionInCompactView(true)
     playerNotificationManager.setUseRewindActionInCompactView(true)
     playerNotificationManager.setSmallIcon(R.drawable.icon_monochrome)
@@ -579,7 +582,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.ACTION_PAUSE or
                     PlaybackStateCompat.ACTION_FAST_FORWARD or
                     PlaybackStateCompat.ACTION_REWIND or
-                    PlaybackStateCompat.ACTION_STOP
+                    PlaybackStateCompat.ACTION_STOP or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
 
     if (deviceSettings.allowSeekingOnMediaControls) {
       playbackActions = playbackActions or PlaybackStateCompat.ACTION_SEEK_TO
@@ -940,11 +945,19 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun skipToPrevious() {
-    currentPlayer.seekToPrevious()
+    if (currentPlayer.hasPrevious()) {
+      currentPlayer.seekToPrevious()
+    } else {
+      clientEventEmitter?.onSkipPreviousRequest()
+    }
   }
 
   fun skipToNext() {
-    currentPlayer.seekToNext()
+    if (currentPlayer.hasNext()) {
+      currentPlayer.seekToNext()
+    } else {
+      clientEventEmitter?.onSkipNextRequest()
+    }
   }
 
   fun jumpForward() {

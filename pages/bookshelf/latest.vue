@@ -20,10 +20,19 @@ export default {
       loadedLibraryId: null
     }
   },
-  watch: {},
+  watch: {
+    networkConnected(newVal) {
+      if (newVal && !this.recentEpisodes.length) {
+        setTimeout(() => this.loadRecentEpisodes(), 1000)
+      }
+    }
+  },
   computed: {
     currentLibraryId() {
       return this.$store.state.libraries.currentLibraryId
+    },
+    networkConnected() {
+      return this.$store.state.networkConnected
     },
     localEpisodes() {
       const episodes = []
@@ -62,7 +71,14 @@ export default {
     async loadRecentEpisodes(page = 0) {
       this.loadedLibraryId = this.currentLibraryId
       this.processing = true
-      const episodePayload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=50&page=${page}`).catch((error) => {
+      if (!this.networkConnected) {
+        const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
+        this.recentEpisodes = cached
+        this.totalEpisodes = cached.length
+        this.processing = false
+        return
+      }
+      const episodePayload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200&page=${page}`).catch((error) => {
         console.error('Failed to get recent episodes', error)
         this.$toast.error('Failed to get recent episodes')
         return null
@@ -72,6 +88,7 @@ export default {
       this.recentEpisodes = episodePayload.episodes || []
       this.totalEpisodes = episodePayload.total
       this.currentPage = page
+      this.$localStore.setCachedLatestEpisodes(this.currentLibraryId, this.recentEpisodes)
     },
     libraryChanged(libraryId) {
       if (libraryId !== this.loadedLibraryId) {

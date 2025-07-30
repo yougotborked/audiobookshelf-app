@@ -228,10 +228,10 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
             handleMediaButtonClickCount()
           }
           KeyEvent.KEYCODE_MEDIA_NEXT -> {
-            playerNotificationService.jumpForward()
+            playerNotificationService.skipToNext()
           }
           KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
-            playerNotificationService.jumpBackward()
+            playerNotificationService.skipToPrevious()
           }
           KeyEvent.KEYCODE_MEDIA_STOP -> {
             playerNotificationService.closePlayback()

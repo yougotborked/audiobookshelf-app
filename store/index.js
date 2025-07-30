@@ -1,5 +1,5 @@
 import { Network } from '@capacitor/network'
-import { AbsAudioPlayer } from '@/plugins/capacitor'
+import { AbsAudioPlayer, AbsDownloader } from '@/plugins/capacitor'
 import { PlayMethod } from '@/plugins/constants'
 
 export const state = () => ({
@@ -27,7 +27,10 @@ export const state = () => ({
   isNetworkListenerInit: false,
   serverSettings: null,
   lastBookshelfScrollData: {},
-  lastItemScrollData: {}
+  lastItemScrollData: {},
+  playQueue: [],
+  queueIndex: null,
+  autoDownloadIntervalId: null
 })
 
 export const getters = {
@@ -99,10 +102,87 @@ export const getters = {
     const majorVersion = parseInt(versionParts[0])
     const minorVersion = parseInt(versionParts[1])
     return majorVersion < 2 || (majorVersion == 2 && minorVersion < 17)
+  },
+  getPlayQueue: (state) => state.playQueue,
+  getQueueIndex: (state) => state.queueIndex,
+  getNextQueueItem: (state) => {
+    if (state.queueIndex === null) return null
+    return state.playQueue[state.queueIndex + 1] || null
+  },
+  getPreviousQueueItem: (state) => {
+    if (state.queueIndex === null) return null
+    if (state.queueIndex === 0) return null
+    return state.playQueue[state.queueIndex - 1] || null
   }
 }
 
 export const actions = {
+  async init({ commit, dispatch }) {
+    const queue = await this.$localStore.getPlayQueue()
+    const index = await this.$localStore.getQueueIndex()
+    const session = await this.$localStore.getPlaybackSession()
+    commit('setPlayQueue', queue)
+    commit('setQueueIndex', index)
+    commit('setPlaybackSession', session)
+    dispatch('startAutoDownloadTimer')
+  },
+  startAutoDownloadTimer({ state, dispatch, commit }) {
+    if (state.autoDownloadIntervalId) return
+    const id = setInterval(() => {
+      dispatch('autoDownloadCheck')
+    }, 30 * 60 * 1000)
+    commit('setAutoDownloadIntervalId', id)
+    dispatch('autoDownloadCheck')
+  },
+  stopAutoDownloadTimer({ state, commit }) {
+    if (state.autoDownloadIntervalId) {
+      clearInterval(state.autoDownloadIntervalId)
+      commit('setAutoDownloadIntervalId', null)
+    }
+  },
+  async autoDownloadCheck({ state }) {
+    if (!state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+
+    const progressMap = {}
+    ;(state.user?.user?.mediaProgress || []).forEach((mp) => {
+      if (mp.episodeId) progressMap[mp.episodeId] = mp
+    })
+
+    const localLibraries = await this.$db.getLocalLibraryItems('podcast')
+    const downloadedMap = {}
+    for (const li of localLibraries) {
+      for (const ep of li.media?.episodes || []) {
+        const sid = ep.serverEpisodeId || ep.id
+        if (sid) downloadedMap[`${li.libraryItemId}_${sid}`] = true
+      }
+    }
+
+    const libraries = state.libraries?.libraries || []
+    for (const lib of libraries) {
+      if (lib.mediaType !== 'podcast') continue
+      let page = 0
+      while (true) {
+        const payload = await this.$nativeHttp
+          .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=${page}`)
+          .catch(() => null)
+        const episodes = payload?.episodes || []
+        for (const ep of episodes) {
+          const serverId = ep.id
+          const liId = ep.libraryItemId
+          if (!serverId || !liId) continue
+          const prog = progressMap[serverId]
+          if (prog && prog.isFinished) continue
+          if (downloadedMap[`${liId}_${serverId}`]) continue
+          AbsDownloader.downloadLibraryItem({
+            libraryItemId: liId,
+            episodeId: serverId
+          })
+        }
+        if (episodes.length < 200) break
+        page++
+      }
+    }
+  },
   // Listen for network connection
   async setupNetworkListener({ state, commit }) {
     if (state.isNetworkListenerInit) return
@@ -139,6 +219,19 @@ export const mutations = {
     state.currentPlaybackSession = playbackSession
 
     state.isCasting = playbackSession?.mediaPlayer === 'cast-player'
+
+    this.$localStore.setPlaybackSession(playbackSession)
+
+    if (playbackSession && state.playQueue.length) {
+      const idx = state.playQueue.findIndex((q) => {
+        const liId = q.localLibraryItem?.id || q.libraryItemId
+        const epId = q.localEpisode?.id || q.episodeId
+        const curLi = playbackSession.localLibraryItem?.id || playbackSession.libraryItemId
+        const curEp = playbackSession.localEpisodeId || playbackSession.episodeId
+        return liId === curLi && epId === curEp
+      })
+      if (idx >= 0) state.queueIndex = idx
+    }
   },
   setMediaPlayer(state, mediaPlayer) {
     state.isCasting = mediaPlayer === 'cast-player'
@@ -206,6 +299,43 @@ export const mutations = {
   },
   setShowSideDrawer(state, val) {
     state.showSideDrawer = val
+  },
+  setPlayQueue(state, queue) {
+    state.playQueue = queue || []
+    this.$localStore.setPlayQueue(state.playQueue)
+  },
+  setQueueIndex(state, index) {
+    state.queueIndex = index
+    this.$localStore.setQueueIndex(index)
+  },
+  reorderQueue(state, { oldIndex, newIndex }) {
+    const item = state.playQueue.splice(oldIndex, 1)[0]
+    state.playQueue.splice(newIndex, 0, item)
+    if (state.queueIndex === oldIndex) {
+      state.queueIndex = newIndex
+    } else if (state.queueIndex > oldIndex && state.queueIndex <= newIndex) {
+      state.queueIndex--
+    } else if (state.queueIndex < oldIndex && state.queueIndex >= newIndex) {
+      state.queueIndex++
+    }
+  },
+  removeQueueItem(state, index) {
+    state.playQueue.splice(index, 1)
+    if (state.queueIndex > index) {
+      state.queueIndex--
+    } else if (state.queueIndex === index) {
+      if (state.queueIndex >= state.playQueue.length) {
+        state.queueIndex = state.playQueue.length - 1
+      }
+    }
+    if (!state.playQueue.length) state.queueIndex = null
+  },
+  clearPlayQueue(state) {
+    state.playQueue = []
+    state.queueIndex = null
+  },
+  setAutoDownloadIntervalId(state, id) {
+    state.autoDownloadIntervalId = id
   },
   setServerSettings(state, val) {
     state.serverSettings = val

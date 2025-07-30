@@ -105,6 +105,14 @@ class AbsAudioPlayer : Plugin() {
         override fun onPlaybackSpeedChanged(playbackSpeed:Float) {
           emit("onPlaybackSpeedChanged", playbackSpeed)
         }
+
+        override fun onSkipNextRequest() {
+          emit("onSkipNextRequest", "")
+        }
+
+        override fun onSkipPreviousRequest() {
+          emit("onSkipPreviousRequest", "")
+        }
       })
 
       MediaEventManager.clientEventEmitter = playerNotificationService.clientEventEmitter
