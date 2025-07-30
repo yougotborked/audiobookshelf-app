@@ -291,7 +291,9 @@ export default {
             } else {
               this.serverEpisodeId = serverEpisodeId
             }
-            AbsAudioPlayer.requestSession()
+            if (this.$store.state.isCasting) {
+              AbsAudioPlayer.requestSession()
+            }
           }
         })
         .catch((error) => {
