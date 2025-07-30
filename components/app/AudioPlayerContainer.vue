@@ -191,7 +191,9 @@ export default {
             this.$toast.error(errorMsg)
           } else {
             console.log('Library item play response', JSON.stringify(data))
-            AbsAudioPlayer.requestSession()
+            if (this.$store.state.isCasting) {
+              AbsAudioPlayer.requestSession()
+            }
           }
         })
         .catch((error) => {
@@ -447,7 +449,10 @@ export default {
     this.$eventBus.$on('device-focus-update', this.deviceFocused)
     this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
 
-    if (this.$store.state.currentPlaybackSession) {
+    if (
+      this.$store.state.currentPlaybackSession &&
+      this.$store.state.isCasting
+    ) {
       AbsAudioPlayer.requestSession()
     }
   },
