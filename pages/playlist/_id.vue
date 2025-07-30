@@ -10,7 +10,14 @@
             {{ playlistName }}
           </h1>
           <div class="flex-grow" />
-          <ui-btn v-if="showPlayButton" color="success" :padding-x="4" :loading="playerIsStartingForThisMedia" small class="flex items-center justify-center mx-1 w-24" @click="playClick">
+          <ui-btn
+            color="success"
+            :padding-x="4"
+            :loading="playerIsStartingForThisMedia"
+            small
+            class="flex items-center justify-center mx-1 w-24"
+            @click.stop="playClick"
+          >
             <span class="material-symbols text-2xl fill">{{ playerIsPlaying ? 'pause' : 'play_arrow' }}</span>
             <span class="px-1 text-sm">{{ playerIsPlaying ? $strings.ButtonPause : $strings.ButtonPlay }}</span>
           </ui-btn>
@@ -32,44 +39,16 @@
 </template>
 
 <script>
+import { AbsDownloader } from '@/plugins/capacitor'
 export default {
   async asyncData({ store, params, app, redirect, route }) {
     if (!store.state.user.user) {
       return redirect(`/connect?redirect=${route.path}`)
     }
 
-    const playlist = await app.$nativeHttp.get(`/api/playlists/${params.id}`).catch((error) => {
-      console.error('Failed', error)
-      return false
-    })
-
-    if (!playlist) {
-      return redirect('/bookshelf/playlists')
-    }
-
-    // Lookup matching local items & episodes and attach to playlist items
-    if (playlist.items.length) {
-      const localLibraryItems = (await app.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
-      if (localLibraryItems.length) {
-        playlist.items.forEach((playlistItem) => {
-          const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
-          if (!matchingLocalLibraryItem) return
-          if (playlistItem.episode) {
-            const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
-            if (matchingLocalEpisode) {
-              playlistItem.localLibraryItem = matchingLocalLibraryItem
-              playlistItem.localEpisode = matchingLocalEpisode
-            }
-          } else {
-            playlistItem.localLibraryItem = matchingLocalLibraryItem
-          }
-        })
-      }
-    }
-
-    return {
-      playlist
-    }
+    const cached = await app.$localStore.getCachedPlaylist(params.id)
+    const playlist = cached || { id: params.id, name: '', description: '', items: [] }
+    return { playlist }
   },
   data() {
     return {
@@ -80,7 +59,19 @@ export default {
       mediaIdStartingPlayback: null
     }
   },
+  watch: {
+    networkConnected(newVal) {
+      if (newVal && !this.playlist.items.length) {
+        setTimeout(() => {
+          this.fetchPlaylist()
+        }, 1000)
+      }
+    }
+  },
   computed: {
+    networkConnected() {
+      return this.$store.state.networkConnected
+    },
     bookCoverAspectRatio() {
       return this.$store.getters['libraries/getBookCoverAspectRatio']
     },
@@ -97,7 +88,7 @@ export default {
       return this.playlistItems.filter((item) => {
         const libraryItem = item.libraryItem
         if (libraryItem.isMissing || libraryItem.isInvalid) return false
-        if (item.episode) return item.episode.audioFile
+        if (item.episode) return true
         return libraryItem.media.tracks.length
       })
     },
@@ -113,9 +104,6 @@ export default {
     autoContinuePlaylists() {
       return this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists
     },
-    showPlayButton() {
-      return this.playableItems.length
-    },
     playerIsStartingPlayback() {
       // Play has been pressed and waiting for native play response
       return this.$store.state.playerIsStartingPlayback
@@ -127,6 +115,133 @@ export default {
     }
   },
   methods: {
+    async fetchPlaylist() {
+      const id = this.$route.params.id
+      let playlist
+      if (id === 'unfinished') {
+        const progressMap = {}
+        ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
+          if (mp.episodeId) progressMap[mp.episodeId] = mp
+        })
+
+        const items = []
+        const seen = new Set()
+        const localLibraries = await this.$db.getLocalLibraryItems('podcast')
+        for (const li of localLibraries) {
+          let episodes = li.media?.episodes || []
+
+          const cachedMeta = await this.$localStore.getEpisodeMetadata(
+            li.libraryItemId
+          )
+          const metaMap = {}
+          cachedMeta.forEach((m) => {
+            if (m && m.id) metaMap[m.id] = m
+          })
+          episodes = episodes.map((ep) => {
+            const id = ep.serverEpisodeId || ep.id
+            if (id && (!ep.publishedAt && !ep.pubDate) && metaMap[id]) {
+              return {
+                ...ep,
+                publishedAt: metaMap[id].publishedAt,
+                pubDate: metaMap[id].pubDate
+              }
+            }
+            return ep
+          })
+
+          let missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
+          if (this.$store.state.networkConnected && missingDates) {
+            const serverItem = await this.$nativeHttp
+              .get(`/api/items/${li.libraryItemId}?expanded=1`)
+              .catch(() => null)
+            if (serverItem?.media?.episodes?.length) {
+              episodes = serverItem.media.episodes.map((se) => {
+                const localEp = li.media?.episodes?.find(
+                  (lep) => lep.serverEpisodeId === se.id
+                )
+                return localEp ? { ...se, localEpisode: localEp } : se
+              })
+              const meta = serverItem.media.episodes.map((se) => ({
+                id: se.id,
+                pubDate: se.pubDate,
+                publishedAt: se.publishedAt
+              }))
+              await this.$localStore.setEpisodeMetadata(li.libraryItemId, meta)
+            }
+          }
+          for (const ep of episodes) {
+            const serverId = ep.serverEpisodeId || ep.id
+            if (!serverId) continue
+            const prog = progressMap[serverId]
+            if (prog && prog.isFinished) continue
+            const key = `${li.libraryItemId}_${serverId}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            items.push({
+              libraryItem: li,
+              episode: ep,
+              libraryItemId: li.libraryItemId,
+              episodeId: serverId,
+              localLibraryItem: li,
+              localEpisode: ep.localEpisode || ep
+            })
+          }
+        }
+
+        const parseDate = (ep) => {
+          if (!ep) return 0
+          let val = ep.publishedAt ?? ep.pubDate
+          if (!val) return 0
+          if (typeof val === 'string') {
+            const num = Number(val)
+            if (!isNaN(num)) val = num
+          }
+          if (typeof val === 'number') {
+            if (val < 1e12) val *= 1000
+            return val
+          }
+          const parsed = Date.parse(val)
+          return isNaN(parsed) ? 0 : parsed
+        }
+        items.sort((a, b) => parseDate(a.episode) - parseDate(b.episode))
+
+        playlist = {
+          id: 'unfinished',
+          name: this.$strings.LabelAutoUnfinishedPodcasts,
+          description: '',
+          items
+        }
+      } else {
+        if (!this.$store.state.networkConnected) {
+          this.checkAutoDownload()
+          return
+        }
+        playlist = await this.$nativeHttp.get(`/api/playlists/${id}`).catch(() => null)
+        if (!playlist) return
+      }
+
+      if (playlist.items.length) {
+        const localLibraryItems = (await this.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
+        if (localLibraryItems.length) {
+          playlist.items.forEach((playlistItem) => {
+            const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
+            if (!matchingLocalLibraryItem) return
+            if (playlistItem.episode) {
+              const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
+              if (matchingLocalEpisode) {
+                playlistItem.localLibraryItem = matchingLocalLibraryItem
+                playlistItem.localEpisode = matchingLocalEpisode
+              }
+            } else {
+              playlistItem.localLibraryItem = matchingLocalLibraryItem
+            }
+          })
+        }
+      }
+      await this.$localStore.setCachedPlaylist(playlist)
+      this.playlist = playlist
+      this.checkAutoDownload()
+    },
     showMore(playlistItem) {
       this.selectedLibraryItem = playlistItem.libraryItem
       this.selectedEpisode = playlistItem.episode
@@ -136,11 +251,28 @@ export default {
       if (this.playerIsStartingPlayback) return
       await this.$hapticsImpact()
 
-      if (this.playerIsPlaying) {
+      if (this.playerIsPlaying && this.isOpenInPlayer) {
         this.$eventBus.$emit('pause-item')
       } else {
-        this.playNextItem()
+        this.playAll()
       }
+    },
+    playAll() {
+      if (!this.playableItems.length) return
+      const nextItem = this.playableItems[0]
+      this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
+      this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
+      this.$store.commit('setPlayQueue', this.playableItems)
+      this.$store.commit('setQueueIndex', 0)
+      const payload = {
+        libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
+        episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
+        serverLibraryItemId: nextItem.libraryItemId,
+        serverEpisodeId: nextItem.episodeId,
+        queue: this.playableItems,
+        queueIndex: 0
+      }
+      this.$eventBus.$emit('play-item', payload)
     },
     playNextItem() {
       const nowIndex = this.playableItems.findIndex((i) => {
@@ -156,27 +288,47 @@ export default {
       })
 
       if (nextItem) {
+        const nextIndex = this.playableItems.findIndex((i) => i === nextItem)
         this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
         this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
-        if (nextItem.localLibraryItem) {
-          this.$eventBus.$emit('play-item', { libraryItemId: nextItem.localLibraryItem.id, episodeId: nextItem.localEpisode?.id, serverLibraryItemId: nextItem.libraryItemId, serverEpisodeId: nextItem.episodeId })
-        } else {
-          this.$eventBus.$emit('play-item', { libraryItemId: nextItem.libraryItemId, episodeId: nextItem.episodeId })
+        this.$store.commit('setPlayQueue', this.playableItems)
+        this.$store.commit('setQueueIndex', nextIndex)
+        const payload = {
+          libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
+          episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
+          serverLibraryItemId: nextItem.libraryItemId,
+          serverEpisodeId: nextItem.episodeId,
+          queue: this.playableItems,
+          queueIndex: nextIndex
         }
+        this.$eventBus.$emit('play-item', payload)
       }
     },
     onPlaybackEnded() {
-      if (this.autoContinuePlaylists) {
-        this.playNextItem()
-      }
+      this.playNextItem()
     },
     playlistUpdated(playlist) {
       if (this.playlist.id !== playlist.id) return
       this.playlist = playlist
+      this.$localStore.setCachedPlaylist(playlist)
     },
     playlistRemoved(playlist) {
       if (this.playlist.id === playlist.id) {
+        this.$localStore.removeCachedPlaylist(playlist.id)
         this.$router.replace('/bookshelf/playlists')
+      }
+    },
+    async checkAutoDownload() {
+      if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+      const localItems = await this.$db.getLocalLibraryItems('podcast')
+      for (const qi of this.playlist.items) {
+        const liId = qi.libraryItem.id
+        const epId = qi.episode.id
+        const localLi = localItems.find((lli) => lli.libraryItemId === liId)
+        const localEp = localLi?.media?.episodes?.find((ep) => ep.serverEpisodeId === epId)
+        if (!localEp) {
+          AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
+        }
       }
     }
   },
@@ -184,6 +336,7 @@ export default {
     this.$socket.$on('playlist_updated', this.playlistUpdated)
     this.$socket.$on('playlist_removed', this.playlistRemoved)
     this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+    this.fetchPlaylist()
   },
   beforeDestroy() {
     this.$socket.$off('playlist_updated', this.playlistUpdated)
