@@ -35,6 +35,11 @@ jobs:
       - name: copy to Android project
         run: npx cap sync
 
+      - name: setup debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          cp android/debug.keystore "$HOME/.android/debug.keystore"
+
       - name: build Android app
         run: ./android/gradlew assembleDebug -p android --no-daemon
 

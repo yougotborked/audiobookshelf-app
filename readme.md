@@ -88,6 +88,12 @@ brew install android-studio node cocoapods
 
 Clone or fork the project from terminal or powershell and `cd` into the project directory.
 
+Debug builds generated in GitHub Actions are signed with the included
+`android/debug.keystore`. Using a consistent keystore allows testers to
+install updated debug APKs over existing ones without uninstalling the
+previous version. The Gradle build uses the same keystore locally so
+debug builds replace each other regardless of where they were produced.
+
 Install the required node packages:
 
 ```shell
