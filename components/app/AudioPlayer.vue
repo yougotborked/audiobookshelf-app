@@ -62,7 +62,7 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click="openQueue">format_list_bulleted</span>
+          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="openQueue">format_list_bulleted</span>
         </div>
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
