@@ -18,6 +18,25 @@ class AbsAudioPlayerWeb extends WebPlugin {
     this.audioTracks = []
     this.startTime = 0
     this.trackStartTime = 0
+
+    this.castAvailable = false
+
+    if (typeof window !== 'undefined') {
+      // Called by the cast framework once it loads
+      window.__onGCastApiAvailable = (isAvailable) => {
+        this.castAvailable =
+          !!isAvailable &&
+          !!(window.chrome?.cast?.isAvailable || window.cast?.framework)
+        this.notifyListeners('onCastAvailableUpdate', {
+          value: this.castAvailable
+        })
+      }
+
+      // Check immediately in case the API is already available
+      this.castAvailable = !!(
+        window.chrome?.cast?.isAvailable || window.cast?.framework
+      )
+    }
   }
 
   // Use startTime to find current track index
@@ -168,7 +187,7 @@ class AbsAudioPlayerWeb extends WebPlugin {
 
   // PluginMethod
   async getIsCastAvailable() {
-    return false
+    return { value: this.castAvailable }
   }
 
   initializePlayer() {
