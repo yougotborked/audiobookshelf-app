@@ -576,7 +576,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun setMediaSessionConnectorPlaybackActions() {
-    var playbackActions =
+    val playbackActions =
             PlaybackStateCompat.ACTION_PLAY_PAUSE or
                     PlaybackStateCompat.ACTION_PLAY or
                     PlaybackStateCompat.ACTION_PAUSE or
@@ -584,11 +584,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.ACTION_REWIND or
                     PlaybackStateCompat.ACTION_STOP or
                     PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-
-    if (deviceSettings.allowSeekingOnMediaControls) {
-      playbackActions = playbackActions or PlaybackStateCompat.ACTION_SEEK_TO
-    }
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                    PlaybackStateCompat.ACTION_SEEK_TO
     mediaSessionConnector.setEnabledPlaybackActions(playbackActions)
   }
 

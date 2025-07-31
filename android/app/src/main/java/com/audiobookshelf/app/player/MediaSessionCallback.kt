@@ -199,6 +199,14 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
             Log.d(tag, "handleCallMediaButton: Media Rewind")
             playerNotificationService.jumpBackward()
           }
+          KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD -> {
+            Log.d(tag, "handleCallMediaButton: Media Skip Forward")
+            playerNotificationService.skipToNext()
+          }
+          KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD -> {
+            Log.d(tag, "handleCallMediaButton: Media Skip Backward")
+            playerNotificationService.skipToPrevious()
+          }
         }
       }
 
@@ -231,6 +239,12 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
             playerNotificationService.skipToNext()
           }
           KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+            playerNotificationService.skipToPrevious()
+          }
+          KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD -> {
+            playerNotificationService.skipToNext()
+          }
+          KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD -> {
             playerNotificationService.skipToPrevious()
           }
           KeyEvent.KEYCODE_MEDIA_STOP -> {
