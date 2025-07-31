@@ -224,6 +224,8 @@ class PlaybackSession(
                             coverUri.toString()
                     )
 
+    metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
+
     // Local covers get bitmap
     if (localLibraryItem?.coverContentUrl != null) {
       val bitmap =
