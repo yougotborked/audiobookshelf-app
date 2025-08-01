@@ -184,13 +184,18 @@ export default {
       if (this.$refs.audioPlayer) {
         playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
       }
-      AbsAudioPlayer.prepareLibraryItem({ libraryItemId, episodeId, playWhenReady: false, playbackRate })
+      const startTime = Math.floor(this.currentTime || 0)
+      const payload = { libraryItemId, episodeId, playWhenReady: false, playbackRate }
+      if (startTime) payload.startTime = startTime
+      AbsAudioPlayer.prepareLibraryItem(payload)
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
             this.$toast.error(errorMsg)
           } else {
             console.log('Library item play response', JSON.stringify(data))
+            this.serverLibraryItemId = libraryItemId
+            this.serverEpisodeId = episodeId
             if (this.$store.state.isCasting) {
               AbsAudioPlayer.requestSession()
             }
