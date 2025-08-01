@@ -471,6 +471,13 @@ export default {
     ) {
       AbsAudioPlayer.requestSession()
     }
+
+    if (this.$store.state.playQueue.length) {
+      AbsAudioPlayer.setPlayQueue({
+        queue: this.$store.state.playQueue,
+        queueIndex: this.$store.state.queueIndex
+      })
+    }
   },
   beforeDestroy() {
     this.onLocalMediaProgressUpdateListener?.remove()
