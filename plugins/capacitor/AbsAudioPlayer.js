@@ -77,7 +77,7 @@ class AbsAudioPlayerWeb extends WebPlugin {
   }
 
   // PluginMethod
-  async prepareLibraryItem({ libraryItemId, episodeId, playWhenReady, startTime, playbackRate }) {
+  async prepareLibraryItem({ libraryItemId, episodeId, playWhenReady, startTime, playbackRate, queue, queueIndex }) {
     console.log('[AbsAudioPlayer] Prepare library item', libraryItemId)
 
     if (!isNaN(playbackRate) && playbackRate) this.playbackRate = playbackRate
