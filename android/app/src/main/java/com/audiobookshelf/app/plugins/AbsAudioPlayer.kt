@@ -13,6 +13,7 @@ import com.audiobookshelf.app.player.PlayerNotificationService
 import com.audiobookshelf.app.server.ApiHandler
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.google.android.gms.cast.CastDevice
@@ -113,6 +114,10 @@ class AbsAudioPlayer : Plugin() {
         override fun onSkipPreviousRequest() {
           emit("onSkipPreviousRequest", "")
         }
+
+        override fun onQueueIndexUpdate(index: Int) {
+          emit("onQueueIndexUpdate", index)
+        }
       })
 
       MediaEventManager.clientEventEmitter = playerNotificationService.clientEventEmitter
@@ -188,6 +193,18 @@ class AbsAudioPlayer : Plugin() {
     val playWhenReady = call.getBoolean("playWhenReady") == true
     val playbackRate = call.getFloat("playbackRate",1f) ?: 1f
     val startTimeOverride = call.getDouble("startTime")
+    val queueIndex = call.getInt("queueIndex", 0)
+    val queueJson = call.getArray("queue")
+
+    queueJson?.let {
+      try {
+        val queue: MutableList<PlayQueueItem> =
+          jacksonMapper.readValue(it.toString())
+        playerNotificationService.setPlayQueue(queue, queueIndex)
+      } catch (e: Exception) {
+        Log.e(tag, "prepareLibraryItem: failed to parse queue", e)
+      }
+    }
 
     AbsLogger.info("AbsAudioPlayer", "prepareLibraryItem: lid=$libraryItemId, startTimeOverride=$startTimeOverride, playbackRate=$playbackRate")
 

@@ -38,6 +38,7 @@ export default {
       onMediaPlayerChangedListener: null,
       onSkipNextRequestListener: null,
       onSkipPreviousRequestListener: null,
+      onQueueIndexUpdateListener: null,
       sleepInterval: null,
       currentEndOfChapterTime: 0,
       serverLibraryItemId: null,
@@ -272,7 +273,14 @@ export default {
       }
 
       console.log('Called playLibraryItem', libraryItemId)
-      const preparePayload = { libraryItemId, episodeId, playWhenReady: startWhenReady, playbackRate }
+      const preparePayload = {
+        libraryItemId,
+        episodeId,
+        playWhenReady: startWhenReady,
+        playbackRate,
+        queue: this.$store.state.playQueue,
+        queueIndex: this.$store.state.queueIndex
+      }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
       AbsAudioPlayer.prepareLibraryItem(preparePayload)
         .then((data) => {
@@ -410,6 +418,11 @@ export default {
         })
       }
     },
+    onQueueIndexUpdate({ value }) {
+      if (typeof value === 'number') {
+        this.$store.commit('setQueueIndex', value)
+      }
+    },
     selectQueueItem(index) {
       const item = this.$store.state.playQueue[index]
       if (!item) return
@@ -437,6 +450,7 @@ export default {
     this.onMediaPlayerChangedListener = await AbsAudioPlayer.addListener('onMediaPlayerChanged', this.onMediaPlayerChanged)
     this.onSkipNextRequestListener = await AbsAudioPlayer.addListener('onSkipNextRequest', this.onSkipNextRequest)
     this.onSkipPreviousRequestListener = await AbsAudioPlayer.addListener('onSkipPreviousRequest', this.onSkipPreviousRequest)
+    this.onQueueIndexUpdateListener = await AbsAudioPlayer.addListener('onQueueIndexUpdate', this.onQueueIndexUpdate)
 
     this.playbackSpeed = this.$store.getters['user/getUserSetting']('playbackRate')
     console.log(`[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`)
@@ -465,6 +479,7 @@ export default {
     this.onMediaPlayerChangedListener?.remove()
     this.onSkipNextRequestListener?.remove()
     this.onSkipPreviousRequestListener?.remove()
+    this.onQueueIndexUpdateListener?.remove()
 
     this.$eventBus.$off('abs-ui-ready', this.onReady)
     this.$eventBus.$off('play-item', this.playLibraryItem)

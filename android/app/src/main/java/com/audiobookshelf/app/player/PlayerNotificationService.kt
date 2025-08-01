@@ -87,6 +87,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     fun onPlaybackSpeedChanged(playbackSpeed: Float)
     fun onSkipNextRequest()
     fun onSkipPreviousRequest()
+    fun onQueueIndexUpdate(index: Int)
   }
   private val binder = LocalBinder()
 
@@ -114,6 +115,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
   var currentPlaybackSession: PlaybackSession? = null
   private var initialPlaybackRate: Float? = null
+
+  private var playQueue: MutableList<PlayQueueItem> = mutableListOf()
+  private var queueIndex: Int = 0
 
   private var isAndroidAuto = false
 
@@ -619,7 +623,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   fun handlePlaybackEnded() {
     Log.d(tag, "handlePlaybackEnded")
     val afterSync = afterSync@{
-      if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
+      if (queueIndex + 1 < playQueue.size) {
+        playNextInQueue()
+      } else if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
         Log.d(tag, "Podcast playback ended on android auto")
         val libraryItem = currentPlaybackSession?.libraryItem ?: return@afterSync
 
@@ -945,6 +951,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   fun skipToPrevious() {
     if (currentPlayer.hasPrevious()) {
       currentPlayer.seekToPrevious()
+    } else if (queueIndex > 0) {
+      playPreviousInQueue()
     } else {
       clientEventEmitter?.onSkipPreviousRequest()
     }
@@ -953,6 +961,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   fun skipToNext() {
     if (currentPlayer.hasNext()) {
       currentPlayer.seekToNext()
+    } else if (queueIndex + 1 < playQueue.size) {
+      playNextInQueue()
     } else {
       clientEventEmitter?.onSkipNextRequest()
     }
@@ -980,6 +990,61 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     // Refresh Android Auto actions
     mediaProgressSyncer.currentPlaybackSession?.let { setMediaSessionConnectorCustomActions(it) }
+  }
+
+  fun setPlayQueue(queue: MutableList<PlayQueueItem>, index: Int) {
+    playQueue = queue
+    queueIndex = index
+  }
+
+  private fun playQueueIndex(idx: Int) {
+    if (idx < 0 || idx >= playQueue.size) return
+    queueIndex = idx
+    val item = playQueue[idx]
+    val playbackRate = currentPlayer.playbackParameters.speed
+    if (item.libraryItemId.startsWith("local")) {
+      DeviceManager.dbManager.getLocalLibraryItem(item.libraryItemId)?.let { localItem ->
+        var episode: PodcastEpisode? = null
+        if (!item.episodeId.isNullOrEmpty()) {
+          val podcastMedia = localItem.media as Podcast
+          episode = podcastMedia.episodes?.find { it.id == item.episodeId }
+        }
+        if (!localItem.hasTracks(episode)) {
+          clientEventEmitter?.onPlaybackFailed("No audio files found on device. Download book again to fix.")
+        } else {
+          mediaProgressSyncer.reset()
+          Handler(Looper.getMainLooper()).post {
+            val playbackSession = localItem.getPlaybackSession(episode, getDeviceInfo())
+            preparePlayer(playbackSession, true, playbackRate)
+          }
+        }
+      }
+    } else {
+      val playItemRequestPayload = getPlayItemRequestPayload(false)
+      mediaProgressSyncer.stop(false) {
+        apiHandler.playLibraryItem(item.libraryItemId, item.episodeId ?: "", playItemRequestPayload) {
+          if (it != null) {
+            Handler(Looper.getMainLooper()).post { preparePlayer(it, true, playbackRate) }
+          } else {
+            clientEventEmitter?.onPlaybackFailed("Server play request failed")
+          }
+        }
+      }
+    }
+  }
+
+  private fun playNextInQueue() {
+    if (queueIndex + 1 < playQueue.size) {
+      playQueueIndex(queueIndex + 1)
+      clientEventEmitter?.onQueueIndexUpdate(queueIndex)
+    }
+  }
+
+  private fun playPreviousInQueue() {
+    if (queueIndex - 1 >= 0) {
+      playQueueIndex(queueIndex - 1)
+      clientEventEmitter?.onQueueIndexUpdate(queueIndex)
+    }
   }
 
   fun closePlayback(calledOnError: Boolean? = false) {
