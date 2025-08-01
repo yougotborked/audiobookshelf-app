@@ -193,7 +193,7 @@ class AbsAudioPlayer : Plugin() {
     val playWhenReady = call.getBoolean("playWhenReady") == true
     val playbackRate = call.getFloat("playbackRate",1f) ?: 1f
     val startTimeOverride = call.getDouble("startTime")
-    val queueIndex = call.getInt("queueIndex", 0)
+    val queueIndex: Int = call.getInt("queueIndex") ?: 0
     val queueJson = call.getArray("queue")
 
     queueJson?.let {
