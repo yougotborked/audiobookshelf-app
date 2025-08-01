@@ -283,6 +283,25 @@ class AbsAudioPlayer : Plugin() {
   }
 
   @PluginMethod
+  fun setPlayQueue(call: PluginCall) {
+    val queueIndex: Int = call.getInt("queueIndex") ?: 0
+    val queueJson = call.getArray("queue")
+
+    queueJson?.let {
+      try {
+        val queue: MutableList<PlayQueueItem> = jacksonMapper.readValue(it.toString())
+        playerNotificationService.setPlayQueue(queue, queueIndex)
+      } catch (e: Exception) {
+        Log.e(tag, "setPlayQueue: failed to parse queue", e)
+        call.reject("Invalid queue")
+        return
+      }
+    }
+
+    call.resolve()
+  }
+
+  @PluginMethod
   fun getCurrentTime(call: PluginCall) {
     Handler(Looper.getMainLooper()).post {
       val currentTime = playerNotificationService.getCurrentTimeSeconds()

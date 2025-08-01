@@ -104,6 +104,12 @@ class AbsAudioPlayerWeb extends WebPlugin {
   }
 
   // PluginMethod
+  setPlayQueue({ queue, queueIndex }) {
+    this.queue = queue
+    this.queueIndex = queueIndex
+  }
+
+  // PluginMethod
   async playPause() {
     if (!this.player) return
     if (this.player.ended) {
