@@ -1,5 +1,11 @@
 <template>
-  <div v-if="playbackSession" id="streamContainer" class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none" :class="{ fullscreen: showFullscreen, 'ios-player': $platform === 'ios', 'web-player': $platform === 'web' }">
+  <div
+    v-if="playbackSession"
+    id="streamContainer"
+    class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none"
+    :class="{ fullscreen: showFullscreen, 'ios-player': $platform === 'ios', 'web-player': $platform === 'web' }"
+    :style="{ '--nav-bar-height': showFullscreen ? '0px' : '36px' }"
+  >
     <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-auto" :style="{ backgroundColor: coverRgb }">
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-audio-player)" />
 
@@ -30,7 +36,11 @@
       </div>
     </div>
 
-    <div class="cover-wrapper absolute z-30 pointer-events-auto" @click="clickContainer">
+    <div
+      class="cover-wrapper absolute z-30"
+      :class="{ 'pointer-events-none': !showFullscreen }"
+      @click="clickContainer"
+    >
       <div class="w-full h-full flex justify-center">
         <covers-book-cover v-if="libraryItem || localLibraryItemCoverSrc" ref="cover" :library-item="libraryItem" :download-cover="localLibraryItemCoverSrc" :width="bookCoverWidth" :book-cover-aspect-ratio="bookCoverAspectRatio" raw @imageLoaded="coverImageLoaded" />
       </div>
@@ -40,14 +50,23 @@
       </div>
     </div>
 
-    <div class="title-author-texts absolute z-30 left-0 right-0 overflow-hidden" @click="clickTitleAndAuthor">
+    <div
+      class="title-author-texts absolute z-30 left-0 right-0 overflow-hidden"
+      :class="{ 'pointer-events-none': !showFullscreen }"
+      @click="clickTitleAndAuthor"
+    >
       <div ref="titlewrapper" class="overflow-hidden relative">
         <p class="title-text whitespace-nowrap"></p>
       </div>
       <p class="author-text text-fg text-opacity-75 truncate">{{ authorName }}</p>
     </div>
 
-    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all" :style="{ backgroundColor: showFullscreen ? '' : coverRgb }" @click="clickContainer">
+    <div
+      id="playerContent"
+      class="playerContainer w-full z-20 absolute left-0 right-0 p-2 pointer-events-auto transition-all"
+      :style="{ backgroundColor: showFullscreen ? '' : coverRgb }"
+      @click="clickContainer"
+    >
       <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-fg-muted cursor-pointer" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
@@ -1074,9 +1093,11 @@ export default {
   height: 200px;
 }
 #playerContent {
+  bottom: var(--nav-bar-height);
   box-shadow: 0px -8px 8px #11111155;
 }
 .fullscreen #playerContent {
+  bottom: 0;
   box-shadow: none;
 }
 
@@ -1090,7 +1111,7 @@ export default {
 }
 
 .cover-wrapper {
-  bottom: 68px;
+  bottom: calc(68px + var(--nav-bar-height));
   left: 24px;
   height: var(--cover-image-height-collapsed);
   width: var(--cover-image-width-collapsed);
@@ -1102,7 +1123,7 @@ export default {
 }
 
 .total-track {
-  bottom: 215px;
+  bottom: calc(215px + var(--nav-bar-height));
   left: 0;
   right: 0;
 }
@@ -1113,7 +1134,7 @@ export default {
   transform-origin: left bottom;
 
   width: var(--title-author-width-collapsed);
-  bottom: 76px;
+  bottom: calc(76px + var(--nav-bar-height));
   left: var(--title-author-left-offset-collapsed);
   text-align: left;
 }
