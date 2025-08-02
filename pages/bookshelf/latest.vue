@@ -72,6 +72,9 @@ export default {
       this.loadedLibraryId = this.currentLibraryId
       this.processing = true
       if (!this.networkConnected) {
+        if (!this.localLibraryItems.length) {
+          await this.loadLocalPodcastLibraryItems()
+        }
         const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
         if (cached.length) {
           this.recentEpisodes = cached
@@ -93,10 +96,12 @@ export default {
             const parsed = Date.parse(val)
             return isNaN(parsed) ? 0 : parsed
           }
-          episodes.sort((a, b) => parseDate(b) - parseDate(a))
-          this.recentEpisodes = episodes
-          this.totalEpisodes = episodes.length
+          this.recentEpisodes = this.localEpisodes
+            .slice()
+            .sort((a, b) => parseDate(b) - parseDate(a))
+            .slice(0, 200)
         }
+        this.totalEpisodes = this.recentEpisodes.length
         this.processing = false
         return
       }

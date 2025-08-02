@@ -56,9 +56,9 @@ export default {
       for (const li of localLibraries) {
         let episodes = li.media?.episodes || []
 
-        const cachedMeta = await this.$localStore.getEpisodeMetadata(
+        const cachedMeta = (await this.$localStore.getEpisodeMetadata(
           li.libraryItemId
-        )
+        )) || []
         const metaMap = {}
         cachedMeta.forEach((m) => {
           if (m && m.id) metaMap[m.id] = m
