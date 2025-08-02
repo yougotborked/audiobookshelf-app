@@ -174,10 +174,10 @@ export default {
       }
 
       if (!this.playbackSession || this.playbackSession.id !== val.id) {
-        // When restoring a saved session we just update the local data without
-        // triggering onPlaybackSession so the player doesn't enter a loading
-        // state waiting for metadata that may never arrive.
-        this.playbackSession = val
+        // Initialize the player UI when a session is restored or changed
+        // so metadata like title and cover image are populated correctly.
+        this.onPlaybackSession(val)
+        return
       }
 
       this.totalDuration = Number((val.duration || 0).toFixed(2))
