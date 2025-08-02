@@ -31,10 +31,14 @@ export default {
   },
   watch: {
     networkConnected(newVal) {
-      if (newVal && !this.autoPlaylist.items.length) {
-        setTimeout(() => {
-          this.fetchAutoPlaylist()
-        }, 1000)
+      if (newVal) {
+        if (!this.autoPlaylist.items.length) {
+          setTimeout(() => {
+            this.fetchAutoPlaylist()
+          }, 1000)
+        } else {
+          this.checkAutoDownload()
+        }
       }
     }
   },

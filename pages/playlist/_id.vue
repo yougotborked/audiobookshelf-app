@@ -62,10 +62,14 @@ export default {
   },
   watch: {
     networkConnected(newVal) {
-      if (newVal && !this.playlist.items.length) {
-        setTimeout(() => {
-          this.fetchPlaylist()
-        }, 1000)
+      if (newVal) {
+        if (!this.playlist.items.length) {
+          setTimeout(() => {
+            this.fetchPlaylist()
+          }, 1000)
+        } else {
+          this.checkAutoDownload()
+        }
       }
     }
   },
