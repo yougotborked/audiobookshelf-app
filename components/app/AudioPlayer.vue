@@ -30,7 +30,11 @@
       </div>
     </div>
 
-    <div class="cover-wrapper absolute z-30 pointer-events-auto" @click="clickContainer">
+    <div
+      class="cover-wrapper absolute z-30"
+      :class="{ 'pointer-events-none': !showFullscreen }"
+      @click="clickContainer"
+    >
       <div class="w-full h-full flex justify-center">
         <covers-book-cover v-if="libraryItem || localLibraryItemCoverSrc" ref="cover" :library-item="libraryItem" :download-cover="localLibraryItemCoverSrc" :width="bookCoverWidth" :book-cover-aspect-ratio="bookCoverAspectRatio" raw @imageLoaded="coverImageLoaded" />
       </div>
@@ -40,7 +44,11 @@
       </div>
     </div>
 
-    <div class="title-author-texts absolute z-30 left-0 right-0 overflow-hidden pointer-events-auto" @click="clickTitleAndAuthor">
+    <div
+      class="title-author-texts absolute z-30 left-0 right-0 overflow-hidden"
+      :class="{ 'pointer-events-none': !showFullscreen }"
+      @click="clickTitleAndAuthor"
+    >
       <div ref="titlewrapper" class="overflow-hidden relative">
         <p class="title-text whitespace-nowrap"></p>
       </div>
