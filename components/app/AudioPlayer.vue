@@ -55,8 +55,8 @@
       <p class="author-text text-fg text-opacity-75 truncate">{{ authorName }}</p>
     </div>
 
-    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all" :style="{ backgroundColor: showFullscreen ? '' : coverRgb }" @click="clickContainer">
-      <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6" style="max-width: 414px">
+    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-none transition-all" :style="{ backgroundColor: showFullscreen ? '' : coverRgb }">
+      <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6 pointer-events-auto" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-fg-muted cursor-pointer" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
           <!-- hidden for podcasts but still using this as a placeholder -->
@@ -75,7 +75,7 @@
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
 
-      <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
+      <div id="playerControls" class="absolute right-0 bottom-0 mx-auto pointer-events-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
           <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="prevQueueOrChapterStart">first_page</span>
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpBackwards">{{ jumpBackwardsIcon }}</span>
@@ -90,7 +90,7 @@
         </div>
       </div>
 
-      <div id="playerTrack" class="absolute left-0 w-full px-6">
+      <div id="playerTrack" class="absolute left-0 w-full px-6 pointer-events-auto">
         <div class="flex pointer-events-none">
           <p class="font-mono text-fg" style="font-size: 0.8rem" ref="currentTimestamp">0:00</p>
           <div class="flex-grow" />
@@ -447,7 +447,10 @@ export default {
         })
     },
     clickTitleAndAuthor() {
-      if (!this.showFullscreen) return
+      if (!this.showFullscreen) {
+        this.expandToFullscreen()
+        return
+      }
       const llid = this.serverLibraryItemId || this.libraryItem?.id || this.localLibraryItem?.id
       if (llid) {
         this.$router.push(`/item/${llid}`)
