@@ -724,6 +724,7 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     remoteMediaClient?.stop()
   }
 
+  @Deprecated("Deprecated in Player")
   override fun stop(reset: Boolean) {
     stop()
   }

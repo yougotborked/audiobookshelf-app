@@ -14,6 +14,7 @@ import com.getcapacitor.PluginCall
 import com.google.android.exoplayer2.ext.cast.SessionAvailabilityListener
 import com.google.android.gms.cast.*
 import com.google.android.gms.cast.framework.*
+import java.util.concurrent.Executors
 import org.json.JSONObject
 
 class CastManager constructor(val mainActivity:Activity) {
@@ -270,7 +271,7 @@ class CastManager constructor(val mainActivity:Activity) {
         Log.d(tag, "CAST SESSION STARTED ${castSession.castDevice?.friendlyName}")
         getSessionManager()?.removeSessionManagerListener(this, CastSession::class.java)
 
-        val castContext = CastContext.getSharedInstance(mainActivity)
+        val castContext = CastContext.getSharedInstance(mainActivity, Executors.newSingleThreadExecutor())
 
         playerNotificationService?.let {
           if (it.castPlayer == null) {
@@ -306,7 +307,7 @@ class CastManager constructor(val mainActivity:Activity) {
   }
 
   private fun getContext(): CastContext {
-    return CastContext.getSharedInstance(mainActivity)
+    return CastContext.getSharedInstance(mainActivity, Executors.newSingleThreadExecutor())
   }
 
   private fun getSessionManager(): SessionManager? {

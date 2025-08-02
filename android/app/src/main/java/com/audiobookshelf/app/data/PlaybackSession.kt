@@ -2,6 +2,7 @@ package com.audiobookshelf.app.data
 
 import android.content.Context
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -230,7 +231,9 @@ class PlaybackSession(
     if (localLibraryItem?.coverContentUrl != null) {
       val bitmap =
               if (Build.VERSION.SDK_INT < 28) {
-                MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
+                ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+                  BitmapFactory.decodeStream(inputStream)
+                }
               } else {
                 val source: ImageDecoder.Source =
                         ImageDecoder.createSource(ctx.contentResolver, coverUri)
