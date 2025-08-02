@@ -1,0 +1,483 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:MediaManager.kt$MediaManager$!DeviceManager.isConnectedToServer || !DeviceManager.checkConnectivity(ctx) || serverConnConfig == null || serverConnConfig.id !== serverConfigIdUsed</ID>
+    <ID>ComplexCondition:MediaProgressSyncer.kt$MediaProgressSyncer$hasNetworkConnection &amp;&amp; shouldSyncServer &amp;&amp; !it.libraryItemId.isNullOrEmpty() &amp;&amp; isConnectedToSameServer</ID>
+    <ID>CyclomaticComplexMethod:AbsAudioPlayer.kt$AbsAudioPlayer$@PluginMethod fun prepareLibraryItem(call: PluginCall)</ID>
+    <ID>CyclomaticComplexMethod:AbsDatabase.kt$AbsDatabase$@PluginMethod fun updateLocalMediaProgressFinished(call:PluginCall)</ID>
+    <ID>CyclomaticComplexMethod:AbsDownloader.kt$AbsDownloader$private fun startLibraryItemDownload(libraryItem: LibraryItem, localFolder: LocalFolder, episode:PodcastEpisode?)</ID>
+    <ID>CyclomaticComplexMethod:ApiHandler.kt$ApiHandler$fun syncLocalMediaProgressForUser(cb: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:FolderScanner.kt$FolderScanner$fun scanDownloadItem(downloadItem: DownloadItem, cb: (DownloadItemScanResult?) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:FolderScanner.kt$FolderScanner$private fun scanInternalDownloadItem( downloadItem: DownloadItem, cb: (DownloadItemScanResult?) -&gt; Unit )</ID>
+    <ID>CyclomaticComplexMethod:MediaManager.kt$MediaManager$fun loadPodcastEpisodeMediaBrowserItems(libraryItemId:String, ctx:Context, cb: (MutableList&lt;MediaBrowserCompat.MediaItem&gt;) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:MediaManager.kt$MediaManager$private fun checkSetValidServerConnectionConfig(cb: (Boolean) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:MediaManager.kt$MediaManager$private fun populatePersonalizedDataForLibrary(libraryId: String, cb: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:MediaProgressSyncer.kt$MediaProgressSyncer$fun sync(shouldSyncServer: Boolean, currentTime: Double, cb: (SyncResult?) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:MediaSessionCallback.kt$MediaSessionCallback$private fun handleCallMediaButton(intent: Intent): Boolean</ID>
+    <ID>CyclomaticComplexMethod:PlayerNotificationService.kt$PlayerNotificationService$fun checkCurrentSessionProgress(seekBackTime: Long): Boolean</ID>
+    <ID>CyclomaticComplexMethod:PlayerNotificationService.kt$PlayerNotificationService$fun preparePlayer( playbackSession: PlaybackSession, playWhenReady: Boolean, playbackRate: Float? )</ID>
+    <ID>CyclomaticComplexMethod:PlayerNotificationService.kt$PlayerNotificationService$override fun onLoadChildren( parentMediaId: String, result: Result&lt;MutableList&lt;MediaBrowserCompat.MediaItem&gt;&gt; )</ID>
+    <ID>CyclomaticComplexMethod:icons.kt$fun getUriToAbsIconDrawable(context: Context, absIconName: String): Uri</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:MainActivity.kt$MainActivity$val (left, top, right, bottom) = if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.R) { val sysInsets = insets.getInsets(WindowInsets.Type.systemBars()) Log.d(tag, "safe sysInsets: $sysInsets") arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom) } else { arrayOf( insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom ) }</ID>
+    <ID>EmptyDefaultConstructor:CastPlayer.kt$CastPlayer.StatusListener$()</ID>
+    <ID>EmptyElseBlock:SleepTimerManager.kt$SleepTimerManager${}</ID>
+    <ID>EmptyFunctionBlock:CastManager.kt$CastManager.SessionListener${}</ID>
+    <ID>EmptyFunctionBlock:CastPlayer.kt$CastPlayer${ }</ID>
+    <ID>EmptyFunctionBlock:CastPlayer.kt$CastPlayer${}</ID>
+    <ID>EmptyFunctionBlock:CastPlayer.kt$CastPlayer.StatusListener${}</ID>
+    <ID>EmptyWhileBlock:MediaManager.kt$MediaManager${ }</ID>
+    <ID>EmptyWhileBlock:PlayerNotificationService.kt$PlayerNotificationService${}</ID>
+    <ID>ForbiddenComment:AbsAudioPlayer.kt$AbsAudioPlayer$// TODO: This was needed again which is probably a design a flaw</ID>
+    <ID>ForbiddenComment:AbsDownloader.kt$AbsDownloader$// TODO: Currently file ino is only stored on AudioFile. This should be updated server side to be in FileMetadata or on the AudioTrack</ID>
+    <ID>ForbiddenComment:ApiHandler.kt$ApiHandler$// TODO: Server 2.2.9 changed to this</ID>
+    <ID>ForbiddenComment:ApiHandler.kt$ApiHandler$// TODO: Using ping client here allows for shorter timeout (3 seconds), maybe rename or make diff client for requests requiring quicker response</ID>
+    <ID>ForbiddenComment:AudioTrack.kt$AudioTrack$// TODO: This should no longer be necessary</ID>
+    <ID>ForbiddenComment:CastTimelineTracker.kt$CastTimelineTracker$// TODO: Reset state when the app instance changes [Internal ref: b/129672468].</ID>
+    <ID>ForbiddenComment:MediaSessionCallback.kt$MediaSessionCallback$// TODO: Play/pause event sent from widget when app is closed. Currently the service gets destroyed before anything can happen</ID>
+    <ID>ForbiddenComment:PlayerListener.kt$PlayerListener$// TODO: this needs to be reworked so that the audio doesn't start playing before it checks for updated progress</ID>
+    <ID>ForbiddenComment:PlayerNotificationService.kt$PlayerNotificationService$// TODO: Start a new playback session here instead of using the existing</ID>
+    <ID>ForbiddenComment:PlayerNotificationService.kt$PlayerNotificationService$// TODO: When an item isFinished the currentTime should be reset to 0</ID>
+    <ID>ForbiddenComment:PlayerNotificationService.kt$PlayerNotificationService$// TODO: bad design here implemented to prevent the session in MediaProgressSyncer from</ID>
+    <ID>FunctionParameterNaming:LocalLibraryItem.kt$LocalLibraryItem$_localFiles:MutableList&lt;LocalFile&gt;</ID>
+    <ID>LargeClass:CastPlayer.kt$CastPlayer : BasePlayer</ID>
+    <ID>LargeClass:MediaManager.kt$MediaManager</ID>
+    <ID>LargeClass:PlayerNotificationService.kt$PlayerNotificationService : MediaBrowserServiceCompat</ID>
+    <ID>LongMethod:AbsAudioPlayer.kt$AbsAudioPlayer$@PluginMethod fun prepareLibraryItem(call: PluginCall)</ID>
+    <ID>LongMethod:AbsDatabase.kt$AbsDatabase$@PluginMethod fun updateLocalMediaProgressFinished(call:PluginCall)</ID>
+    <ID>LongMethod:AbsDownloader.kt$AbsDownloader$private fun startLibraryItemDownload(libraryItem: LibraryItem, localFolder: LocalFolder, episode:PodcastEpisode?)</ID>
+    <ID>LongMethod:CastPlayer.kt$CastPlayer$private fun updateInternalStateAndNotifyIfChanged()</ID>
+    <ID>LongMethod:DbManager.kt$DbManager$fun cleanLocalLibraryItems()</ID>
+    <ID>LongMethod:FolderScanner.kt$FolderScanner$fun scanDownloadItem(downloadItem: DownloadItem, cb: (DownloadItemScanResult?) -&gt; Unit)</ID>
+    <ID>LongMethod:FolderScanner.kt$FolderScanner$private fun scanInternalDownloadItem( downloadItem: DownloadItem, cb: (DownloadItemScanResult?) -&gt; Unit )</ID>
+    <ID>LongMethod:LibraryItem.kt$LibraryItem$@JsonIgnore fun getMediaDescription(progress:MediaProgressWrapper?, ctx: Context, authorId: String?, showSeriesNumber: Boolean?, groupTitle: String?): MediaDescriptionCompat</ID>
+    <ID>LongMethod:MediaManager.kt$MediaManager$private fun populatePersonalizedDataForLibrary(libraryId: String, cb: () -&gt; Unit)</ID>
+    <ID>LongMethod:MediaProgressSyncer.kt$MediaProgressSyncer$fun sync(shouldSyncServer: Boolean, currentTime: Double, cb: (SyncResult?) -&gt; Unit)</ID>
+    <ID>LongMethod:MediaSessionCallback.kt$MediaSessionCallback$private fun handleCallMediaButton(intent: Intent): Boolean</ID>
+    <ID>LongMethod:PlayerNotificationService.kt$PlayerNotificationService$fun checkCurrentSessionProgress(seekBackTime: Long): Boolean</ID>
+    <ID>LongMethod:PlayerNotificationService.kt$PlayerNotificationService$fun preparePlayer( playbackSession: PlaybackSession, playWhenReady: Boolean, playbackRate: Float? )</ID>
+    <ID>LongMethod:PlayerNotificationService.kt$PlayerNotificationService$override fun onCreate()</ID>
+    <ID>LongMethod:PlayerNotificationService.kt$PlayerNotificationService$override fun onLoadChildren( parentMediaId: String, result: Result&lt;MutableList&lt;MediaBrowserCompat.MediaItem&gt;&gt; )</ID>
+    <ID>LongMethod:SleepTimerManager.kt$SleepTimerManager$private fun setSleepTimer(time: Long): Boolean</ID>
+    <ID>LongParameterList:CastPlayer.kt$CastPlayer$(mediaItems:List&lt;MediaItem&gt;, startIndex:Int, startTime:Long, playWhenReady:Boolean, playbackRate:Float, mediaType:String)</ID>
+    <ID>LongParameterList:DataClasses.kt$Book$( metadata:BookMetadata, coverPath:String?, var tags:List&lt;String&gt;, var audioFiles:List&lt;AudioFile&gt;?, var chapters:List&lt;BookChapter&gt;?, var tracks:MutableList&lt;AudioTrack&gt;?, var ebookFile: EBookFile?, var size:Long?, var duration:Double?, var numTracks:Int? )</ID>
+    <ID>LongParameterList:DataClasses.kt$BookMetadata$( title:String, var subtitle:String?, var authors:MutableList&lt;Author&gt;?, var narrators:MutableList&lt;String&gt;?, var genres:MutableList&lt;String&gt;, var publishedYear:String?, var publishedDate:String?, var publisher:String?, var description:String?, var isbn:String?, var asin:String?, var language:String?, explicit:Boolean, // In toJSONExpanded var authorName:String?, var authorNameLF:String?, var narratorName:String?, var seriesName:String?, @JsonFormat(with=[JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY]) var series:List&lt;SeriesType&gt;? )</ID>
+    <ID>LongParameterList:DownloadItemPart.kt$DownloadItemPart.Companion$(downloadItemId:String, filename:String, fileSize: Long, destinationFile: File, finalDestinationFile: File, subfolder:String, serverPath:String, localFolder: LocalFolder, ebookFile: EBookFile?, audioTrack: AudioTrack?, episode: PodcastEpisode?)</ID>
+    <ID>LongParameterList:LibraryAuthorItem.kt$LibraryAuthorItem$( id:String, var libraryId:String, var name:String, var description:String?, var imagePath:String?, var addedAt:Long, var updatedAt:Long, var numBooks:Int?, var libraryItems:MutableList&lt;LibraryItem&gt;?, var series:MutableList&lt;LibrarySeriesItem&gt;? )</ID>
+    <ID>LongParameterList:LibraryItem.kt$LibraryItem$( id:String, var ino:String, var libraryId:String, var folderId:String, var path:String, var relPath:String, var mtimeMs:Long, var ctimeMs:Long, var birthtimeMs:Long, var addedAt:Long, var updatedAt:Long, var lastScan:Long?, var scanVersion:String?, var isMissing:Boolean, var isInvalid:Boolean, var mediaType:String, var media:MediaType, var libraryFiles:MutableList&lt;LibraryFile&gt;?, var userMediaProgress:MediaProgress?, // Only included when requesting library item with progress (for downloads) var collapsedSeries: CollapsedSeries?, var localLibraryItemId:String?, // For Android Auto val recentEpisode: PodcastEpisode? // Podcast episode shelf uses this )</ID>
+    <ID>LongParameterList:LibrarySeriesItem.kt$LibrarySeriesItem$( id:String, var libraryId:String, var name:String, var description:String?, var addedAt:Long, var updatedAt:Long, var books:MutableList&lt;LibraryItem&gt;?, var localLibraryItemId:String? // For Android Auto )</ID>
+    <ID>LongParameterList:LocalLibraryItem.kt$LocalLibraryItem$( id:String, var folderId:String, var basePath:String, var absolutePath:String, var contentUrl:String, var isInvalid:Boolean, var mediaType:String, var media:MediaType, var localFiles:MutableList&lt;LocalFile&gt;, var coverContentUrl:String?, var coverAbsolutePath:String?, var isLocal:Boolean, // If local library item is linked to a server item var serverConnectionConfigId:String?, var serverAddress:String?, var serverUserId:String?, var libraryItemId:String? )</ID>
+    <ID>LongParameterList:LocalMediaProgress.kt$LocalMediaProgress$( var id:String, var localLibraryItemId:String, var localEpisodeId:String?, var duration:Double, progress:Double, // 0 to 1 currentTime:Double, isFinished:Boolean, var ebookLocation:String?, // cfi tag var ebookProgress:Double?, // 0 to 1 var lastUpdate:Long, var startedAt:Long, var finishedAt:Long?, // For local lib items from server to support server sync var serverConnectionConfigId:String?, var serverAddress:String?, var serverUserId:String?, var libraryItemId:String?, var episodeId:String? )</ID>
+    <ID>LongParameterList:MediaItemEvent.kt$MediaItemEvent$( var name:String, // e.g. Play/Pause/Stop/Seek/Save var type:String, // Playback/Info var description:String?, var currentTime:Number?, // Seconds var serverSyncAttempted:Boolean?, var serverSyncSuccess:Boolean?, var serverSyncMessage:String?, var timestamp: Long )</ID>
+    <ID>LongParameterList:MediaItemHistory.kt$MediaItemHistory$( var id: String, // media id var mediaDisplayTitle: String, var libraryItemId: String, var episodeId: String?, var isLocal: Boolean, var serverConnectionConfigId: String?, var serverAddress: String?, var serverUserId: String?, var createdAt: Long, var events: MutableList&lt;MediaItemEvent&gt;, )</ID>
+    <ID>LongParameterList:MediaPlayerWidget.kt$(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, playbackSession: PlaybackSession?, isPlaying:Boolean, isAppClosed:Boolean)</ID>
+    <ID>LongParameterList:MediaProgress.kt$MediaProgress$( var id:String, var libraryItemId:String, var episodeId:String?, var duration:Double, // seconds progress:Double, // 0 to 1 currentTime:Double, isFinished:Boolean, var ebookLocation:String?, // cfi tag var ebookProgress:Double?, // 0 to 1 var lastUpdate:Long, var startedAt:Long, var finishedAt:Long? )</ID>
+    <ID>LongParameterList:PlaybackSession.kt$PlaybackSession$( var id: String, var userId: String?, var libraryItemId: String?, var episodeId: String?, var mediaType: String, var mediaMetadata: MediaTypeMetadata, var deviceInfo: DeviceInfo, var chapters: List&lt;BookChapter&gt;, var displayTitle: String?, var displayAuthor: String?, var coverPath: String?, var duration: Double, var playMethod: Int, var startedAt: Long, var updatedAt: Long, var timeListening: Long, var audioTracks: MutableList&lt;AudioTrack&gt;, var currentTime: Double, var libraryItem: LibraryItem?, var localLibraryItem: LocalLibraryItem?, var localEpisodeId: String?, var serverConnectionConfigId: String?, var serverAddress: String?, var mediaPlayer: String? )</ID>
+    <ID>MagicNumber:AbMediaDescriptionAdapter.kt$AbMediaDescriptionAdapter$28</ID>
+    <ID>MagicNumber:AbsAudioPlayer.kt$AbsAudioPlayer$1000L</ID>
+    <ID>MagicNumber:AbsFileSystem.kt$AbsFileSystem$6</ID>
+    <ID>MagicNumber:AbsFileSystem.kt$AbsFileSystem$7</ID>
+    <ID>MagicNumber:ApiHandler.kt$ApiHandler$3</ID>
+    <ID>MagicNumber:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$401</ID>
+    <ID>MagicNumber:AudioTrack.kt$AudioTrack$1000L</ID>
+    <ID>MagicNumber:CastPlayer.kt$CastPlayer$1000</ID>
+    <ID>MagicNumber:CastPlayer.kt$CastPlayer$3</ID>
+    <ID>MagicNumber:CastPlayer.kt$CastPlayer$5000L</ID>
+    <ID>MagicNumber:CastTimelineTracker.kt$CastTimelineTracker$1000</ID>
+    <ID>MagicNumber:DataClasses.kt$BookChapter$1000L</ID>
+    <ID>MagicNumber:DbManager.kt$DbManager$3600000</ID>
+    <ID>MagicNumber:DbManager.kt$DbManager$48</ID>
+    <ID>MagicNumber:DeviceClasses.kt$DeviceSettings$1.1f</ID>
+    <ID>MagicNumber:DeviceClasses.kt$DeviceSettings$1.3f</ID>
+    <ID>MagicNumber:DeviceClasses.kt$DeviceSettings$1.5f</ID>
+    <ID>MagicNumber:DeviceClasses.kt$DeviceSettings$1.6f</ID>
+    <ID>MagicNumber:DeviceClasses.kt$DeviceSettings$1000L</ID>
+    <ID>MagicNumber:DeviceClasses.kt$DeviceSettings$2.7f</ID>
+    <ID>MagicNumber:DeviceManager.kt$DeviceManager$100</ID>
+    <ID>MagicNumber:DeviceManager.kt$DeviceManager$300000L</ID>
+    <ID>MagicNumber:DeviceManager.kt$DeviceManager$900000L</ID>
+    <ID>MagicNumber:DownloadItemManager.kt$DownloadItemManager$100L</ID>
+    <ID>MagicNumber:DownloadItemManager.kt$DownloadItemManager$3</ID>
+    <ID>MagicNumber:DownloadItemManager.kt$DownloadItemManager$500</ID>
+    <ID>MagicNumber:InternalDownloadManager.kt$BinaryFileWriter$100L</ID>
+    <ID>MagicNumber:InternalDownloadManager.kt$InternalDownloadManager$30</ID>
+    <ID>MagicNumber:LocalLibraryItem.kt$LocalLibraryItem$28</ID>
+    <ID>MagicNumber:LocalMediaProgress.kt$LocalMediaProgress$0.99</ID>
+    <ID>MagicNumber:LocalMediaProgress.kt$LocalMediaProgress$100</ID>
+    <ID>MagicNumber:MediaManager.kt$MediaManager$5000</ID>
+    <ID>MagicNumber:MediaPlayerWidget.kt$300</ID>
+    <ID>MagicNumber:MediaProgressSyncer.kt$MediaProgressSyncer$1000L</ID>
+    <ID>MagicNumber:MediaProgressSyncer.kt$MediaProgressSyncer$30000</ID>
+    <ID>MagicNumber:MediaProgressSyncer.kt$MediaProgressSyncer$5000L</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$0.5f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$0.7f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$0.8f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$1.1f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$1.2f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$1.3f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$1.5f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$1.6f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$1000</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$2.1f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$3.0f</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback$33</ID>
+    <ID>MagicNumber:MediaSessionCallback.kt$MediaSessionCallback.&lt;no name provided&gt;$3</ID>
+    <ID>MagicNumber:PlaybackSession.kt$PlaybackSession$1000L</ID>
+    <ID>MagicNumber:PlaybackSession.kt$PlaybackSession$28</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$10000</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$1800000</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$20000</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$29500</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$3000</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$300000</ID>
+    <ID>MagicNumber:PlayerListener.kt$PlayerListener$60000</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$10</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$1000</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$1000.0</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$20</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$2000L</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$3</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$4</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$45</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService$5</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.&lt;no name provided&gt;$28</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$0.5f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$0.7f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$0.8f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$1.1f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$1.3f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$1.4f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$1.7f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$1.8f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$2.4f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$2.5f</ID>
+    <ID>MagicNumber:PlayerNotificationService.kt$PlayerNotificationService.ChangePlaybackSpeedCustomActionProvider$3.0f</ID>
+    <ID>MagicNumber:ShakeDetector.kt$ShakeDetector$1.6f</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$0.9f</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$10</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$1000</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$10000L</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$1000L</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$150</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$30</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$3000L</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$60</ID>
+    <ID>MagicNumber:SleepTimerManager.kt$SleepTimerManager$60F</ID>
+    <ID>MaxLineLength:AbMediaDescriptionAdapter.kt$AbMediaDescriptionAdapter$class</ID>
+    <ID>MaxLineLength:AbMediaDescriptionAdapter.kt$AbMediaDescriptionAdapter$val source: ImageDecoder.Source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)</ID>
+    <ID>MaxLineLength:AbsAudioPlayer.kt$AbsAudioPlayer$AbsLogger.info("AbsAudioPlayer", "prepareLibraryItem: lid=$libraryItemId, startTimeOverride=$startTimeOverride, playbackRate=$playbackRate")</ID>
+    <ID>MaxLineLength:AbsAudioPlayer.kt$AbsAudioPlayer$if</ID>
+    <ID>MaxLineLength:AbsAudioPlayer.kt$AbsAudioPlayer$private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>MaxLineLength:AbsAudioPlayer.kt$AbsAudioPlayer$val playbackSession: PlaybackSession? = playerNotificationService.mediaProgressSyncer.currentPlaybackSession ?: playerNotificationService.currentPlaybackSession</ID>
+    <ID>MaxLineLength:AbsAudioPlayer.kt$AbsAudioPlayer$val success:Boolean = playerNotificationService.sleepTimerManager.setManualSleepTimer(playbackSession?.id ?: "", time, isChapterTime)</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$AbsLogger.info("AbsDatabase", "syncLocalSessionsWithServer: Finished sending local playback sessions to server. Removing ${savedSessions.size} saved sessions.")</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$AbsLogger.info("AbsDatabase", "syncLocalSessionsWithServer: No saved local playback sessions to send to server.")</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$DeviceManager.deviceData.serverConnectionConfigs = DeviceManager.deviceData.serverConnectionConfigs.filter { it.id != serverConnectionConfigId } as MutableList&lt;ServerConnectionConfig&gt;</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$Log.d(tag, "Found existing track ${existingTrack.localFileId} that has index ${existingTrack.index} should be index $index")</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$ServerConnConfigPayload</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$if</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$localMediaProgressId = if (localEpisodeId.isNullOrEmpty()) localLibraryItemId else "$localLibraryItemId-$localEpisodeId"</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$serverConnectionConfig = ServerConnectionConfig(sscId, sscIndex, "$serverAddress ($username)", serverAddress, serverVersion, userId, username, accessToken, serverConfigPayload.customHeaders)</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$val localMediaProgress = allLocalMediaProgress.find { libraryItemId == it.libraryItemId &amp;&amp; (episodeId == null || it.episodeId == episodeId) }</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$val localMediaProgressId = if (localEpisodeId.isNullOrEmpty()) localLibraryItemId else "$localLibraryItemId-$localEpisodeId"</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$val savedSessions = DeviceManager.dbManager.getPlaybackSessions().filter { it.serverConnectionConfigId == DeviceManager.serverConnectionConfigId }</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$val serverConnectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == serverConnectionConfigId }</ID>
+    <ID>MaxLineLength:AbsDatabase.kt$AbsDatabase$var serverConnectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == serverConfigPayload.id }</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$// TODO: Currently file ino is only stored on AudioFile. This should be updated server side to be in FileMetadata or on the AudioTrack</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$Log.d(tag, "Audio File Server Path $serverPath | AF RelPath ${audioTrack.relPath} | LocalFolder Path ${localFolder.absolutePath} | DestName $destinationFilename")</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$Log.d(tag, "Audio File Server Path $serverPath | AF RelPath ${audioTrack?.relPath} | LocalFolder Path ${localFolder.absolutePath} | DestName $destinationFilename")</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$downloadItemPart = DownloadItemPart.make(downloadItem.id, destinationFilename,coverFileSize,destinationFile,finalDestinationFile,podcastTitle,serverPath,localFolder,null,null,null)</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$localFolder = LocalFolder(localFolderId, "Internal App Storage", "", "", "", "", "internal", libraryItem.mediaType)</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$val downloadItem = DownloadItem(downloadItemId, libraryItem.id, episode?.id, libraryItem.userMediaProgress, DeviceManager.serverConnectionConfig?.id ?: "", DeviceManager.serverAddress, DeviceManager.serverUserId, libraryItem.mediaType, itemFolderPath, localFolder, podcastTitle, podcastTitle, libraryItem.media, mutableListOf())</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$val downloadItem = DownloadItem(libraryItem.id, libraryItem.id, null, libraryItem.userMediaProgress,DeviceManager.serverConnectionConfig?.id ?: "", DeviceManager.serverAddress, DeviceManager.serverUserId, libraryItem.mediaType, itemFolderPath, localFolder, bookTitle, itemSubfolder, libraryItem.media, mutableListOf())</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$val downloadItemPart = DownloadItemPart.make(downloadItem.id, destinationFilename, coverFileSize, destinationFile,finalDestinationFile,itemSubfolder,serverPath,localFolder,null,null,null)</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$val downloadItemPart = DownloadItemPart.make(downloadItem.id, destinationFilename, fileSize, destinationFile,finalDestinationFile,itemSubfolder,serverPath,localFolder,ebookFile,null,null)</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$val downloadItemPart = DownloadItemPart.make(downloadItem.id, destinationFilename, fileSize, destinationFile,finalDestinationFile,itemSubfolder,serverPath,localFolder,null,audioTrack,null)</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$val tempFolderPath = if (isInternal) "${mainActivity.filesDir}/downloads/${libraryItem.id}" else mainActivity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)</ID>
+    <ID>MaxLineLength:AbsDownloader.kt$AbsDownloader$var downloadItemPart = DownloadItemPart.make(downloadItem.id, destinationFilename,fileSize, destinationFile,finalDestinationFile,podcastTitle,serverPath,localFolder,null,audioTrack,episode)</ID>
+    <ID>MaxLineLength:AbsFileSystem.kt$AbsFileSystem$private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>MaxLineLength:AbsFileSystem.kt$AbsFileSystem.&lt;no name provided&gt;$builder.setPositiveButton("Allow.") { _, _ -&gt; mainActivity.storageHelper.requestStorageAccess(REQUEST_CODE_SDCARD_ACCESS, initialPath = FileFullPath(mainActivity, storageId, "")) }</ID>
+    <ID>MaxLineLength:AbsFileSystem.kt$AbsFileSystem.&lt;no name provided&gt;$override</ID>
+    <ID>MaxLineLength:AbsFileSystem.kt$AbsFileSystem.&lt;no name provided&gt;$val localFolder = LocalFolder(folderId, folder.name ?: "", folder.uri.toString(),basePath,absolutePath, simplePath, storageType.toString(), mediaType)</ID>
+    <ID>MaxLineLength:AbsLogger.kt$AbsLogger$private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>MaxLineLength:AbsLogger.kt$AbsLogger.Companion$val absLog = AbsLog(id = UUID.randomUUID().toString(), tag, level, message, timestamp = System.currentTimeMillis())</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$// TODO: Using ping client here allows for shorter timeout (3 seconds), maybe rename or make diff client for requests requiring quicker response</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.error("ApiHandler", "sendSyncLocalSessions: Failed to sync local sessions. (${it.getString("error")})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.error("ApiHandler", "sendSyncLocalSessions: Failed to sync session \"${session.displayTitle}\" with server. Error: ${localSessionSyncResult.error}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.error("ApiHandler", "syncLocalMediaProgressForUser: Failed to load user from server (${DeviceManager.serverConnectionConfigName})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.error(tag, "handleTokenRefresh: Unable to refresh auth tokens. No refresh token available for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.error(tag, "retryOriginalRequest: Unexpected error during retry for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.error(tag, "updateTokens: Failed to refresh auth tokens for server ${DeviceManager.serverConnectionConfigString} (error: ${e.message})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "[ApiHandler] syncLocalMediaProgressForUser: Server connection ${DeviceManager.serverConnectionConfigName}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "sendSyncLocalSessions: Sending ${playbackSessions.size} saved local playback sessions to server (${DeviceManager.serverConnectionConfigName})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "sendSyncLocalSessions: Synced session \"${session.displayTitle}\" with server, server progress was updated for item ${session.mediaItemId}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "sendSyncLocalSessions: Synced session \"${session.displayTitle}\" with server. Server progress was up-to-date for item ${session.mediaItemId}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "syncLocalMediaProgressForUser: Finishing syncing local media progress with server. $numLocalMediaProgressUptToDate up-to-date, $numLocalMediaProgressUpdated updated")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "syncLocalMediaProgressForUser: Found ${allLocalMediaProgress.size} local media progress")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "syncLocalMediaProgressForUser: Local progress for ebook item \"${mediaProgress.mediaItemId}\" is more recent than server progress. Local progress last updated ${localMediaProgress.lastUpdate}, server progress last updated ${mediaProgress.lastUpdate}. Sending server request to update ebook progress from ${mediaProgress.ebookProgress} to ${localMediaProgress.ebookProgress}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "syncLocalMediaProgressForUser: Server progress for item \"${mediaProgress.mediaItemId}\" is more recent than local (server lastUpdate=${mediaProgress.lastUpdate}, local lastUpdate=${localMediaProgress.lastUpdate}). ${updateLogs.joinToString()}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info("ApiHandler", "syncLocalMediaProgressForUser: Successfully updated server ebook progress for item item \"${mediaProgress.mediaItemId}\"")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info(tag, "handleTokenRefresh: Attempting to refresh auth tokens for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$AbsLogger.info(tag, "updateTokens: Successfully refreshed auth tokens for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$Log.d(tag, "Synced session result ${localSessionSyncResult.id}|${localSessionSyncResult.progressSynced}|${localSessionSyncResult.success}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$fun</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$getRequest</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$private</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$updateLogs.add("Updated currentTime from ${localMediaProgress.currentTime} to ${mediaProgress.currentTime}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$updateLogs.add("Updated ebookProgress from ${localMediaProgress.isFinished} to ${mediaProgress.isFinished}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$updateLogs.add("Updated isFinished from ${localMediaProgress.isFinished} to ${mediaProgress.isFinished}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$val allLocalMediaProgress = DeviceManager.dbManager.getAllLocalMediaProgress().filter { it.serverConnectionConfigId == DeviceManager.serverConnectionConfigId }</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$val deviceInfo = DeviceInfo(deviceId, Build.MANUFACTURER, Build.MODEL, Build.VERSION.SDK_INT, BuildConfig.VERSION_NAME)</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$val endpoint = if (episodeId.isNullOrEmpty()) "/api/items/$libraryItemId/play" else "/api/items/$libraryItemId/play/$episodeId"</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$val endpoint = if(episodeId.isNullOrEmpty()) "/api/me/progress/$libraryItemId" else "/api/me/progress/$libraryItemId/$episodeId"</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$val payload = JSObject(jacksonMapper.writeValueAsString(LocalSessionsSyncRequestPayload(playbackSessions, deviceInfo)))</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler$}</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "handleTokenRefresh: Failed to connect to refresh endpoint for server ${DeviceManager.serverConnectionConfigString} (error: ${e.message})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "handleTokenRefresh: Failed to parse refresh response for server ${DeviceManager.serverConnectionConfigString} (error: ${e.message})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "handleTokenRefresh: No access token in refresh response for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "handleTokenRefresh: No user object in refresh response for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "handleTokenRefresh: Refresh request failed with status ${it.code} for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "retryOriginalRequest: Failed to retry request after token refresh for server ${DeviceManager.serverConnectionConfigString} (error: ${e.message})")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.error(tag, "retryOriginalRequest: Retry request failed with status ${it.code} for server ${DeviceManager.serverConnectionConfigString}")</ID>
+    <ID>MaxLineLength:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$AbsLogger.info(tag, "makeRequest: 401 Unauthorized for request to \"${request.url}\" - attempt token refresh")</ID>
+    <ID>MaxLineLength:BrowseTree.kt$BrowseTree$putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getUriToDrawable(context, R.drawable.exo_icon_downloaddone).toString())</ID>
+    <ID>MaxLineLength:BrowseTree.kt$BrowseTree$putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getUriToDrawable(context, R.drawable.exo_icon_localaudio).toString())</ID>
+    <ID>MaxLineLength:BrowseTree.kt$BrowseTree$putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getUriToDrawable(context, R.drawable.icon_library_folder).toString())</ID>
+    <ID>MaxLineLength:BrowseTree.kt$BrowseTree$putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getUriToDrawable(context, R.drawable.md_clock_outline).toString())</ID>
+    <ID>MaxLineLength:CastManager.kt$CastManager$.</ID>
+    <ID>MaxLineLength:CastManager.kt$CastManager.&lt;no name provided&gt;$routes?.forEach { Log.d(tag, "CAST ROUTE ${it.description} | ${it.deviceType} | ${it.isBluetooth} | ${it.name}") }</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$)</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$@PlayWhenReadyChangeReason val playWhenReadyChangeReason = if (newPlayWhenReadyValue != playWhenReady) PLAY_WHEN_READY_CHANGE_REASON_REMOTE else PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$Log.d(tag, "setPlayerStateAndNotifyIfChanged newPlayWhenReady:$playWhenReady | playbackStateChanged:$playbackStateChanged | playWhenReadyChanged:$playWhenReadyChanged")</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$fun</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$listeners.sendEvent(EVENT_PLAYBACK_STATE_CHANGED) { obj: Player.Listener -&gt; obj.onPlaybackStateChanged(currentPlaybackState) }</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$remoteMediaClient?.queueJumpToItem(myCurrentTimeline.getPeriod(mediaItemIndex, period).uid as Int, positionMsFinal, JSONObject())?.setResultCallback(resultCb)</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$return if (trackType == C.TRACK_TYPE_VIDEO) RENDERER_INDEX_VIDEO else if (trackType == C.TRACK_TYPE_AUDIO) RENDERER_INDEX_AUDIO else if (trackType == C.TRACK_TYPE_TEXT) RENDERER_INDEX_TEXT else C.INDEX_UNSET</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$setQueueType(if (mediaType == "book") MediaQueueData.MEDIA_QUEUE_TYPE_AUDIO_BOOK else MediaQueueData.MEDIA_QUEUE_TYPE_PODCAST_SERIES)</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$this.myCurrentTimeline = if (status != null) timelineTracker.getCastTimeline(it) else CastTimeline.EMPTY_CAST_TIMELINE</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$val currentPeriodUid = if (!currentTimeline.isEmpty) currentTimeline.getPeriod(currentMediaItemIndex, period, /* setIds= */true).uid else null</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$val oldPeriodUid = if (!currentTimeline.isEmpty) currentTimeline.getPeriod(oldWindowIndex, period, /* setIds= */true).uid else null</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$val pendingResult: PendingResult&lt;RemoteMediaClient.MediaChannelResult&gt; = if (playWhenReady) remoteMediaClient!!.play() else remoteMediaClient!!.pause()</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer$val pendingResult: PendingResult&lt;RemoteMediaClient.MediaChannelResult&gt;? = remoteMediaClient?.setPlaybackRate(actualPlaybackParameters.speed.toDouble(), /* customData= */null)</ID>
+    <ID>MaxLineLength:CastPlayer.kt$CastPlayer.StatusListener$inner</ID>
+    <ID>MaxLineLength:CastTimeline.kt$CastTimeline.ItemData$return</ID>
+    <ID>MaxLineLength:DataClasses.kt$Book$return Book(metadata as BookMetadata,coverPath,tags, mutableListOf(),chapters,mutableListOf(), ebookFile, null,null, 0)</ID>
+    <ID>MaxLineLength:DataClasses.kt$Podcast$val newEpisode = PodcastEpisode(localEpisodeId,(episodes?.size ?: 0) + 1,episode.episode,episode.episodeType,episode.title,episode.subtitle,episode.description,null,null,null,audioTrack,episode.chapters,audioTrack.duration,episode.size, episode.id, localEpisodeId)</ID>
+    <ID>MaxLineLength:DataClasses.kt$Podcast$val newEpisode = PodcastEpisode(localEpisodeId,(episodes?.size ?: 0) + 1,null,null,at.title,null,null,null, null, null, at,null,at.duration,0, null, localEpisodeId)</ID>
+    <ID>MaxLineLength:DataClasses.kt$Podcast$val newEpisode = PodcastEpisode(localEpisodeId,(episodes?.size ?: 0) + 1,null,null,audioTrack.title,null,null,null, null, null,audioTrack,null,audioTrack.duration,0, null, localEpisodeId)</ID>
+    <ID>MaxLineLength:DataClasses.kt$Podcast$val progress = mediaManager.serverUserMediaProgress.find { it.libraryItemId == libraryItemId &amp;&amp; it.episodeId == episode.id }</ID>
+    <ID>MaxLineLength:DataClasses.kt$PodcastEpisode$fun</ID>
+    <ID>MaxLineLength:DbManager.kt$DbManager$"cleanLocalLibraryItems: Audio track ${track.title} was removed from library item ${lli.media.metadata.title}"</ID>
+    <ID>MaxLineLength:DbManager.kt$DbManager$"cleanLocalLibraryItems: Local file ${localFile.absolutePath} was removed from library item ${lli.media.metadata.title}"</ID>
+    <ID>MaxLineLength:DbManager.kt$DbManager$"cleanLocalLibraryItems: Podcast episode ${ep.title} was removed from library item ${lli.media.metadata.title}"</ID>
+    <ID>MaxLineLength:DbManager.kt$DbManager$"cleanLocalMediaProgress: Invalid local media progress does not start with 'local' (fixed on server 2.0.24)"</ID>
+    <ID>MaxLineLength:DbManager.kt$DbManager$"cleanLocalMediaProgress: Podcast media progress for episode ${it.localEpisodeId} not found - removing"</ID>
+    <ID>MaxLineLength:DeviceClasses.kt$LibraryItemWrapper$open</ID>
+    <ID>MaxLineLength:DownloadItemManager.kt$DownloadItemManager$"Item download complete ${downloadItem.itemTitle} | local library item id: ${downloadItemScanResult?.localLibraryItem?.id}"</ID>
+    <ID>MaxLineLength:DownloadItemManager.kt$DownloadItemManager$"Start internal download to destination path ${downloadItemPart.finalDestinationPath} from ${downloadItemPart.serverUrl}"</ID>
+    <ID>MaxLineLength:DownloadItemManager.kt$DownloadItemManager$"checkDownloads Download ${downloadItemPart.filename} bytes $totalBytes | bytes dled $bytesDownloadedSoFar | downloadStatus $downloadStatus"</ID>
+    <ID>MaxLineLength:DownloadItemManager.kt$DownloadItemManager$"checkUpdateDownloadQueue: numPartsToGet=$numPartsToGet, nextDownloadItemParts=${nextDownloadItemParts.size}"</ID>
+    <ID>MaxLineLength:DownloadItemManager.kt$DownloadItemManager.&lt;no name provided&gt;$"DOWNLOAD: COMPLETED FILE INFO (name=${resultDocFile.name}) ${resultDocFile.getAbsolutePath(mainActivity)}"</ID>
+    <ID>MaxLineLength:DownloadItemPart.kt$DownloadItemPart.Companion$Log.d("DownloadItemPart", "Audio File Destination Uri: $destinationUri | Final Destination Uri: $finalDestinationUri | Download URI $downloadUri")</ID>
+    <ID>MaxLineLength:DownloadItemPart.kt$DownloadItemPart.Companion$fun</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanDownloadItem did not find any audio tracks or ebook file in folder for ${downloadItem.itemFolderPath}"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanDownloadItem starting for ${downloadItem.itemFolderPath} | ${df.uri} | Item Folder Id:$itemFolderId | LLI Id:$localLibraryItemId"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanDownloadItem: Added episode to podcast ${podcastEpisode.title} ${track.title} | Track index: ${podcastEpisode.audioTrack?.index}"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanDownloadItem: Created Audio Track with index ${track.index} from local file ${localFile.absolutePath}"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanDownloadItem: Item part not found for doc file ${docFile.name} | ${docFile.getAbsolutePath(ctx)} | ${docFile.uri}"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanInternalDownloadItem: Added episode to podcast ${podcastEpisode.title} ${track.title} | Track index: ${podcastEpisode.audioTrack?.index}"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanInternalDownloadItem: Created Audio Track with index ${track.index} from local file ${localFile.absolutePath}"</ID>
+    <ID>MaxLineLength:FolderScanner.kt$FolderScanner$"scanLibraryItemFolder: Saving local media progress ${newLocalMediaProgress.id} at progress ${newLocalMediaProgress.progress}"</ID>
+    <ID>MaxLineLength:LibraryItem.kt$LibraryItem$fun</ID>
+    <ID>MaxLineLength:LocalLibraryItem.kt$LocalLibraryItem$return FileProvider.getUriForFile(ctx, "${BuildConfig.APPLICATION_ID}.fileprovider", Uri.parse(coverContentUrl).toFile())</ID>
+    <ID>MaxLineLength:LocalLibraryItem.kt$LocalLibraryItem$return PlaybackSession(sessionId,serverUserId,libraryItemId,episode?.serverEpisodeId, mediaType, mediaMetadata, deviceInfo,chapters ?: mutableListOf(), displayTitle, authorName,null,duration,PLAYMETHOD_LOCAL,dateNow,0L,0L, audioTracks,currentTime,null,this,localEpisodeId,serverConnectionConfigId, serverAddress, "exo-player")</ID>
+    <ID>MaxLineLength:LocalLibraryItem.kt$LocalLibraryItem$return if (coverContentUrl != null) Uri.parse(coverContentUrl) else Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$"checkSetValidServerConnectionConfig: Current config ${DeviceManager.serverAddress} is pingable? $hasValidConn"</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$Log.d(tag, "checkSetValidServerConnectionConfig | serverConfigIdUsed=$serverConfigIdUsed | lastServerConnectionConfigId=${DeviceManager.deviceData.lastServerConnectionConfigId}")</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$Log.d(tag, "checkSetValidServerConnectionConfig: Set server connection config ${DeviceManager.serverConnectionConfigId}")</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$cb(cachedLibraryPodcasts[libraryId]?.values?.sortedBy { libraryItem -&gt; (libraryItem.media as Podcast).metadata.title })</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$fun</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$if</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$podcastEpisodeLibraryItemMap[podcastEpisode.id] = LibraryItemWithEpisode(libraryItemWrapper, podcastEpisode)</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val authorsWithBooks = cachedLibraryAuthors[libraryId]!!.values.filter { lai -&gt; lai.name.uppercase().startsWith(authorFilter) }.toList()</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val description = libraryItem.getMediaDescription(progress, ctx, null, null, "Books (${serverLibrary?.name})")</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val libraryItemsFromAuthorWithAudio = libraryItemsWithAudio.filter { li -&gt; li.authorName.indexOf(authorName, ignoreCase = true) &gt;= 0 }</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val progress = DeviceManager.dbManager.getLocalMediaProgress("${libraryItemWrapper.id}-${podcastEpisode.id}")</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val progress = serverUserMediaProgress.find { it.libraryItemId == libraryItemWrapper.id &amp;&amp; it.episodeId == podcastEpisode.id }</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val seriesWithBooks = cachedLibrarySeries[libraryId]!!.filter { ls -&gt; ls.title.uppercase().startsWith(seriesFilter) }.toList()</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$val serverConnConfig = if (DeviceManager.isConnectedToServer) DeviceManager.serverConnectionConfig else DeviceManager.deviceData.getLastServerConnectionConfig()</ID>
+    <ID>MaxLineLength:MediaManager.kt$MediaManager$}</ID>
+    <ID>MaxLineLength:MediaPlayerWidget.kt$Log.i(tag, "updateAppWidget ${playbackSession?.displayTitle ?: "No Title"} isPlaying=$isPlaying isAppClosed=$isAppClosed")</ID>
+    <ID>MaxLineLength:MediaPlayerWidget.kt$internal</ID>
+    <ID>MaxLineLength:MediaPlayerWidget.kt$val</ID>
+    <ID>MaxLineLength:MediaPlayerWidget.kt$val fastForwardPI = MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_FAST_FORWARD)</ID>
+    <ID>MaxLineLength:MediaPlayerWidget.kt$val imageUri = playbackSession?.getCoverUri(context) ?: Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)</ID>
+    <ID>MaxLineLength:MediaPlayerWidget.kt$val playPauseResource = if (isPlaying) androidx.mediarouter.R.drawable.ic_media_pause_dark else androidx.mediarouter.R.drawable.ic_media_play_dark</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$"Current Playback Session invalid progress ${currentPlaybackSession?.progress} | Current Time: ${currentPlaybackSession?.currentTime} | Duration: ${currentPlaybackSession?.getTotalDuration()}"</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$"Saved Local Progress Current Time: ID ${it.id} | ${it.currentTime} | Duration ${it.duration} | Progress ${it.progressPercent}%"</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.error("MediaProgressSyncer", "sync: Local progress sync failed (count: $failedSyncs) (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${it.id}) (${DeviceManager.serverConnectionConfigName})")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.error("MediaProgressSyncer", "sync: Progress sync failed (count: $failedSyncs) (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: $currentSessionId) (${DeviceManager.serverConnectionConfigName})")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.info("MediaProgressSyncer", "sync: Not sending local progress to server (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${it.id}) (hasNetworkConnection: $hasNetworkConnection) (isConnectedToSameServer: $isConnectedToSameServer)")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.info("MediaProgressSyncer", "sync: Not sending progress to server (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: $currentSessionId) (${DeviceManager.serverConnectionConfigName}) (hasNetworkConnection: $hasNetworkConnection)")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.info("MediaProgressSyncer", "sync: Saved local progress (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${it.id})")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.info("MediaProgressSyncer", "sync: Sending progress sync to server (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${currentSessionId}) (${DeviceManager.serverConnectionConfigName})")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.info("MediaProgressSyncer", "sync: Successfully synced local progress (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${it.id})")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$AbsLogger.info("MediaProgressSyncer", "sync: Successfully synced progress (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${currentSessionId}) (${DeviceManager.serverConnectionConfigName})")</ID>
+    <ID>MaxLineLength:MediaProgressSyncer.kt$MediaProgressSyncer$val isConnectedToSameServer = it.serverConnectionConfigId != null &amp;&amp; DeviceManager.serverConnectionConfig?.id == it.serverConnectionConfigId</ID>
+    <ID>MaxLineLength:MediaSessionCallback.kt$MediaSessionCallback$// TODO: Play/pause event sent from widget when app is closed. Currently the service gets destroyed before anything can happen</ID>
+    <ID>MaxLineLength:MediaSessionCallback.kt$MediaSessionCallback$// if (playerNotificationService.currentPlaybackSession == null &amp;&amp; DeviceManager.deviceData.lastPlaybackSession != null) {</ID>
+    <ID>MaxLineLength:MediaSessionCallback.kt$MediaSessionCallback$// val connectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == DeviceManager.deviceData.lastPlaybackSession?.serverConnectionConfigId }</ID>
+    <ID>MaxLineLength:MediaSessionCallback.kt$MediaSessionCallback$playerNotificationService.mediaManager</ID>
+    <ID>MaxLineLength:MediaSessionPlaybackPreparer.kt$MediaSessionPlaybackPreparer$class</ID>
+    <ID>MaxLineLength:MediaSessionPlaybackPreparer.kt$MediaSessionPlaybackPreparer$playerNotificationService.mediaManager</ID>
+    <ID>MaxLineLength:PlayerListener.kt$PlayerListener$Log.d(tag, "onIsPlayingChanged to $isPlaying | ${playerNotificationService.getMediaPlayer()} | playbackState=${playerNotificationService.currentPlayer.playbackState}")</ID>
+    <ID>MaxLineLength:PlayerListener.kt$PlayerListener$Log.d(tag, "onPositionDiscontinuity: oldPosition=${oldPosition.positionMs}/${oldPosition.mediaItemIndex}, newPosition=${newPosition.positionMs}/${newPosition.mediaItemIndex}, isPlaying=${playerNotificationService.currentPlayer.isPlaying} reason=SEEK")</ID>
+    <ID>MaxLineLength:PlayerListener.kt$PlayerListener$Log.d(tag, "onPositionDiscontinuity: oldPosition=${oldPosition.positionMs}/${oldPosition.mediaItemIndex}, newPosition=${newPosition.positionMs}/${newPosition.mediaItemIndex}, isPlaying=${playerNotificationService.currentPlayer.isPlaying}, reason=$reason")</ID>
+    <ID>MaxLineLength:PlayerListener.kt$PlayerListener$playerNotificationService.handlePlayerPlaybackError(errorMessage)</ID>
+    <ID>MaxLineLength:PlayerListener.kt$PlayerListener$val playbackSession: PlaybackSession? = playerNotificationService.mediaProgressSyncer.currentPlaybackSession ?: playerNotificationService.currentPlaybackSession</ID>
+    <ID>MaxLineLength:PlayerNotificationListener.kt$PlayerNotificationListener$Log.d(tag, "Notification posted $notificationId, not starting foreground - onGoing=$onGoing | isForegroundService=$isForegroundService")</ID>
+    <ID>MaxLineLength:PlayerNotificationListener.kt$PlayerNotificationListener$class</ID>
+    <ID>MaxLineLength:PlayerNotificationListener.kt$PlayerNotificationListener$playerNotificationService.startForeground(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$"checkCurrentSessionProgress: Checking if playback session ${playbackSession.id} for server stream is still available"</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$"checkCurrentSessionProgress: Local library item server connection config is not saved ${playbackSession.serverConnectionConfigId}"</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$"checkCurrentSessionProgress: Media progress was updated since last play time updating from ${playbackSession.currentTime} to ${mediaProgress.currentTime}"</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$"checkCurrentSessionProgress: Playback session does not exist on server - start new playback session"</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$AbsLogger.info("PlayerNotificationService", "preparePlayer: Direct playing item ${currentPlaybackSession?.mediaItemId}.")</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$AbsLogger.info("PlayerNotificationService", "preparePlayer: Playing HLS stream of item ${currentPlaybackSession?.mediaItemId}.")</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$AbsLogger.info("PlayerNotificationService", "preparePlayer: Playing local item ${currentPlaybackSession?.mediaItemId}.")</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$AbsLogger.info("PlayerNotificationService", "preparePlayer: Started playback session for item ${currentPlaybackSession?.mediaItemId}. MediaPlayer ${currentPlaybackSession?.mediaPlayer}")</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$AbsLogger.info(tag, "onGetRoot: Reset Android Auto server items cache (${DeviceManager.serverConnectionConfigString})")</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService$setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService.&lt;no name provided&gt;$"Network capabilities changed. hasNetworkConnectivity=$hasNetworkConnectivity | isUnmeteredNetwork=$isUnmeteredNetwork"</ID>
+    <ID>MaxLineLength:PlayerNotificationService.kt$PlayerNotificationService.&lt;no name provided&gt;$// Note: In Android Auto for local cover images, setting the icon uri to a local path does not work (cover is blank)</ID>
+    <ID>MaxLineLength:SleepTimerManager.kt$SleepTimerManager$if</ID>
+    <ID>NestedBlockDepth:AbsAudioPlayer.kt$AbsAudioPlayer$@PluginMethod fun prepareLibraryItem(call: PluginCall)</ID>
+    <ID>NestedBlockDepth:AbsDownloader.kt$AbsDownloader$private fun startLibraryItemDownload(libraryItem: LibraryItem, localFolder: LocalFolder, episode:PodcastEpisode?)</ID>
+    <ID>NestedBlockDepth:AbsFileSystem.kt$AbsFileSystem$@PluginMethod fun deleteItem(call: PluginCall)</ID>
+    <ID>NestedBlockDepth:CastPlayer.kt$CastPlayer$private fun updateTimelineAndNotifyIfChanged(): Boolean</ID>
+    <ID>NestedBlockDepth:DbManager.kt$DbManager$fun cleanLocalMediaProgress()</ID>
+    <ID>NestedBlockDepth:DownloadItemManager.kt$DownloadItemManager$private fun checkDownloadItemPart(downloadItemPart: DownloadItemPart): DownloadCheckStatus</ID>
+    <ID>NestedBlockDepth:FolderScanner.kt$FolderScanner$private fun scanInternalDownloadItem( downloadItem: DownloadItem, cb: (DownloadItemScanResult?) -&gt; Unit )</ID>
+    <ID>NestedBlockDepth:MediaManager.kt$MediaManager$fun getSavedPlaybackRate():Float</ID>
+    <ID>NestedBlockDepth:MediaSessionCallback.kt$MediaSessionCallback$private fun handleCallMediaButton(intent: Intent): Boolean</ID>
+    <ID>NestedBlockDepth:PlayerListener.kt$PlayerListener$override fun onIsPlayingChanged(isPlaying: Boolean)</ID>
+    <ID>NestedBlockDepth:PlayerNotificationService.kt$PlayerNotificationService$override fun onLoadChildren( parentMediaId: String, result: Result&lt;MutableList&lt;MediaBrowserCompat.MediaItem&gt;&gt; )</ID>
+    <ID>PrintStackTrace:AbsAudioPlayer.kt$AbsAudioPlayer$e</ID>
+    <ID>PrintStackTrace:ApiHandler.kt$ApiHandler$e</ID>
+    <ID>ReturnCount:AbsAudioPlayer.kt$AbsAudioPlayer$@PluginMethod fun prepareLibraryItem(call: PluginCall)</ID>
+    <ID>ReturnCount:AbsDatabase.kt$AbsDatabase$@PluginMethod fun updateLocalMediaProgressFinished(call:PluginCall)</ID>
+    <ID>ReturnCount:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$override fun onResponse(call: Call, response: Response)</ID>
+    <ID>ReturnCount:CastPlayer.kt$CastPlayer$@SuppressLint("WrongConstant") private fun updateTracksAndSelectionsAndNotifyIfChanged(): Boolean</ID>
+    <ID>ReturnCount:DeviceClasses.kt$LocalFile$@JsonIgnore fun getEBookFormat():String?</ID>
+    <ID>ReturnCount:DeviceClasses.kt$LocalFile$@JsonIgnore fun isAudioFile():Boolean</ID>
+    <ID>ReturnCount:DeviceManager.kt$DeviceManager$fun checkConnectivity(ctx: Context): Boolean</ID>
+    <ID>ReturnCount:DeviceManager.kt$DeviceManager$fun isServerVersionGreaterThanOrEqualTo(compareVersion:String):Boolean</ID>
+    <ID>ReturnCount:DownloadItemManager.kt$DownloadItemManager$private fun checkDownloadItemPart(downloadItemPart: DownloadItemPart): DownloadCheckStatus</ID>
+    <ID>ReturnCount:FolderScanner.kt$FolderScanner$fun scanDownloadItem(downloadItem: DownloadItem, cb: (DownloadItemScanResult?) -&gt; Unit)</ID>
+    <ID>ReturnCount:LibraryItem.kt$LibraryItem$@JsonIgnore fun getCoverUri(): Uri</ID>
+    <ID>ReturnCount:LocalLibraryItem.kt$LocalLibraryItem$@JsonIgnore fun hasTracks(episode:PodcastEpisode?): Boolean</ID>
+    <ID>ReturnCount:MediaManager.kt$MediaManager$fun getFirstItem() : LibraryItemWrapper?</ID>
+    <ID>ReturnCount:MediaManager.kt$MediaManager$fun getSavedPlaybackRate():Float</ID>
+    <ID>ReturnCount:MediaProgressSyncer.kt$MediaProgressSyncer$fun sync(shouldSyncServer: Boolean, currentTime: Double, cb: (SyncResult?) -&gt; Unit)</ID>
+    <ID>ReturnCount:PlaybackSession.kt$PlaybackSession$@JsonIgnore fun getContentUri(audioTrack: AudioTrack): Uri</ID>
+    <ID>ReturnCount:PlaybackSession.kt$PlaybackSession$@JsonIgnore fun getCoverUri(ctx: Context): Uri</ID>
+    <ID>ReturnCount:PlayerNotificationService.kt$PlayerNotificationService$fun checkCurrentSessionProgress(seekBackTime: Long): Boolean</ID>
+    <ID>ReturnCount:PlayerNotificationService.kt$PlayerNotificationService$override fun onLoadChildren( parentMediaId: String, result: Result&lt;MutableList&lt;MediaBrowserCompat.MediaItem&gt;&gt; )</ID>
+    <ID>ReturnCount:SleepTimerManager.kt$SleepTimerManager$private fun checkShouldResetSleepTimer()</ID>
+    <ID>ReturnCount:SleepTimerManager.kt$SleepTimerManager$private fun getSleepTimerTimeRemainingSeconds(speed: Float = 1f): Int</ID>
+    <ID>ReturnCount:SleepTimerManager.kt$SleepTimerManager$private fun setSleepTimer(time: Long): Boolean</ID>
+    <ID>SpreadOperator:CastPlayer.kt$CastPlayer$(*tg)</ID>
+    <ID>SpreadOperator:CastPlayer.kt$CastPlayer$(*ts)</ID>
+    <ID>SpreadOperator:PlayerNotificationService.kt$PlayerNotificationService$(*customActionProviders.toTypedArray())</ID>
+    <ID>TooGenericExceptionCaught:AbMediaDescriptionAdapter.kt$AbMediaDescriptionAdapter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AbsAudioPlayer.kt$AbsAudioPlayer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AbsAudioPlayer.kt$AbsAudioPlayer$e:Exception</ID>
+    <ID>TooGenericExceptionCaught:ApiHandler.kt$ApiHandler$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ApiHandler.kt$ApiHandler.&lt;no name provided&gt;$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerNotificationService.kt$PlayerNotificationService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerNotificationService.kt$PlayerNotificationService$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerNotificationService.kt$PlayerNotificationService.&lt;no name provided&gt;$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:SecureStorage.kt$SecureStorage$e: Exception</ID>
+    <ID>TooManyFunctions:AbsAudioPlayer.kt$AbsAudioPlayer : Plugin</ID>
+    <ID>TooManyFunctions:AbsDatabase.kt$AbsDatabase : Plugin</ID>
+    <ID>TooManyFunctions:ApiHandler.kt$ApiHandler</ID>
+    <ID>TooManyFunctions:CastPlayer.kt$CastPlayer : BasePlayer</ID>
+    <ID>TooManyFunctions:CastPlayer.kt$CastPlayer$StatusListener : CallbackSessionManagerListenerProgressListener</ID>
+    <ID>TooManyFunctions:DbManager.kt$DbManager</ID>
+    <ID>TooManyFunctions:DownloadItemManager.kt$DownloadItemManager</ID>
+    <ID>TooManyFunctions:MediaEventManager.kt$MediaEventManager</ID>
+    <ID>TooManyFunctions:MediaManager.kt$MediaManager</ID>
+    <ID>TooManyFunctions:MediaSessionCallback.kt$MediaSessionCallback : Callback</ID>
+    <ID>TooManyFunctions:PlaybackSession.kt$PlaybackSession</ID>
+    <ID>TooManyFunctions:PlayerNotificationService.kt$PlayerNotificationService : MediaBrowserServiceCompat</ID>
+    <ID>TooManyFunctions:PlayerNotificationService.kt$PlayerNotificationService$ClientEventEmitter</ID>
+    <ID>TooManyFunctions:SleepTimerManager.kt$SleepTimerManager</ID>
+    <ID>UnusedParameter:LibraryAuthorItem.kt$LibraryAuthorItem$ctx: Context</ID>
+    <ID>UnusedParameter:LibraryAuthorItem.kt$LibraryAuthorItem$progress:MediaProgressWrapper?</ID>
+    <ID>UnusedParameter:LibraryItem.kt$LibraryItem$ctx: Context</ID>
+    <ID>UnusedParameter:LibrarySeriesItem.kt$LibrarySeriesItem$ctx: Context</ID>
+    <ID>UnusedParameter:LibrarySeriesItem.kt$LibrarySeriesItem$progress:MediaProgressWrapper?</ID>
+    <ID>UnusedPrivateMember:MediaManager.kt$MediaManager$private fun levenshtein(lhs : CharSequence, rhs : CharSequence) : Int</ID>
+    <ID>UnusedPrivateProperty:AbMediaDescriptionAdapter.kt$AbMediaDescriptionAdapter$private val tag = "MediaDescriptionAdapter"</ID>
+    <ID>UnusedPrivateProperty:FolderScanner.kt$FolderScanner$private var jacksonMapper = jacksonObjectMapper() .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())</ID>
+    <ID>VariableNaming:AbsFileSystem.kt$AbsFileSystem$private val TAG = "AbsFileSystem"</ID>
+    <ID>VariableNaming:AbsFileSystem.kt$AbsFileSystem$val REQUEST_CODE_SDCARD_ACCESS = 7</ID>
+    <ID>VariableNaming:AbsFileSystem.kt$AbsFileSystem$val REQUEST_CODE_SELECT_FOLDER = 6</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$/* package */ val PERMANENT_AVAILABLE_COMMANDS = Commands.Builder() .addAll( COMMAND_PLAY_PAUSE, COMMAND_PREPARE, COMMAND_STOP, COMMAND_SEEK_TO_DEFAULT_POSITION, COMMAND_SEEK_TO_MEDIA_ITEM, COMMAND_SET_REPEAT_MODE, COMMAND_SET_SPEED_AND_PITCH, COMMAND_GET_CURRENT_MEDIA_ITEM, COMMAND_GET_TIMELINE, COMMAND_GET_MEDIA_ITEMS_METADATA, COMMAND_SET_MEDIA_ITEMS_METADATA, COMMAND_CHANGE_MEDIA_ITEMS, COMMAND_GET_TRACKS) .build()</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val EMPTY_TRACK_ID_ARRAY = LongArray(0)</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val EMPTY_TRACK_SELECTION_ARRAY = TrackSelectionArray()</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val PROGRESS_REPORT_PERIOD_MS: Long = 1000</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val RENDERER_COUNT = 3</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val RENDERER_INDEX_AUDIO = 1</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val RENDERER_INDEX_TEXT = 2</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer$private val RENDERER_INDEX_VIDEO = 0</ID>
+    <ID>VariableNaming:CastPlayer.kt$CastPlayer.StatusListener$val TAG = "StatusListener"</ID>
+    <ID>VariableNaming:MainActivity.kt$MainActivity$val REQUEST_PERMISSIONS = 1</ID>
+    <ID>VariableNaming:MainActivity.kt$MainActivity$var PERMISSIONS_ALL = arrayOf( Manifest.permission.READ_EXTERNAL_STORAGE )</ID>
+    <ID>VariableNaming:MediaProgressSyncer.kt$MediaProgressSyncer$// Default sync interval when on a metered network. Reduced from 60s so // progress updates happen sooner when auto continuing playback. private val METERED_CONNECTION_SYNC_INTERVAL = 30000</ID>
+    <ID>VariableNaming:PlayerNotificationService.kt$PlayerNotificationService$// // MEDIA BROWSER STUFF (ANDROID AUTO) // private val VALID_MEDIA_BROWSERS = mutableListOf( "com.audiobookshelf.app", "com.audiobookshelf.app.debug", ANDROID_AUTO_PKG_NAME, ANDROID_AUTO_SIMULATOR_PKG_NAME, ANDROID_WEARABLE_PKG_NAME, ANDROID_GSEARCH_PKG_NAME, ANDROID_AUTOMOTIVE_PKG_NAME )</ID>
+    <ID>VariableNaming:PlayerNotificationService.kt$PlayerNotificationService$private val AUTO_MEDIA_ROOT = "/"</ID>
+    <ID>VariableNaming:PlayerNotificationService.kt$PlayerNotificationService$private val CONTINUE_ROOT = "__CONTINUE__"</ID>
+    <ID>VariableNaming:PlayerNotificationService.kt$PlayerNotificationService$private val DOWNLOADS_ROOT = "__DOWNLOADS__"</ID>
+    <ID>VariableNaming:PlayerNotificationService.kt$PlayerNotificationService$private val LIBRARIES_ROOT = "__LIBRARIES__"</ID>
+    <ID>VariableNaming:PlayerNotificationService.kt$PlayerNotificationService$private val RECENTLY_ROOT = "__RECENTLY__"</ID>
+    <ID>WildcardImport:AbMediaDescriptionAdapter.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:AbsAudioPlayer.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:AbsAudioPlayer.kt$import com.getcapacitor.*</ID>
+    <ID>WildcardImport:AbsDatabase.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:AbsDatabase.kt$import com.getcapacitor.*</ID>
+    <ID>WildcardImport:AbsDownloader.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:AbsFileSystem.kt$import com.anggrayudi.storage.file.*</ID>
+    <ID>WildcardImport:AbsFileSystem.kt$import com.getcapacitor.*</ID>
+    <ID>WildcardImport:ApiHandler.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:ApiHandler.kt$import okhttp3.*</ID>
+    <ID>WildcardImport:BrowseTree.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:CastManager.kt$import com.google.android.gms.cast.*</ID>
+    <ID>WildcardImport:CastManager.kt$import com.google.android.gms.cast.framework.*</ID>
+    <ID>WildcardImport:CastPlayer.kt$import com.google.android.exoplayer2.*</ID>
+    <ID>WildcardImport:CastPlayer.kt$import com.google.android.exoplayer2.Player.*</ID>
+    <ID>WildcardImport:CastPlayer.kt$import com.google.android.exoplayer2.util.*</ID>
+    <ID>WildcardImport:CastPlayer.kt$import com.google.android.gms.cast.*</ID>
+    <ID>WildcardImport:DataClasses.kt$import com.fasterxml.jackson.annotation.*</ID>
+    <ID>WildcardImport:DbManager.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:DeviceManager.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:FolderScanner.kt$import com.anggrayudi.storage.file.*</ID>
+    <ID>WildcardImport:FolderScanner.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:InternalDownloadManager.kt$import java.io.*</ID>
+    <ID>WildcardImport:InternalDownloadManager.kt$import okhttp3.*</ID>
+    <ID>WildcardImport:MediaEventManager.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:MediaManager.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:MediaSessionCallback.kt$import android.os.*</ID>
+    <ID>WildcardImport:PlaybackSession.kt$import com.audiobookshelf.app.player.*</ID>
+    <ID>WildcardImport:PlayerNotificationService.kt$import android.app.*</ID>
+    <ID>WildcardImport:PlayerNotificationService.kt$import android.net.*</ID>
+    <ID>WildcardImport:PlayerNotificationService.kt$import android.os.*</ID>
+    <ID>WildcardImport:PlayerNotificationService.kt$import com.audiobookshelf.app.data.*</ID>
+    <ID>WildcardImport:PlayerNotificationService.kt$import com.google.android.exoplayer2.*</ID>
+    <ID>WildcardImport:PlayerNotificationService.kt$import com.google.android.exoplayer2.upstream.*</ID>
+    <ID>WildcardImport:SleepTimerManager.kt$import android.os.*</ID>
+  </CurrentIssues>
+</SmellBaseline>
