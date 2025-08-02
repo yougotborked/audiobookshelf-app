@@ -96,10 +96,10 @@ class FolderScanner(var ctx: Context) {
       val file = File(downloadItemPart.finalDestinationPath)
       Log.d(tag, "Scan internal storage item created file ${file.name}")
 
-      if (file == null) {
+      if (!file.exists()) {
         Log.e(
                 tag,
-                "scanInternalDownloadItem: Null docFile for path ${downloadItemPart.finalDestinationPath}"
+                "scanInternalDownloadItem: Missing file for path ${downloadItemPart.finalDestinationPath}"
         )
       } else {
         if (downloadItemPart.audioTrack != null) {

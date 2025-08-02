@@ -6,9 +6,9 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.support.v4.media.MediaDescriptionCompat
 import android.util.Log
+import android.graphics.BitmapFactory
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import androidx.media.utils.MediaConstants
@@ -140,7 +140,9 @@ class LocalLibraryItem(
     var bitmap:Bitmap? = null
     if (coverContentUrl != null) {
       bitmap = if (Build.VERSION.SDK_INT < 28) {
-        MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
+        ctx.contentResolver.openInputStream(coverUri)?.use { input ->
+          BitmapFactory.decodeStream(input)
+        }
       } else {
         val source: ImageDecoder.Source = ImageDecoder.createSource(ctx.contentResolver, coverUri)
         ImageDecoder.decodeBitmap(source)
