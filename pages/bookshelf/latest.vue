@@ -78,8 +78,11 @@ export default {
         const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
         if (cached.length) {
           this.recentEpisodes = cached
+          this.totalEpisodes = cached.length
         } else {
+          const episodes = [...this.localEpisodes]
           const parseDate = (ep) => {
+            if (!ep) return 0
             let val = ep.publishedAt ?? ep.pubDate
             if (!val) return 0
             if (typeof val === 'string') {

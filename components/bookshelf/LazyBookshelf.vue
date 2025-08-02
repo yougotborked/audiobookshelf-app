@@ -237,7 +237,7 @@ export default {
       }
     },
     async loadPage(page) {
-      if (!this.currentLibraryId) {
+      if (this.networkConnected && !this.currentLibraryId) {
         console.error('[LazyBookshelf] loadPage current library id not set')
         return
       }
