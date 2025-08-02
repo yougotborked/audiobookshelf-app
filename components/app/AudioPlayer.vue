@@ -176,8 +176,8 @@ export default {
       if (!this.playbackSession || this.playbackSession.id !== val.id) {
         // Initialize the player UI when a session is restored or changed
         // so metadata like title and cover image are populated correctly.
-        this.onPlaybackSession(val)
-        return
+        // Skip loading state so the play button stays interactive.
+        this.onPlaybackSession(val, { isLoading: false })
       }
 
       this.totalDuration = Number((val.duration || 0).toFixed(2))
@@ -902,12 +902,12 @@ export default {
       this.timeupdate()
     },
     // When a playback session is started the native android/ios will send the session
-    onPlaybackSession(playbackSession) {
+    onPlaybackSession(playbackSession, { isLoading = true } = {}) {
       console.log('onPlaybackSession received', JSON.stringify(playbackSession))
       this.playbackSession = playbackSession
 
       this.isEnded = false
-      this.isLoading = true
+      this.isLoading = isLoading
       this.syncStatus = 0
       this.$store.commit('setPlaybackSession', this.playbackSession)
 
@@ -1025,7 +1025,7 @@ export default {
       this.init()
       const saved = this.$store.state.currentPlaybackSession
       if (saved) {
-        this.onPlaybackSession(saved)
+        this.onPlaybackSession(saved, { isLoading: false })
       }
     })
   },
