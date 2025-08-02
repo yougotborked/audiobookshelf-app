@@ -17,8 +17,10 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.DelicateCoroutinesApi
 
 @CapacitorPlugin(name = "AbsDatabase")
+@OptIn(DelicateCoroutinesApi::class)
 class AbsDatabase : Plugin() {
   val tag = "AbsDatabase"
   private var jacksonMapper = jacksonObjectMapper().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())

@@ -270,7 +270,7 @@ class CastManager constructor(val mainActivity:Activity) {
         Log.d(tag, "CAST SESSION STARTED ${castSession.castDevice?.friendlyName}")
         getSessionManager()?.removeSessionManagerListener(this, CastSession::class.java)
 
-        val castContext = CastContext.getSharedInstance(mainActivity)
+          val castContext = CastContext.getSharedInstance()
 
         playerNotificationService?.let {
           if (it.castPlayer == null) {
@@ -305,9 +305,9 @@ class CastManager constructor(val mainActivity:Activity) {
     }
   }
 
-  private fun getContext(): CastContext {
-    return CastContext.getSharedInstance(mainActivity)
-  }
+    private fun getContext(): CastContext {
+      return CastContext.getSharedInstance()
+    }
 
   private fun getSessionManager(): SessionManager? {
     return getContext().sessionManager
