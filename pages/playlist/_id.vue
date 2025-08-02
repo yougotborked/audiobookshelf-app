@@ -331,11 +331,11 @@ export default {
       if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
       const localItems = await this.$db.getLocalLibraryItems('podcast')
       for (const qi of this.playlist.items) {
-        const liId = qi.libraryItem.id
-        const epId = qi.episode.id
+        const liId = qi.libraryItemId || qi.libraryItem?.libraryItemId || qi.libraryItem?.id
+        const epId = qi.episodeId || qi.episode?.serverEpisodeId || qi.episode?.id
         const localLi = localItems.find((lli) => lli.libraryItemId === liId)
         const localEp = localLi?.media?.episodes?.find((ep) => ep.serverEpisodeId === epId)
-        if (!localEp) {
+        if (!localEp && liId && epId) {
           AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
         }
       }
