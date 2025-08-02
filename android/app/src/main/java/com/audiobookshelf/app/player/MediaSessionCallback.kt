@@ -272,7 +272,7 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
 
 
   private val mediaBtnHandler : Handler = @SuppressLint("HandlerLeak")
-  object : Handler(){
+  object : Handler(Looper.getMainLooper()){
     override fun handleMessage(msg: Message) {
       super.handleMessage(msg)
       if (2 == msg.what) {

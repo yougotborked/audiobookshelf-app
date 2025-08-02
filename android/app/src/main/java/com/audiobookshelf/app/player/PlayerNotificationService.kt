@@ -7,11 +7,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.*
 import android.os.*
-import android.provider.MediaStore
 import android.provider.Settings
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -262,12 +262,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               PendingIntent.getActivity(this, 0, sessionIntent, PendingIntent.FLAG_IMMUTABLE)
             }
 
-    mediaSession =
-            MediaSessionCompat(this, tag).apply {
-              setSessionActivity(sessionActivityPendingIntent)
-              setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
-              isActive = true
-            }
+      mediaSession =
+              MediaSessionCompat(this, tag).apply {
+                setSessionActivity(sessionActivityPendingIntent)
+                isActive = true
+              }
 
     val mediaController = MediaControllerCompat(ctx, mediaSession.sessionToken)
 
@@ -324,16 +323,18 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                 // Local covers get bitmap
                 // Note: In Android Auto for local cover images, setting the icon uri to a local path does not work (cover is blank)
                 // so we create and set the bitmap here instead of AbMediaDescriptionAdapter
-                if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
-                  bitmap =
-                    if (Build.VERSION.SDK_INT < 28) {
-                      MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
-                    } else {
-                      val source: ImageDecoder.Source =
-                        ImageDecoder.createSource(ctx.contentResolver, coverUri)
-                      ImageDecoder.decodeBitmap(source)
-                    }
-                }
+                  if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
+                    bitmap =
+                      if (Build.VERSION.SDK_INT < 28) {
+                        ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+                          BitmapFactory.decodeStream(inputStream)
+                        }
+                      } else {
+                        val source: ImageDecoder.Source =
+                          ImageDecoder.createSource(ctx.contentResolver, coverUri)
+                        ImageDecoder.decodeBitmap(source)
+                      }
+                  }
 
                 // Fix for local images crashing on Android 11 for specific devices
                 // https://stackoverflow.com/questions/64186578/android-11-mediastyle-notification-crash/64232958#64232958
@@ -948,25 +949,25 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
   }
 
-  fun skipToPrevious() {
-    if (currentPlayer.hasPrevious()) {
-      currentPlayer.seekToPrevious()
-    } else if (queueIndex > 0) {
-      playPreviousInQueue()
-    } else {
-      clientEventEmitter?.onSkipPreviousRequest()
+    fun skipToPrevious() {
+      if (currentPlayer.hasPreviousMediaItem()) {
+        currentPlayer.seekToPrevious()
+      } else if (queueIndex > 0) {
+        playPreviousInQueue()
+      } else {
+        clientEventEmitter?.onSkipPreviousRequest()
+      }
     }
-  }
 
-  fun skipToNext() {
-    if (currentPlayer.hasNext()) {
-      currentPlayer.seekToNext()
-    } else if (queueIndex + 1 < playQueue.size) {
-      playNextInQueue()
-    } else {
-      clientEventEmitter?.onSkipNextRequest()
+    fun skipToNext() {
+      if (currentPlayer.hasNextMediaItem()) {
+        currentPlayer.seekToNext()
+      } else if (queueIndex + 1 < playQueue.size) {
+        playNextInQueue()
+      } else {
+        clientEventEmitter?.onSkipNextRequest()
+      }
     }
-  }
 
   fun jumpForward() {
     seekForward(deviceSettings.jumpForwardTimeMs)

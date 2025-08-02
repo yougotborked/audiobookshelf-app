@@ -3,10 +3,10 @@ package com.audiobookshelf.app.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.support.v4.media.MediaDescriptionCompat
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -138,14 +138,16 @@ class LocalLibraryItem(
     val coverUri = getCoverUri(ctx)
 
     var bitmap:Bitmap? = null
-    if (coverContentUrl != null) {
-      bitmap = if (Build.VERSION.SDK_INT < 28) {
-        MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
-      } else {
-        val source: ImageDecoder.Source = ImageDecoder.createSource(ctx.contentResolver, coverUri)
-        ImageDecoder.decodeBitmap(source)
+      if (coverContentUrl != null) {
+        bitmap = if (Build.VERSION.SDK_INT < 28) {
+          ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+          }
+        } else {
+          val source: ImageDecoder.Source = ImageDecoder.createSource(ctx.contentResolver, coverUri)
+          ImageDecoder.decodeBitmap(source)
+        }
       }
-    }
 
     val extras = Bundle()
     extras.putLong(

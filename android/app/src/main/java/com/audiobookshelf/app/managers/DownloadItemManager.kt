@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.DelicateCoroutinesApi
 
 /** Manages download items and their parts. */
 class DownloadItemManager(
@@ -147,6 +148,7 @@ class DownloadItemManager(
   }
 
   /** Starts watching the downloads. */
+  @OptIn(DelicateCoroutinesApi::class)
   private fun startWatchingDownloads() {
     if (isDownloading) return // Already watching
 
@@ -341,6 +343,7 @@ class DownloadItemManager(
   }
 
   /** Checks if a download item is finished and processes it. */
+  @OptIn(DelicateCoroutinesApi::class)
   private fun checkDownloadItemFinished(downloadItem: DownloadItem) {
     if (downloadItem.isDownloadFinished) {
       Log.i(tag, "Download Item finished ${downloadItem.media.metadata.title}")
