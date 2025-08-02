@@ -7,7 +7,10 @@
         </div>
         <div class="item-table-content h-full px-2 flex items-center">
           <div class="max-w-full">
-            <p class="truncate block text-sm">{{ itemTitle }} <span v-if="localLibraryItem" class="material-symbols text-success text-base align-text-bottom">download_done</span></p>
+            <div class="flex items-center max-w-full">
+              <p class="truncate text-sm flex-grow">{{ itemTitle }}</p>
+              <span v-if="localLibraryItem" class="material-symbols text-success text-base flex-shrink-0 ml-1">download_done</span>
+            </div>
             <p v-if="authorName" class="truncate block text-fg-muted text-xs">{{ authorName }}</p>
             <p class="text-xxs text-fg-muted">{{ itemDuration }}</p>
           </div>
