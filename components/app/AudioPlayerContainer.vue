@@ -177,9 +177,14 @@ export default {
       let episodeId = this.serverEpisodeId
       if (!libraryItemId) {
         const session = this.$store.state.currentPlaybackSession
-        if (session?.libraryItemId && !session.libraryItemId.startsWith('local')) {
-          libraryItemId = session.libraryItemId
-          episodeId = session.episodeId
+        if (session) {
+          if (session.libraryItemId && !session.libraryItemId.startsWith('local')) {
+            libraryItemId = session.libraryItemId
+            episodeId = session.episodeId
+          } else if (session.localLibraryItem?.libraryItemId) {
+            libraryItemId = session.localLibraryItem.libraryItemId
+            episodeId = session.localEpisode?.serverEpisodeId || null
+          }
         }
       }
       if (!libraryItemId) {
@@ -206,9 +211,7 @@ export default {
             console.log('Library item play response', JSON.stringify(data))
             this.serverLibraryItemId = libraryItemId
             this.serverEpisodeId = episodeId
-            if (this.$store.state.isCasting) {
-              AbsAudioPlayer.requestSession()
-            }
+            AbsAudioPlayer.requestSession()
           }
         })
         .catch((error) => {
