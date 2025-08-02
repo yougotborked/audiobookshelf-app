@@ -184,9 +184,16 @@ export default {
       const fullQueryString = `?${sfQueryString}limit=${this.booksPerFetch}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
 
       let payload
-      if (this.entityName === 'playlists' && !this.networkConnected) {
-        const cached = await this.$localStore.getCachedPlaylists(this.currentLibraryId)
-        payload = { results: cached.slice(startIndex, startIndex + this.booksPerFetch), total: cached.length }
+      if (!this.networkConnected) {
+        if (this.entityName === 'playlists') {
+          const cached = await this.$localStore.getCachedPlaylists(this.currentLibraryId)
+          payload = { results: cached.slice(startIndex, startIndex + this.booksPerFetch), total: cached.length }
+        } else if (this.entityName === 'books' || this.entityName === 'series-books') {
+          const results = this.localLibraryItems.slice(startIndex, startIndex + this.booksPerFetch)
+          payload = { results, total: this.localLibraryItems.length }
+        } else {
+          payload = { results: [], total: 0 }
+        }
       } else {
         payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}${fullQueryString}`).catch((error) => {
           console.error('failed to fetch books', error)
