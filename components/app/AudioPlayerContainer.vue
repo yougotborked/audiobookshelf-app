@@ -36,6 +36,7 @@ export default {
       onSleepTimerEndedListener: null,
       onSleepTimerSetListener: null,
       onMediaPlayerChangedListener: null,
+      onCastAvailableUpdateListener: null,
       onSkipNextRequestListener: null,
       onSkipPreviousRequestListener: null,
       sleepInterval: null,
@@ -172,25 +173,39 @@ export default {
       }
     },
     castLocalItem() {
-      if (!this.serverLibraryItemId) {
-        this.$toast.error(`Cannot cast locally downloaded media`)
-      } else {
-        // Change to server library item
-        this.playServerLibraryItemAndCast(this.serverLibraryItemId, this.serverEpisodeId)
+      let libraryItemId = this.serverLibraryItemId
+      let episodeId = this.serverEpisodeId
+      if (!libraryItemId) {
+        const session = this.$store.state.currentPlaybackSession
+        if (session?.libraryItemId && !session.libraryItemId.startsWith('local')) {
+          libraryItemId = session.libraryItemId
+          episodeId = session.episodeId
+        }
       }
+      if (!libraryItemId) {
+        this.$toast.error(`Cannot cast locally downloaded media`)
+        return
+      }
+      // Change to server library item
+      this.playServerLibraryItemAndCast(libraryItemId, episodeId)
     },
     playServerLibraryItemAndCast(libraryItemId, episodeId) {
       var playbackRate = 1
       if (this.$refs.audioPlayer) {
         playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
       }
-      AbsAudioPlayer.prepareLibraryItem({ libraryItemId, episodeId, playWhenReady: false, playbackRate })
+      const startTime = Math.floor(this.currentTime || 0)
+      const payload = { libraryItemId, episodeId, playWhenReady: false, playbackRate }
+      if (startTime) payload.startTime = startTime
+      AbsAudioPlayer.prepareLibraryItem(payload)
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
             this.$toast.error(errorMsg)
           } else {
             console.log('Library item play response', JSON.stringify(data))
+            this.serverLibraryItemId = libraryItemId
+            this.serverEpisodeId = episodeId
             if (this.$store.state.isCasting) {
               AbsAudioPlayer.requestSession()
             }
@@ -435,8 +450,15 @@ export default {
     this.onSleepTimerEndedListener = await AbsAudioPlayer.addListener('onSleepTimerEnded', this.onSleepTimerEnded)
     this.onSleepTimerSetListener = await AbsAudioPlayer.addListener('onSleepTimerSet', this.onSleepTimerSet)
     this.onMediaPlayerChangedListener = await AbsAudioPlayer.addListener('onMediaPlayerChanged', this.onMediaPlayerChanged)
+    this.onCastAvailableUpdateListener = await AbsAudioPlayer.addListener('onCastAvailableUpdate', ({ value }) => {
+      this.$store.commit('setCastAvailable', value)
+    })
     this.onSkipNextRequestListener = await AbsAudioPlayer.addListener('onSkipNextRequest', this.onSkipNextRequest)
     this.onSkipPreviousRequestListener = await AbsAudioPlayer.addListener('onSkipPreviousRequest', this.onSkipPreviousRequest)
+
+    AbsAudioPlayer.getIsCastAvailable().then(({ value }) => {
+      this.$store.commit('setCastAvailable', value)
+    })
 
     this.playbackSpeed = this.$store.getters['user/getUserSetting']('playbackRate')
     console.log(`[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`)
@@ -463,6 +485,7 @@ export default {
     this.onSleepTimerEndedListener?.remove()
     this.onSleepTimerSetListener?.remove()
     this.onMediaPlayerChangedListener?.remove()
+    this.onCastAvailableUpdateListener?.remove()
     this.onSkipNextRequestListener?.remove()
     this.onSkipPreviousRequestListener?.remove()
 
