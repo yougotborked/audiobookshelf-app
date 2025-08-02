@@ -73,8 +73,30 @@ export default {
       this.processing = true
       if (!this.networkConnected) {
         const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
-        this.recentEpisodes = cached
-        this.totalEpisodes = cached.length
+        if (cached.length) {
+          this.recentEpisodes = cached
+          this.totalEpisodes = cached.length
+        } else {
+          const episodes = [...this.localEpisodes]
+          const parseDate = (ep) => {
+            if (!ep) return 0
+            let val = ep.publishedAt ?? ep.pubDate
+            if (!val) return 0
+            if (typeof val === 'string') {
+              const num = Number(val)
+              if (!isNaN(num)) val = num
+            }
+            if (typeof val === 'number') {
+              if (val < 1e12) val *= 1000
+              return val
+            }
+            const parsed = Date.parse(val)
+            return isNaN(parsed) ? 0 : parsed
+          }
+          episodes.sort((a, b) => parseDate(b) - parseDate(a))
+          this.recentEpisodes = episodes
+          this.totalEpisodes = episodes.length
+        }
         this.processing = false
         return
       }
@@ -114,9 +136,9 @@ export default {
       }
     }
   },
-  mounted() {
+  async mounted() {
+    await this.loadLocalPodcastLibraryItems()
     this.loadRecentEpisodes()
-    this.loadLocalPodcastLibraryItems()
     this.$eventBus.$on('library-changed', this.libraryChanged)
     this.$eventBus.$on('new-local-library-item', this.newLocalLibraryItem)
   },

@@ -323,6 +323,7 @@ export default {
       }
     },
     async checkAutoDownload() {
+      if (!this.networkConnected) return
       if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
       const localItems = await this.$db.getLocalLibraryItems('podcast')
       for (const qi of this.playlist.items) {
