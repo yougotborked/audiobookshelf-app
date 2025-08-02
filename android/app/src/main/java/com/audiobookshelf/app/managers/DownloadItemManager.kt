@@ -21,8 +21,8 @@ import com.getcapacitor.JSObject
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,6 +64,8 @@ class DownloadItemManager(
   companion object {
     var isDownloading: Boolean = false
   }
+
+  private val scope = CoroutineScope(Dispatchers.IO)
 
   /** Adds a download item to the queue and starts processing the queue. */
   fun addDownloadItem(downloadItem: DownloadItem) {
@@ -150,7 +152,7 @@ class DownloadItemManager(
   private fun startWatchingDownloads() {
     if (isDownloading) return // Already watching
 
-    GlobalScope.launch(Dispatchers.IO) {
+    scope.launch {
       Log.d(tag, "Starting watching downloads")
       isDownloading = true
 
@@ -345,7 +347,7 @@ class DownloadItemManager(
     if (downloadItem.isDownloadFinished) {
       Log.i(tag, "Download Item finished ${downloadItem.media.metadata.title}")
 
-      GlobalScope.launch(Dispatchers.IO) {
+      scope.launch {
         folderScanner.scanDownloadItem(downloadItem) { downloadItemScanResult ->
           Log.d(
                   tag,

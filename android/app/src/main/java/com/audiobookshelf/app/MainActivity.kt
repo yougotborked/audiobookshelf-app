@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.util.Log
 import android.view.ViewGroup
 import android.view.WindowInsets
+import androidx.core.view.WindowInsetsCompat
 import android.webkit.WebView
 import androidx.core.app.ActivityCompat
 import androidx.core.view.updateLayoutParams
@@ -65,12 +66,9 @@ class MainActivity : BridgeActivity() {
         Log.d(tag, "safe sysInsets: $sysInsets")
         arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
       } else {
-        arrayOf(
-          insets.systemWindowInsetLeft,
-          insets.systemWindowInsetTop,
-          insets.systemWindowInsetRight,
-          insets.systemWindowInsetBottom
-        )
+        val sysInsets = WindowInsetsCompat.toWindowInsetsCompat(insets, v)
+          .getInsets(WindowInsetsCompat.Type.systemBars())
+        arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
       }
 
       // Inject as CSS variables
