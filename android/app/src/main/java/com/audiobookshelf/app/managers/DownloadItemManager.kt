@@ -21,8 +21,9 @@ import com.getcapacitor.JSObject
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -49,6 +50,8 @@ class DownloadItemManager(
           mutableListOf() // All pending and downloading items
   var currentDownloadItemParts: MutableList<DownloadItemPart> =
           mutableListOf() // Item parts currently being downloaded
+
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
   interface DownloadEventEmitter {
     fun onDownloadItem(downloadItem: DownloadItem)
@@ -150,9 +153,9 @@ class DownloadItemManager(
   private fun startWatchingDownloads() {
     if (isDownloading) return // Already watching
 
-    GlobalScope.launch(Dispatchers.IO) {
-      Log.d(tag, "Starting watching downloads")
-      isDownloading = true
+      scope.launch {
+        Log.d(tag, "Starting watching downloads")
+        isDownloading = true
 
       while (currentDownloadItemParts.isNotEmpty()) {
         val itemParts = currentDownloadItemParts.filter { !it.isMoving }
@@ -345,8 +348,8 @@ class DownloadItemManager(
     if (downloadItem.isDownloadFinished) {
       Log.i(tag, "Download Item finished ${downloadItem.media.metadata.title}")
 
-      GlobalScope.launch(Dispatchers.IO) {
-        folderScanner.scanDownloadItem(downloadItem) { downloadItemScanResult ->
+        scope.launch {
+          folderScanner.scanDownloadItem(downloadItem) { downloadItemScanResult ->
           Log.d(
                   tag,
                   "Item download complete ${downloadItem.itemTitle} | local library item id: ${downloadItemScanResult?.localLibraryItem?.id}"

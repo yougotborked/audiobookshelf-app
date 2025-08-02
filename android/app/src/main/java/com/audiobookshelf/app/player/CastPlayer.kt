@@ -724,9 +724,10 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     remoteMediaClient?.stop()
   }
 
-  override fun stop(reset: Boolean) {
-    stop()
-  }
+    @Deprecated("Deprecated in Player")
+    override fun stop(reset: Boolean) {
+      stop()
+    }
 
   override fun release() {
     val sessionManager = castContext.sessionManager
