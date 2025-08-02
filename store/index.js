@@ -230,6 +230,13 @@ export const actions = {
 export const mutations = {
   setDeviceData(state, deviceData) {
     state.deviceData = deviceData
+
+    // Ensure auto download timer reflects the "auto cache unplayed episodes" setting
+    if (deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) {
+      this.dispatch('startAutoDownloadTimer')
+    } else {
+      this.dispatch('stopAutoDownloadTimer')
+    }
   },
   setLastBookshelfScrollData(state, { scrollTop, path, name }) {
     state.lastBookshelfScrollData[name] = { scrollTop, path }
