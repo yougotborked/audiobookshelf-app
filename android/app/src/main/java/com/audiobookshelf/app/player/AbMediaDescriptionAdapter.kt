@@ -38,36 +38,32 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
     val albumBitmap = controller.metadata.description.iconBitmap
 
     // For local cover images, bitmap is set in PlayerNotificationService TimelineQueueNavigator.getMediaDescription
-    if (albumBitmap != null) {
-      return albumBitmap
+    albumBitmap?.let { return it }
+
+    if (currentIconUri == albumArtUri && currentBitmap != null) {
+      return currentBitmap
     }
 
-    return if (currentIconUri != albumArtUri || currentBitmap == null) {
-      // Cache the bitmap for the current audiobook so that successive calls to
-      // `getCurrentLargeIcon` don't cause the bitmap to be recreated.
-      currentIconUri = albumArtUri
+    // Cache the bitmap for the current audiobook so that successive calls to
+    // `getCurrentLargeIcon` don't cause the bitmap to be recreated.
+    currentIconUri = albumArtUri
 
-      if (currentIconUri.toString().startsWith("content://")) {
-        currentBitmap = if (Build.VERSION.SDK_INT < 28) {
-          @Suppress("DEPRECATION")
-          MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
-        } else {
-          val source: ImageDecoder.Source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
-          ImageDecoder.decodeBitmap(source)
-        }
-        currentBitmap
+    if (currentIconUri.toString().startsWith("content://")) {
+      currentBitmap = if (Build.VERSION.SDK_INT < 28) {
+        @Suppress("DEPRECATION")
+        MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
       } else {
-        serviceScope.launch {
-          currentBitmap = albumArtUri?.let {
-            resolveUriAsBitmap(it)
-          }
-          currentBitmap?.let { callback.onBitmap(it) }
-        }
-        null
+        val source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
+        ImageDecoder.decodeBitmap(source)
       }
-    } else {
-      currentBitmap
+      return currentBitmap
     }
+
+    serviceScope.launch {
+      currentBitmap = albumArtUri?.let { resolveUriAsBitmap(it) }
+      currentBitmap?.let { callback.onBitmap(it) }
+    }
+    return null
   }
 
   private suspend fun resolveUriAsBitmap(uri: Uri): Bitmap? {
