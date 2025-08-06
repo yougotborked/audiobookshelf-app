@@ -957,6 +957,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     } else {
       clientEventEmitter?.onSkipPreviousRequest()
     }
+  }
+    
 
   fun skipToNext() {
     if (currentPlayer.hasNextMediaItem()) {
@@ -966,6 +968,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     } else {
       clientEventEmitter?.onSkipNextRequest()
     }
+  }
 
   fun jumpForward() {
     seekForward(deviceSettings.jumpForwardTimeMs)
