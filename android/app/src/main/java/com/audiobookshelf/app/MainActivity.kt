@@ -60,17 +60,22 @@ class MainActivity : BridgeActivity() {
     // See: https://developer.android.com/develop/ui/views/layout/edge-to-edge
     val webView: WebView = findViewById(R.id.webview)
     webView.setOnApplyWindowInsetsListener { v, insets ->
-      val (left, top, right, bottom) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      val left: Int
+      val top: Int
+      val right: Int
+      val bottom: Int
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         val sysInsets = insets.getInsets(WindowInsets.Type.systemBars())
         Log.d(tag, "safe sysInsets: $sysInsets")
-        arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
+        left = sysInsets.left
+        top = sysInsets.top
+        right = sysInsets.right
+        bottom = sysInsets.bottom
       } else {
-        arrayOf(
-          insets.systemWindowInsetLeft,
-          insets.systemWindowInsetTop,
-          insets.systemWindowInsetRight,
-          insets.systemWindowInsetBottom
-        )
+        left = insets.systemWindowInsetLeft
+        top = insets.systemWindowInsetTop
+        right = insets.systemWindowInsetRight
+        bottom = insets.systemWindowInsetBottom
       }
 
       // Inject as CSS variables

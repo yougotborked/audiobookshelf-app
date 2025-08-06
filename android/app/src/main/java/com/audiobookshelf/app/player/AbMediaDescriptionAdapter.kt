@@ -38,36 +38,33 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
     val albumBitmap = controller.metadata.description.iconBitmap
 
     // For local cover images, bitmap is set in PlayerNotificationService TimelineQueueNavigator.getMediaDescription
-    if (albumBitmap != null) {
-      return albumBitmap
-    }
+    albumBitmap?.let { return it }
 
-    return if (currentIconUri != albumArtUri || currentBitmap == null) {
+    var result: Bitmap? = null
+    if (currentIconUri == albumArtUri && currentBitmap != null) {
+      result = currentBitmap
+    } else {
       // Cache the bitmap for the current audiobook so that successive calls to
       // `getCurrentLargeIcon` don't cause the bitmap to be recreated.
       currentIconUri = albumArtUri
 
-      if (currentIconUri.toString().startsWith("content://")) {
+      if (currentIconUri?.toString()?.startsWith("content://") == true) {
         currentBitmap = if (Build.VERSION.SDK_INT < 28) {
           @Suppress("DEPRECATION")
           MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
         } else {
-          val source: ImageDecoder.Source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
+          val source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
           ImageDecoder.decodeBitmap(source)
         }
-        currentBitmap
+        result = currentBitmap
       } else {
         serviceScope.launch {
-          currentBitmap = albumArtUri?.let {
-            resolveUriAsBitmap(it)
-          }
+          currentBitmap = albumArtUri?.let { resolveUriAsBitmap(it) }
           currentBitmap?.let { callback.onBitmap(it) }
         }
-        null
       }
-    } else {
-      currentBitmap
     }
+    return result
   }
 
   private suspend fun resolveUriAsBitmap(uri: Uri): Bitmap? {
