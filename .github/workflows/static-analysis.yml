@@ -31,8 +31,8 @@ jobs:
       - name: install dependencies
         run: npm ci
 
-      - name: sync Capacitor plugins
-        run: npx cap sync
+      - name: build web assets and sync Capacitor plugins
+        run: npm run sync
 
       - name: run static analysis
         run: ./android/gradlew ktlintCheck detekt lint -p android --no-daemon
