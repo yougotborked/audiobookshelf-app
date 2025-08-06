@@ -49,13 +49,14 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
       currentIconUri = albumArtUri
 
       if (currentIconUri?.toString()?.startsWith("content://") == true) {
-        currentBitmap = if (Build.VERSION.SDK_INT < 28) {
-          @Suppress("DEPRECATION")
-          MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
-        } else {
-          val source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
-          ImageDecoder.decodeBitmap(source)
-        }
+        currentBitmap =
+          if (Build.VERSION.SDK_INT < 28) {
+            @Suppress("DEPRECATION")
+            MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
+          } else {
+            val source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
+            ImageDecoder.decodeBitmap(source)
+          }
         result = currentBitmap
       } else {
         serviceScope.launch {

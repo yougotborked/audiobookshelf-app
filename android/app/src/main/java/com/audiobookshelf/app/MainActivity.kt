@@ -80,12 +80,13 @@ class MainActivity : BridgeActivity() {
 
       // Inject as CSS variables
       // NOTE: Possibly able to use in the future to support edge-to-edge better.
-       val js = """
-       document.documentElement.style.setProperty('--safe-area-inset-top', '${top}px');
-       document.documentElement.style.setProperty('--safe-area-inset-bottom', '${bottom}px');
-       document.documentElement.style.setProperty('--safe-area-inset-left', '${left}px');
-       document.documentElement.style.setProperty('--safe-area-inset-right', '${right}px');
-      """.trimIndent()
+      val js =
+        """
+        document.documentElement.style.setProperty('--safe-area-inset-top', '${top}px');
+        document.documentElement.style.setProperty('--safe-area-inset-bottom', '${bottom}px');
+        document.documentElement.style.setProperty('--safe-area-inset-left', '${left}px');
+        document.documentElement.style.setProperty('--safe-area-inset-right', '${right}px');
+        """.trimIndent()
       webView.evaluateJavascript(js, null)
 
       // Set margins
@@ -105,9 +106,11 @@ class MainActivity : BridgeActivity() {
 
     val permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
     if (permission != PackageManager.PERMISSION_GRANTED) {
-      ActivityCompat.requestPermissions(this,
+      ActivityCompat.requestPermissions(
+        this,
         PERMISSIONS_ALL,
-        REQUEST_PERMISSIONS)
+        REQUEST_PERMISSIONS,
+      )
     }
   }
 
@@ -119,23 +122,27 @@ class MainActivity : BridgeActivity() {
     super.onPostCreate(savedInstanceState)
     Log.d(tag, "onPostCreate MainActivity")
 
-    mConnection = object : ServiceConnection {
-      override fun onServiceDisconnected(name: ComponentName) {
-        Log.w(tag, "Service Disconnected $name")
-        mBounded = false
+    mConnection =
+      object : ServiceConnection {
+        override fun onServiceDisconnected(name: ComponentName) {
+          Log.w(tag, "Service Disconnected $name")
+          mBounded = false
+        }
+
+        override fun onServiceConnected(
+          name: ComponentName,
+          service: IBinder,
+        ) {
+          Log.d(tag, "Service Connected $name")
+
+          mBounded = true
+          val mLocalBinder = service as PlayerNotificationService.LocalBinder
+          foregroundService = mLocalBinder.getService()
+
+          // Let NativeAudio know foreground service is ready and setup event listener
+          pluginCallback()
+        }
       }
-
-      override fun onServiceConnected(name: ComponentName, service: IBinder) {
-        Log.d(tag, "Service Connected $name")
-
-        mBounded = true
-        val mLocalBinder = service as PlayerNotificationService.LocalBinder
-        foregroundService = mLocalBinder.getService()
-
-        // Let NativeAudio know foreground service is ready and setup event listener
-        pluginCallback()
-      }
-    }
 
     Intent(this, PlayerNotificationService::class.java).also { intent ->
       Log.d(tag, "Binding PlayerNotificationService")
@@ -143,14 +150,14 @@ class MainActivity : BridgeActivity() {
     }
   }
 
-  fun isPlayerNotificationServiceInitialized():Boolean {
+  fun isPlayerNotificationServiceInitialized(): Boolean {
     return ::foregroundService.isInitialized
   }
 
   fun stopMyService() {
     if (mBounded) {
-      mConnection.let { unbindService(it) };
-      mBounded = false;
+      mConnection.let { unbindService(it) }
+      mBounded = false
     }
     val stopIntent = Intent(this, PlayerNotificationService::class.java)
     stopService(stopIntent)
@@ -167,13 +174,21 @@ class MainActivity : BridgeActivity() {
     storageHelper.onRestoreInstanceState(savedInstanceState)
   }
 
-  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+  override fun onActivityResult(
+    requestCode: Int,
+    resultCode: Int,
+    data: Intent?,
+  ) {
     super.onActivityResult(requestCode, resultCode, data)
     // Mandatory for Activity, but not for Fragment & ComponentActivity
     storageHelper.storage.onActivityResult(requestCode, resultCode, data)
   }
 
-  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+  override fun onRequestPermissionsResult(
+    requestCode: Int,
+    permissions: Array<String>,
+    grantResults: IntArray,
+  ) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     Log.d(tag, "onRequestPermissionResult $requestCode")
     permissions.forEach { Log.d(tag, "PERMISSION $it") }
