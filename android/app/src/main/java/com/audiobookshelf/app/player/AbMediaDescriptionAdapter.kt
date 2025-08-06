@@ -3,9 +3,9 @@ package com.audiobookshelf.app.player
 import android.app.PendingIntent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.support.v4.media.session.MediaControllerCompat
 import com.audiobookshelf.app.BuildConfig
 import com.audiobookshelf.app.R
@@ -49,8 +49,9 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
 
       if (currentIconUri.toString().startsWith("content://")) {
         currentBitmap = if (Build.VERSION.SDK_INT < 28) {
-          @Suppress("DEPRECATION")
-          MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
+          playerNotificationService.contentResolver.openInputStream(currentIconUri!!)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+          }
         } else {
           val source: ImageDecoder.Source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
           ImageDecoder.decodeBitmap(source)
