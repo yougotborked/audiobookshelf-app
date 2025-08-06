@@ -1,0 +1,38 @@
+name: Static Analysis
+
+on:
+  push:
+    paths-ignore:
+      - 'ios/**'
+      - 'readme.md'
+  pull_request:
+    paths-ignore:
+      - 'ios/**'
+      - 'readme.md'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout sources
+        uses: actions/checkout@v3
+
+      - name: use Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: install dependencies
+        run: npm ci
+
+      - name: build web assets and sync Capacitor plugins
+        run: npm run sync
+
+      - name: run static analysis
+        run: ./android/gradlew ktlintCheck detekt lint -p android --no-daemon
