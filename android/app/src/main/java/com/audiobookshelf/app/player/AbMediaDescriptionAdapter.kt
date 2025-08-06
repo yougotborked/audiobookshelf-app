@@ -40,30 +40,31 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
     // For local cover images, bitmap is set in PlayerNotificationService TimelineQueueNavigator.getMediaDescription
     albumBitmap?.let { return it }
 
+    var result: Bitmap? = null
     if (currentIconUri == albumArtUri && currentBitmap != null) {
-      return currentBitmap
-    }
+      result = currentBitmap
+    } else {
+      // Cache the bitmap for the current audiobook so that successive calls to
+      // `getCurrentLargeIcon` don't cause the bitmap to be recreated.
+      currentIconUri = albumArtUri
 
-    // Cache the bitmap for the current audiobook so that successive calls to
-    // `getCurrentLargeIcon` don't cause the bitmap to be recreated.
-    currentIconUri = albumArtUri
-
-    if (currentIconUri.toString().startsWith("content://")) {
-      currentBitmap = if (Build.VERSION.SDK_INT < 28) {
-        @Suppress("DEPRECATION")
-        MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
+      if (currentIconUri?.toString()?.startsWith("content://") == true) {
+        currentBitmap = if (Build.VERSION.SDK_INT < 28) {
+          @Suppress("DEPRECATION")
+          MediaStore.Images.Media.getBitmap(playerNotificationService.contentResolver, currentIconUri)
+        } else {
+          val source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
+          ImageDecoder.decodeBitmap(source)
+        }
+        result = currentBitmap
       } else {
-        val source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)
-        ImageDecoder.decodeBitmap(source)
+        serviceScope.launch {
+          currentBitmap = albumArtUri?.let { resolveUriAsBitmap(it) }
+          currentBitmap?.let { callback.onBitmap(it) }
+        }
       }
-      return currentBitmap
     }
-
-    serviceScope.launch {
-      currentBitmap = albumArtUri?.let { resolveUriAsBitmap(it) }
-      currentBitmap?.let { callback.onBitmap(it) }
-    }
-    return null
+    return result
   }
 
   private suspend fun resolveUriAsBitmap(uri: Uri): Bitmap? {
