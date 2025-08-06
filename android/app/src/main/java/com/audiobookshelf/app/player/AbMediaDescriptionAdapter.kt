@@ -49,8 +49,8 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
 
       if (currentIconUri.toString().startsWith("content://")) {
         currentBitmap = if (Build.VERSION.SDK_INT < 28) {
-          playerNotificationService.contentResolver.openInputStream(currentIconUri!!)?.use { input ->
-            BitmapFactory.decodeStream(input)
+          playerNotificationService.contentResolver.openInputStream(currentIconUri!!)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
           }
         } else {
           val source: ImageDecoder.Source = ImageDecoder.createSource(playerNotificationService.contentResolver, currentIconUri!!)

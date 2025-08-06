@@ -16,7 +16,6 @@ import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 @CapacitorPlugin(name = "AbsDatabase")
@@ -47,9 +46,11 @@ class AbsDatabase : Plugin() {
     DeviceManager.dbManager.cleanLogs()
   }
 
+  private val ioScope = CoroutineScope(Dispatchers.IO)
+
   @PluginMethod
   fun getDeviceData(call:PluginCall) {
-    scope.launch {
+    ioScope.launch {
       val deviceData = DeviceManager.dbManager.getDeviceData()
       call.resolve(JSObject(jacksonMapper.writeValueAsString(deviceData)))
     }
@@ -57,7 +58,7 @@ class AbsDatabase : Plugin() {
 
   @PluginMethod
   fun getLocalFolders(call:PluginCall) {
-    scope.launch {
+    ioScope.launch {
       val folders = DeviceManager.dbManager.getAllLocalFolders()
       call.resolve(JSObject(jacksonMapper.writeValueAsString(LocalFoldersPayload(folders))))
     }
@@ -66,7 +67,7 @@ class AbsDatabase : Plugin() {
   @PluginMethod
   fun getLocalFolder(call:PluginCall) {
     val folderId = call.getString("folderId", "").toString()
-    scope.launch {
+    ioScope.launch {
       DeviceManager.dbManager.getLocalFolder(folderId)?.let {
         val folderObj = jacksonMapper.writeValueAsString(it)
         call.resolve(JSObject(folderObj))
@@ -78,7 +79,7 @@ class AbsDatabase : Plugin() {
   fun getLocalLibraryItem(call:PluginCall) {
     val id = call.getString("id", "").toString()
 
-    scope.launch {
+    ioScope.launch {
       val localLibraryItem = DeviceManager.dbManager.getLocalLibraryItem(id)
       if (localLibraryItem == null) {
         call.resolve()
@@ -91,7 +92,7 @@ class AbsDatabase : Plugin() {
   @PluginMethod
   fun getLocalLibraryItemByLId(call:PluginCall) {
     val libraryItemId = call.getString("libraryItemId", "").toString()
-    scope.launch {
+    ioScope.launch {
       val localLibraryItem = DeviceManager.dbManager.getLocalLibraryItemByLId(libraryItemId)
       if (localLibraryItem == null) {
         call.resolve()
@@ -105,7 +106,7 @@ class AbsDatabase : Plugin() {
   fun getLocalLibraryItems(call:PluginCall) {
     val mediaType = call.getString("mediaType", "").toString()
 
-    scope.launch {
+    ioScope.launch {
       val localLibraryItems = DeviceManager.dbManager.getLocalLibraryItems(mediaType)
       call.resolve(JSObject(jacksonMapper.writeValueAsString(LocalLibraryItemsPayload(localLibraryItems))))
     }
@@ -114,7 +115,7 @@ class AbsDatabase : Plugin() {
   @PluginMethod
   fun getLocalLibraryItemsInFolder(call:PluginCall) {
     val folderId = call.getString("folderId", "").toString()
-    scope.launch {
+    ioScope.launch {
       val localLibraryItems = DeviceManager.dbManager.getLocalLibraryItemsInFolder(folderId)
       call.resolve(JSObject(jacksonMapper.writeValueAsString(LocalLibraryItemsPayload(localLibraryItems))))
     }
@@ -132,7 +133,7 @@ class AbsDatabase : Plugin() {
     val accessToken = serverConfigPayload.token
     val refreshToken = serverConfigPayload.refreshToken // Refresh only sent after login or refresh
 
-    scope.launch {
+    ioScope.launch {
       if (serverConnectionConfig == null) { // New Server Connection
         val serverAddress = call.getString("address", "").toString()
 
@@ -187,7 +188,7 @@ class AbsDatabase : Plugin() {
 
   @PluginMethod
   fun removeServerConnectionConfig(call:PluginCall) {
-    scope.launch {
+    ioScope.launch {
       val serverConnectionConfigId = call.getString("serverConnectionConfigId", "").toString()
 
       // Remove refresh token if it exists
@@ -209,7 +210,7 @@ class AbsDatabase : Plugin() {
   fun getRefreshToken(call:PluginCall) {
     val serverConnectionConfigId = call.getString("serverConnectionConfigId", "").toString()
 
-    scope.launch {
+    ioScope.launch {
       val refreshToken = secureStorage.getRefreshToken(serverConnectionConfigId)
       if (refreshToken != null) {
         val result = JSObject()
@@ -243,7 +244,7 @@ class AbsDatabase : Plugin() {
 
   @PluginMethod
   fun logout(call:PluginCall) {
-    scope.launch {
+    ioScope.launch {
       DeviceManager.serverConnectionConfig = null
       DeviceManager.deviceData.lastServerConnectionConfigId = null
       DeviceManager.dbManager.saveDeviceData(DeviceManager.deviceData)
@@ -253,7 +254,7 @@ class AbsDatabase : Plugin() {
 
   @PluginMethod
   fun getAllLocalMediaProgress(call:PluginCall) {
-    scope.launch {
+    ioScope.launch {
       val localMediaProgress = DeviceManager.dbManager.getAllLocalMediaProgress()
       call.resolve(JSObject(jacksonMapper.writeValueAsString(LocalMediaProgressPayload(localMediaProgress))))
     }
@@ -265,7 +266,7 @@ class AbsDatabase : Plugin() {
     var episodeId:String? = call.getString("episodeId", "").toString()
     if (episodeId == "") episodeId = null
 
-    scope.launch {
+    ioScope.launch {
       val allLocalMediaProgress = DeviceManager.dbManager.getAllLocalMediaProgress()
       val localMediaProgress = allLocalMediaProgress.find { libraryItemId == it.libraryItemId && (episodeId == null || it.episodeId == episodeId) }
 
@@ -582,7 +583,7 @@ class AbsDatabase : Plugin() {
     Log.d(tag, "getMediaItemHistory ${call.data}")
     val mediaId = call.getString("mediaId") ?: ""
 
-    scope.launch {
+    ioScope.launch {
       val mediaItemHistory = DeviceManager.dbManager.getMediaItemHistory(mediaId)
       if (mediaItemHistory == null) {
         call.resolve()

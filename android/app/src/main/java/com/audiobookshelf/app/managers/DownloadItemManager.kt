@@ -23,7 +23,6 @@ import java.io.FileOutputStream
 import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,6 +66,8 @@ class DownloadItemManager(
   companion object {
     var isDownloading: Boolean = false
   }
+
+  private val scope = CoroutineScope(Dispatchers.IO)
 
   /** Adds a download item to the queue and starts processing the queue. */
   fun addDownloadItem(downloadItem: DownloadItem) {
@@ -153,9 +154,9 @@ class DownloadItemManager(
   private fun startWatchingDownloads() {
     if (isDownloading) return // Already watching
 
-      scope.launch {
-        Log.d(tag, "Starting watching downloads")
-        isDownloading = true
+    scope.launch {
+      Log.d(tag, "Starting watching downloads")
+      isDownloading = true
 
       while (currentDownloadItemParts.isNotEmpty()) {
         val itemParts = currentDownloadItemParts.filter { !it.isMoving }
@@ -348,8 +349,8 @@ class DownloadItemManager(
     if (downloadItem.isDownloadFinished) {
       Log.i(tag, "Download Item finished ${downloadItem.media.metadata.title}")
 
-        scope.launch {
-          folderScanner.scanDownloadItem(downloadItem) { downloadItemScanResult ->
+      scope.launch {
+        folderScanner.scanDownloadItem(downloadItem) { downloadItemScanResult ->
           Log.d(
                   tag,
                   "Item download complete ${downloadItem.itemTitle} | local library item id: ${downloadItemScanResult?.localLibraryItem?.id}"

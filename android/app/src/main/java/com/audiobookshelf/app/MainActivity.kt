@@ -11,6 +11,8 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.view.ViewGroup
+import android.view.WindowInsets
+import androidx.core.view.WindowInsetsCompat
 import android.webkit.WebView
 import androidx.core.app.ActivityCompat
 import androidx.core.view.WindowInsetsCompat
@@ -61,15 +63,15 @@ class MainActivity : BridgeActivity() {
     // See: https://developer.android.com/develop/ui/views/layout/edge-to-edge
     val webView: WebView = findViewById(R.id.webview)
     webView.setOnApplyWindowInsetsListener { v, insets ->
-      val sysInsets = WindowInsetsCompat.toWindowInsetsCompat(insets, v)
-        .getInsets(WindowInsetsCompat.Type.systemBars())
-      Log.d(tag, "safe sysInsets: $sysInsets")
-      val (left, top, right, bottom) = arrayOf(
-        sysInsets.left,
-        sysInsets.top,
-        sysInsets.right,
-        sysInsets.bottom
-      )
+      val (left, top, right, bottom) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val sysInsets = insets.getInsets(WindowInsets.Type.systemBars())
+        Log.d(tag, "safe sysInsets: $sysInsets")
+        arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
+      } else {
+        val sysInsets = WindowInsetsCompat.toWindowInsetsCompat(insets, v)
+          .getInsets(WindowInsetsCompat.Type.systemBars())
+        arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
+      }
 
       // Inject as CSS variables
       // NOTE: Possibly able to use in the future to support edge-to-edge better.
