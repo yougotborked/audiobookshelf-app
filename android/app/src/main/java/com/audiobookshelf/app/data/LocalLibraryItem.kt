@@ -3,6 +3,7 @@ package com.audiobookshelf.app.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -140,8 +141,8 @@ class LocalLibraryItem(
     var bitmap:Bitmap? = null
     if (coverContentUrl != null) {
       bitmap = if (Build.VERSION.SDK_INT < 28) {
-        ctx.contentResolver.openInputStream(coverUri)?.use { input ->
-          BitmapFactory.decodeStream(input)
+        ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+          BitmapFactory.decodeStream(inputStream)
         }
       } else {
         val source: ImageDecoder.Source = ImageDecoder.createSource(ctx.contentResolver, coverUri)

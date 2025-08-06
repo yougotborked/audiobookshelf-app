@@ -262,12 +262,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               PendingIntent.getActivity(this, 0, sessionIntent, PendingIntent.FLAG_IMMUTABLE)
             }
 
-      mediaSession =
-              MediaSessionCompat(this, tag).apply {
-                setSessionActivity(sessionActivityPendingIntent)
-                setMediaButtonReceiver(null)
-                isActive = true
-              }
+    mediaSession =
+            MediaSessionCompat(this, tag).apply {
+              setSessionActivity(sessionActivityPendingIntent)
+              isActive = true
+            }
 
     val mediaController = MediaControllerCompat(ctx, mediaSession.sessionToken)
 
@@ -324,18 +323,18 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                 // Local covers get bitmap
                 // Note: In Android Auto for local cover images, setting the icon uri to a local path does not work (cover is blank)
                 // so we create and set the bitmap here instead of AbMediaDescriptionAdapter
-                  if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
-                    bitmap =
-                      if (Build.VERSION.SDK_INT < 28) {
-                        ctx.contentResolver.openInputStream(coverUri)?.use { input ->
-                          BitmapFactory.decodeStream(input)
-                        }
-                      } else {
-                        val source: ImageDecoder.Source =
-                          ImageDecoder.createSource(ctx.contentResolver, coverUri)
-                        ImageDecoder.decodeBitmap(source)
+                if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
+                  bitmap =
+                    if (Build.VERSION.SDK_INT < 28) {
+                      ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+                        BitmapFactory.decodeStream(inputStream)
                       }
-                  }
+                    } else {
+                      val source: ImageDecoder.Source =
+                        ImageDecoder.createSource(ctx.contentResolver, coverUri)
+                      ImageDecoder.decodeBitmap(source)
+                    }
+                }
 
                 // Fix for local images crashing on Android 11 for specific devices
                 // https://stackoverflow.com/questions/64186578/android-11-mediastyle-notification-crash/64232958#64232958
@@ -950,24 +949,22 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
   }
 
-    fun skipToPrevious() {
-      if (currentPlayer.hasPreviousMediaItem()) {
-        currentPlayer.seekToPrevious()
-      } else if (queueIndex > 0) {
-        playPreviousInQueue()
-      } else {
-        clientEventEmitter?.onSkipPreviousRequest()
-      }
+  fun skipToPrevious() {
+    if (currentPlayer.hasPreviousMediaItem()) {
+      currentPlayer.seekToPrevious()
+    } else if (queueIndex > 0) {
+      playPreviousInQueue()
+    } else {
+      clientEventEmitter?.onSkipPreviousRequest()
     }
 
-    fun skipToNext() {
-      if (currentPlayer.hasNextMediaItem()) {
-        currentPlayer.seekToNext()
-      } else if (queueIndex + 1 < playQueue.size) {
-        playNextInQueue()
-      } else {
-        clientEventEmitter?.onSkipNextRequest()
-      }
+  fun skipToNext() {
+    if (currentPlayer.hasNextMediaItem()) {
+      currentPlayer.seekToNext()
+    } else if (queueIndex + 1 < playQueue.size) {
+      playNextInQueue()
+    } else {
+      clientEventEmitter?.onSkipNextRequest()
     }
 
   fun jumpForward() {

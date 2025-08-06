@@ -99,7 +99,7 @@ class FolderScanner(var ctx: Context) {
       if (!file.exists()) {
         Log.e(
                 tag,
-                "scanInternalDownloadItem: Missing file for path ${downloadItemPart.finalDestinationPath}"
+                "scanInternalDownloadItem: Missing file at path ${downloadItemPart.finalDestinationPath}"
         )
       } else {
         if (downloadItemPart.audioTrack != null) {

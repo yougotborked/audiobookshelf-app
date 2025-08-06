@@ -2,6 +2,7 @@ package com.audiobookshelf.app.data
 
 import android.content.Context
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.support.v4.media.MediaMetadataCompat
@@ -228,15 +229,16 @@ class PlaybackSession(
 
     // Local covers get bitmap
     if (localLibraryItem?.coverContentUrl != null) {
-      val bitmap = if (Build.VERSION.SDK_INT < 28) {
-        ctx.contentResolver.openInputStream(coverUri)?.use { input ->
-          BitmapFactory.decodeStream(input)
-        }
-      } else {
-        val source: ImageDecoder.Source =
-          ImageDecoder.createSource(ctx.contentResolver, coverUri)
-        ImageDecoder.decodeBitmap(source)
-      }
+      val bitmap =
+              if (Build.VERSION.SDK_INT < 28) {
+                ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+                  BitmapFactory.decodeStream(inputStream)
+                }
+              } else {
+                val source: ImageDecoder.Source =
+                        ImageDecoder.createSource(ctx.contentResolver, coverUri)
+                ImageDecoder.decodeBitmap(source)
+              }
       metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
       metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
     }
