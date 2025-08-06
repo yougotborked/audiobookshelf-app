@@ -11,7 +11,8 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.view.ViewGroup
-import android.view.WindowInsets
+import android.view.WindowInsets as AndroidWindowInsets
+import androidx.core.view.WindowInsetsCompat as AndroidWindowInsetsCompat
 import android.webkit.WebView
 import androidx.core.app.ActivityCompat
 import androidx.core.view.updateLayoutParams
@@ -61,16 +62,13 @@ class MainActivity : BridgeActivity() {
     val webView: WebView = findViewById(R.id.webview)
     webView.setOnApplyWindowInsetsListener { v, insets ->
       val (left, top, right, bottom) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val sysInsets = insets.getInsets(WindowInsets.Type.systemBars())
+        val sysInsets = insets.getInsets(AndroidWindowInsets.Type.systemBars())
         Log.d(tag, "safe sysInsets: $sysInsets")
         arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
       } else {
-        arrayOf(
-          insets.systemWindowInsetLeft,
-          insets.systemWindowInsetTop,
-          insets.systemWindowInsetRight,
-          insets.systemWindowInsetBottom
-        )
+        val sysInsets = AndroidWindowInsetsCompat.toWindowInsetsCompat(insets, v)
+          .getInsets(AndroidWindowInsetsCompat.Type.systemBars())
+        arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
       }
 
       // Inject as CSS variables
@@ -92,7 +90,7 @@ class MainActivity : BridgeActivity() {
       }
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        WindowInsets.CONSUMED
+        AndroidWindowInsets.CONSUMED
       } else {
         insets
       }

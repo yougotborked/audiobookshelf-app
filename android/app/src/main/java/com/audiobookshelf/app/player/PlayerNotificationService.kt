@@ -7,11 +7,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.*
 import android.os.*
-import android.provider.MediaStore
 import android.provider.Settings
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -265,7 +265,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     mediaSession =
             MediaSessionCompat(this, tag).apply {
               setSessionActivity(sessionActivityPendingIntent)
-              setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
               isActive = true
             }
 
@@ -327,7 +326,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                 if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
                   bitmap =
                     if (Build.VERSION.SDK_INT < 28) {
-                      MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
+                      ctx.contentResolver.openInputStream(coverUri)?.use { inputStream ->
+                        BitmapFactory.decodeStream(inputStream)
+                      }
                     } else {
                       val source: ImageDecoder.Source =
                         ImageDecoder.createSource(ctx.contentResolver, coverUri)
@@ -949,7 +950,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun skipToPrevious() {
-    if (currentPlayer.hasPrevious()) {
+    if (currentPlayer.hasPreviousMediaItem()) {
       currentPlayer.seekToPrevious()
     } else if (queueIndex > 0) {
       playPreviousInQueue()
@@ -959,7 +960,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun skipToNext() {
-    if (currentPlayer.hasNext()) {
+    if (currentPlayer.hasNextMediaItem()) {
       currentPlayer.seekToNext()
     } else if (queueIndex + 1 < playQueue.size) {
       playNextInQueue()
