@@ -27,6 +27,8 @@ class AbsDatabase : Plugin() {
   private lateinit var apiHandler: ApiHandler
   private lateinit var secureStorage: SecureStorage
 
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
   data class LocalMediaProgressPayload(val value:List<LocalMediaProgress>)
   data class LocalLibraryItemsPayload(val value:List<LocalLibraryItem>)
   data class LocalFoldersPayload(val value:List<LocalFolder>)

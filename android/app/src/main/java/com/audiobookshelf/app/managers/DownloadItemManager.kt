@@ -50,6 +50,8 @@ class DownloadItemManager(
   var currentDownloadItemParts: MutableList<DownloadItemPart> =
           mutableListOf() // Item parts currently being downloaded
 
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
   interface DownloadEventEmitter {
     fun onDownloadItem(downloadItem: DownloadItem)
     fun onDownloadItemPartUpdate(downloadItemPart: DownloadItemPart)
