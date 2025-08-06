@@ -1,6 +1,6 @@
 <template>
   <div class="w-full h-full overflow-y-auto">
-    <div class="px-4 pt-4">
+    <div class="px-4 pt-4" v-if="showAutoPlaylist">
       <div class="mb-4 border border-fg/20 rounded p-4 flex items-center">
         <nuxt-link to="/playlist/unfinished" class="flex items-center flex-grow">
           <covers-playlist-cover :items="autoPlaylist.items" :width="64" :height="64" />
@@ -27,10 +27,11 @@ export default {
     }
   },
   mounted() {
-    this.fetchAutoPlaylist()
+    if (this.showAutoPlaylist) this.fetchAutoPlaylist()
   },
   watch: {
     networkConnected(newVal) {
+      if (!this.showAutoPlaylist) return
       if (newVal) {
         if (!this.autoPlaylist.items.length) {
           setTimeout(() => {
@@ -45,12 +46,18 @@ export default {
   computed: {
     networkConnected() {
       return this.$store.state.networkConnected
+    },
+    showAutoPlaylist() {
+      return this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
     }
   },
   methods: {
     async fetchAutoPlaylist() {
       const progressMap = {}
       ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
+        if (mp.episodeId) progressMap[mp.episodeId] = mp
+      })
+      ;(this.$store.state.globals.localMediaProgress || []).forEach((mp) => {
         if (mp.episodeId) progressMap[mp.episodeId] = mp
       })
 

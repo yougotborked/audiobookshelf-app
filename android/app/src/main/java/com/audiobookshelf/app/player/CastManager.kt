@@ -307,6 +307,7 @@ class CastManager constructor(val mainActivity:Activity) {
     }
   }
 
+  @Suppress("DEPRECATION")
   private fun getContext(): CastContext {
     @Suppress("DEPRECATION")
     return CastContext.getSharedInstance(mainActivity)
