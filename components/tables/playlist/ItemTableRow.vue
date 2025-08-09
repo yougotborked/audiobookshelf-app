@@ -48,11 +48,14 @@ export default {
   },
   computed: {
     itemUrl() {
-      if (this.episodeId) return `/item/${this.libraryItem.id}/${this.episodeId}`
-      return `/item/${this.libraryItem.id}`
+      if (this.episodeId) return `/item/${this.libraryItemId}/${this.episodeId}`
+      return `/item/${this.libraryItemId}`
     },
     libraryItem() {
       return this.item.libraryItem || {}
+    },
+    libraryItemId() {
+      return this.item.libraryItemId || this.libraryItem.id
     },
     localLibraryItem() {
       return this.item.localLibraryItem
@@ -118,8 +121,13 @@ export default {
       return !this.isMissing && !this.isInvalid && (this.tracks.length || this.episode)
     },
     isOpenInPlayer() {
-      if (this.localLibraryItem && this.localEpisode && this.$store.getters['getIsMediaStreaming'](this.localLibraryItem.id, this.localEpisode.id)) return true
-      return this.$store.getters['getIsMediaStreaming'](this.libraryItem.id, this.episodeId)
+      if (
+        this.localLibraryItem &&
+        this.localEpisode &&
+        this.$store.getters['getIsMediaStreaming'](this.localLibraryItem.id, this.localEpisode.id)
+      )
+        return true
+      return this.$store.getters['getIsMediaStreaming'](this.libraryItemId, this.episodeId)
     },
     streamIsPlaying() {
       return this.$store.state.playerIsPlaying && this.isOpenInPlayer
@@ -132,11 +140,20 @@ export default {
       const mediaId = this.$store.state.playerStartingPlaybackMediaId
       if (!mediaId) return false
 
-      let thisMediaId = this.episodeId || this.libraryItem.id
+      let thisMediaId = this.episodeId || this.libraryItemId
       return mediaId === thisMediaId
     },
     userItemProgress() {
-      return this.$store.getters['user/getUserMediaProgress'](this.libraryItem.id, this.episodeId)
+      return (
+        this.$store.getters['globals/getLocalMediaProgressByServerItemId'](
+          this.libraryItemId,
+          this.episodeId
+        ) ||
+        this.$store.getters['user/getUserMediaProgress'](
+          this.libraryItemId,
+          this.episodeId
+        )
+      )
     },
     userIsFinished() {
       return !!this.userItemProgress?.isFinished
@@ -163,7 +180,7 @@ export default {
       if (this.playerIsStartingPlayback) return
 
       await this.$hapticsImpact()
-      let mediaId = this.episodeId || this.libraryItem.id
+      let mediaId = this.episodeId || this.libraryItemId
       if (this.streamIsPlaying) {
         this.$eventBus.$emit('pause-item')
       } else if (this.localLibraryItem) {
@@ -171,13 +188,13 @@ export default {
         this.$eventBus.$emit('play-item', {
           libraryItemId: this.localLibraryItem.id,
           episodeId: this.localEpisode?.id,
-          serverLibraryItemId: this.libraryItem.id,
+          serverLibraryItemId: this.libraryItemId,
           serverEpisodeId: this.episodeId
         })
       } else {
         this.$store.commit('setPlayerIsStartingPlayback', mediaId)
         this.$eventBus.$emit('play-item', {
-          libraryItemId: this.libraryItem.id,
+          libraryItemId: this.libraryItemId,
           episodeId: this.episodeId
         })
       }

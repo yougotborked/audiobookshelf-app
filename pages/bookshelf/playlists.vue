@@ -67,6 +67,9 @@ export default {
       ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
         if (mp.episodeId) progressMap[mp.episodeId] = mp
       })
+      ;(this.$store.state.globals.localMediaProgress || []).forEach((mp) => {
+        if (mp.episodeId) progressMap[mp.episodeId] = mp
+      })
 
       const items = []
       const seen = new Set()
