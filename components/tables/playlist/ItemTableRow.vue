@@ -61,7 +61,8 @@ export default {
       return this.item.episode
     },
     episodeId() {
-      return this.episode?.id || null
+      // Prefer the server episode id so progress can be looked up correctly
+      return this.item.episodeId || this.episode?.serverEpisodeId || this.episode?.id || null
     },
     localEpisode() {
       return this.item.localEpisode

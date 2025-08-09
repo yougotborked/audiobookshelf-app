@@ -1,7 +1,10 @@
 <template>
   <div class="w-full h-full overflow-y-auto">
     <div class="px-4 pt-4">
-      <div class="mb-4 border border-fg/20 rounded p-4 flex items-center">
+      <div
+        v-if="autoCacheUnplayedEpisodes"
+        class="mb-4 border border-fg/20 rounded p-4 flex items-center"
+      >
         <nuxt-link to="/playlist/unfinished" class="flex items-center flex-grow">
           <covers-playlist-cover :items="autoPlaylist.items" :width="64" :height="64" />
           <p class="text-lg ml-4">{{ autoPlaylist.name }}</p>
@@ -16,8 +19,11 @@
 import { AbsDownloader } from '@/plugins/capacitor'
 export default {
   async asyncData({ store, app }) {
-    const cached = await app.$localStore.getCachedPlaylist('unfinished')
     const name = app.$strings.LabelAutoUnfinishedPodcasts
+    const enabled = store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
+    if (!enabled)
+      return { autoPlaylist: { id: 'unfinished', name, items: [] } }
+    const cached = await app.$localStore.getCachedPlaylist('unfinished')
     if (cached) return { autoPlaylist: cached }
     return { autoPlaylist: { id: 'unfinished', name, items: [] } }
   },
@@ -27,11 +33,11 @@ export default {
     }
   },
   mounted() {
-    this.fetchAutoPlaylist()
+    if (this.autoCacheUnplayedEpisodes) this.fetchAutoPlaylist()
   },
   watch: {
     networkConnected(newVal) {
-      if (newVal) {
+      if (newVal && this.autoCacheUnplayedEpisodes) {
         if (!this.autoPlaylist.items.length) {
           setTimeout(() => {
             this.fetchAutoPlaylist()
@@ -40,11 +46,19 @@ export default {
           this.checkAutoDownload()
         }
       }
+    },
+    autoCacheUnplayedEpisodes(newVal) {
+      if (newVal && !this.autoPlaylist.items.length) {
+        this.fetchAutoPlaylist()
+      }
     }
   },
   computed: {
     networkConnected() {
       return this.$store.state.networkConnected
+    },
+    autoCacheUnplayedEpisodes() {
+      return this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
     }
   },
   methods: {
@@ -108,8 +122,9 @@ export default {
           const key = `${li.libraryItemId}_${serverId}`
           if (seen.has(key)) continue
           seen.add(key)
+          const serverLibraryItem = { ...li, id: li.libraryItemId }
           items.push({
-            libraryItem: li,
+            libraryItem: serverLibraryItem,
             episode: ep,
             libraryItemId: li.libraryItemId,
             episodeId: serverId,
