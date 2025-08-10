@@ -23,7 +23,8 @@ export default {
       return this.currentLibrary?.icon || 'database'
     },
     userHasPlaylists() {
-      return this.$store.state.libraries.numUserPlaylists
+      const autoUnfinished = this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
+      return this.$store.state.libraries.numUserPlaylists || autoUnfinished
     },
     userIsAdminOrUp() {
       return this.$store.getters['user/getIsAdminOrUp']

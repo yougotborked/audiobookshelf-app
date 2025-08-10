@@ -146,6 +146,12 @@ export const actions = {
     commit('setPlayQueue', queue)
     commit('setQueueIndex', index)
     commit('setPlaybackSession', session)
+    const autoUnfinished = this.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
+    const hasCachedPlaylists = await this.$localStore.hasCachedPlaylists()
+    if (autoUnfinished || hasCachedPlaylists) {
+      commit('libraries/setNumUserPlaylists', 1, { root: true })
+    }
+
     dispatch('startAutoDownloadTimer')
   },
   startAutoDownloadTimer({ state, dispatch, commit }) {
@@ -184,9 +190,7 @@ export const actions = {
       if (lib.mediaType !== 'podcast') continue
       let page = 0
       while (true) {
-        const payload = await this.$nativeHttp
-          .get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=${page}`)
-          .catch(() => null)
+        const payload = await this.$nativeHttp.get(`/api/libraries/${lib.id}/recent-episodes?limit=200&page=${page}`).catch(() => null)
         const episodes = payload?.episodes || []
         for (const ep of episodes) {
           const serverId = ep.id
