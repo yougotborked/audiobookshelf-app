@@ -43,7 +43,9 @@
 import { AbsDownloader } from '@/plugins/capacitor'
 export default {
   async asyncData({ store, params, app, redirect, route }) {
-    if (!store.state.user.user) {
+    const user = store.state.user.user
+    const serverConfig = store.state.user.serverConnectionConfig
+    if (!user && !serverConfig) {
       return redirect(`/connect?redirect=${route.path}`)
     }
 
