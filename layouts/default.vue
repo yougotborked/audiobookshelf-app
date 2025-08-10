@@ -336,6 +336,16 @@ export default {
       const deviceData = await this.$db.getDeviceData()
       this.$store.commit('setDeviceData', deviceData)
 
+      if (deviceData?.lastServerConnectionConfigId && deviceData.serverConnectionConfigs?.length) {
+        const scc = deviceData.serverConnectionConfigs.find(
+          (s) => s.id == deviceData.lastServerConnectionConfigId
+        )
+        if (scc) {
+          this.$store.commit('user/setAccessToken', scc.token)
+          this.$store.commit('user/setServerConnectionConfig', scc)
+        }
+      }
+
       this.$setOrientationLock(this.$store.getters['getOrientationLockSetting'])
 
       await this.$store.dispatch('init')
