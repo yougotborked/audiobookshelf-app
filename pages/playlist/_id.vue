@@ -45,7 +45,8 @@ export default {
   async asyncData({ store, params, app, redirect, route }) {
     const user = store.state.user.user
     const serverConfig = store.state.user.serverConnectionConfig
-    if (!user && !serverConfig) {
+    const networkConnected = store.state.networkConnected
+    if (!user && !serverConfig && networkConnected) {
       return redirect(`/connect?redirect=${route.path}`)
     }
 
@@ -151,6 +152,9 @@ export default {
         } else {
           const progressMap = {}
           ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
+            if (mp.episodeId) progressMap[mp.episodeId] = mp
+          })
+          ;(this.$store.state.globals.localMediaProgress || []).forEach((mp) => {
             if (mp.episodeId) progressMap[mp.episodeId] = mp
           })
 
