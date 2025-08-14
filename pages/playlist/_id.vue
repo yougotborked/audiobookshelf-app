@@ -45,7 +45,7 @@ export default {
   async asyncData({ store, params, app, redirect, route }) {
     const user = store.state.user.user
     const serverConfig = store.state.user.serverConnectionConfig
-    if (!user && !serverConfig) {
+    if (!user && !serverConfig && params.id !== 'unfinished') {
       return redirect(`/connect?redirect=${route.path}`)
     }
 
