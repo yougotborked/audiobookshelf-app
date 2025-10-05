@@ -173,6 +173,50 @@ class LocalStorage {
     }
   }
 
+  async setCachedCollection(collection) {
+    try {
+      if (!collection?.id) return
+      await Preferences.set({
+        key: `collection_${collection.id}`,
+        value: JSON.stringify(collection)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache collection', error)
+    }
+  }
+
+  async getCachedCollection(id) {
+    try {
+      const obj = (await Preferences.get({ key: `collection_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached collection', error)
+      return null
+    }
+  }
+
+  async setCachedSeries(series) {
+    try {
+      if (!series?.id) return
+      await Preferences.set({
+        key: `series_${series.id}`,
+        value: JSON.stringify(series)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache series', error)
+    }
+  }
+
+  async getCachedSeries(id) {
+    try {
+      const obj = (await Preferences.get({ key: `series_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached series', error)
+      return null
+    }
+  }
+
   async setCachedPlaylists(libraryId, playlists) {
     try {
       await Preferences.set({
@@ -208,6 +252,29 @@ class LocalStorage {
       console.error('[LocalStorage] Failed to check cached playlists', error)
     }
     return false
+  }
+
+  async setCachedAuthors(libraryId, authors) {
+    try {
+      if (!libraryId) return
+      await Preferences.set({
+        key: `authors_${libraryId}`,
+        value: JSON.stringify(authors || [])
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache authors', error)
+    }
+  }
+
+  async getCachedAuthors(libraryId) {
+    try {
+      if (!libraryId) return []
+      const obj = (await Preferences.get({ key: `authors_${libraryId}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached authors', error)
+      return []
+    }
   }
 
   async setCachedLatestEpisodes(libraryId, episodes) {
@@ -249,6 +316,28 @@ class LocalStorage {
     } catch (error) {
       console.error('[LocalStorage] Failed to get episode metadata', error)
       return []
+    }
+  }
+
+  async setCachedLibraryItem(libraryItem) {
+    try {
+      if (!libraryItem?.id) return
+      await Preferences.set({
+        key: `libraryItem_${libraryItem.id}`,
+        value: JSON.stringify(libraryItem)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache library item', error)
+    }
+  }
+
+  async getCachedLibraryItem(id) {
+    try {
+      const obj = (await Preferences.get({ key: `libraryItem_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached library item', error)
+      return null
     }
   }
 

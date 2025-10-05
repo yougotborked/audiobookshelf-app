@@ -34,17 +34,36 @@
 <script>
 export default {
   async asyncData({ store, params, app, redirect, route }) {
-    if (!store.state.user.user) {
-      return redirect(`/connect?redirect=${route.path}`)
+    if (!store.state.user.user && !store.state.networkConnected) {
+      const cachedOfflineCollection = await app.$localStore.getCachedCollection(params.id)
+      if (cachedOfflineCollection) {
+        return { collection: cachedOfflineCollection, loadedFromCache: true }
+      }
+      return redirect('/bookshelf')
     }
 
-    var collection = await app.$nativeHttp.get(`/api/collections/${params.id}`).catch((error) => {
-      console.error('Failed', error)
-      return false
-    })
+    const isNetworkAvailable = store.state.networkConnected && !!store.state.user.user
+    let collection = null
+    let loadedFromCache = false
+
+    if (isNetworkAvailable) {
+      collection = await app.$nativeHttp.get(`/api/collections/${params.id}`).catch((error) => {
+        console.error('Failed to fetch collection', error)
+        return null
+      })
+
+      if (collection) {
+        await app.$localStore.setCachedCollection(collection)
+      }
+    }
 
     if (!collection) {
-      return redirect('/bookshelf')
+      collection = await app.$localStore.getCachedCollection(params.id)
+      loadedFromCache = !!collection
+    }
+
+    if (!collection) {
+      return redirect(store.state.networkConnected ? '/bookshelf' : '/bookshelf?error=offlineCollectionUnavailable')
     }
 
     // Lookup matching local items and attach to collection items
@@ -60,13 +79,15 @@ export default {
     }
 
     return {
-      collection
+      collection,
+      loadedFromCache
     }
   },
   data() {
     return {
       mediaIdStartingPlayback: null,
-      processingRemove: false
+      processingRemove: false,
+      loadedFromCache: false
     }
   },
   computed: {

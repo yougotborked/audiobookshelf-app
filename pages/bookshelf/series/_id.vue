@@ -9,17 +9,35 @@ import cellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
 
 export default {
   async asyncData({ params, app, store, redirect }) {
-    var series = await app.$nativeHttp.get(`/api/series/${params.id}`).catch((error) => {
-      console.error('Failed', error)
-      return false
-    })
+    const isNetworkAvailable = store.state.networkConnected && !!store.state.user.user
+    let series = null
+    let loadedFromCache = false
+
+    if (isNetworkAvailable) {
+      series = await app.$nativeHttp.get(`/api/series/${params.id}`).catch((error) => {
+        console.error('Failed to load series', error)
+        return null
+      })
+
+      if (series) {
+        await app.$localStore.setCachedSeries(series)
+      }
+    }
+
+    if (!series) {
+      series = await app.$localStore.getCachedSeries(params.id)
+      loadedFromCache = !!series
+    }
+
     if (!series) {
       return redirect('/oops?message=Series not found')
     }
+
     store.commit('globals/setSeries', series)
     return {
       series,
-      seriesId: params.id
+      seriesId: params.id,
+      loadedFromCache
     }
   },
   data() {
@@ -30,19 +48,28 @@ export default {
       books: 0,
       missingFiles: 0,
       missingFilesSize: 0,
-      libraryIds: []
+      libraryIds: [],
+      loadedFromCache: false
     }
   },
   mixins: [cellularPermissionHelpers],
   computed: {
     isIos() {
       return this.$platform === 'ios'
+    },
+    networkConnected() {
+      return this.$store.state.networkConnected
     }
   },
   methods: {
     async downloadSeriesClick() {
       console.log('Download Series clicked')
       if (this.startingDownload) return
+
+      if (!this.networkConnected) {
+        this.$toast.error(this.$strings.MessageNoNetworkConnection)
+        return
+      }
 
       const hasPermission = await this.checkCellularPermission('download')
       if (!hasPermission) return
@@ -68,6 +95,21 @@ export default {
       const entityPath = `items`
       const sfQueryString = this.currentSFQueryString ? this.currentSFQueryString + '&' : ''
       const fullQueryString = `?${sfQueryString}limit=${this.booksPerFetch}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
+
+      if (!this.networkConnected) {
+        const books = Array.isArray(this.series?.books) ? this.series.books : []
+        this.books = books.length
+        const slice = books.slice(startIndex, startIndex + this.booksPerFetch)
+        for (const book of slice) {
+          const hasLocal = await this.$db.getLocalLibraryItem(`local_${book.id}`)
+          if (!hasLocal) {
+            this.missingFiles += book.numFiles || 0
+            this.missingFilesSize += book.size || 0
+            this.libraryIds.push(book.id)
+          }
+        }
+        return true
+      }
 
       const payload = await this.$nativeHttp.get(`/api/libraries/${this.series.libraryId}/${entityPath}${fullQueryString}`).catch((error) => {
         console.error('failed to fetch books', error)

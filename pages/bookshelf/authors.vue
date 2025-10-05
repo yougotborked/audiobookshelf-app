@@ -24,24 +24,72 @@ export default {
     currentLibraryId() {
       return this.$store.state.libraries.currentLibraryId
     },
+    networkConnected() {
+      return this.$store.state.networkConnected
+    },
     cardHeight() {
       return this.cardWidth * 1.25
     }
   },
   methods: {
+    async buildLocalAuthors() {
+      const localItems = await this.$db.getLocalLibraryItems('book')
+      const authorMap = new Map()
+
+      localItems.forEach((item) => {
+        const names = item?.media?.metadata?.authors || []
+        names.forEach((name) => {
+          if (!name) return
+          const key = name.toLowerCase()
+          if (!authorMap.has(key)) {
+            authorMap.set(key, {
+              id: `local_author_${key}`,
+              name,
+              displayName: name,
+              books: 0,
+              numAudiobooks: 0,
+              libraryId: this.currentLibraryId
+            })
+          }
+          const entry = authorMap.get(key)
+          entry.books += 1
+          entry.numAudiobooks += 1
+        })
+      })
+
+      return Array.from(authorMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+    },
     async init() {
       this.cardWidth = (window.innerWidth - 64) / 2
       if (!this.currentLibraryId) {
         return
       }
       this.loadedLibraryId = this.currentLibraryId
-      this.authors = await this.$nativeHttp
-        .get(`/api/libraries/${this.currentLibraryId}/authors`)
-        .then((response) => response.authors)
-        .catch((error) => {
-          console.error('Failed to load authors', error)
-          return []
-        })
+      let authors = []
+
+      if (this.networkConnected) {
+        authors = await this.$nativeHttp
+          .get(`/api/libraries/${this.currentLibraryId}/authors`)
+          .then((response) => response.authors)
+          .catch((error) => {
+            console.error('Failed to load authors', error)
+            return []
+          })
+
+        if (authors.length) {
+          await this.$localStore.setCachedAuthors(this.currentLibraryId, authors)
+        }
+      }
+
+      if (!authors.length) {
+        authors = await this.$localStore.getCachedAuthors(this.currentLibraryId)
+      }
+
+      if (!authors.length) {
+        authors = await this.buildLocalAuthors()
+      }
+
+      this.authors = authors
       console.log('Loaded authors', this.authors)
       this.$eventBus.$emit('bookshelf-total-entities', this.authors.length)
       this.loading = false

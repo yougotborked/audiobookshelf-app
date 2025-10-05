@@ -104,6 +104,9 @@ export default {
     socketConnected() {
       return this.$store.state.socketConnected
     },
+    networkConnected() {
+      return this.$store.state.networkConnected
+    },
     libraryItemId() {
       return this.libraryItem?.id || null
     },
@@ -227,6 +230,11 @@ export default {
   },
   methods: {
     async clearDownloadQueue() {
+      if (!this.networkConnected) {
+        this.$toast.error(this.$strings.MessageNoNetworkConnection)
+        return
+      }
+
       const { value } = await Dialog.confirm({
         title: 'Confirm',
         message: `Are you sure you want to clear episode download queue?`
@@ -246,7 +254,7 @@ export default {
       }
     },
     async searchEpisodes() {
-      if (!this.socketConnected) {
+      if (!this.networkConnected || !this.socketConnected) {
         return this.$toast.error(this.$strings.MessageNoNetworkConnection)
       }
 

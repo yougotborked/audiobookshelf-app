@@ -179,6 +179,7 @@ export default {
   async asyncData({ store, params, redirect, app, query }) {
     const libraryItemId = params.id
     let libraryItem = null
+    let loadedFromCache = false
 
     if (libraryItemId.startsWith('local')) {
       libraryItem = await app.$db.getLocalLibraryItem(libraryItemId)
@@ -200,13 +201,35 @@ export default {
         return redirect(`/item/${libraryItem.libraryItemId}?${queryParams.toString()}`)
       }
     } else if (!store.state.user.serverConnectionConfig) {
-      // Not connected to server
-      return redirect('/?error=No server connection to get library item')
+      libraryItem = await app.$localStore.getCachedLibraryItem(libraryItemId)
+      if (libraryItem) {
+        loadedFromCache = true
+      } else {
+        const fallbackLocal = await app.$db.getLocalLibraryItemByLId(libraryItemId)
+        if (fallbackLocal) {
+          libraryItem = fallbackLocal
+          loadedFromCache = true
+        } else {
+          return redirect('/?error=No server connection to get library item')
+        }
+      }
+    }
+
+    if (!libraryItemId.startsWith('local') && libraryItem && store.state.networkConnected && store.state.user.serverConnectionConfig) {
+      await app.$localStore.setCachedLibraryItem(libraryItem)
+    }
+
+    if (libraryItem && !libraryItem.isLocal) {
+      const localLibraryItem = await app.$db.getLocalLibraryItemByLId(libraryItem.id || libraryItemId)
+      if (localLibraryItem) {
+        libraryItem.localLibraryItem = localLibraryItem
+      }
     }
 
     return {
       libraryItem,
-      libraryItemId
+      libraryItemId,
+      loadedFromCache
     }
   },
   data() {
@@ -221,7 +244,8 @@ export default {
       descriptionClamped: false,
       showFullDescription: false,
       episodeStartingPlayback: null,
-      startingDownload: false
+      startingDownload: false,
+      loadedFromCache: false
     }
   },
   mixins: [cellularPermissionHelpers],
@@ -761,25 +785,50 @@ export default {
     },
     async loadServerLibraryItem() {
       console.log(`Fetching library item "${this.libraryItemId}" from server`)
-      const libraryItem = await this.$nativeHttp.get(`/api/items/${this.libraryItemId}?expanded=1&include=rssfeed`, { connectTimeout: 5000 }).catch((error) => {
-        console.error('Failed', error)
-        return null
-      })
+      let libraryItem = null
 
-      if (libraryItem) {
-        const localLibraryItem = await this.$db.getLocalLibraryItemByLId(this.libraryItemId)
-        if (localLibraryItem) {
-          console.log('Library item has local library item also', localLibraryItem.id)
-          libraryItem.localLibraryItem = localLibraryItem
+      if (this.$store.state.networkConnected && this.$store.state.user.serverConnectionConfig) {
+        libraryItem = await this.$nativeHttp.get(`/api/items/${this.libraryItemId}?expanded=1&include=rssfeed`, { connectTimeout: 5000 }).catch((error) => {
+          console.error('Failed', error)
+          return null
+        })
+
+        if (libraryItem) {
+          await this.$localStore.setCachedLibraryItem(libraryItem)
         }
-        this.libraryItem = libraryItem
-      } else if (this.$route.query.localLibraryItemId) {
-        // Failed to get server library item but is local library item so redirect
+      }
+
+      if (!libraryItem) {
+        libraryItem = await this.$localStore.getCachedLibraryItem(this.libraryItemId)
+        if (libraryItem) {
+          this.loadedFromCache = true
+        }
+      }
+
+      if (!libraryItem && this.$route.query.localLibraryItemId) {
         return this.$router.replace(`/item/${this.$route.query.localLibraryItemId}?noredirect=1`)
-      } else {
+      }
+
+      if (!libraryItem) {
+        const fallbackLocal = await this.$db.getLocalLibraryItemByLId(this.libraryItemId)
+        if (fallbackLocal) {
+          libraryItem = fallbackLocal
+          this.loadedFromCache = true
+        }
+      }
+
+      if (!libraryItem) {
         this.$toast.error('Failed to get library item from server')
         return this.$router.replace('/bookshelf')
       }
+
+      const localLibraryItem = await this.$db.getLocalLibraryItemByLId(this.libraryItemId)
+      if (localLibraryItem) {
+        console.log('Library item has local library item also', localLibraryItem.id)
+        libraryItem.localLibraryItem = localLibraryItem
+      }
+
+      this.libraryItem = libraryItem
     }
   },
   async mounted() {
