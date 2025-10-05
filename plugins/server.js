@@ -50,6 +50,7 @@ class ServerSocket extends EventEmitter {
 
   setSocketListeners() {
     this.socket.on('connect', this.onConnect.bind(this))
+    this.socket.on('connect_error', this.onConnectError.bind(this))
     this.socket.on('disconnect', this.onDisconnect.bind(this))
     this.socket.on('init', this.onInit.bind(this))
     this.socket.on('auth_failed', this.onAuthFailed.bind(this))
@@ -78,8 +79,16 @@ class ServerSocket extends EventEmitter {
     console.log('[SOCKET] Socket Connected ' + this.socket.id)
     this.connected = true
     this.$store.commit('setSocketConnected', true)
+    this.$store.commit('setServerReachable', true)
     this.emit('connection-update', true)
     this.sendAuthenticate()
+  }
+
+  onConnectError(error) {
+    console.log('[SOCKET] Connect error', error)
+    this.connected = false
+    this.$store.commit('setSocketConnected', false)
+    this.$store.commit('setServerReachable', false)
   }
 
   onReconnectAttempt(attemptNumber) {
@@ -90,16 +99,19 @@ class ServerSocket extends EventEmitter {
 
   onReconnectError(error) {
     console.log('[SOCKET] Reconnect error', error)
+    this.$store.commit('setServerReachable', false)
   }
 
   onReconnectFailed(error) {
     console.log('[SOCKET] Reconnect failed', error)
+    this.$store.commit('setServerReachable', false)
   }
 
   onDisconnect(reason) {
     console.log('[SOCKET] Socket Disconnected: ' + reason)
     this.connected = false
     this.$store.commit('setSocketConnected', false)
+    this.$store.commit('setServerReachable', false)
     this.emit('connection-update', false)
   }
 

@@ -2,6 +2,24 @@ plugins {
   id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
 }
 
+def embeddedJdks = [
+  file("$rootDir/.jdk/jdk-21.0.4+7"),
+  file("$rootDir/.jdk/jdk-17.0.13+11")
+].findAll { it.exists() }
+
+if (!embeddedJdks.isEmpty()) {
+  // Prefer the embedded JDKs when present so builds work without a system-wide install
+  def configuredPaths = embeddedJdks.collect { it.absolutePath }.join(File.pathSeparator)
+  if (!System.getProperty('org.gradle.java.installations.paths')) {
+    System.setProperty('org.gradle.java.installations.paths', configuredPaths)
+  }
+
+  if (!System.getProperty('org.gradle.java.home')) {
+    def preferredJdk = embeddedJdks.find { it.name.startsWith('jdk-21') } ?: embeddedJdks.first()
+    System.setProperty('org.gradle.java.home', preferredJdk.absolutePath)
+  }
+}
+
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')

@@ -15,6 +15,7 @@ export const state = () => ({
   socketConnected: false,
   networkConnected: false,
   networkConnectionType: null,
+  serverReachable: true,
   isNetworkUnmetered: true,
   isFirstLoad: true,
   isFirstAudioLoad: true,
@@ -316,6 +317,9 @@ export const mutations = {
       state.networkConnected = true
     }
     state.networkConnectionType = val.connectionType
+  },
+  setServerReachable(state, val) {
+    state.serverReachable = !!val
   },
   setIsNetworkUnmetered(state, val) {
     state.isNetworkUnmetered = val

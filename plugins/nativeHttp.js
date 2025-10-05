@@ -29,13 +29,17 @@ export default function ({ store, $db, $socket }, inject) {
       }
       console.log(`[nativeHttp] Making ${method} request to ${url}`)
 
-      return CapacitorHttp.request({
-        method,
-        url,
-        data,
-        headers,
-        ...options
-      }).then((res) => {
+      try {
+        const res = await CapacitorHttp.request({
+          method,
+          url,
+          data,
+          headers,
+          ...options
+        })
+
+        store.commit('setServerReachable', true)
+
         if (res.status === 401) {
           console.error(`[nativeHttp] 401 status for url "${url}"`)
           // Handle refresh token automatically
@@ -43,10 +47,32 @@ export default function ({ store, $db, $socket }, inject) {
         }
         if (res.status >= 400) {
           console.error(`[nativeHttp] ${res.status} status for url "${url}"`)
-          throw new Error(res.data)
+          const error = new Error(res.data)
+          error.status = res.status
+          error.url = url
+          throw error
         }
         return res.data
-      })
+      } catch (error) {
+        const status = error?.status ?? error?.response?.status
+        const errorCode = (error?.code || '').toString().toUpperCase()
+        const message = (error?.message || '').toLowerCase()
+        const isLikelyNetworkError =
+          status === 0 ||
+          ['ERR_NETWORK', 'ECONNABORTED', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(errorCode) ||
+          message.includes('network') ||
+          message.includes('connection') ||
+          message.includes('timed out') ||
+          message.includes('offline')
+
+        if (typeof status === 'number' && status >= 400 && !isLikelyNetworkError) {
+          store.commit('setServerReachable', true)
+        } else if (isLikelyNetworkError) {
+          store.commit('setServerReachable', false)
+        }
+
+        throw error
+      }
     },
 
     /**

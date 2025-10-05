@@ -18,6 +18,9 @@ export default {
     socketConnected() {
       return this.$store.state.socketConnected
     },
+    serverReachable() {
+      return this.$store.state.serverReachable
+    },
     networkConnected() {
       return this.$store.state.networkConnected
     },
@@ -40,7 +43,7 @@ export default {
         return 'cloud_sync'
       } else if (!this.networkConnected) {
         return 'wifi_off'
-      } else if (!this.socketConnected) {
+      } else if (!this.socketConnected || !this.serverReachable) {
         return 'cloud_off'
       } else if (this.isCellular) {
         return 'signal_cellular_alt'
@@ -50,7 +53,7 @@ export default {
     },
     iconClass() {
       if (!this.networkConnected) return 'text-error'
-      else if (!this.socketConnected) return 'text-warning'
+      else if (!this.socketConnected || !this.serverReachable) return 'text-error'
       else if (!this.isNetworkUnmetered) return 'text-yellow-400'
       else if (this.isCellular) return 'text-gray-200'
       else return 'text-success'
@@ -65,6 +68,8 @@ export default {
         msg = this.$strings.MessageNoNetworkConnection
       } else if (!this.socketConnected) {
         msg = this.$strings.MessageSocketNotConnected
+      } else if (!this.serverReachable) {
+        msg = this.$strings.MessageServerConnectionUnavailable
       } else if (this.isCellular) {
         msg = this.isNetworkUnmetered ? this.$strings.MessageSocketConnectedOverUnmeteredCellular : this.$strings.MessageSocketConnectedOverMeteredCellular
       } else {

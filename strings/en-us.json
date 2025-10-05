@@ -327,6 +327,7 @@
   "MessageNoLogs": "No logs",
   "MessageNoMediaFolders": "No Media Folders",
   "MessageNoNetworkConnection": "No network connection",
+  "MessageServerConnectionUnavailable": "Cannot reach the server right now",
   "MessageNoPodcastsFound": "No podcasts found",
   "MessageNoSeries": "No series",
   "MessageNoUpdatesWereNecessary": "No updates were necessary",

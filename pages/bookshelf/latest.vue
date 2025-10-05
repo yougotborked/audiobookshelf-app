@@ -17,14 +17,20 @@ export default {
       totalEpisodes: 0,
       currentPage: 0,
       localLibraryItems: [],
-      loadedLibraryId: null
+      loadedLibraryId: null,
+      reloadTimeout: null,
+      offlineToastShown: false
     }
   },
   watch: {
     networkConnected(newVal) {
-      if (newVal && !this.recentEpisodes.length) {
-        setTimeout(() => this.loadRecentEpisodes(), 1000)
-      }
+      this.scheduleReload(newVal ? 800 : 0)
+    },
+    socketConnected(newVal) {
+      this.scheduleReload(newVal ? 800 : 0)
+    },
+    serverReachable(newVal) {
+      this.scheduleReload(newVal ? 600 : 0)
     }
   },
   computed: {
@@ -33,6 +39,12 @@ export default {
     },
     networkConnected() {
       return this.$store.state.networkConnected
+    },
+    socketConnected() {
+      return this.$store.state.socketConnected
+    },
+    serverReachable() {
+      return this.$store.state.serverReachable
     },
     localEpisodes() {
       const episodes = []
@@ -69,53 +81,77 @@ export default {
       this.$store.commit('globals/setShowPlaylistsAddCreateModal', true)
     },
     async loadRecentEpisodes(page = 0) {
+      if (!this.currentLibraryId) return
       this.loadedLibraryId = this.currentLibraryId
       this.processing = true
-      if (!this.networkConnected) {
-        if (!this.localLibraryItems.length) {
-          await this.loadLocalPodcastLibraryItems()
+      const shouldUseOffline = !this.networkConnected || !this.socketConnected || !this.serverReachable
+
+      try {
+        if (shouldUseOffline) {
+          await this.useOfflineEpisodes({ showToast: this.networkConnected })
+          return
         }
-        const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
-        if (cached.length) {
-          this.recentEpisodes = cached
-          this.totalEpisodes = cached.length
-        } else {
-          const episodes = [...this.localEpisodes]
-          const parseDate = (ep) => {
-            if (!ep) return 0
-            let val = ep.publishedAt ?? ep.pubDate
-            if (!val) return 0
-            if (typeof val === 'string') {
-              const num = Number(val)
-              if (!isNaN(num)) val = num
-            }
-            if (typeof val === 'number') {
-              if (val < 1e12) val *= 1000
-              return val
-            }
-            const parsed = Date.parse(val)
-            return isNaN(parsed) ? 0 : parsed
-          }
-          this.recentEpisodes = this.localEpisodes
-            .slice()
-            .sort((a, b) => parseDate(b) - parseDate(a))
-            .slice(0, 200)
+
+        const episodePayload = await this.$nativeHttp.get(
+          `/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200&page=${page}`
+        )
+
+        if (!episodePayload) {
+          throw new Error('Empty response payload')
         }
-        this.totalEpisodes = this.recentEpisodes.length
-        this.processing = false
-        return
-      }
-      const episodePayload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200&page=${page}`).catch((error) => {
+
+        console.log('Episodes', episodePayload)
+        this.recentEpisodes = episodePayload.episodes || []
+        this.totalEpisodes = episodePayload.total ?? this.recentEpisodes.length
+        this.currentPage = page
+        this.offlineToastShown = false
+        this.$localStore.setCachedLatestEpisodes(this.currentLibraryId, this.recentEpisodes)
+      } catch (error) {
         console.error('Failed to get recent episodes', error)
-        this.$toast.error('Failed to get recent episodes')
-        return null
-      })
-      this.processing = false
-      console.log('Episodes', episodePayload)
-      this.recentEpisodes = episodePayload.episodes || []
-      this.totalEpisodes = episodePayload.total
-      this.currentPage = page
-      this.$localStore.setCachedLatestEpisodes(this.currentLibraryId, this.recentEpisodes)
+        await this.useOfflineEpisodes({ showToast: true })
+      } finally {
+        this.processing = false
+      }
+    },
+    async useOfflineEpisodes({ showToast = false } = {}) {
+      if (!this.localLibraryItems.length) {
+        await this.loadLocalPodcastLibraryItems()
+      }
+
+      const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
+      if (cached.length) {
+        this.recentEpisodes = cached
+        this.totalEpisodes = cached.length
+      } else {
+        const episodes = [...this.localEpisodes]
+        const parseDate = (ep) => {
+          if (!ep) return 0
+          let val = ep.publishedAt ?? ep.pubDate
+          if (!val) return 0
+          if (typeof val === 'string') {
+            const num = Number(val)
+            if (!isNaN(num)) val = num
+          }
+          if (typeof val === 'number') {
+            if (val < 1e12) val *= 1000
+            return val
+          }
+          const parsed = Date.parse(val)
+          return isNaN(parsed) ? 0 : parsed
+        }
+        this.recentEpisodes = episodes
+          .slice()
+          .sort((a, b) => parseDate(b) - parseDate(a))
+          .slice(0, 200)
+        this.totalEpisodes = this.recentEpisodes.length
+      }
+
+      this.currentPage = 0
+
+      if (showToast && !this.offlineToastShown) {
+        this.$toast.error(this.$strings.MessageServerConnectionUnavailable)
+        this.offlineToastShown = true
+      }
     },
     libraryChanged(libraryId) {
       if (libraryId !== this.loadedLibraryId) {
@@ -139,6 +175,16 @@ export default {
       } else {
         this.localLibraryItems.push(item)
       }
+    },
+    scheduleReload(delay = 0) {
+      if (this.reloadTimeout) {
+        clearTimeout(this.reloadTimeout)
+        this.reloadTimeout = null
+      }
+      this.reloadTimeout = setTimeout(() => {
+        this.reloadTimeout = null
+        this.loadRecentEpisodes()
+      }, Math.max(delay, 0))
     }
   },
   async mounted() {
@@ -148,6 +194,10 @@ export default {
     this.$eventBus.$on('new-local-library-item', this.newLocalLibraryItem)
   },
   beforeDestroy() {
+    if (this.reloadTimeout) {
+      clearTimeout(this.reloadTimeout)
+      this.reloadTimeout = null
+    }
     this.$eventBus.$off('library-changed', this.libraryChanged)
     this.$eventBus.$off('new-local-library-item', this.newLocalLibraryItem)
   }
