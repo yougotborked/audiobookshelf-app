@@ -265,6 +265,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       mediaSession =
               MediaSessionCompat(this, tag).apply {
                 setSessionActivity(sessionActivityPendingIntent)
+                setFlags(
+                  MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
+                  MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+                )
                 setMediaButtonReceiver(null)
                 isActive = true
               }

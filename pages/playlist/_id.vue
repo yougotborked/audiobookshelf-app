@@ -64,15 +64,19 @@ export default {
   },
   watch: {
     networkConnected(newVal) {
-      if (newVal) {
-        if (!this.playlist.items.length && this.autoCacheUnplayedEpisodes) {
+      if (!newVal) return
+
+      const isUnfinished = this.$route.params.id === 'unfinished'
+      if (!this.playlist.items.length) {
+        if (!isUnfinished || this.autoCacheUnplayedEpisodes) {
           setTimeout(() => {
             this.fetchPlaylist()
           }, 1000)
-        } else {
-          this.checkAutoDownload()
         }
+        return
       }
+
+      this.checkAutoDownload()
     },
     autoCacheUnplayedEpisodes(newVal) {
       if (

@@ -1,10 +1,10 @@
 <template>
   <div class="w-full h-full overflow-y-auto">
-    <div class="px-4 pt-4">
-      <div
-        v-if="autoCacheUnplayedEpisodes"
-        class="mb-4 border border-fg/20 rounded p-4 flex items-center"
-      >
+    <div
+      v-if="autoCacheUnplayedEpisodes"
+      class="px-4 pt-4"
+    >
+      <div class="mb-4 border border-fg/20 rounded p-4 flex items-center">
         <nuxt-link to="/playlist/unfinished" class="flex items-center flex-grow">
           <covers-playlist-cover :items="autoPlaylist.items" :width="64" :height="64" />
           <p class="text-lg ml-4">{{ autoPlaylist.name }}</p>
