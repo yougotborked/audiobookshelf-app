@@ -37,6 +37,7 @@ export default {
   computed: {},
   methods: {
     async init() {
+      await this.$store.dispatch('setupNetworkListener')
       this.deviceData = await this.$db.getDeviceData()
       this.$store.commit('setDeviceData', this.deviceData)
       await this.$store.dispatch('init')
