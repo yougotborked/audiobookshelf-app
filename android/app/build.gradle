@@ -31,6 +31,12 @@ android {
   kotlinOptions {
     freeCompilerArgs = ['-Xjvm-default=all']
   }
+  lint {
+    abortOnError true
+    warningsAsErrors true
+    checkDependencies true
+    baseline = file('lint-baseline.xml')
+  }
   compileSdk rootProject.ext.compileSdkVersion
   signingConfigs {
     debug {
@@ -135,6 +141,16 @@ dependencies {
 
   // Jackson for JSON
   implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.12.2'
+}
+
+tasks.register('staticAnalysis') {
+  group = 'verification'
+  description = 'Runs static analysis checks.'
+  dependsOn('lint')
+}
+
+tasks.named('check') {
+  dependsOn('staticAnalysis')
 }
 
 apply from: 'capacitor.build.gradle'

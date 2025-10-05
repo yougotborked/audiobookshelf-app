@@ -36,6 +36,9 @@ jobs:
       - name: copy to Android project
         run: npx cap sync
 
+      - name: run static analysis
+        run: ./android/gradlew staticAnalysis -p android --no-daemon
+
       - name: setup debug keystore
         run: |
           mkdir -p "$HOME/.android"
