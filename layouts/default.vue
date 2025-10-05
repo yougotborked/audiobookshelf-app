@@ -25,7 +25,8 @@ export default {
       hasMounted: false,
       disconnectTime: 0,
       timeLostFocus: 0,
-      currentLang: null
+      currentLang: null,
+      connectionRetryTimeout: null
     }
   },
   watch: {
@@ -53,7 +54,22 @@ export default {
         } else {
           console.log(`[default] lost network connection`)
           this.disconnectTime = Date.now()
+          this.clearConnectionRetry()
         }
+      }
+    },
+    socketConnected(newVal) {
+      if (newVal) {
+        this.clearConnectionRetry()
+      } else {
+        this.scheduleConnectionRetry(1200)
+      }
+    },
+    serverReachable(newVal) {
+      if (newVal) {
+        this.clearConnectionRetry()
+      } else {
+        this.scheduleConnectionRetry(2000)
       }
     }
   },
@@ -75,6 +91,12 @@ export default {
     },
     currentLibraryName() {
       return this.$store.getters['libraries/getCurrentLibraryName']
+    },
+    socketConnected() {
+      return this.$store.state.socketConnected
+    },
+    serverReachable() {
+      return this.$store.state.serverReachable
     },
     attemptingConnection: {
       get() {
@@ -318,6 +340,68 @@ export default {
       console.log('Changed lang', code)
       this.currentLang = code
       document.documentElement.lang = code
+    },
+    scheduleConnectionRetry(delay = 2000) {
+      if (this.connectionRetryTimeout) return
+      if (!this.networkConnected) return
+      if (!this.user && !this.$store.state.user.serverConnectionConfig) return
+
+      console.log(`[default] scheduling connection retry in ${delay}ms`)
+      this.connectionRetryTimeout = setTimeout(() => {
+        this.connectionRetryTimeout = null
+        this.retryConnectionIfNeeded().catch((error) => {
+          console.error('[default] retryConnectionIfNeeded failed', error)
+        })
+      }, Math.max(delay, 0))
+    },
+    clearConnectionRetry() {
+      if (this.connectionRetryTimeout) {
+        clearTimeout(this.connectionRetryTimeout)
+        this.connectionRetryTimeout = null
+      }
+    },
+    async retryConnectionIfNeeded() {
+      if (!this.networkConnected) return
+      if (this.attemptingConnection) return
+
+      const hasUser = !!this.user
+      const serverConfig = this.$store.state.user.serverConnectionConfig
+
+      if (!hasUser) {
+        await this.attemptConnection()
+        return
+      }
+
+      if (!serverConfig?.address || !serverConfig?.token) {
+        console.warn('[default] No server config available for retry connection')
+        return
+      }
+
+      if (!this.$socket) {
+        console.warn('[default] Socket plugin unavailable, cannot retry connection')
+        return
+      }
+
+      const socketIsConnected = this.$socket?.socket?.connected
+
+      if (!socketIsConnected) {
+        console.log('[default] Socket disconnected, reconnecting')
+        this.$socket.logout()
+        this.$socket.connect(serverConfig.address, serverConfig.token)
+      } else if (!this.$socket.isAuthenticated) {
+        console.log('[default] Socket connected but unauthenticated, sending auth event')
+        this.$socket.sendAuthenticate()
+      }
+
+      try {
+        await this.syncLocalSessions(false)
+      } catch (error) {
+        console.error('[default] retryConnectionIfNeeded sync failed', error)
+      } finally {
+        if (!this.$store.state.serverReachable) {
+          this.scheduleConnectionRetry(5000)
+        }
+      }
     }
   },
   async mounted() {
@@ -372,6 +456,7 @@ export default {
     document.removeEventListener('visibilitychange', this.visibilityChanged)
     this.$socket.off('user_updated', this.userUpdated)
     this.$socket.off('user_media_progress_updated', this.userMediaProgressUpdated)
+    this.clearConnectionRetry()
   }
 }
 </script>

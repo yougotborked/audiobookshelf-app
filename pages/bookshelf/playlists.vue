@@ -17,6 +17,7 @@
 
 <script>
 import { AbsDownloader } from '@/plugins/capacitor'
+import { buildUnfinishedAutoPlaylist, collectDownloadedEpisodeKeys } from '@/mixins/autoPlaylistHelpers'
 export default {
   async asyncData({ store, app }) {
     const name = app.$strings.LabelAutoUnfinishedPodcasts
@@ -29,7 +30,8 @@ export default {
   },
   data() {
     return {
-      autoPlaylist: { name: '', items: [] }
+      autoPlaylist: { name: '', items: [] },
+      downloadedEpisodeKeys: null
     }
   },
   mounted() {
@@ -63,117 +65,54 @@ export default {
   },
   methods: {
     async fetchAutoPlaylist() {
-      const progressMap = {}
-      ;(this.$store.state.user.user?.mediaProgress || []).forEach((mp) => {
-        if (mp.episodeId) progressMap[mp.episodeId] = mp
-      })
-      ;(this.$store.state.globals.localMediaProgress || []).forEach((mp) => {
-        if (mp.episodeId) progressMap[mp.episodeId] = mp
-      })
+      try {
+        const { items, downloadedEpisodeKeys } = await buildUnfinishedAutoPlaylist({
+          store: this.$store,
+          db: this.$db,
+          localStore: this.$localStore,
+          nativeHttp: this.$nativeHttp,
+          networkConnected: this.networkConnected
+        })
 
-      const items = []
-      const seen = new Set()
+        this.downloadedEpisodeKeys = downloadedEpisodeKeys
+
+        this.autoPlaylist = {
+          id: 'unfinished',
+          name: this.$strings.LabelAutoUnfinishedPodcasts,
+          items
+        }
+
+        await this.$localStore.setCachedPlaylist(this.autoPlaylist)
+        this.checkAutoDownload()
+      } catch (error) {
+        console.error('Failed to fetch auto playlist', error)
+      }
+    },
+    async ensureDownloadedKeySet() {
+      if (this.downloadedEpisodeKeys instanceof Set) {
+        return this.downloadedEpisodeKeys
+      }
+
       const localLibraries = await this.$db.getLocalLibraryItems('podcast')
-      for (const li of localLibraries) {
-        let episodes = li.media?.episodes || []
-
-        const cachedMeta = (await this.$localStore.getEpisodeMetadata(
-          li.libraryItemId
-        )) || []
-        const metaMap = {}
-        cachedMeta.forEach((m) => {
-          if (m && m.id) metaMap[m.id] = m
-        })
-        episodes = episodes.map((ep) => {
-          const id = ep.serverEpisodeId || ep.id
-          if (id && (!ep.publishedAt && !ep.pubDate) && metaMap[id]) {
-            return {
-              ...ep,
-              publishedAt: metaMap[id].publishedAt,
-              pubDate: metaMap[id].pubDate
-            }
-          }
-          return ep
-        })
-
-        let missingDates = episodes.some((e) => !e.publishedAt && !e.pubDate)
-        if (this.networkConnected && missingDates) {
-          const serverItem = await this.$nativeHttp
-            .get(`/api/items/${li.libraryItemId}?expanded=1`)
-            .catch(() => null)
-          if (serverItem?.media?.episodes?.length) {
-            episodes = serverItem.media.episodes.map((se) => {
-              const localEp = li.media?.episodes?.find(
-                (lep) => lep.serverEpisodeId === se.id
-              )
-              return localEp ? { ...se, localEpisode: localEp } : se
-            })
-            const meta = serverItem.media.episodes.map((se) => ({
-              id: se.id,
-              pubDate: se.pubDate,
-              publishedAt: se.publishedAt
-            }))
-            await this.$localStore.setEpisodeMetadata(li.libraryItemId, meta)
-          }
-        }
-
-        for (const ep of episodes) {
-          const serverId = ep.serverEpisodeId || ep.id
-          if (!serverId) continue
-          const prog = progressMap[serverId]
-          if (prog && prog.isFinished) continue
-          const key = `${li.libraryItemId}_${serverId}`
-          if (seen.has(key)) continue
-          seen.add(key)
-          const serverLibraryItem = { ...li, id: li.libraryItemId }
-          items.push({
-            libraryItem: serverLibraryItem,
-            episode: ep,
-            libraryItemId: li.libraryItemId,
-            episodeId: serverId,
-            localLibraryItem: li,
-            localEpisode: ep.localEpisode || ep
-          })
-        }
-      }
-
-      const parseDate = (ep) => {
-        if (!ep) return 0
-        let val = ep.publishedAt ?? ep.pubDate
-        if (!val) return 0
-        if (typeof val === 'string') {
-          const num = Number(val)
-          if (!isNaN(num)) val = num
-        }
-        if (typeof val === 'number') {
-          if (val < 1e12) val *= 1000
-          return val
-        }
-        const parsed = Date.parse(val)
-        return isNaN(parsed) ? 0 : parsed
-      }
-      items.sort((a, b) => parseDate(a.episode) - parseDate(b.episode))
-
-      this.autoPlaylist = {
-        id: 'unfinished',
-        name: this.$strings.LabelAutoUnfinishedPodcasts,
-        items
-      }
-      await this.$localStore.setCachedPlaylist(this.autoPlaylist)
-      this.checkAutoDownload()
+      this.downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraries)
+      return this.downloadedEpisodeKeys
     },
     async checkAutoDownload() {
       if (!this.networkConnected) return
       if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
-      const localItems = await this.$db.getLocalLibraryItems('podcast')
+
+      const downloadedKeys = await this.ensureDownloadedKeySet()
+
       for (const qi of this.autoPlaylist.items) {
         const liId = qi.libraryItemId || qi.libraryItem?.libraryItemId || qi.libraryItem?.id
         const epId = qi.episodeId || qi.episode?.serverEpisodeId || qi.episode?.id
-        const localLi = localItems.find((lli) => lli.libraryItemId === liId)
-        const localEp = localLi?.media?.episodes?.find((ep) => ep.serverEpisodeId === epId)
-        if (!localEp && liId && epId) {
-          AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
-        }
+        if (!liId || !epId) continue
+
+        const key = `${liId}_${epId}`
+        if (downloadedKeys.has(key)) continue
+
+        AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
+        downloadedKeys.add(key)
       }
     }
   }
