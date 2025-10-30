@@ -23,14 +23,20 @@ export default {
     const name = app.$strings.LabelAutoUnfinishedPodcasts
     const enabled = store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
     if (!enabled)
-      return { autoPlaylist: { id: 'unfinished', name, items: [] } }
+      return { autoPlaylist: { id: 'unfinished', name, items: [], totalItems: 0 } }
     const cached = await app.$localStore.getCachedPlaylist('unfinished')
-    if (cached) return { autoPlaylist: cached }
-    return { autoPlaylist: { id: 'unfinished', name, items: [] } }
+    if (cached)
+      return {
+        autoPlaylist: {
+          ...cached,
+          totalItems: cached.totalItems || (cached.items ? cached.items.length : 0)
+        }
+      }
+    return { autoPlaylist: { id: 'unfinished', name, items: [], totalItems: 0 } }
   },
   data() {
     return {
-      autoPlaylist: { name: '', items: [] },
+      autoPlaylist: { name: '', items: [], totalItems: 0 },
       downloadedEpisodeKeys: null
     }
   },
@@ -66,7 +72,7 @@ export default {
   methods: {
     async fetchAutoPlaylist() {
       try {
-        const { items, downloadedEpisodeKeys } = await buildUnfinishedAutoPlaylist({
+        const { items, downloadedEpisodeKeys, totalItems } = await buildUnfinishedAutoPlaylist({
           store: this.$store,
           db: this.$db,
           localStore: this.$localStore,
@@ -79,7 +85,8 @@ export default {
         this.autoPlaylist = {
           id: 'unfinished',
           name: this.$strings.LabelAutoUnfinishedPodcasts,
-          items
+          items,
+          totalItems
         }
 
         await this.$localStore.setCachedPlaylist(this.autoPlaylist)
