@@ -435,9 +435,13 @@ export default {
       await this.$store.dispatch('init')
       await this.$store.dispatch('setupNetworkListener')
 
-      if (this.$store.state.user.serverConnectionConfig) {
+      const serverConfig = this.$store.state.user.serverConnectionConfig
+      if (serverConfig && this.user) {
         AbsLogger.info({ tag: 'default', message: `mounted: Server connected, init libraries (${this.$store.getters['user/getServerConfigName']})` })
         await this.initLibraries()
+      } else if (serverConfig) {
+        AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempting connection (${this.$store.getters['user/getServerConfigName']})` })
+        await this.attemptConnection()
       } else {
         AbsLogger.info({ tag: 'default', message: `mounted: Server not connected, attempt connection` })
         await this.attemptConnection()

@@ -49,6 +49,8 @@ function getEpisodeSortDate(episode) {
   return Number.isNaN(parsed) ? 0 : parsed
 }
 
+const MAX_AUTO_PLAYLIST_ITEMS = 400
+
 export function collectDownloadedEpisodeKeys(localLibraries = []) {
   const keys = new Set()
 
@@ -175,12 +177,20 @@ export async function buildUnfinishedAutoPlaylist({
   }
 
   playlistItems.sort((a, b) => a.sortDate - b.sortDate)
-  playlistItems.forEach((item) => {
+
+  const totalItems = playlistItems.length
+  let limitedItems = playlistItems
+  if (playlistItems.length > MAX_AUTO_PLAYLIST_ITEMS) {
+    limitedItems = playlistItems.slice(-MAX_AUTO_PLAYLIST_ITEMS)
+  }
+
+  limitedItems.forEach((item) => {
     delete item.sortDate
   })
 
   return {
-    items: playlistItems,
-    downloadedEpisodeKeys
+    items: limitedItems,
+    downloadedEpisodeKeys,
+    totalItems
   }
 }

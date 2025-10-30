@@ -4,7 +4,7 @@
       <p class="pr-2">{{ $strings.HeaderPlaylistItems }}</p>
 
       <div class="w-6 h-6 md:w-7 md:h-7 bg-fg bg-opacity-10 rounded-full flex items-center justify-center">
-        <span class="text-xs md:text-sm font-mono leading-none">{{ items.length }}</span>
+        <span class="text-xs md:text-sm font-mono leading-none">{{ displayCount }}</span>
       </div>
 
       <div class="flex-grow" />
@@ -23,12 +23,22 @@ export default {
     items: {
       type: Array,
       default: () => []
+    },
+    totalItems: {
+      type: Number,
+      default: null
     }
   },
   data() {
     return {}
   },
   computed: {
+    displayCount() {
+      if (this.totalItems && this.totalItems > this.items.length) {
+        return `${this.items.length}/${this.totalItems}`
+      }
+      return `${this.items.length}`
+    },
     totalDuration() {
       var _total = 0
       this.items.forEach((item) => {

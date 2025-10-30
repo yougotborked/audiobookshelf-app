@@ -28,7 +28,12 @@
           <p class="text-base text-fg">{{ description }}</p>
         </div>
 
-        <tables-playlist-items-table :items="playlistItems" :playlist-id="playlist.id" @showMore="showMore" />
+        <tables-playlist-items-table
+          :items="playlistItems"
+          :total-items="playlistTotalItems"
+          :playlist-id="playlist.id"
+          @showMore="showMore"
+        />
       </div>
     </div>
 
@@ -52,7 +57,12 @@ export default {
     }
 
     const cached = await app.$localStore.getCachedPlaylist(params.id)
-    const playlist = cached || { id: params.id, name: '', description: '', items: [] }
+    const playlist = cached
+      ? {
+          ...cached,
+          totalItems: cached.totalItems || (cached.items ? cached.items.length : 0)
+        }
+      : { id: params.id, name: '', description: '', items: [], totalItems: 0 }
     return { playlist }
   },
   data() {
@@ -100,6 +110,9 @@ export default {
     },
     playlistItems() {
       return this.playlist.items || []
+    },
+    playlistTotalItems() {
+      return this.playlist.totalItems || this.playlistItems.length
     },
     playlistName() {
       return this.playlist.name || ''
@@ -153,10 +166,11 @@ export default {
             id: 'unfinished',
             name: this.$strings.LabelAutoUnfinishedPodcasts,
             description: '',
-            items: []
+            items: [],
+            totalItems: 0
           }
         } else {
-          const { items, downloadedEpisodeKeys } = await buildUnfinishedAutoPlaylist({
+          const { items, downloadedEpisodeKeys, totalItems } = await buildUnfinishedAutoPlaylist({
             store: this.$store,
             db: this.$db,
             localStore: this.$localStore,
@@ -168,7 +182,8 @@ export default {
             id: 'unfinished',
             name: this.$strings.LabelAutoUnfinishedPodcasts,
             description: '',
-            items
+            items,
+            totalItems
           }
 
           this.downloadedEpisodeKeys = downloadedEpisodeKeys
@@ -204,6 +219,7 @@ export default {
           this.downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraryItems)
         }
       }
+      playlist.totalItems = playlist.totalItems || playlist.items.length
       await this.$localStore.setCachedPlaylist(playlist)
       this.playlist = playlist
       this.checkAutoDownload()
