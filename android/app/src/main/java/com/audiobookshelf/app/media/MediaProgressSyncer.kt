@@ -183,7 +183,17 @@ class MediaProgressSyncer(
   }
 
   fun finished(cb: () -> Unit) {
-    if (!listeningTimerRunning) return
+    if (!listeningTimerRunning) {
+      Log.d(tag, "finished: Timer not running for $currentDisplayTitle")
+
+      currentPlaybackSession?.let { playbackSession ->
+        MediaEventManager.finishedEvent(playbackSession, null)
+      }
+
+      reset()
+      cb()
+      return
+    }
 
     listeningTimerTask?.cancel()
     listeningTimerTask = null
