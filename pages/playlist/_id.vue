@@ -183,19 +183,57 @@ export default {
       }
 
       if (playlist.items.length) {
-        const localLibraryItems = (await this.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
+        const mediaType = playlist.items[0]?.libraryItem?.mediaType
+        const localLibraryItems = mediaType ? (await this.$db.getLocalLibraryItems(mediaType)) || [] : []
         if (localLibraryItems.length) {
-          playlist.items.forEach((playlistItem) => {
-            const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
-            if (!matchingLocalLibraryItem) return
-            if (playlistItem.episode) {
-              const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
-              if (matchingLocalEpisode) {
-                playlistItem.localLibraryItem = matchingLocalLibraryItem
-                playlistItem.localEpisode = matchingLocalEpisode
+          const localLibraryItemMap = new Map()
+          const episodeMapsByLocalId = new Map()
+
+          localLibraryItems.forEach((localItem) => {
+            if (localItem?.libraryItemId) {
+              localLibraryItemMap.set(localItem.libraryItemId, localItem)
+            }
+          })
+
+          const getEpisodeMap = (localItem) => {
+            if (!localItem?.id) return null
+            if (episodeMapsByLocalId.has(localItem.id)) {
+              return episodeMapsByLocalId.get(localItem.id)
+            }
+
+            const map = new Map()
+            ;(localItem.media?.episodes || []).forEach((episode) => {
+              const serverEpisodeId = episode?.serverEpisodeId || episode?.id
+              if (serverEpisodeId) {
+                map.set(serverEpisodeId, episode)
               }
-            } else {
-              playlistItem.localLibraryItem = matchingLocalLibraryItem
+            })
+
+            episodeMapsByLocalId.set(localItem.id, map)
+            return map
+          }
+
+          playlist.items.forEach((playlistItem) => {
+            const matchingLocalLibraryItem = localLibraryItemMap.get(playlistItem.libraryItemId)
+            if (!matchingLocalLibraryItem) return
+
+            playlistItem.localLibraryItem = matchingLocalLibraryItem
+
+            if (!playlistItem.episode && !playlistItem.episodeId) return
+
+            const episodeMap = getEpisodeMap(matchingLocalLibraryItem)
+            if (!episodeMap) return
+
+            const episodeKey =
+              playlistItem.episodeId ||
+              playlistItem.episode?.serverEpisodeId ||
+              playlistItem.episode?.id
+
+            if (!episodeKey) return
+
+            const matchingLocalEpisode = episodeMap.get(episodeKey)
+            if (matchingLocalEpisode) {
+              playlistItem.localEpisode = matchingLocalEpisode
             }
           })
         }
