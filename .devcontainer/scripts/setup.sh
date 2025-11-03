@@ -152,6 +152,14 @@ fi
 # with the project's npm scripts. The step is idempotent and will not fail the entire
 # setup when it encounters an error; it will warn instead.
 if command -v npm >/dev/null 2>&1 && [ -f package.json ]; then
+  # Auto-answer Capacitor telemetry prompt by enabling telemetry non-interactively
+  # before any `npx cap sync` runs. This prevents the interactive prompt from
+  # blocking setup. It's best-effort and non-blocking if the CLI is not present.
+  if command -v npx >/dev/null 2>&1; then
+    echo "Auto-enabling Capacitor telemetry (non-interactive)..."
+    npx cap telemetry on >/dev/null 2>&1 || npx cap telemetry enable >/dev/null 2>&1 || true
+  fi
+
   if npm run | sed -n '1,200p' | grep -q "sync"; then
     echo "Running 'npm run sync' (generate + cap sync)..."
     if ! npm run sync --if-present; then

@@ -10,6 +10,8 @@ import android.view.SurfaceView
 import android.view.TextureView
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.C.TrackType
+import com.google.android.exoplayer2.DeviceInfo
+import com.google.android.exoplayer2.DeviceInfo.*
 import com.google.android.exoplayer2.MediaMetadata
 import com.google.android.exoplayer2.Player.*
 import com.google.android.exoplayer2.Tracks.Group
@@ -63,10 +65,10 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   val period: Timeline.Period
   var listeners: ListenerSet<Player.Listener>
   private val mainHandler = Handler(Looper.getMainLooper())
-  // DeviceInfo.Builder's constructor signature can vary between ExoPlayer versions.
-  // Use the no-arg builder and set the playback type explicitly for compatibility.
-  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo(
-    com.google.android.exoplayer2.DeviceInfo.PLAYBACK_TYPE_REMOTE,  /* maxVolume= */0)
+  // DeviceInfo.Builder is not available in the ExoPlayer version used by this project (2.18.x).
+  // Use the UNKNOWN sentinel as a safe default; when a cast session exists we return a
+  // remote-specific DeviceInfo elsewhere (see getDeviceInfo()).
+  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo.UNKNOWN
   private val volumeStep = 0.05
 
   /* package */
