@@ -26,8 +26,30 @@ if ! command -v java >/dev/null 2>&1; then
 fi
 
 # ---------- Android SDK: ensure cmdline-tools + permissions ----------
-# If sdkmanager is not present, install the commandline tools.
-if ! command -v sdkmanager >/dev/null 2>&1 && [ ! -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+# Prefer any existing sdkmanager on PATH. If found, try to infer the SDK root from
+# its location (commonly <sdk_root>/cmdline-tools/latest/bin/sdkmanager). If not
+# found on PATH, fall back to the configured ANDROID_SDK_ROOT and install the
+# commandline tools there.
+SDKMANAGER_BIN=""
+
+if command -v sdkmanager >/dev/null 2>&1; then
+  SDKMANAGER_BIN=$(command -v sdkmanager)
+  # sdkmanager is usually at <sdk_root>/cmdline-tools/latest/bin/sdkmanager
+  INFERRED_ROOT="$(cd "$(dirname "$(dirname "$(dirname "$SDKMANAGER_BIN")")")" && pwd)" || INFERRED_ROOT=""
+  if [ -n "$INFERRED_ROOT" ]; then
+    echo "Detected sdkmanager at $SDKMANAGER_BIN, inferring SDK root: $INFERRED_ROOT"
+    ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$INFERRED_ROOT}"
+    ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+  else
+    echo "Detected sdkmanager at $SDKMANAGER_BIN but failed to infer SDK root; using ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+  fi
+else
+  if [ -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+    SDKMANAGER_BIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+  fi
+fi
+
+if [ -z "$SDKMANAGER_BIN" ]; then
   CMDLINE_VER="11076708"  # Google cmdline-tools rev; adjust as needed
   sudo mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools"
   tmpdir="$(mktemp -d)"
@@ -37,12 +59,13 @@ if ! command -v sdkmanager >/dev/null 2>&1 && [ ! -x "$ANDROID_SDK_ROOT/cmdline-
   sudo mv "${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools" "${ANDROID_SDK_ROOT}/cmdline-tools/latest"
   popd
   rm -rf "$tmpdir"
+  SDKMANAGER_BIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
 fi
 
 # Make SDK tree writable by the vscode user (fixes "Failed to read or create install properties file")
 sudo mkdir -p "$ANDROID_SDK_ROOT"
-sudo chown -R vscode:vscode "$ANDROID_SDK_ROOT"
-sudo chmod -R u+rwX,go+rX "$ANDROID_SDK_ROOT"
+sudo chown -R vscode:vscode "$ANDROID_SDK_ROOT" || true
+sudo chmod -R u+rwX,go+rX "$ANDROID_SDK_ROOT" || true
 
 # Pre-create common subdirs to keep sdkmanager happy
 mkdir -p \
@@ -52,14 +75,24 @@ mkdir -p \
   "$ANDROID_SDK_ROOT/platform-tools" \
   "$HOME/.android"
 
-# Add SDK tools to PATH for this script execution
+# Add SDK tools to PATH for this script execution and prefer detected sdkmanager
 export ANDROID_SDK_ROOT ANDROID_HOME
 export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+if [ -n "$SDKMANAGER_BIN" ]; then
+  SDK_DIR_BIN_DIR="$(dirname "$SDKMANAGER_BIN")"
+  export PATH="$SDK_DIR_BIN_DIR:$PATH"
+fi
 
 # Helper to run sdkmanager with retries (network hiccups happen)
 sdkm() {
   local attempt=1 max=4
-  until "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "$@"; do
+  local bin
+  if [ -n "$SDKMANAGER_BIN" ]; then
+    bin="$SDKMANAGER_BIN"
+  else
+    bin="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+  fi
+  until "$bin" --sdk_root="$ANDROID_SDK_ROOT" "$@"; do
     if [ $attempt -ge $max ]; then
       echo "sdkmanager failed after $attempt attempts: $*" >&2
       exit 1

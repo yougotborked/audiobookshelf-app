@@ -19,7 +19,7 @@ kotlin {
     "--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
   ]
 
-  jvmToolchain(21)
+  jvmToolchain(17)
 }
 
 android {
@@ -30,12 +30,12 @@ android {
   }
   kotlinOptions {
     freeCompilerArgs = ['-Xjvm-default=all']
-    // Align Kotlin JVM target with Java toolchain (Java 21)
-    jvmTarget = '21'
+    // Align Kotlin JVM target with Java toolchain (Java 17)
+    jvmTarget = '17'
   }
   compileOptions {
-    sourceCompatibility JavaVersion.VERSION_21
-    targetCompatibility JavaVersion.VERSION_21
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
   }
   lint {
     abortOnError true
