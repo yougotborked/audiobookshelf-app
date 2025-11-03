@@ -207,6 +207,11 @@ export default {
 
       AbsLogger.info({ tag: 'default', message: `attemptConnection: Successful connection to last saved server config (${serverConnectionConfig.name})` })
       await this.initLibraries()
+      try {
+        await this.$store.dispatch('autoDownloadCheck')
+      } catch (error) {
+        console.error('[default] attemptConnection auto download check failed', error)
+      }
       this.attemptingConnection = false
     },
     itemRemoved(libraryItem) {
@@ -435,9 +440,26 @@ export default {
       await this.$store.dispatch('init')
       await this.$store.dispatch('setupNetworkListener')
 
-      if (this.$store.state.user.serverConnectionConfig) {
-        AbsLogger.info({ tag: 'default', message: `mounted: Server connected, init libraries (${this.$store.getters['user/getServerConfigName']})` })
+      const hasServerConfig = !!this.$store.state.user.serverConnectionConfig
+      const hasUser = !!this.$store.state.user.user
+
+      if (hasServerConfig && hasUser) {
+        AbsLogger.info({ tag: 'default', message: `mounted: Using existing server session (${this.$store.getters['user/getServerConfigName']})` })
+        if (!this.$socket?.socket || !this.$socket.socket.connected) {
+          const { address, token } = this.$store.state.user.serverConnectionConfig
+          if (address && token) {
+            this.$socket.connect(address, token)
+          }
+        }
         await this.initLibraries()
+        try {
+          await this.$store.dispatch('autoDownloadCheck')
+        } catch (error) {
+          console.error('[default] Failed to run auto download check', error)
+        }
+      } else if (hasServerConfig || deviceData?.lastServerConnectionConfigId) {
+        AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempt connection` })
+        await this.attemptConnection()
       } else {
         AbsLogger.info({ tag: 'default', message: `mounted: Server not connected, attempt connection` })
         await this.attemptConnection()
