@@ -167,6 +167,7 @@ export default {
       coverRgb: 'rgb(55, 56, 56)',
       coverBgIsLight: false,
       titleMarquee: null,
+      lastNativeCurrentTime: null,
       isRefreshingUI: false,
       appStateListener: null
     }
@@ -731,6 +732,7 @@ export default {
     },
     stopPlayInterval() {
       clearInterval(this.playInterval)
+      this.playInterval = null
     },
     resetStream(startTime) {
       this.closePlayback()
@@ -858,6 +860,7 @@ export default {
       this.isEnded = false
       this.isLoading = false
       this.playbackSession = null
+      this.lastNativeCurrentTime = null
     },
     async loadPlayerSettings() {
       const savedPlayerSettings = await this.$localStore.getPlayerSettings()
@@ -930,6 +933,7 @@ export default {
       this.isEnded = false
       this.isLoading = isLoading
       this.syncStatus = 0
+      this.lastNativeCurrentTime = null
       this.$store.commit('setPlaybackSession', this.playbackSession)
 
       // Set track width
@@ -1047,19 +1051,58 @@ export default {
     async refreshCurrentPlaybackPosition() {
       if (!this.playbackSession || typeof AbsAudioPlayer?.getCurrentTime !== 'function') return
       try {
+        const previousNativeTime =
+          typeof this.lastNativeCurrentTime === 'number' ? this.lastNativeCurrentTime : null
         const data = await AbsAudioPlayer.getCurrentTime()
         if (!data) return
-        if (typeof data.value === 'number') {
-          this.currentTime = Number(data.value.toFixed(2))
+
+        const rawCurrentTime = typeof data.value === 'number' ? data.value : null
+
+        if (rawCurrentTime !== null) {
+          this.lastNativeCurrentTime = rawCurrentTime
+          this.currentTime = Number(rawCurrentTime.toFixed(2))
         }
         if (typeof data.bufferedTime === 'number') {
           this.bufferedTime = Number(data.bufferedTime.toFixed(2))
         }
-        this.maybeRestartPolling()
+
         if (this.$refs.playedTrack) {
           this.timeupdate()
         } else {
           this.updateTimestamp()
+        }
+
+        const observedChange =
+          previousNativeTime !== null && rawCurrentTime !== null ? rawCurrentTime - previousNativeTime : 0
+        const resumedProgress = observedChange > 0.25
+
+        let nativePlaybackState = resumedProgress ? true : null
+        if (!resumedProgress && !this.isPlaying && !this.$store.state.playerIsPlaying) {
+          nativePlaybackState = await this.determineNativePlaybackState(rawCurrentTime)
+        }
+
+        if (nativePlaybackState === true) {
+          this.isPlaying = true
+          if (!this.$store.state.playerIsPlaying) {
+            this.$store.commit('setPlayerPlaying', true)
+          }
+          this.startPlayInterval()
+        } else if (nativePlaybackState === false) {
+          this.isPlaying = false
+          if (this.$store.state.playerIsPlaying) {
+            this.$store.commit('setPlayerPlaying', false)
+          }
+          this.stopPlayInterval()
+        } else {
+          if (observedChange > 0.05) {
+            this.isPlaying = true
+            if (!this.$store.state.playerIsPlaying) {
+              this.$store.commit('setPlayerPlaying', true)
+            }
+            this.startPlayInterval()
+          } else {
+            this.maybeRestartPolling()
+          }
         }
       } catch (error) {
         console.error('[AudioPlayer] Failed to refresh playback position', error)
@@ -1069,6 +1112,23 @@ export default {
       if (this.$platform === 'web') return
       if (!this.isPlaying && !this.$store.state.playerIsPlaying) return
       this.startPlayInterval()
+    },
+    async determineNativePlaybackState(baselineTime) {
+      if (this.$platform === 'web') return null
+      if (typeof baselineTime !== 'number') return null
+      if (typeof AbsAudioPlayer?.getCurrentTime !== 'function') return null
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 750))
+        if (!this.playbackSession) return null
+        const followUp = await AbsAudioPlayer.getCurrentTime()
+        if (!followUp || typeof followUp.value !== 'number') return null
+        const followUpTime = followUp.value
+        return followUpTime - baselineTime > 0.1
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to evaluate native playback state', error)
+        return null
+      }
     }
   },
   mounted() {
