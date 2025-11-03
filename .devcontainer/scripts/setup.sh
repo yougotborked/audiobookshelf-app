@@ -1,42 +1,119 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
-# System deps often needed by Android/Gradle & native node modules
+# ---------- Configuration ----------
+# Allow overrides from devcontainer.json via containerEnv
+ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/opt/android-sdk}"
+ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+GRADLE_USER_HOME="${GRADLE_USER_HOME:-/workspaces/.gradle}"
+NPM_CACHE_DIR="${NPM_CACHE_DIR:-/workspaces/.npm-cache}"
+WORKSPACE_DIR="/workspaces/${LOCAL_WORKSPACE_FOLDER_BASENAME:-audiobookshelf-app}"
+
+# Android components to ensure are present
+ANDROID_PLATFORMS=("platforms;android-34" "platforms;android-33")
+ANDROID_BUILD_TOOLS=("build-tools;34.0.0" "build-tools;33.0.2")
+ANDROID_BASICS=("platform-tools" "extras;google;m2repository" "extras;android;m2repository")
+
+# ---------- Base system deps (for native modules/Gradle) ----------
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-  ca-certificates git unzip zip wget curl jq gpg libstdc++6 lib32stdc++6 \
-  build-essential python3 make pkg-config openjdk-17-jdk-headless
+  ca-certificates git unzip zip wget curl jq gpg \
+  build-essential python3 make pkg-config libstdc++6 lib32stdc++6
 
-# Android SDK (cmdline-tools) install
-ANDROID_DIR="/opt/android-sdk"
-CMDLINE_VER="11076708" # current stable cmdline-tools version number (Google)
-sudo mkdir -p "${ANDROID_DIR}/cmdline-tools"
-cd /tmp
-wget -q https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_VER}_latest.zip -O cmdtools.zip
-sudo unzip -q cmdtools.zip -d "${ANDROID_DIR}/cmdline-tools"
-sudo mv "${ANDROID_DIR}/cmdline-tools/cmdline-tools" "${ANDROID_DIR}/cmdline-tools/latest"
-sudo chown -R vscode:vscode "${ANDROID_DIR}"
-
-# Accept licenses & install platforms/build-tools used by modern Gradle configs
-export ANDROID_SDK_ROOT="${ANDROID_DIR}"
-yes | "${ANDROID_DIR}/cmdline-tools/latest/bin/sdkmanager" --licenses
-"${ANDROID_DIR}/cmdline-tools/latest/bin/sdkmanager" \
-  "platform-tools" \
-  "platforms;android-34" \
-  "platforms;android-33" \
-  "build-tools;34.0.0" \
-  "build-tools;33.0.2" \
-  "extras;google;m2repository" \
-  "extras;android;m2repository"
-
-# Node: already provided by feature; ensure corepack/pnpm available if ever needed
-corepack enable || true
-
-# Project bootstrap
-cd /workspaces/"${LOCAL_WORKSPACE_FOLDER_BASENAME:-audiobookshelf-app}"
-if [ -f package-lock.json ] || [ -f package.json ]; then
-  npm ci || npm install
+# If Java is not present (because a feature/base image might have installed it), install OpenJDK 17 headless.
+if ! command -v java >/dev/null 2>&1; then
+  sudo apt-get install -y --no-install-recommends openjdk-17-jdk-headless
 fi
 
-# Nuxt generate & Capacitor sync are optional on first boot; leave as tasks
-echo "Setup complete."
+# ---------- Android SDK: ensure cmdline-tools + permissions ----------
+# If sdkmanager is not present, install the commandline tools.
+if ! command -v sdkmanager >/dev/null 2>&1 && [ ! -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+  CMDLINE_VER="11076708"  # Google cmdline-tools rev; adjust as needed
+  sudo mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools"
+  tmpdir="$(mktemp -d)"
+  pushd "$tmpdir"
+  wget -q "https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_VER}_latest.zip" -O cmdtools.zip
+  sudo unzip -q cmdtools.zip -d "${ANDROID_SDK_ROOT}/cmdline-tools"
+  sudo mv "${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools" "${ANDROID_SDK_ROOT}/cmdline-tools/latest"
+  popd
+  rm -rf "$tmpdir"
+fi
+
+# Make SDK tree writable by the vscode user (fixes "Failed to read or create install properties file")
+sudo mkdir -p "$ANDROID_SDK_ROOT"
+sudo chown -R vscode:vscode "$ANDROID_SDK_ROOT"
+sudo chmod -R u+rwX,go+rX "$ANDROID_SDK_ROOT"
+
+# Pre-create common subdirs to keep sdkmanager happy
+mkdir -p \
+  "$ANDROID_SDK_ROOT/licenses" \
+  "$ANDROID_SDK_ROOT/platforms" \
+  "$ANDROID_SDK_ROOT/build-tools" \
+  "$ANDROID_SDK_ROOT/platform-tools" \
+  "$HOME/.android"
+
+# Add SDK tools to PATH for this script execution
+export ANDROID_SDK_ROOT ANDROID_HOME
+export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+
+# Helper to run sdkmanager with retries (network hiccups happen)
+sdkm() {
+  local attempt=1 max=4
+  until "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "$@"; do
+    if [ $attempt -ge $max ]; then
+      echo "sdkmanager failed after $attempt attempts: $*" >&2
+      exit 1
+    fi
+    sleep $((attempt * 2))
+    attempt=$((attempt + 1))
+  done
+}
+
+# Accept licenses non-interactively
+# ---------- Accept licenses (avoid SIGPIPE with pipefail) ----------
+set +o pipefail
+yes | sdkm --licenses >/dev/null 2>&1 || true
+set -o pipefail
+
+# Install required Android packages
+sdkm "${ANDROID_BASICS[@]}"
+sdkm "${ANDROID_PLATFORMS[@]}"
+sdkm "${ANDROID_BUILD_TOOLS[@]}"
+
+# ---------- Node/npm hygiene (fix EACCES, root-owned cache, partial installs) ----------
+# Ensure npm cache is writable and persistent (mounted as a volume in devcontainer.json is ideal)
+sudo mkdir -p "$NPM_CACHE_DIR"
+sudo chown -R vscode:vscode "$NPM_CACHE_DIR"
+mkdir -p "$HOME/.npm"
+sudo chown -R vscode:vscode "$HOME/.npm"
+
+# Point npm to the writable cache and clean any prior root-owned junk
+npm config set cache "$NPM_CACHE_DIR" --location=global || true
+# If previous runs created root-owned files in ~/.npm, fix ownership
+sudo chown -R "$(id -u)":"$(id -g)" "$HOME/.npm" || true
+
+# ---------- Gradle cache ----------
+sudo mkdir -p "$GRADLE_USER_HOME"
+sudo chown -R vscode:vscode "$GRADLE_USER_HOME"
+
+# ---------- Project bootstrap ----------
+cd "$WORKSPACE_DIR"
+
+# If node_modules exists but has root-owned content, fix it; otherwise npm will throw TAR_ENTRY/EACCES noise.
+if [ -d node_modules ]; then
+  sudo chown -R vscode:vscode node_modules || true
+fi
+
+# Prefer reproducible install; fall back to npm install if no lockfile present.
+if [ -f package-lock.json ]; then
+  # Clean partial installs from previous failed attempts but avoid nuking caches
+  rm -rf node_modules
+  npm ci --no-audit --fund=false || (rm -rf node_modules && npm ci --no-audit --fund=false)
+else
+  npm install --no-audit --fund=false
+fi
+
+# Optional: enable corepack for pnpm/yarn if ever needed by contributors
+corepack enable || true
+
+echo "Setup complete: Android SDK + Node deps installed. Ready for Nuxt/Capacitor/Gradle builds."
