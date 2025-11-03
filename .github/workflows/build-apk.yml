@@ -9,73 +9,88 @@ on:
     paths-ignore:
       - 'ios/**'
       - 'readme.md'
+
+# Minimize default token and avoid unneeded scopes
+permissions:
+  contents: read
+
+# Cancel superseded runs per ref to save minutes
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   main:
     runs-on: ubuntu-latest
-    steps:
-      - name: checkout sources
-        uses: actions/checkout@v4
+    defaults:
+      run:
+        shell: bash
 
-      - name: use Node.js 20.x
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      - name: Use Node.js 20.x with npm cache
         uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: '**/package-lock.json'
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - name: Set up Java 21 (Temurin)
+        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: 21
+          # Enables Gradle/Maven toolchain caching if used
+          cache: gradle
 
-      - name: install dependencies
+      # Nuxt deps
+      - name: Install dependencies
         run: npm ci
 
-      - name: build Nuxt project
+      - name: Build Nuxt project (static)
         run: npm run generate
 
-      - name: copy to Android project
+      - name: Copy web to Android (Capacitor)
         run: npx cap sync
 
-      - name: Run static analysis (Gradle action)
-        uses: gradle/gradle-build-action@v4
+      # Modern Gradle action (replaces gradle/gradle-build-action)
+      # It enables Gradle configuration cache & dependency caching out of the box.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
         with:
-          cache: true
-          cache-dependency-path: |
-            android/**/build.gradle
-            android/**/build.gradle.kts
-            android/**/settings.gradle
-            android/**/settings.gradle.kts
-            android/gradle/wrapper/gradle-wrapper.properties
-          arguments: staticAnalysis -p android --no-daemon
+          # Avoid writes to cache from forked PRs (safe & faster)
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+          # Optional: publish build scans for deeper diagnostics (uncomment if desired)
+          # build-scan-publish: true
+          # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          # build-scan-terms-of-use-agree: "yes"
 
-      - name: setup debug keystore
+      - name: Run static analysis
+        working-directory: android
+        run: ./gradlew --no-daemon staticAnalysis
+
+      - name: Setup debug keystore
         run: |
           mkdir -p "$HOME/.android"
           cp android/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Build Android app (Gradle action)
-        uses: gradle/gradle-build-action@v4
-        with:
-          cache: true
-          cache-dependency-path: |
-            android/**/build.gradle
-            android/**/build.gradle.kts
-            android/**/settings.gradle
-            android/**/settings.gradle.kts
-            android/gradle/wrapper/gradle-wrapper.properties
-          arguments: assembleDebug -p android --no-daemon
+      - name: Build Android app (Debug)
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
 
-      - name: rename apk
+      - name: Rename APK with timestamp + short SHA
         working-directory: android/app/build/outputs/apk/debug/
         run: |
           build="$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
           name="audiobookshelf-${build}.apk"
           mv -v app-debug.apk "${name}"
 
-      - name: upload app
+      - name: Upload app artifact
         uses: actions/upload-artifact@v4
         with:
           name: audiobookshelf-apk
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
