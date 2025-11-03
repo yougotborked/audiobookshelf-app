@@ -11,7 +11,12 @@
       <p v-if="totalDuration" class="text-sm text-fg">{{ totalDurationPretty }}</p>
     </div>
     <template v-for="item in items">
-      <tables-playlist-item-table-row :key="item.id" :item="item" :playlist-id="playlistId" @showMore="showMore" />
+      <tables-playlist-item-table-row
+        :key="itemKey(item)"
+        :item="item"
+        :playlist-id="playlistId"
+        @showMore="showMore"
+      />
     </template>
   </div>
 </template>
@@ -52,6 +57,12 @@ export default {
     }
   },
   methods: {
+    itemKey(item) {
+      if (item?.id) return item.id
+      const episodeId = item?.episodeId || item?.episode?.serverEpisodeId || item?.episode?.id || 'book'
+      const libraryItemId = item?.libraryItemId || item?.libraryItem?.id || 'unknown'
+      return `${libraryItemId}_${episodeId}`
+    },
     showMore(playlistItem) {
       this.$emit('showMore', playlistItem)
     }

@@ -165,6 +165,7 @@ export async function buildUnfinishedAutoPlaylist({
 
       const sortDate = getEpisodeSortDate(episode)
       playlistItems.push({
+        id: key,
         libraryItem: { ...libraryItem, id: libraryId },
         episode,
         libraryItemId: libraryId,
