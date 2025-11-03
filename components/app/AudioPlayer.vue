@@ -6,8 +6,16 @@
       <div class="top-4 left-4 absolute cursor-pointer">
         <span class="material-symbols text-5xl" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" @click="collapseFullscreen">keyboard_arrow_down</span>
       </div>
-      <div v-show="showCastBtn" class="top-6 right-16 absolute cursor-pointer">
-        <span class="material-symbols text-3xl" :class="coverBgIsLight && theme !== 'black' ? 'text-black' : ''" @click="castClick">{{ isCasting ? 'cast_connected' : 'cast' }}</span>
+      <div
+        v-show="showCastBtn"
+        class="top-6 right-16 absolute cursor-pointer"
+        :class="{ 'opacity-60': !castAvailable && !isCasting }"
+      >
+        <span
+          class="material-symbols text-3xl"
+          :class="coverBgIsLight && theme !== 'black' ? 'text-black' : ''"
+          @click="castClick"
+        >{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
       <div class="top-6 right-4 absolute cursor-pointer">
         <span class="material-symbols text-3xl" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" @click="showMoreMenuDialog = true">more_vert</span>
@@ -291,6 +299,9 @@ export default {
       }
     },
     showCastBtn() {
+      return this.$store.state.isCastEnabled || this.$store.state.isCasting
+    },
+    castAvailable() {
       return this.$store.state.isCastAvailable
     },
     isCasting() {

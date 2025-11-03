@@ -45,7 +45,8 @@ export default {
       pagesLoaded: {},
       isFirstInit: false,
       pendingReset: false,
-      localLibraryItems: []
+      localLibraryItems: [],
+      localLibraryItemMap: new Map()
     }
   },
   watch: {
@@ -165,6 +166,15 @@ export default {
     }
   },
   methods: {
+    buildLocalLibraryItemMap(items = []) {
+      const map = new Map()
+      items.forEach((item) => {
+        if (item?.libraryItemId) {
+          map.set(item.libraryItemId, item)
+        }
+      })
+      return map
+    },
     clearFilter() {
       this.$store.dispatch('user/updateUserSettings', {
         mobileFilterBy: 'all'
@@ -227,7 +237,7 @@ export default {
             this.entityComponentRefs[index].setEntity(this.entities[index])
 
             if (this.isBookEntity) {
-              const localLibraryItem = this.localLibraryItems.find((lli) => lli.libraryItemId == this.entities[index].id)
+              const localLibraryItem = this.localLibraryItemMap.get(this.entities[index].id)
               if (localLibraryItem) {
                 this.entityComponentRefs[index].setLocalLibraryItem(localLibraryItem)
               }
@@ -373,6 +383,7 @@ export default {
       }
 
       this.localLibraryItems = await this.$db.getLocalLibraryItems(this.currentLibraryMediaType)
+      this.localLibraryItemMap = this.buildLocalLibraryItemMap(this.localLibraryItems)
       console.log('Local library items loaded for lazy bookshelf', this.localLibraryItems.length)
 
       this.isFirstInit = true
@@ -479,7 +490,7 @@ export default {
             this.entityComponentRefs[indexOf].setEntity(libraryItem)
 
             if (this.isBookEntity) {
-              var localLibraryItem = this.localLibraryItems.find((lli) => lli.libraryItemId == libraryItem.id)
+              const localLibraryItem = this.localLibraryItemMap.get(libraryItem.id)
               if (localLibraryItem) {
                 this.entityComponentRefs[indexOf].setLocalLibraryItem(localLibraryItem)
               }
