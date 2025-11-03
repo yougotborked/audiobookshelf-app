@@ -37,9 +37,7 @@ async function fetchServerEpisodesInBatches(contexts, nativeHttp, localStore) {
 
   for (let i = 0; i < contexts.length; i += batchSize) {
     const batch = contexts.slice(i, i + batchSize)
-    const responses = await Promise.allSettled(
-      batch.map((context) => nativeHttp.get(`/api/items/${context.libraryId}?expanded=1`))
-    )
+    const responses = await Promise.allSettled(batch.map((context) => nativeHttp.get(`/api/items/${context.libraryId}?expanded=1`)))
 
     responses.forEach((result, index) => {
       const context = batch[index]
@@ -136,6 +134,27 @@ function createPlaylistEpisode(episode) {
   return { ...rest }
 }
 
+function sanitizeLocalEpisode(localEpisode) {
+  if (!localEpisode) return null
+
+  // Keep only the fields needed by the UI and playback routing.
+  // Avoid storing very large/nested structures but retain audioTrack so
+  // components can show download controls and play local files.
+  const { id, serverEpisodeId, localLibraryItemId, title, pubDate, publishedAt, duration, fileSize, audioTrack, ...rest } = localEpisode
+
+  return {
+    id,
+    serverEpisodeId,
+    localLibraryItemId,
+    title,
+    pubDate,
+    publishedAt,
+    duration,
+    fileSize,
+    audioTrack: audioTrack ? { ...audioTrack } : undefined
+  }
+}
+
 export function toCacheablePlaylist(playlist) {
   if (!playlist) return playlist
 
@@ -143,7 +162,20 @@ export function toCacheablePlaylist(playlist) {
     ...playlist,
     items: (playlist.items || []).map((item) => {
       const { localLibraryItem, localEpisode, ...rest } = item || {}
-      return { ...rest }
+
+      const sanitized = { ...rest }
+
+      if (localLibraryItem) {
+        // Keep a sanitized version of the local library item so offline
+        // views can match and show download state without storing full DB blobs.
+        sanitized.localLibraryItem = createPlaylistLibraryItem(localLibraryItem, localLibraryItem.libraryItemId || localLibraryItem.id || rest.libraryItemId)
+      }
+
+      if (localEpisode) {
+        sanitized.localEpisode = sanitizeLocalEpisode(localEpisode)
+      }
+
+      return sanitized
     })
   }
 }
@@ -163,13 +195,7 @@ export function collectDownloadedEpisodeKeys(localLibraries = []) {
   return keys
 }
 
-export async function buildUnfinishedAutoPlaylist({
-  store,
-  db,
-  localStore,
-  nativeHttp,
-  networkConnected
-}) {
+export async function buildUnfinishedAutoPlaylist({ store, db, localStore, nativeHttp, networkConnected }) {
   const progressMap = new Map()
 
   ;(store.state.user.user?.mediaProgress || []).forEach((progress) => {
@@ -186,9 +212,7 @@ export async function buildUnfinishedAutoPlaylist({
   const localLibraries = await db.getLocalLibraryItems('podcast')
   const downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraries)
 
-  const metadataResults = await Promise.allSettled(
-    localLibraries.map((libraryItem) => localStore.getEpisodeMetadata(libraryItem.libraryItemId))
-  )
+  const metadataResults = await Promise.allSettled(localLibraries.map((libraryItem) => localStore.getEpisodeMetadata(libraryItem.libraryItemId)))
 
   const metadataByLibraryId = new Map()
   metadataResults.forEach((result, index) => {
@@ -230,9 +254,7 @@ export async function buildUnfinishedAutoPlaylist({
       }
     }
 
-    const needsServerDates =
-      networkConnected &&
-      context.episodes.some((episode) => !episode?.publishedAt && !episode?.pubDate)
+    const needsServerDates = networkConnected && context.episodes.some((episode) => !episode?.publishedAt && !episode?.pubDate)
 
     if (needsServerDates) {
       libraryContexts.push({ ...context, needsServerDates: true })
