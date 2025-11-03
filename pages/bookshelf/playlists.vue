@@ -17,7 +17,11 @@
 
 <script>
 import { AbsDownloader } from '@/plugins/capacitor'
-import { buildUnfinishedAutoPlaylist, collectDownloadedEpisodeKeys } from '@/mixins/autoPlaylistHelpers'
+import {
+  buildUnfinishedAutoPlaylist,
+  collectDownloadedEpisodeKeys,
+  toCacheablePlaylist
+} from '@/mixins/autoPlaylistHelpers'
 export default {
   async asyncData({ store, app }) {
     const name = app.$strings.LabelAutoUnfinishedPodcasts
@@ -89,7 +93,7 @@ export default {
           totalItems
         }
 
-        await this.$localStore.setCachedPlaylist(this.autoPlaylist)
+        await this.$localStore.setCachedPlaylist(toCacheablePlaylist(this.autoPlaylist))
         this.checkAutoDownload()
       } catch (error) {
         console.error('Failed to fetch auto playlist', error)

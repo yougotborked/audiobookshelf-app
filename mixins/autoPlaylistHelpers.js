@@ -51,6 +51,57 @@ function getEpisodeSortDate(episode) {
 
 const MAX_AUTO_PLAYLIST_ITEMS = 400
 
+function sanitizeTracks(tracks = []) {
+  if (!Array.isArray(tracks) || !tracks.length) return tracks
+  return tracks.map((track) => {
+    if (!track || typeof track !== 'object') return track
+    const { chapters, ...rest } = track
+    return rest
+  })
+}
+
+function createPlaylistLibraryItem(libraryItem, libraryId) {
+  if (!libraryItem) {
+    return { id: libraryId, libraryItemId: libraryId }
+  }
+
+  const { media, ...rest } = libraryItem
+  const sanitizedMedia = media ? { ...media } : undefined
+  if (sanitizedMedia) {
+    delete sanitizedMedia.episodes
+    delete sanitizedMedia.chapters
+    if (sanitizedMedia.tracks) {
+      sanitizedMedia.tracks = sanitizeTracks(sanitizedMedia.tracks)
+    }
+  }
+
+  return {
+    ...rest,
+    id: libraryId,
+    libraryItemId: libraryId,
+    media: sanitizedMedia
+  }
+}
+
+function createPlaylistEpisode(episode) {
+  if (!episode) return null
+
+  const { localEpisode, chapters, waveform, ...rest } = episode
+  return { ...rest }
+}
+
+export function toCacheablePlaylist(playlist) {
+  if (!playlist) return playlist
+
+  return {
+    ...playlist,
+    items: (playlist.items || []).map((item) => {
+      const { localLibraryItem, localEpisode, ...rest } = item || {}
+      return { ...rest }
+    })
+  }
+}
+
 export function collectDownloadedEpisodeKeys(localLibraries = []) {
   const keys = new Set()
 
@@ -164,10 +215,12 @@ export async function buildUnfinishedAutoPlaylist({
       seen.add(key)
 
       const sortDate = getEpisodeSortDate(episode)
+      const sanitizedEpisode = createPlaylistEpisode(episode)
+
       playlistItems.push({
         id: key,
-        libraryItem: { ...libraryItem, id: libraryId },
-        episode,
+        libraryItem: createPlaylistLibraryItem(libraryItem, libraryId),
+        episode: sanitizedEpisode,
         libraryItemId: libraryId,
         episodeId: serverId,
         localLibraryItem: libraryItem,
