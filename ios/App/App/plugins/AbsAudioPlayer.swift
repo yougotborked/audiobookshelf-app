@@ -31,7 +31,9 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "decreaseSleepTime", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "increaseSleepTime", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSleepTimerTime", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setSleepTimer", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setSleepTimer", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getIsCastAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getIsCastSupported", returnType: CAPPluginReturnPromise)
     ]
     
     private let logger = AppLogger(category: "AbsAudioPlayer")
@@ -65,6 +67,14 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
     @objc func onReady(_ call: CAPPluginCall) {
         // TODO: Was used to notify when Abs UI was ready so that last played media could be opened - this was buggy and removed
         call.resolve()
+    }
+
+    @objc func getIsCastAvailable(_ call: CAPPluginCall) {
+        call.resolve(["value": false])
+    }
+
+    @objc func getIsCastSupported(_ call: CAPPluginCall) {
+        call.resolve(["value": false])
     }
 
     @objc func startPlaybackSession(_ session: PlaybackSession, playWhenReady: Bool, playbackRate: Float) throws {

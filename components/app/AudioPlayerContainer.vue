@@ -37,6 +37,7 @@ export default {
       onSleepTimerSetListener: null,
       onMediaPlayerChangedListener: null,
       onCastAvailableUpdateListener: null,
+      onCastSupportUpdateListener: null,
       onSkipNextRequestListener: null,
       onSkipPreviousRequestListener: null,
       onQueueIndexUpdateListener: null,
@@ -469,12 +470,18 @@ export default {
     this.onCastAvailableUpdateListener = await AbsAudioPlayer.addListener('onCastAvailableUpdate', ({ value }) => {
       this.$store.commit('setCastAvailable', value)
     })
+    this.onCastSupportUpdateListener = await AbsAudioPlayer.addListener('onCastSupportUpdate', ({ value }) => {
+      this.$store.commit('setCastEnabled', value)
+    })
     this.onSkipNextRequestListener = await AbsAudioPlayer.addListener('onSkipNextRequest', this.onSkipNextRequest)
     this.onSkipPreviousRequestListener = await AbsAudioPlayer.addListener('onSkipPreviousRequest', this.onSkipPreviousRequest)
     this.onQueueIndexUpdateListener = await AbsAudioPlayer.addListener('onQueueIndexUpdate', this.onQueueIndexUpdate)
 
     AbsAudioPlayer.getIsCastAvailable().then(({ value }) => {
       this.$store.commit('setCastAvailable', value)
+    })
+    AbsAudioPlayer.getIsCastSupported?.().then?.(({ value }) => {
+      this.$store.commit('setCastEnabled', value)
     })
 
     this.playbackSpeed = this.$store.getters['user/getUserSetting']('playbackRate')
@@ -510,6 +517,7 @@ export default {
     this.onSleepTimerSetListener?.remove()
     this.onMediaPlayerChangedListener?.remove()
     this.onCastAvailableUpdateListener?.remove()
+    this.onCastSupportUpdateListener?.remove()
     this.onSkipNextRequestListener?.remove()
     this.onSkipPreviousRequestListener?.remove()
     this.onQueueIndexUpdateListener?.remove()

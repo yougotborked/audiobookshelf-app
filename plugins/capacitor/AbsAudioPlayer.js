@@ -20,22 +20,34 @@ class AbsAudioPlayerWeb extends WebPlugin {
     this.trackStartTime = 0
 
     this.castAvailable = false
+    this.castSupported = false
 
     if (typeof window !== 'undefined') {
       // Called by the cast framework once it loads
       window.__onGCastApiAvailable = (isAvailable) => {
+        this.castSupported = !!isAvailable && !!(window.chrome?.cast || window.cast?.framework)
         this.castAvailable =
-          !!isAvailable &&
+          this.castSupported &&
           !!(window.chrome?.cast?.isAvailable || window.cast?.framework)
+        this.notifyListeners('onCastSupportUpdate', {
+          value: this.castSupported
+        })
         this.notifyListeners('onCastAvailableUpdate', {
           value: this.castAvailable
         })
       }
 
       // Check immediately in case the API is already available
+      this.castSupported = !!(window.chrome?.cast || window.cast?.framework)
       this.castAvailable = !!(
         window.chrome?.cast?.isAvailable || window.cast?.framework
       )
+      this.notifyListeners('onCastSupportUpdate', {
+        value: this.castSupported
+      })
+      this.notifyListeners('onCastAvailableUpdate', {
+        value: this.castAvailable
+      })
     }
   }
 
@@ -194,6 +206,11 @@ class AbsAudioPlayerWeb extends WebPlugin {
   // PluginMethod
   async getIsCastAvailable() {
     return { value: this.castAvailable }
+  }
+
+  // PluginMethod
+  async getIsCastSupported() {
+    return { value: this.castSupported }
   }
 
   initializePlayer() {
