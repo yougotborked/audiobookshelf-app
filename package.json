@@ -10,8 +10,10 @@
     "build": "nuxt build",
     "start": "nuxt --hostname 0.0.0.0 --port 1337",
     "generate": "nuxt generate",
-    "lint": "eslint --ext .js .",
+    "lint": "eslint --ext .js,.vue .",
+    "lint:fix": "npm run lint -- --fix",
     "sync": "nuxt generate && npx cap sync",
+    "ci:android": "bash scripts/local-ci.sh",
     "icons-android": "cordova-res android --skip-config --copy",
     "ionic:build": "npm run build",
     "ionic:serve": "npm run dev",
@@ -50,8 +52,10 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0",
+    "@nuxtjs/eslint-config": "^12.0.0",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.57.1",
+    "eslint-plugin-nuxt": "^4.0.0",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1"
   }
