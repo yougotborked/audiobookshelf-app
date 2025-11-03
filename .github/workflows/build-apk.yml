@@ -94,3 +94,46 @@ jobs:
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
+
+  publish:
+    needs: main
+    runs-on: ubuntu-latest
+    # Only publish for commits pushed to the master branch
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: audiobookshelf-apk
+          path: ./ghpages
+
+      - name: Prepare test page resources
+        run: |
+          mkdir -p ghpages
+          # copy logo + template from the repo into the ghpages folder
+          cp static/Logo.png ghpages/logo.png || true
+          cp .github/testing-page-template.html ghpages/index.html
+
+      - name: Build test page
+        working-directory: ghpages
+        run: |
+          sed -i "s/__DATE__/$(date)/g" index.html
+          sed -i "s/__COMMIT__/$(git rev-parse --short HEAD)/g" index.html
+          sed -i "s/__APK__/$(ls *apk | xargs -n1 basename)/g" index.html
+          # Replace repository placeholder so forks point to their own repo (owner/name)
+          sed -i "s|__REPO__|${GITHUB_REPOSITORY}|g" index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./ghpages
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
