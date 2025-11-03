@@ -1,24 +1,59 @@
 {
-  "name": "Audiobookshelf Dev Container",
-  "build": {
-    "dockerfile": "Dockerfile"
+  "name": "audiobookshelf-app (Codespaces)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true
+    },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17.0.12-tem",
+      "jdkDistro": "tem",
+      "installGradle": false,
+      "installMaven": false
+    },
+    "ghcr.io/casl0/devcontainer-features/android-sdk:1": {
+      "version": "latest"
+    }
   },
-  "postCreateCommand": "bash .devcontainer/scripts/setup-devcontainer.sh",
-  "remoteUser": "vscode",
-  "forwardPorts": [1337],
-  "workspaceFolder": "/workspace",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "containerEnv": {
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
+    "GRADLE_USER_HOME": "/workspaces/.gradle"
+  },
+  "postCreateCommand": "bash .devcontainer/scripts/setup.sh",
+  "postStartCommand": "git config --global --add safe.directory /workspaces/${LOCAL_WORKSPACE_FOLDER_BASENAME}",
+  "forwardPorts": [3000, 5173],
+  "portsAttributes": {
+    "3000": { "label": "Nuxt dev" },
+    "5173": { "label": "Vite (Nuxt alt)" }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
+        "Vue.volar",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "octref.vetur",
-        "msjsdiag.debugger-for-chrome"
+        "bradlc.vscode-tailwindcss",
+        "mhutchie.git-graph",
+        "redhat.vscode-yaml",
+        "ms-vscode.vscode-typescript-next",
+        "vscjava.vscode-gradle",
+        "fwcd.kotlin"
       ],
       "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
+        "editor.formatOnSave": true,
+        "eslint.validate": ["javascript", "javascriptreact", "vue"],
+        "files.eol": "\n",
+        "typescript.tsdk": "node_modules/typescript/lib"
       }
     }
-  }
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "type=bind,source=${localEnv:HOME}/.android,target=/home/vscode/.android,consistency=cached",
+    "type=volume,source=audiobookshelf-gradle-cache,target=/workspaces/.gradle",
+    "type=volume,source=audiobookshelf-npm-cache,target=/home/vscode/.npm"
+  ]
 }

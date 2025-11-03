@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Nuxt app (Chrome)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "runtimeArgs": ["--remote-debugging-port=9222"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Nuxt app (Edge)",
+      "type": "pwa-msedge",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "runtimeArgs": ["--remote-debugging-port=9222"],
+      "console": "integratedTerminal",
+      "sourceMaps": true
+    },
+    {
+      "name": "Attach to running Nuxt process",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "protocol": "inspector",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Dev + Chrome",
+      "configurations": ["Nuxt app (Chrome)"],
+      "preLaunchTask": "Nuxt: dev"
+    },
+    {
+      "name": "Dev + Edge",
+      "configurations": ["Nuxt app (Edge)"],
+      "preLaunchTask": "Nuxt: dev"
+    }
+  ]
+}

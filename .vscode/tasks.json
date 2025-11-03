@@ -2,36 +2,48 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "npm: install (ci)",
-      "type": "shell",
-      "command": "npm ci",
-      "group": "build",
-      "presentation": { "reveal": "always" },
-      "problemMatcher": []
-    },
-    {
-      "label": "Start Nuxt Dev",
+      "label": "Nuxt: dev",
       "type": "shell",
       "command": "npm run dev",
-      "isBackground": false,
-      "presentation": { "reveal": "always" },
-      "problemMatcher": []
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [
+            { "regexp": ".+", "file": 1, "location": 2, "message": 3 }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*Starting development server.*|.*VITE.*",
+            "endsPattern": ".*Local:.*http://.*:3000.*|.*ready in.*"
+          }
+        }
+      ]
     },
     {
-      "label": "Generate web app + Cap Sync",
+      "label": "App: generate web",
       "type": "shell",
-      "command": "npm run generate && npx cap sync",
-      "presentation": { "reveal": "always" },
-      "problemMatcher": []
-    }
-    ,
+      "command": "npm run generate"
+    },
     {
-      "label": "Gradle: assembleDebug (android)",
+      "label": "Capacitor: sync",
       "type": "shell",
-      "command": "./gradlew assembleDebug",
-      "options": { "cwd": "${workspaceFolder}/android" },
-      "presentation": { "reveal": "always" },
-      "problemMatcher": []
+      "command": "npx cap sync"
+    },
+    {
+      "label": "Android: assemble Debug",
+      "type": "shell",
+      "options": {
+        "cwd": "android"
+      },
+      "command": "./gradlew assembleDebug"
+    },
+    {
+      "label": "Android: bundle Release",
+      "type": "shell",
+      "options": {
+        "cwd": "android"
+      },
+      "command": "./gradlew bundleRelease"
     }
   ]
 }
