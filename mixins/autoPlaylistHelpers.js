@@ -29,6 +29,52 @@ function mergeEpisodeMetadata(episodes = [], metadataMap) {
   })
 }
 
+async function fetchServerEpisodesInBatches(contexts, nativeHttp, localStore) {
+  if (!contexts.length) return
+
+  const metadataWrites = []
+  const batchSize = 4
+
+  for (let i = 0; i < contexts.length; i += batchSize) {
+    const batch = contexts.slice(i, i + batchSize)
+    const responses = await Promise.allSettled(
+      batch.map((context) => nativeHttp.get(`/api/items/${context.libraryId}?expanded=1`))
+    )
+
+    responses.forEach((result, index) => {
+      const context = batch[index]
+      if (result.status !== 'fulfilled') {
+        context.useLocalEpisodesFallback()
+        return
+      }
+
+      const serverItem = result.value
+      const serverEpisodes = serverItem?.media?.episodes
+      if (!Array.isArray(serverEpisodes) || !serverEpisodes.length) {
+        context.useLocalEpisodesFallback()
+        return
+      }
+
+      context.episodes = serverEpisodes.map((serverEpisode) => {
+        const localEpisode = context.localEpisodeMap.get(serverEpisode.id)
+        return localEpisode ? { ...serverEpisode, localEpisode } : serverEpisode
+      })
+
+      const metadataForCache = serverEpisodes.map((serverEpisode) => ({
+        id: serverEpisode.id,
+        pubDate: serverEpisode.pubDate,
+        publishedAt: serverEpisode.publishedAt
+      }))
+
+      metadataWrites.push(localStore.setEpisodeMetadata(context.libraryId, metadataForCache))
+    })
+  }
+
+  if (metadataWrites.length) {
+    await Promise.allSettled(metadataWrites)
+  }
+}
+
 function getEpisodeSortDate(episode) {
   if (!episode) return 0
   let value = episode.publishedAt ?? episode.pubDate
@@ -101,8 +147,9 @@ export async function buildUnfinishedAutoPlaylist({
 
   const playlistItems = []
   const seen = new Set()
+  const libraryContexts = []
 
-  for (const libraryItem of localLibraries) {
+  localLibraries.forEach((libraryItem) => {
     const libraryId = libraryItem.libraryItemId
     const localEpisodes = libraryItem?.media?.episodes || []
     const metadataMap = metadataByLibraryId.get(libraryId)
@@ -115,50 +162,48 @@ export async function buildUnfinishedAutoPlaylist({
       }
     })
 
-    let episodes = mergeEpisodeMetadata(localEpisodes, metadataMap)
+    const context = {
+      libraryItem,
+      libraryId,
+      localEpisodeMap,
+      episodes: mergeEpisodeMetadata(localEpisodes, metadataMap),
+      useLocalEpisodesFallback() {
+        this.episodes = this.episodes.map((episode) => {
+          const serverId = episode?.serverEpisodeId || episode?.id
+          if (!serverId || episode.localEpisode) return episode
+          const localEpisode = this.localEpisodeMap.get(serverId)
+          return localEpisode ? { ...episode, localEpisode } : episode
+        })
+      }
+    }
 
     const needsServerDates =
       networkConnected &&
-      episodes.some((episode) => !episode?.publishedAt && !episode?.pubDate)
+      context.episodes.some((episode) => !episode?.publishedAt && !episode?.pubDate)
 
     if (needsServerDates) {
-      const serverItem = await nativeHttp
-        .get(`/api/items/${libraryId}?expanded=1`)
-        .catch(() => null)
-
-      if (serverItem?.media?.episodes?.length) {
-        episodes = serverItem.media.episodes.map((serverEpisode) => {
-          const localEpisode = localEpisodeMap.get(serverEpisode.id)
-          return localEpisode
-            ? { ...serverEpisode, localEpisode }
-            : serverEpisode
-        })
-
-        const metadataForCache = serverItem.media.episodes.map((serverEpisode) => ({
-          id: serverEpisode.id,
-          pubDate: serverEpisode.pubDate,
-          publishedAt: serverEpisode.publishedAt
-        }))
-        await localStore.setEpisodeMetadata(libraryId, metadataForCache)
-      }
+      libraryContexts.push({ ...context, needsServerDates: true })
     } else {
-      episodes = episodes.map((episode) => {
-        const serverId = episode?.serverEpisodeId || episode?.id
-        if (!serverId || episode.localEpisode) return episode
-        const localEpisode = localEpisodeMap.get(serverId)
-        return localEpisode ? { ...episode, localEpisode } : episode
-      })
+      context.useLocalEpisodesFallback()
+      libraryContexts.push({ ...context, needsServerDates: false })
     }
+  })
 
-    for (const episode of episodes) {
+  const contextsNeedingServerData = libraryContexts.filter((context) => context.needsServerDates)
+  await fetchServerEpisodesInBatches(contextsNeedingServerData, nativeHttp, localStore)
+
+  libraryContexts.forEach((context) => {
+    const { libraryItem, libraryId, localEpisodeMap } = context
+
+    context.episodes.forEach((episode) => {
       const serverId = episode?.serverEpisodeId || episode?.id
-      if (!serverId) continue
+      if (!serverId) return
 
       const progress = progressMap.get(serverId)
-      if (progress?.isFinished) continue
+      if (progress?.isFinished) return
 
       const key = `${libraryId}_${serverId}`
-      if (seen.has(key)) continue
+      if (seen.has(key)) return
       seen.add(key)
 
       const sortDate = getEpisodeSortDate(episode)
@@ -171,8 +216,8 @@ export async function buildUnfinishedAutoPlaylist({
         localEpisode: episode.localEpisode || localEpisodeMap.get(serverId) || null,
         sortDate
       })
-    }
-  }
+    })
+  })
 
   playlistItems.sort((a, b) => a.sortDate - b.sortDate)
   playlistItems.forEach((item) => {

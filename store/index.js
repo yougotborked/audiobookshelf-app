@@ -171,6 +171,8 @@ export const actions = {
   },
   async autoDownloadCheck({ state }) {
     if (!state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+    if (!state.networkConnected) return
+    if (!this.state.user?.user) return
 
     const progressMap = {}
     ;(state.user?.user?.mediaProgress || []).forEach((mp) => {

@@ -51,6 +51,9 @@ export default {
               }, 4000)
             }
           }
+          if (this.user && this.currentLibraryId) {
+            this.$store.dispatch('autoDownloadCheck')
+          }
         } else {
           console.log(`[default] lost network connection`)
           this.disconnectTime = Date.now()
@@ -166,6 +169,7 @@ export default {
 
       if (!authRes) {
         this.attemptingConnection = false
+        this.scheduleConnectionRetry(5000)
         return
       }
 
@@ -224,12 +228,18 @@ export default {
         return
       }
       this.inittingLibraries = true
-      await this.$store.dispatch('libraries/load')
+      try {
+        await this.$store.dispatch('libraries/load')
 
-      AbsLogger.info({ tag: 'default', message: `initLibraries loading library ${this.currentLibraryName}` })
-      await this.$store.dispatch('libraries/fetch', this.currentLibraryId)
-      this.$eventBus.$emit('library-changed')
-      this.inittingLibraries = false
+        AbsLogger.info({ tag: 'default', message: `initLibraries loading library ${this.currentLibraryName}` })
+        await this.$store.dispatch('libraries/fetch', this.currentLibraryId)
+        this.$eventBus.$emit('library-changed')
+        if (this.$store.state.user.user) {
+          await this.$store.dispatch('autoDownloadCheck')
+        }
+      } finally {
+        this.inittingLibraries = false
+      }
     },
     async syncLocalSessions(isFirstSync) {
       if (!this.user) {
