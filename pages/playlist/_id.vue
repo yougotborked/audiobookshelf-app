@@ -46,7 +46,11 @@
 
 <script>
 import { AbsDownloader } from '@/plugins/capacitor'
-import { buildUnfinishedAutoPlaylist, collectDownloadedEpisodeKeys } from '@/mixins/autoPlaylistHelpers'
+import {
+  buildUnfinishedAutoPlaylist,
+  collectDownloadedEpisodeKeys,
+  toCacheablePlaylist
+} from '@/mixins/autoPlaylistHelpers'
 export default {
   async asyncData({ store, params, app, redirect, route }) {
     const user = store.state.user.user
@@ -220,7 +224,7 @@ export default {
         }
       }
       playlist.totalItems = playlist.totalItems || playlist.items.length
-      await this.$localStore.setCachedPlaylist(playlist)
+      await this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
       this.playlist = playlist
       this.checkAutoDownload()
     },
@@ -292,7 +296,7 @@ export default {
     playlistUpdated(playlist) {
       if (this.playlist.id !== playlist.id) return
       this.playlist = playlist
-      this.$localStore.setCachedPlaylist(playlist)
+      this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
     },
     playlistRemoved(playlist) {
       if (this.playlist.id === playlist.id) {

@@ -1,6 +1,7 @@
 package com.audiobookshelf.app.player
 
 import android.annotation.SuppressLint
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.Surface
@@ -31,6 +32,7 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.api.PendingResult
 import com.google.android.gms.common.api.ResultCallback
 import org.json.JSONObject
+import kotlin.math.roundToInt
 
 
 class CastPlayer(var castContext: CastContext) : BasePlayer() {
@@ -60,6 +62,9 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   val timelineTracker: CastTimelineTracker
   val period: Timeline.Period
   var listeners: ListenerSet<Player.Listener>
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private val remoteDeviceInfo = DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).build()
+  private val volumeStep = 0.05
 
   /* package */
   val PERMANENT_AVAILABLE_COMMANDS = Commands.Builder()
@@ -111,6 +116,43 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     sessionManager.addSessionManagerListener(statusListener, CastSession::class.java)
     val session = sessionManager.currentCastSession
     setRemoteMediaClient(session?.remoteMediaClient)
+  }
+
+  private fun currentCastSession(): CastSession? {
+    return castContext.sessionManager.currentCastSession
+  }
+
+  private fun setRemoteVolume(session: CastSession, targetVolume: Double) {
+    val clamped = targetVolume.coerceIn(0.0, 1.0)
+    mainHandler.post {
+      try {
+        session.setVolume(clamped)
+      } catch (e: Exception) {
+        Log.e(tag, "Failed to set cast volume", e)
+      }
+    }
+  }
+
+  private fun adjustRemoteVolume(delta: Double) {
+    val session = currentCastSession() ?: return
+    mainHandler.post {
+      try {
+        val updated = (session.volume + delta).coerceIn(0.0, 1.0)
+        session.setVolume(updated)
+      } catch (e: Exception) {
+        Log.e(tag, "Failed to adjust cast volume", e)
+      }
+    }
+  }
+
+  private fun setRemoteMute(session: CastSession, muted: Boolean) {
+    mainHandler.post {
+      try {
+        session.setMute(muted)
+      } catch (e: Exception) {
+        Log.e(tag, "Failed to set cast mute", e)
+      }
+    }
   }
 
   fun load(mediaItems:List<MediaItem>, startIndex:Int, startTime:Long, playWhenReady:Boolean, playbackRate:Float, mediaType:String) {
@@ -858,31 +900,34 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   }
 
   override fun getDeviceInfo(): DeviceInfo {
-    return DeviceInfo.UNKNOWN
+    return if (currentCastSession() != null) remoteDeviceInfo else DeviceInfo.UNKNOWN
   }
 
   override fun getDeviceVolume(): Int {
-   return 0
+    val session = currentCastSession() ?: return 0
+    return (session.volume * 100).roundToInt().coerceIn(0, 100)
   }
 
   override fun isDeviceMuted(): Boolean {
-   return false
+    return currentCastSession()?.isMute ?: false
   }
 
   override fun setDeviceVolume(volume: Int) {
-
+    val session = currentCastSession() ?: return
+    setRemoteVolume(session, volume.toDouble() / 100.0)
   }
 
   override fun increaseDeviceVolume() {
-
+    adjustRemoteVolume(volumeStep)
   }
 
   override fun decreaseDeviceVolume() {
-
+    adjustRemoteVolume(-volumeStep)
   }
 
   override fun setDeviceMuted(muted: Boolean) {
-
+    val session = currentCastSession() ?: return
+    setRemoteMute(session, muted)
   }
 
   inner class StatusListener() : RemoteMediaClient.Callback(), SessionManagerListener<CastSession>, RemoteMediaClient.ProgressListener {

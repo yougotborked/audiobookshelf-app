@@ -33,6 +33,7 @@ class AbsAudioPlayer : Plugin() {
   lateinit var playerNotificationService: PlayerNotificationService
 
   private var isCastAvailable:Boolean = false
+  private var isCastSupported:Boolean = false
 
   override fun load() {
     mainActivity = (activity as MainActivity)
@@ -42,6 +43,7 @@ class AbsAudioPlayer : Plugin() {
       initCastManager()
     } catch(e:Exception) {
       Log.e(tag, "initCastManager exception ${e.printStackTrace()}")
+      emit("onCastSupportUpdate", false)
     }
 
     val foregroundServiceReady : () -> Unit = {
@@ -147,8 +149,13 @@ class AbsAudioPlayer : Plugin() {
         } else if (statusCode == ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED) {
           Log.w(tag, "initCastManager: Google Api Update Required")
         }
+        isCastSupported = false
+        emit("onCastSupportUpdate", false)
         return
     }
+
+    isCastSupported = true
+    emit("onCastSupportUpdate", true)
 
     val connListener = object: CastManager.ChromecastListener() {
       override fun onReceiverAvailableUpdate(available: Boolean) {
@@ -465,6 +472,13 @@ class AbsAudioPlayer : Plugin() {
   fun getIsCastAvailable(call: PluginCall) {
     val jsobj = JSObject()
     jsobj.put("value", isCastAvailable)
+    call.resolve(jsobj)
+  }
+
+  @PluginMethod
+  fun getIsCastSupported(call: PluginCall) {
+    val jsobj = JSObject()
+    jsobj.put("value", isCastSupported)
     call.resolve(jsobj)
   }
 }

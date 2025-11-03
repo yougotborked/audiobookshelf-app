@@ -11,6 +11,7 @@ export const state = () => ({
   playerStartingPlaybackMediaId: null,
   isCasting: false,
   isCastAvailable: false,
+  isCastEnabled: false,
   attemptingConnection: false,
   socketConnected: false,
   networkConnected: false,
@@ -272,6 +273,9 @@ export const mutations = {
   },
   setCastAvailable(state, available) {
     state.isCastAvailable = available
+  },
+  setCastEnabled(state, enabled) {
+    state.isCastEnabled = enabled
   },
   setAttemptingConnection(state, val) {
     state.attemptingConnection = val
