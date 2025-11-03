@@ -65,9 +65,8 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   private val mainHandler = Handler(Looper.getMainLooper())
   // DeviceInfo.Builder's constructor signature can vary between ExoPlayer versions.
   // Use the no-arg builder and set the playback type explicitly for compatibility.
-  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo.Builder()
-    .setPlaybackType(com.google.android.exoplayer2.DeviceInfo.PLAYBACK_TYPE_REMOTE)
-    .build()
+  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo(
+    com.google.android.exoplayer2.DeviceInfo.PLAYBACK_TYPE_REMOTE,  /* maxVolume= */0)
   private val volumeStep = 0.05
 
   /* package */

@@ -22,7 +22,7 @@ sudo apt-get install -y --no-install-recommends \
 
 # If Java is not present (because a feature/base image might have installed it), install OpenJDK 17 headless.
 if ! command -v java >/dev/null 2>&1; then
-  sudo apt-get install -y --no-install-recommends openjdk-17-jdk-headless
+  sudo apt-get install -y --no-install-recommends openjdk-21-jdk-headless
 fi
 
 # ---------- Android SDK: ensure cmdline-tools + permissions ----------

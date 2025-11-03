@@ -7,7 +7,7 @@
       "nodeGypDependencies": true
     },
     "ghcr.io/devcontainers/features/java:1": {
-      "version": "17.0.12-tem",
+      "version": "21",
       "jdkDistro": "tem",
       "installGradle": false,
       "installMaven": false
@@ -19,7 +19,7 @@
   "containerEnv": {
     "ANDROID_HOME": "/opt/android-sdk",
     "ANDROID_SDK_ROOT": "/opt/android-sdk",
-    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
+    
     "GRADLE_USER_HOME": "/workspaces/.gradle"
   },
   "postCreateCommand": "bash .devcontainer/scripts/setup.sh",
