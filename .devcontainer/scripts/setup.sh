@@ -113,6 +113,28 @@ else
   npm install --no-audit --fund=false
 fi
 
+# ---------- Optional: sync Capacitor native projects ----------
+# Prefer using the `npm run sync` script when available (it's defined in package.json
+# as `nuxt generate && npx cap sync`). This keeps the behavior concise and consistent
+# with the project's npm scripts. The step is idempotent and will not fail the entire
+# setup when it encounters an error; it will warn instead.
+if command -v npm >/dev/null 2>&1 && [ -f package.json ]; then
+  if npm run | sed -n '1,200p' | grep -q "sync"; then
+    echo "Running 'npm run sync' (generate + cap sync)..."
+    if ! npm run sync --if-present; then
+      echo "Warning: 'npm run sync' failed — native projects may be out of sync. You can run 'npm run sync' manually to retry."
+    fi
+  else
+    # Fallback: if Capacitor deps/config are present but no `sync` script, run npx cap sync directly
+    if grep -q "@capacitor" package.json || [ -f capacitor.config.json ]; then
+      echo "No 'sync' npm script found; running 'npx cap sync' as a fallback..."
+      if ! command -v npx >/dev/null 2>&1 || ! npx cap sync; then
+        echo "Warning: 'npx cap sync' failed or npx not available — native projects may be out of sync."
+      fi
+    fi
+  fi
+fi
+
 # Optional: enable corepack for pnpm/yarn if ever needed by contributors
 corepack enable || true
 

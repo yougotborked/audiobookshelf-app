@@ -63,7 +63,11 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   val period: Timeline.Period
   var listeners: ListenerSet<Player.Listener>
   private val mainHandler = Handler(Looper.getMainLooper())
-  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo.Builder(com.google.android.exoplayer2.DeviceInfo.PLAYBACK_TYPE_REMOTE).build()
+  // DeviceInfo.Builder's constructor signature can vary between ExoPlayer versions.
+  // Use the no-arg builder and set the playback type explicitly for compatibility.
+  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo.Builder()
+    .setPlaybackType(com.google.android.exoplayer2.DeviceInfo.PLAYBACK_TYPE_REMOTE)
+    .build()
   private val volumeStep = 0.05
 
   /* package */
