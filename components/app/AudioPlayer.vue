@@ -38,11 +38,7 @@
       </div>
     </div>
 
-    <div
-      class="cover-wrapper absolute z-30"
-      :class="{ 'pointer-events-none': !showFullscreen }"
-      @click="clickContainer"
-    >
+    <div class="cover-wrapper absolute z-30 pointer-events-auto" @click="clickContainer">
       <div class="w-full h-full flex justify-center">
         <covers-book-cover v-if="libraryItem || localLibraryItemCoverSrc" ref="cover" :library-item="libraryItem" :download-cover="localLibraryItemCoverSrc" :width="bookCoverWidth" :book-cover-aspect-ratio="bookCoverAspectRatio" raw @imageLoaded="coverImageLoaded" />
       </div>
@@ -52,19 +48,15 @@
       </div>
     </div>
 
-    <div
-      class="title-author-texts absolute z-30 left-0 right-0 overflow-hidden"
-      :class="{ 'pointer-events-none': !showFullscreen }"
-      @click="clickTitleAndAuthor"
-    >
+    <div class="title-author-texts absolute z-30 left-0 right-0 overflow-hidden" @click="clickTitleAndAuthor">
       <div ref="titlewrapper" class="overflow-hidden relative">
         <p class="title-text whitespace-nowrap"></p>
       </div>
       <p class="author-text text-fg text-opacity-75 truncate">{{ authorName }}</p>
     </div>
 
-    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-none transition-all" :style="{ backgroundColor: showFullscreen ? '' : coverRgb }">
-      <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6 pointer-events-auto" style="max-width: 414px">
+    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all" :style="{ backgroundColor: showFullscreen ? '' : coverRgb }" @click="clickContainer">
+      <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-fg-muted cursor-pointer" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
           <!-- hidden for podcasts but still using this as a placeholder -->
@@ -78,14 +70,14 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="queueLength > 1 ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="openQueue">format_list_bulleted</span>
+          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
         </div>
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
 
-      <div id="playerControls" class="absolute right-0 bottom-0 mx-auto pointer-events-auto" style="max-width: 414px">
+      <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="prevQueueOrChapterStart">first_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpChapterStart">first_page</span>
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpBackwards">{{ jumpBackwardsIcon }}</span>
           <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
             <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white bg-opacity-20 pointer-events-none" />
@@ -94,11 +86,11 @@
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
           <span v-show="!playerSettings.lockUi" class="material-symbols jump-icon text-fg cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpForward">{{ jumpForwardIcon }}</span>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="(hasNextQueueItem || nextChapter) && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="nextQueueOrChapter">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="nextChapter && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapter">last_page</span>
         </div>
       </div>
 
-      <div id="playerTrack" class="absolute left-0 w-full px-6 pointer-events-auto">
+      <div id="playerTrack" class="absolute left-0 w-full px-6">
         <div class="flex pointer-events-none">
           <p class="font-mono text-fg" style="font-size: 0.8rem" ref="currentTimestamp">0:00</p>
           <div class="flex-grow" />
@@ -175,6 +167,7 @@ export default {
       coverRgb: 'rgb(55, 56, 56)',
       coverBgIsLight: false,
       titleMarquee: null,
+      lastNativeCurrentTime: null,
       isRefreshingUI: false,
       appStateListener: null
     }
@@ -430,15 +423,6 @@ export default {
       if (!localLibraryItem) return null
 
       return this.playbackSession.localEpisodeId ? `${localLibraryItem.id}-${this.playbackSession.localEpisodeId}` : localLibraryItem.id
-    },
-    queueLength() {
-      return this.$store.state.playQueue.length
-    },
-    hasNextQueueItem() {
-      return !!this.$store.getters['getNextQueueItem']
-    },
-    hasPreviousQueueItem() {
-      return !!this.$store.getters['getPreviousQueueItem']
     }
   },
   methods: {
@@ -468,10 +452,7 @@ export default {
         })
     },
     clickTitleAndAuthor() {
-      if (!this.showFullscreen) {
-        this.expandToFullscreen()
-        return
-      }
+      if (!this.showFullscreen) return
       const llid = this.serverLibraryItemId || this.libraryItem?.id || this.localLibraryItem?.id
       if (llid) {
         this.$router.push(`/item/${llid}`)
@@ -554,37 +535,6 @@ export default {
       await this.$hapticsImpact()
       if (this.isLoading) return
       AbsAudioPlayer.seekForward({ value: this.jumpForwardTime })
-    },
-    skipNextQueue() {
-      if (this.hasNextQueueItem) {
-        this.$emit('skipNextQueue')
-      }
-    },
-    skipPreviousQueue() {
-      if (this.hasPreviousQueueItem) {
-        this.$emit('skipPreviousQueue')
-      }
-    },
-    nextQueueOrChapter() {
-      if (this.isLoading) return
-      if (this.hasNextQueueItem) {
-        this.skipNextQueue()
-      } else {
-        this.jumpNextChapter()
-      }
-    },
-    prevQueueOrChapterStart() {
-      if (this.isLoading) return
-      if (this.hasPreviousQueueItem) {
-        this.skipPreviousQueue()
-      } else {
-        this.jumpChapterStart()
-      }
-    },
-    openQueue() {
-      if (this.queueLength > 1) {
-        this.$emit('openQueue')
-      }
     },
     setStreamReady() {
       this.readyTrackWidth = this.trackWidth
@@ -732,7 +682,6 @@ export default {
     },
     startPlayInterval() {
       clearInterval(this.playInterval)
-      if (this.$platform === 'web') return
       this.playInterval = setInterval(async () => {
         var data = await AbsAudioPlayer.getCurrentTime()
         this.currentTime = Number(data.value.toFixed(2))
@@ -742,6 +691,7 @@ export default {
     },
     stopPlayInterval() {
       clearInterval(this.playInterval)
+      this.playInterval = null
     },
     resetStream(startTime) {
       this.closePlayback()
@@ -869,6 +819,7 @@ export default {
       this.isEnded = false
       this.isLoading = false
       this.playbackSession = null
+      this.lastNativeCurrentTime = null
     },
     async loadPlayerSettings() {
       const savedPlayerSettings = await this.$localStore.getPlayerSettings()
@@ -919,7 +870,6 @@ export default {
 
       if (data.playerState === 'ENDED') {
         console.log('[AudioPlayer] Playback ended')
-        this.$eventBus.$emit('playback-ended')
       }
       this.isEnded = data.playerState === 'ENDED'
 
@@ -927,20 +877,15 @@ export default {
 
       this.timeupdate()
     },
-    onTimeUpdate(data) {
-      if (!data) return
-      this.currentTime = Number((data.currentTime || 0).toFixed(2))
-      this.bufferedTime = Number((data.bufferedTime || 0).toFixed(2))
-      this.timeupdate()
-    },
     // When a playback session is started the native android/ios will send the session
-    onPlaybackSession(playbackSession, { isLoading = true } = {}) {
+    onPlaybackSession(playbackSession) {
       console.log('onPlaybackSession received', JSON.stringify(playbackSession))
       this.playbackSession = playbackSession
 
       this.isEnded = false
-      this.isLoading = isLoading
+      this.isLoading = true
       this.syncStatus = 0
+      this.lastNativeCurrentTime = null
       this.$store.commit('setPlaybackSession', this.playbackSession)
 
       // Set track width
@@ -978,7 +923,6 @@ export default {
       AbsAudioPlayer.addListener('onPlaybackFailed', this.onPlaybackFailed)
       AbsAudioPlayer.addListener('onPlayingUpdate', this.onPlayingUpdate)
       AbsAudioPlayer.addListener('onMetadata', this.onMetadata)
-      AbsAudioPlayer.addListener('onTimeUpdate', this.onTimeUpdate)
       AbsAudioPlayer.addListener('onProgressSyncFailing', this.showProgressSyncIsFailing)
       AbsAudioPlayer.addListener('onProgressSyncSuccess', this.showProgressSyncSuccess)
       AbsAudioPlayer.addListener('onPlaybackSpeedChanged', this.onPlaybackSpeedChanged)
@@ -1050,9 +994,7 @@ export default {
       if (!state) return
       if (state.isActive) {
         await this.refreshCurrentPlaybackPosition()
-        if (this.$store.state.playerIsPlaying) {
-          this.startPlayInterval()
-        }
+        this.maybeRestartPolling()
       } else {
         this.stopPlayInterval()
       }
@@ -1060,21 +1002,83 @@ export default {
     async refreshCurrentPlaybackPosition() {
       if (!this.playbackSession || typeof AbsAudioPlayer?.getCurrentTime !== 'function') return
       try {
+        const previousNativeTime =
+          typeof this.lastNativeCurrentTime === 'number' ? this.lastNativeCurrentTime : null
         const data = await AbsAudioPlayer.getCurrentTime()
         if (!data) return
-        if (typeof data.value === 'number') {
-          this.currentTime = Number(data.value.toFixed(2))
+
+        const rawCurrentTime = typeof data.value === 'number' ? data.value : null
+
+        if (rawCurrentTime !== null) {
+          this.lastNativeCurrentTime = rawCurrentTime
+          this.currentTime = Number(rawCurrentTime.toFixed(2))
         }
         if (typeof data.bufferedTime === 'number') {
           this.bufferedTime = Number(data.bufferedTime.toFixed(2))
         }
+
         if (this.$refs.playedTrack) {
           this.timeupdate()
         } else {
           this.updateTimestamp()
         }
+
+        const observedChange =
+          previousNativeTime !== null && rawCurrentTime !== null ? rawCurrentTime - previousNativeTime : 0
+        const resumedProgress = observedChange > 0.25
+
+        let nativePlaybackState = resumedProgress ? true : null
+        if (!resumedProgress && !this.isPlaying && !this.$store.state.playerIsPlaying) {
+          nativePlaybackState = await this.determineNativePlaybackState(rawCurrentTime)
+        }
+
+        if (nativePlaybackState === true) {
+          this.isPlaying = true
+          if (!this.$store.state.playerIsPlaying) {
+            this.$store.commit('setPlayerPlaying', true)
+          }
+          this.startPlayInterval()
+        } else if (nativePlaybackState === false) {
+          this.isPlaying = false
+          if (this.$store.state.playerIsPlaying) {
+            this.$store.commit('setPlayerPlaying', false)
+          }
+          this.stopPlayInterval()
+        } else {
+          if (observedChange > 0.05) {
+            this.isPlaying = true
+            if (!this.$store.state.playerIsPlaying) {
+              this.$store.commit('setPlayerPlaying', true)
+            }
+            this.startPlayInterval()
+          } else {
+            this.maybeRestartPolling()
+          }
+        }
       } catch (error) {
         console.error('[AudioPlayer] Failed to refresh playback position', error)
+      }
+    },
+    maybeRestartPolling() {
+      if (this.$platform === 'web') return
+      if (!this.isPlaying && !this.$store.state.playerIsPlaying) return
+      this.startPlayInterval()
+    },
+    async determineNativePlaybackState(baselineTime) {
+      if (this.$platform === 'web') return null
+      if (typeof baselineTime !== 'number') return null
+      if (typeof AbsAudioPlayer?.getCurrentTime !== 'function') return null
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 750))
+        if (!this.playbackSession) return null
+        const followUp = await AbsAudioPlayer.getCurrentTime()
+        if (!followUp || typeof followUp.value !== 'number') return null
+        const followUpTime = followUp.value
+        return followUpTime - baselineTime > 0.1
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to evaluate native playback state', error)
+        return null
       }
     }
   },
