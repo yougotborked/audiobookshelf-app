@@ -114,6 +114,7 @@
 
 <script>
 import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
 import { AbsAudioPlayer } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
 import { FastAverageColor } from 'fast-average-color'
@@ -166,7 +167,8 @@ export default {
       coverRgb: 'rgb(55, 56, 56)',
       coverBgIsLight: false,
       titleMarquee: null,
-      isRefreshingUI: false
+      isRefreshingUI: false,
+      appStateListener: null
     }
   },
   watch: {
@@ -191,6 +193,14 @@ export default {
       this.totalDuration = Number((val.duration || 0).toFixed(2))
       this.currentTime = Number((val.currentTime || 0).toFixed(2))
       this.timeupdate()
+    },
+    async '$store.state.playerIsPlaying'(isPlaying) {
+      if (isPlaying) {
+        await this.refreshCurrentPlaybackPosition()
+        this.startPlayInterval()
+      } else {
+        this.stopPlayInterval()
+      }
     },
     bookCoverAspectRatio() {
       this.updateScreenSize()
@@ -1016,6 +1026,49 @@ export default {
     },
     showProgressSyncSuccess() {
       this.syncStatus = this.$constants.SyncStatus.SUCCESS
+    },
+    async registerAppStateListener() {
+      if (!Capacitor?.isPluginAvailable || !Capacitor.isPluginAvailable('App')) return
+      try {
+        this.appStateListener = await App.addListener('appStateChange', this.onAppStateChange)
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to register app state listener', error)
+      }
+    },
+    async onAppStateChange(state) {
+      if (!state) return
+      if (state.isActive) {
+        await this.refreshCurrentPlaybackPosition()
+        this.maybeRestartPolling()
+      } else {
+        this.stopPlayInterval()
+      }
+    },
+    async refreshCurrentPlaybackPosition() {
+      if (!this.playbackSession || typeof AbsAudioPlayer?.getCurrentTime !== 'function') return
+      try {
+        const data = await AbsAudioPlayer.getCurrentTime()
+        if (!data) return
+        if (typeof data.value === 'number') {
+          this.currentTime = Number(data.value.toFixed(2))
+        }
+        if (typeof data.bufferedTime === 'number') {
+          this.bufferedTime = Number(data.bufferedTime.toFixed(2))
+        }
+        this.maybeRestartPolling()
+        if (this.$refs.playedTrack) {
+          this.timeupdate()
+        } else {
+          this.updateTimestamp()
+        }
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to refresh playback position', error)
+      }
+    },
+    maybeRestartPolling() {
+      if (this.$platform === 'web') return
+      if (!this.isPlaying && !this.$store.state.playerIsPlaying) return
+      this.startPlayInterval()
     }
   },
   mounted() {
@@ -1028,15 +1081,21 @@ export default {
     }
     window.addEventListener('resize', this.screenOrientationChange)
 
+    this.registerAppStateListener()
+
     this.$eventBus.$on('minimize-player', this.minimizePlayerEvt)
     document.body.addEventListener('touchstart', this.touchstart, { passive: false })
     document.body.addEventListener('touchend', this.touchend)
     document.body.addEventListener('touchmove', this.touchmove)
-    this.$nextTick(() => {
-      this.init()
+    this.$nextTick(async () => {
+      await this.init()
       const saved = this.$store.state.currentPlaybackSession
       if (saved) {
         this.onPlaybackSession(saved, { isLoading: false })
+        await this.refreshCurrentPlaybackPosition()
+        if (this.$store.state.playerIsPlaying) {
+          this.startPlayInterval()
+        }
       }
     })
   },
@@ -1064,6 +1123,10 @@ export default {
       AbsAudioPlayer.removeAllListeners()
     }
     clearInterval(this.playInterval)
+    if (this.appStateListener?.remove) {
+      this.appStateListener.remove()
+      this.appStateListener = null
+    }
   }
 }
 </script>
