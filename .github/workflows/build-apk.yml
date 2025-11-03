@@ -42,8 +42,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-          # Enables Gradle/Maven toolchain caching if used
-          cache: gradle
 
       # Nuxt deps
       - name: Install dependencies
@@ -55,17 +53,14 @@ jobs:
       - name: Copy web to Android (Capacitor)
         run: npx cap sync
 
-      # Modern Gradle action (replaces gradle/gradle-build-action)
-      # It enables Gradle configuration cache & dependency caching out of the box.
+      # Single source of truth for Gradle caching & config-cache
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
-          # Avoid writes to cache from forked PRs (safe & faster)
           cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
-          # Optional: publish build scans for deeper diagnostics (uncomment if desired)
-          # build-scan-publish: true
-          # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
-          # build-scan-terms-of-use-agree: "yes"
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
 
       - name: Run static analysis
         working-directory: android
@@ -104,12 +99,13 @@ jobs:
       pages: write
       id-token: write
       contents: read
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v5
 
       - name: Download APK artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v5
         with:
           name: audiobookshelf-apk
           path: ./ghpages
