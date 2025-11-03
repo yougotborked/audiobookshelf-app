@@ -63,7 +63,7 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   val period: Timeline.Period
   var listeners: ListenerSet<Player.Listener>
   private val mainHandler = Handler(Looper.getMainLooper())
-  private val remoteDeviceInfo = DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).build()
+  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo.Builder(com.google.android.exoplayer2.DeviceInfo.PLAYBACK_TYPE_REMOTE).build()
   private val volumeStep = 0.05
 
   /* package */
@@ -899,8 +899,8 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     return CueGroup.EMPTY_TIME_ZERO
   }
 
-  override fun getDeviceInfo(): DeviceInfo {
-    return if (currentCastSession() != null) remoteDeviceInfo else DeviceInfo.UNKNOWN
+  override fun getDeviceInfo(): com.google.android.exoplayer2.DeviceInfo {
+    return if (currentCastSession() != null) remoteDeviceInfo else com.google.android.exoplayer2.DeviceInfo.UNKNOWN
   }
 
   override fun getDeviceVolume(): Int {
