@@ -70,8 +70,15 @@ export default {
     if (collection.books.length) {
       const localLibraryItems = (await app.$db.getLocalLibraryItems('book')) || []
       if (localLibraryItems.length) {
+        const localLibraryItemMap = new Map()
+        localLibraryItems.forEach((item) => {
+          if (item?.libraryItemId) {
+            localLibraryItemMap.set(item.libraryItemId, item)
+          }
+        })
+
         collection.books.forEach((collectionItem) => {
-          const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === collectionItem.id)
+          const matchingLocalLibraryItem = localLibraryItemMap.get(collectionItem.id)
           if (!matchingLocalLibraryItem) return
           collectionItem.localLibraryItem = matchingLocalLibraryItem
         })
