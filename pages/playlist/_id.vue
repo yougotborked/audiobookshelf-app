@@ -200,11 +200,52 @@ export default {
       if (playlist.items.length) {
         const localLibraryItems = (await this.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
         if (localLibraryItems.length) {
+          const localLibraryItemMap = new Map()
+          const localEpisodesByLibraryItemId = new Map()
+
+          localLibraryItems.forEach((localItem) => {
+            const libraryItemId = localItem?.libraryItemId
+            if (!libraryItemId) return
+            localLibraryItemMap.set(libraryItemId, localItem)
+
+            const episodes = localItem?.media?.episodes || []
+            if (episodes.length) {
+              const episodeMap = new Map()
+              episodes.forEach((episode) => {
+                const key = episode?.serverEpisodeId || episode?.id
+                if (key) {
+                  episodeMap.set(key, episode)
+                }
+              })
+              if (episodeMap.size) {
+                localEpisodesByLibraryItemId.set(libraryItemId, episodeMap)
+              }
+            }
+          })
+
           playlist.items.forEach((playlistItem) => {
-            const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === playlistItem.libraryItemId)
+            const libraryItemId =
+              playlistItem.libraryItemId ||
+              playlistItem.libraryItem?.id ||
+              playlistItem.libraryItem?.libraryItemId ||
+              null
+            if (!libraryItemId) return
+
+            const matchingLocalLibraryItem = localLibraryItemMap.get(libraryItemId)
             if (!matchingLocalLibraryItem) return
+
             if (playlistItem.episode) {
-              const matchingLocalEpisode = matchingLocalLibraryItem.media.episodes?.find((lep) => lep.serverEpisodeId === playlistItem.episodeId)
+              const episodeKey =
+                playlistItem.episodeId ||
+                playlistItem.episode?.serverEpisodeId ||
+                playlistItem.episode?.id ||
+                null
+              if (!episodeKey) {
+                playlistItem.localLibraryItem = matchingLocalLibraryItem
+                return
+              }
+
+              const matchingLocalEpisode = localEpisodesByLibraryItemId.get(libraryItemId)?.get(episodeKey)
               if (matchingLocalEpisode) {
                 playlistItem.localLibraryItem = matchingLocalLibraryItem
                 playlistItem.localEpisode = matchingLocalEpisode
