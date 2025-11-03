@@ -64,6 +64,118 @@ export default {
     }
   },
   methods: {
+    isLocalId(id) {
+      return typeof id === 'string' && id.startsWith('local')
+    },
+    resolveQueueItemIds(item) {
+      if (!item || typeof item !== 'object') {
+        return {
+          serverLibraryItemId: null,
+          localLibraryItemId: null,
+          fallbackLibraryItemId: null,
+          serverEpisodeId: null,
+          localEpisodeId: null,
+          fallbackEpisodeId: null
+        }
+      }
+
+      const libraryItem = item.libraryItem || {}
+      const rawLibraryItemId =
+        item.libraryItemId ??
+        libraryItem.libraryItemId ??
+        libraryItem.id ??
+        item.id ??
+        null
+      const serverLibraryItemId =
+        item.serverLibraryItemId ??
+        (!this.isLocalId(rawLibraryItemId) ? rawLibraryItemId : null) ??
+        (!this.isLocalId(libraryItem.id) ? libraryItem.id : null) ??
+        (!this.isLocalId(libraryItem.libraryItemId) ? libraryItem.libraryItemId : null) ??
+        null
+      const localLibraryItemId =
+        item.localLibraryItem?.id ??
+        item.localLibraryItemId ??
+        (this.isLocalId(rawLibraryItemId) ? rawLibraryItemId : null) ??
+        (this.isLocalId(libraryItem.id) ? libraryItem.id : null) ??
+        null
+
+      const episode = item.episode || {}
+      const rawEpisodeId =
+        item.episodeId ??
+        episode.id ??
+        item.localEpisodeId ??
+        null
+      const serverEpisodeId =
+        item.serverEpisodeId ??
+        episode.serverEpisodeId ??
+        (!this.isLocalId(rawEpisodeId) ? rawEpisodeId : null) ??
+        null
+      const localEpisodeId =
+        item.localEpisode?.id ??
+        item.localEpisodeId ??
+        (this.isLocalId(rawEpisodeId) ? rawEpisodeId : null) ??
+        null
+
+      const fallbackLibraryItemId =
+        localLibraryItemId ??
+        serverLibraryItemId ??
+        rawLibraryItemId ??
+        null
+      const fallbackEpisodeId =
+        localEpisodeId ??
+        serverEpisodeId ??
+        rawEpisodeId ??
+        null
+
+      return {
+        serverLibraryItemId,
+        localLibraryItemId,
+        fallbackLibraryItemId,
+        serverEpisodeId,
+        localEpisodeId,
+        fallbackEpisodeId
+      }
+    },
+    getQueuePayload(queue, preferServerIds = false) {
+      if (!Array.isArray(queue)) return []
+      return queue
+        .map((item) => {
+          const ids = this.resolveQueueItemIds(item)
+          const libraryItemId = preferServerIds
+            ? ids.serverLibraryItemId
+            : ids.localLibraryItemId || ids.fallbackLibraryItemId
+          if (!libraryItemId) return null
+          if (preferServerIds && this.isLocalId(libraryItemId)) return null
+
+          let episodeId = null
+          if (preferServerIds) {
+            episodeId = ids.serverEpisodeId
+            if (episodeId && this.isLocalId(episodeId)) return null
+            if (ids.serverEpisodeId === null && ids.fallbackEpisodeId !== null) {
+              return null
+            }
+          } else {
+            episodeId = ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId
+          }
+
+          const payload = { libraryItemId }
+          if (episodeId) payload.episodeId = episodeId
+          return payload
+        })
+        .filter(Boolean)
+    },
+    resolveQueueIndex(queuePayload, libraryItemId, episodeId, fallbackIndex = 0) {
+      if (!Array.isArray(queuePayload) || !queuePayload.length) return 0
+      const normalizedEpisodeId = episodeId || null
+      const idx = queuePayload.findIndex((entry) => {
+        if (entry.libraryItemId !== libraryItemId) return false
+        const entryEpisodeId = entry.episodeId || null
+        return entryEpisodeId === normalizedEpisodeId
+      })
+      if (idx >= 0) return idx
+      const safeFallback = Math.max(0, Math.min(fallbackIndex ?? 0, queuePayload.length - 1))
+      return safeFallback
+    },
     showBookmarks() {
       this.showBookmarksModal = true
     },
@@ -202,7 +314,13 @@ export default {
         playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
       }
       const startTime = Math.floor(this.currentTime || 0)
+      const queuePayload = this.getQueuePayload(this.$store.state.playQueue, true)
       const payload = { libraryItemId, episodeId, playWhenReady: false, playbackRate }
+      if (queuePayload.length) {
+        payload.queue = queuePayload
+        const fallbackIndex = this.$store.state.queueIndex ?? 0
+        payload.queueIndex = this.resolveQueueIndex(queuePayload, libraryItemId, episodeId || null, fallbackIndex)
+      }
       if (startTime) payload.startTime = startTime
       AbsAudioPlayer.prepareLibraryItem(payload)
         .then((data) => {
@@ -223,12 +341,24 @@ export default {
     },
     async playLibraryItem(payload) {
       await AbsLogger.info({ tag: 'AudioPlayerContainer', message: `playLibraryItem: Received play request for library item ${payload.libraryItemId} ${payload.episodeId ? `episode ${payload.episodeId}` : ''}` })
-      const libraryItemId = payload.libraryItemId
-      const episodeId = payload.episodeId
+      const ids = this.resolveQueueItemIds(payload)
+      const canUseServerIds = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
+      const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !payload.forceLocal
+      let libraryItemId = shouldUseServerIds
+        ? ids.serverLibraryItemId
+        : ids.localLibraryItemId || ids.fallbackLibraryItemId
+      let episodeId = shouldUseServerIds
+        ? ids.serverEpisodeId
+        : ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId
+      if (!libraryItemId) {
+        this.$store.commit('setPlayerDoneStartingPlayback')
+        this.$toast.error('Unable to determine item to play')
+        return
+      }
       const startTime = payload.startTime
       const startWhenReady = !payload.paused
 
-      const isLocal = libraryItemId.startsWith('local')
+      const isLocal = this.isLocalId(libraryItemId)
       if (!isLocal) {
         const hasPermission = await this.checkCellularPermission('streaming')
         if (!hasPermission) {
@@ -239,10 +369,10 @@ export default {
 
       // When playing local library item and can also play this item from the server
       //   then store the server library item id so it can be used if a cast is made
-      const serverLibraryItemId = payload.serverLibraryItemId || null
-      const serverEpisodeId = payload.serverEpisodeId || null
+      const serverLibraryItemId = ids.serverLibraryItemId || payload.serverLibraryItemId || null
+      const serverEpisodeId = ids.serverEpisodeId || payload.serverEpisodeId || null
 
-      if (isLocal && this.$store.state.isCasting) {
+      if (this.$store.state.isCasting && isLocal) {
         const { value } = await Dialog.confirm({
           title: 'Warning',
           message: `Cannot cast downloaded media items. Confirm to close cast and play on your device.`
@@ -280,9 +410,17 @@ export default {
           this.$store.commit('setQueueIndex', payload.queueIndex)
         } else {
           const idx = payload.queue.findIndex((q) => {
-            const li = q.localLibraryItem?.id || q.libraryItemId
-            const ep = q.localEpisode?.id || q.episodeId
-            return li === libraryItemId && ep === episodeId
+            const queueIds = this.resolveQueueItemIds(q)
+            const queueLibraryItemId = shouldUseServerIds
+              ? queueIds.serverLibraryItemId
+              : queueIds.localLibraryItemId || queueIds.fallbackLibraryItemId
+            const queueEpisodeId = shouldUseServerIds
+              ? queueIds.serverEpisodeId
+              : queueIds.localEpisodeId ?? queueIds.serverEpisodeId ?? queueIds.fallbackEpisodeId
+            if (!queueLibraryItemId) return false
+            return (
+              queueLibraryItemId === libraryItemId && (queueEpisodeId || null) === (episodeId || null)
+            )
           })
           if (idx >= 0) this.$store.commit('setQueueIndex', idx)
         }
@@ -292,13 +430,17 @@ export default {
       }
 
       console.log('Called playLibraryItem', libraryItemId)
+      const queuePayload = this.getQueuePayload(this.$store.state.playQueue, shouldUseServerIds)
       const preparePayload = {
         libraryItemId,
         episodeId,
         playWhenReady: startWhenReady,
-        playbackRate,
-        queue: this.$store.state.playQueue,
-        queueIndex: this.$store.state.queueIndex
+        playbackRate
+      }
+      if (queuePayload.length) {
+        preparePayload.queue = queuePayload
+        const fallbackIndex = this.$store.state.queueIndex ?? 0
+        preparePayload.queueIndex = this.resolveQueueIndex(queuePayload, libraryItemId, episodeId || null, fallbackIndex)
       }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
       AbsAudioPlayer.prepareLibraryItem(preparePayload)
@@ -308,15 +450,19 @@ export default {
             this.$toast.error(errorMsg)
           } else {
             console.log('Library item play response', JSON.stringify(data))
-            if (!libraryItemId.startsWith('local')) {
+            if (!this.isLocalId(libraryItemId)) {
               this.serverLibraryItemId = libraryItemId
-            } else {
+            } else if (serverLibraryItemId && !this.isLocalId(serverLibraryItemId)) {
               this.serverLibraryItemId = serverLibraryItemId
-            }
-            if (episodeId && !episodeId.startsWith('local')) {
-              this.serverEpisodeId = episodeId
             } else {
+              this.serverLibraryItemId = null
+            }
+            if (episodeId && !this.isLocalId(episodeId)) {
+              this.serverEpisodeId = episodeId
+            } else if (serverEpisodeId && !this.isLocalId(serverEpisodeId)) {
               this.serverEpisodeId = serverEpisodeId
+            } else {
+              this.serverEpisodeId = null
             }
             if (this.$store.state.isCasting) {
               AbsAudioPlayer.requestSession()
