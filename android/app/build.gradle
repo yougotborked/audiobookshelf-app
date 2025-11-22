@@ -109,7 +109,9 @@ dependencies {
   implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
   implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
 
-  implementation project(':capacitor-cordova-android-plugins')
+  if (findProject(':capacitor-cordova-android-plugins') != null) {
+    implementation project(':capacitor-cordova-android-plugins')
+  }
 
   implementation "androidx.core:core-ktx:$androidx_core_ktx_version"
 
