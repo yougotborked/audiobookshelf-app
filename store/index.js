@@ -2,6 +2,45 @@ import { Network } from '@capacitor/network'
 import { AbsAudioPlayer, AbsDownloader } from '@/plugins/capacitor'
 import { PlayMethod } from '@/plugins/constants'
 
+function resolveQueueItemIds(item) {
+  if (!item || typeof item !== 'object') {
+    return { libraryItemId: null, episodeId: null }
+  }
+
+  const libraryItem = item.libraryItem || {}
+  const libraryItemId =
+    item.localLibraryItem?.id ??
+    item.localLibraryItemId ??
+    item.libraryItemId ??
+    libraryItem.libraryItemId ??
+    libraryItem.id ??
+    item.id ??
+    null
+
+  const episode = item.episode || {}
+  const episodeId =
+    item.localEpisode?.id ??
+    item.localEpisodeId ??
+    item.episodeId ??
+    episode.serverEpisodeId ??
+    episode.id ??
+    null
+
+  return { libraryItemId, episodeId }
+}
+
+function sanitizeQueue(queue = []) {
+  const sanitized = []
+
+  queue.forEach((item) => {
+    const ids = resolveQueueItemIds(item)
+    if (!ids.libraryItemId) return
+    sanitized.push({ ...item, libraryItemId: ids.libraryItemId, episodeId: ids.episodeId ?? item.episodeId ?? null })
+  })
+
+  return sanitized
+}
+
 export const state = () => ({
   deviceData: null,
   currentPlaybackSession: null,
@@ -120,7 +159,7 @@ export const getters = {
 
 export const actions = {
   async init({ commit, dispatch }) {
-    const queue = await this.$localStore.getPlayQueue()
+    const queue = sanitizeQueue(await this.$localStore.getPlayQueue())
     let index = await this.$localStore.getQueueIndex()
     let session = await this.$localStore.getPlaybackSession()
 
@@ -143,6 +182,13 @@ export const actions = {
         index = idx
         await this.$localStore.setQueueIndex(index)
       }
+    }
+
+    if (!queue.length) {
+      index = null
+    } else if (typeof index !== 'number' || index < 0 || index >= queue.length) {
+      index = 0
+      await this.$localStore.setQueueIndex(index)
     }
 
     commit('setPlayQueue', queue)
@@ -344,7 +390,7 @@ export const mutations = {
     state.showSideDrawer = val
   },
   setPlayQueue(state, queue) {
-    state.playQueue = queue || []
+    state.playQueue = sanitizeQueue(queue)
     this.$localStore.setPlayQueue(state.playQueue)
   },
   setQueueIndex(state, index) {

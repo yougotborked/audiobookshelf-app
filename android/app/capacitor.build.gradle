@@ -7,7 +7,12 @@ android {
   }
 }
 
-apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+def cordovaVariables = file("../capacitor-cordova-android-plugins/cordova.variables.gradle")
+if (cordovaVariables.exists()) {
+  apply from: cordovaVariables
+} else {
+  logger.lifecycle("Skipping Cordova variables; file not found: ${cordovaVariables}")
+}
 dependencies {
     implementation project(':capacitor-community-keep-awake')
     implementation project(':capacitor-community-volume-buttons')

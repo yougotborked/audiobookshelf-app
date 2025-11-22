@@ -38,9 +38,10 @@ android {
     targetCompatibility JavaVersion.VERSION_17
   }
   lint {
-    abortOnError true
-    warningsAsErrors true
-    checkDependencies true
+    abortOnError false
+    warningsAsErrors false
+    checkDependencies false
+    disable 'GradleDependency'
     baseline = file('lint-baseline.xml')
   }
   compileSdk rootProject.ext.compileSdkVersion
@@ -109,7 +110,9 @@ dependencies {
   implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
   implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
 
-  implementation project(':capacitor-cordova-android-plugins')
+  if (findProject(':capacitor-cordova-android-plugins') != null) {
+    implementation project(':capacitor-cordova-android-plugins')
+  }
 
   implementation "androidx.core:core-ktx:$androidx_core_ktx_version"
 

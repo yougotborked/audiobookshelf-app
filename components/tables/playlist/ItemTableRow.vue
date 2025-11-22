@@ -156,7 +156,8 @@ export default {
       )
     },
     userIsFinished() {
-      return !!this.userItemProgress?.isFinished
+      if (this.userItemProgress?.isFinished) return true
+      return this.progressPercent >= 0.97
     },
     progressPercent() {
       return Math.max(Math.min(1, this.userItemProgress?.progress || 0), 0)

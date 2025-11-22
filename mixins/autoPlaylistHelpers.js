@@ -105,8 +105,10 @@ function sanitizeTracks(tracks = []) {
 }
 
 function createPlaylistLibraryItem(libraryItem, libraryId) {
+  const resolvedLibraryId = libraryId || libraryItem?.libraryItemId || libraryItem?.id
+
   if (!libraryItem) {
-    return { id: libraryId, libraryItemId: libraryId }
+    return { id: resolvedLibraryId, libraryItemId: resolvedLibraryId }
   }
 
   const { media, ...rest } = libraryItem
@@ -121,8 +123,8 @@ function createPlaylistLibraryItem(libraryItem, libraryId) {
 
   return {
     ...rest,
-    id: libraryId,
-    libraryItemId: libraryId,
+    id: resolvedLibraryId,
+    libraryItemId: resolvedLibraryId,
     media: sanitizedMedia
   }
 }
@@ -184,11 +186,14 @@ export function collectDownloadedEpisodeKeys(localLibraries = []) {
   const keys = new Set()
 
   localLibraries.forEach((libraryItem) => {
+    const libraryId = libraryItem?.libraryItemId || libraryItem?.id
+    if (!libraryId) return
+
     const episodes = libraryItem?.media?.episodes || []
     episodes.forEach((episode) => {
       const serverId = episode?.serverEpisodeId || episode?.id
       if (!serverId) return
-      keys.add(`${libraryItem.libraryItemId}_${serverId}`)
+      keys.add(`${libraryId}_${serverId}`)
     })
   })
 
@@ -212,14 +217,21 @@ export async function buildUnfinishedAutoPlaylist({ store, db, localStore, nativ
   const localLibraries = await db.getLocalLibraryItems('podcast')
   const downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraries)
 
-  const metadataResults = await Promise.allSettled(localLibraries.map((libraryItem) => localStore.getEpisodeMetadata(libraryItem.libraryItemId)))
+  const metadataResults = await Promise.allSettled(
+    localLibraries.map((libraryItem) => {
+      const libraryId = libraryItem?.libraryItemId || libraryItem?.id
+      return libraryId ? localStore.getEpisodeMetadata(libraryId) : []
+    })
+  )
 
   const metadataByLibraryId = new Map()
   metadataResults.forEach((result, index) => {
     const libraryItem = localLibraries[index]
     if (!libraryItem) return
+    const libraryId = libraryItem.libraryItemId || libraryItem.id
+    if (!libraryId) return
     const entries = result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
-    metadataByLibraryId.set(libraryItem.libraryItemId, toEpisodeMetadataMap(entries))
+    metadataByLibraryId.set(libraryId, toEpisodeMetadataMap(entries))
   })
 
   const playlistItems = []
@@ -227,7 +239,7 @@ export async function buildUnfinishedAutoPlaylist({ store, db, localStore, nativ
   const libraryContexts = []
 
   localLibraries.forEach((libraryItem) => {
-    const libraryId = libraryItem.libraryItemId
+    const libraryId = libraryItem.libraryItemId || libraryItem.id
     const localEpisodes = libraryItem?.media?.episodes || []
     const metadataMap = metadataByLibraryId.get(libraryId)
 
