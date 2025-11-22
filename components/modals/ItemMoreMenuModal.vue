@@ -178,11 +178,11 @@ export default {
       return this.localLibraryItem?.id || null
     },
     serverLibraryItemId() {
-      if (!this.isLocal) return this.libraryItem?.id
+      if (!this.isLocal) return this.libraryItem?.id || this.libraryItem?.libraryItemId
       if (this.isConnectedToServer) {
         return this.libraryItem.libraryItemId
       }
-      return null
+      return this.libraryItem?.libraryItemId || this.libraryItem?.id || null
     },
     localEpisode() {
       if (this.isLocal) return this.episode
@@ -192,11 +192,11 @@ export default {
       return this.localEpisode?.id || null
     },
     serverEpisodeId() {
-      if (!this.isLocal) return this.episode?.id
+      if (!this.isLocal) return this.episode?.id || this.episode?.serverEpisodeId
       if (this.isConnectedToServer) {
         return this.episode.serverEpisodeId
       }
-      return null
+      return this.episode?.serverEpisodeId || this.episode?.id || null
     },
     mediaType() {
       return this.libraryItem?.mediaType
@@ -241,7 +241,8 @@ export default {
       return this.serverItemProgress
     },
     userIsFinished() {
-      return !!this.userItemProgress?.isFinished
+      if (this.userItemProgress?.isFinished) return true
+      return this.progressPercent >= 0.97
     },
     useEBookProgress() {
       if (!this.userItemProgress || this.userItemProgress.progress) return false
@@ -482,9 +483,22 @@ export default {
           this.$emit('update:processing', false)
         })
     },
-    removeFromPlaylistClick() {
+    async removeFromPlaylistClick() {
       if (!this.playlist) {
         this.$toast.error('Invalid: No Playlist')
+        return
+      }
+
+      // Unfinished auto playlist items are removed by marking them finished locally/server-side
+      if (this.playlist.id === 'unfinished') {
+        if (this.userIsFinished) {
+          this.$toast.success('Item removed from playlist')
+          this.$emit('removed-from-auto-playlist')
+          return
+        }
+
+        await this.forceMarkFinished()
+        this.$emit('removed-from-auto-playlist')
         return
       }
 
@@ -504,6 +518,58 @@ export default {
         .finally(() => {
           this.$emit('update:processing', false)
         })
+    },
+    async forceMarkFinished() {
+      if (this.episode) {
+        if (this.userIsFinished) return
+        if (this.isLocal || this.localEpisode) {
+          const payload = await this.$db.updateLocalMediaProgressFinished({
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId,
+            isFinished: true
+          })
+
+          if (payload?.error) {
+            this.$toast.error(payload?.error || 'Unknown error')
+            return
+          }
+
+          if (payload?.localMediaProgress) {
+            this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+          }
+        } else if (this.serverLibraryItemId && this.serverEpisodeId) {
+          await this.$nativeHttp
+            .patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, { isFinished: true })
+            .catch((error) => {
+              console.error('Failed to mark finished', error)
+              this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
+            })
+        }
+      } else {
+        if (this.userIsFinished) return
+        if (this.isLocal) {
+          const payload = await this.$db.updateLocalMediaProgressFinished({
+            localLibraryItemId: this.localLibraryItemId,
+            isFinished: true
+          })
+
+          if (payload?.error) {
+            this.$toast.error(payload?.error || 'Unknown error')
+            return
+          }
+
+          if (payload?.localMediaProgress) {
+            this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+          }
+        } else if (this.serverLibraryItemId) {
+          await this.$nativeHttp
+            .patch(`/api/me/progress/${this.serverLibraryItemId}`, { isFinished: true })
+            .catch((error) => {
+              console.error('Failed to mark finished', error)
+              this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
+            })
+        }
+      }
     }
   },
   mounted() {}

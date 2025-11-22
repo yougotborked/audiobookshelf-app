@@ -21,7 +21,33 @@ if (!embeddedJdks.isEmpty()) {
 }
 
 include ':app'
-include ':capacitor-cordova-android-plugins'
-project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+def agpVersion = providers.gradleProperty('agpVersion').getOrElse('8.13.1')
+
+def rewriteAgpCoordinate = { File gradleFile ->
+  if (!gradleFile?.exists()) return
+
+  def desiredAgpLine = "com.android.tools.build:gradle:${agpVersion}"
+  def originalScript = gradleFile.getText('UTF-8')
+  def updatedScript = originalScript.replaceAll(/com\.android\.tools\.build:gradle:[0-9.]+/, desiredAgpLine)
+
+  if (updatedScript != originalScript) {
+    gradleFile.setText(updatedScript, 'UTF-8')
+  }
+}
+
+def cordovaAndroidPluginsDir = file('./capacitor-cordova-android-plugins/')
+if (cordovaAndroidPluginsDir.exists()) {
+  rewriteAgpCoordinate(new File(cordovaAndroidPluginsDir, 'build.gradle'))
+
+  include ':capacitor-cordova-android-plugins'
+  project(':capacitor-cordova-android-plugins').projectDir = cordovaAndroidPluginsDir
+}
+
+// Align AGP across included Capacitor community modules that ship their own buildscript classpath
+def repoRoot = rootDir.parentFile
+fileTree(dir: repoRoot, include: ['node_modules/**/android/build.gradle']).each { gradleFile ->
+  rewriteAgpCoordinate(gradleFile)
+}
 
 apply from: 'capacitor.settings.gradle'
