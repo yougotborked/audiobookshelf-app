@@ -214,6 +214,7 @@ export default {
         null
 
       const resolvedLibraryItemId = serverLibraryItemId ?? localLibraryItemId ?? rawLibraryItemId
+
       if (!resolvedLibraryItemId) return null
 
       return {
