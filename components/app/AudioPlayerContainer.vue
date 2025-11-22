@@ -93,6 +93,7 @@ export default {
         (!this.isLocalId(libraryItem.libraryItemId) ? libraryItem.libraryItemId : null) ??
         null
       const localLibraryItemId =
+        item.localEpisode?.localLibraryItemId ??
         item.localLibraryItem?.id ??
         item.localLibraryItemId ??
         (this.isLocalId(rawLibraryItemId) ? rawLibraryItemId : null) ??
