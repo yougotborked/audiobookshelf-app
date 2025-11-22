@@ -169,33 +169,58 @@ export default {
     }
   },
   methods: {
+    isLocalId(id) {
+      return typeof id === 'string' && id.startsWith('local')
+    },
     normalizeQueueItem(item) {
       if (!item) return null
 
+      const libraryItem = item.libraryItem || {}
+      const rawLibraryItemId =
+        item.libraryItemId ??
+        libraryItem.libraryItemId ??
+        libraryItem.id ??
+        item.id ??
+        null
       const serverLibraryItemId =
-        item.libraryItemId ||
-        item.libraryItem?.libraryItemId ||
-        item.libraryItem?.id ||
+        item.serverLibraryItemId ??
+        (!this.isLocalId(rawLibraryItemId) ? rawLibraryItemId : null) ??
+        (!this.isLocalId(libraryItem.id) ? libraryItem.id : null) ??
+        (!this.isLocalId(libraryItem.libraryItemId) ? libraryItem.libraryItemId : null) ??
         null
       const localLibraryItemId =
-        item.localEpisode?.localLibraryItemId ||
-        item.localLibraryItem?.id ||
-        item.localLibraryItemId ||
+        item.localEpisode?.localLibraryItemId ??
+        item.localLibraryItem?.id ??
+        item.localLibraryItemId ??
+        (this.isLocalId(rawLibraryItemId) ? rawLibraryItemId : null) ??
+        (this.isLocalId(libraryItem.id) ? libraryItem.id : null) ??
+        null
+
+      const episode = item.episode || {}
+      const rawEpisodeId =
+        item.episodeId ??
+        episode.id ??
+        item.localEpisodeId ??
         null
       const serverEpisodeId =
-        item.episodeId ||
-        item.episode?.serverEpisodeId ||
-        item.episode?.id ||
+        item.serverEpisodeId ??
+        episode.serverEpisodeId ??
+        (!this.isLocalId(rawEpisodeId) ? rawEpisodeId : null) ??
         null
-      const localEpisodeId = item.localEpisode?.id || item.localEpisodeId || null
+      const localEpisodeId =
+        item.localEpisode?.id ??
+        item.localEpisodeId ??
+        (this.isLocalId(rawEpisodeId) ? rawEpisodeId : null) ??
+        null
 
-      const resolvedLibraryItemId = serverLibraryItemId || localLibraryItemId
+      const resolvedLibraryItemId = serverLibraryItemId ?? localLibraryItemId ?? rawLibraryItemId
+
       if (!resolvedLibraryItemId) return null
 
       return {
         ...item,
         libraryItemId: resolvedLibraryItemId,
-        episodeId: serverEpisodeId || localEpisodeId,
+        episodeId: serverEpisodeId ?? localEpisodeId ?? rawEpisodeId ?? null,
         serverLibraryItemId,
         serverEpisodeId,
         localLibraryItemId,
