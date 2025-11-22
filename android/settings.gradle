@@ -22,7 +22,7 @@ if (!embeddedJdks.isEmpty()) {
 
 include ':app'
 
-def agpVersion = providers.gradleProperty('agpVersion').getOrElse('8.8.2')
+def agpVersion = providers.gradleProperty('agpVersion').getOrElse('8.13.1')
 
 def cordovaAndroidPluginsDir = file('./capacitor-cordova-android-plugins/')
 if (cordovaAndroidPluginsDir.exists()) {
