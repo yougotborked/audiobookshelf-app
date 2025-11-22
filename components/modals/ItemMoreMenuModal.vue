@@ -328,8 +328,14 @@ export default {
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
-        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, updatePayload).catch((error) => {
+        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, updatePayload).catch(async (error) => {
           console.error('Failed', error)
+          const status = error?.response?.status
+          const serverNotFound = status === 404
+          if (serverNotFound && this.localLibraryItemId) {
+            await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
+            return
+          }
           this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
         })
       }
@@ -359,8 +365,14 @@ export default {
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
-        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, updatePayload).catch((error) => {
+        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, updatePayload).catch(async (error) => {
           console.error('Failed', error)
+          const status = error?.response?.status
+          const serverNotFound = status === 404
+          if (serverNotFound && this.localLibraryItemId) {
+            await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
+            return
+          }
           this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
         })
       }
@@ -569,6 +581,26 @@ export default {
               this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
             })
         }
+      }
+    },
+    async setLocalProgressFinished({ isEpisode, isFinished }) {
+      if (!this.localLibraryItemId) return
+
+      const payload = await this.$db.updateLocalMediaProgressFinished({
+        localLibraryItemId: this.localLibraryItemId,
+        localEpisodeId: isEpisode ? this.localEpisodeId : null,
+        isFinished
+      })
+
+      if (payload?.error) {
+        this.$toast.error(payload?.error || 'Unknown error')
+        return
+      }
+
+      if (payload?.localMediaProgress) {
+        this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+        const message = isFinished ? this.$strings.ToastItemMarkedAsFinished : this.$strings.ToastItemMarkedAsNotFinished
+        this.$toast.success(message)
       }
     }
   },
