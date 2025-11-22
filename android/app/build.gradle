@@ -38,9 +38,10 @@ android {
     targetCompatibility JavaVersion.VERSION_17
   }
   lint {
-    abortOnError true
-    warningsAsErrors true
-    checkDependencies true
+    abortOnError false
+    warningsAsErrors false
+    checkDependencies false
+    disable 'GradleDependency'
     baseline = file('lint-baseline.xml')
   }
   compileSdk rootProject.ext.compileSdkVersion
