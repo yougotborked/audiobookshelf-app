@@ -136,10 +136,18 @@ export default {
     },
     playableItems() {
       return this.playlistItems.filter((item) => {
-        const libraryItem = item.libraryItem
-        if (libraryItem.isMissing || libraryItem.isInvalid) return false
-        if (item.episode) return true
-        return libraryItem.media.tracks.length
+        const libraryItem = item.libraryItem || item.localLibraryItem
+        if (!libraryItem) return false
+
+        const hasLocalFallback = !!(item.localLibraryItem || item.localEpisode)
+        if (libraryItem.isMissing || libraryItem.isInvalid) {
+          if (!hasLocalFallback) return false
+        }
+
+        if (item.episode || item.localEpisode) return true
+
+        const tracks = item.localLibraryItem?.media?.tracks || libraryItem.media?.tracks || []
+        return tracks.length
       })
     },
     playerIsPlaying() {
