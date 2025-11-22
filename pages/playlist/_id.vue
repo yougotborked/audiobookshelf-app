@@ -169,6 +169,42 @@ export default {
     }
   },
   methods: {
+    normalizeQueueItem(item) {
+      if (!item) return null
+
+      const serverLibraryItemId =
+        item.libraryItemId ||
+        item.libraryItem?.libraryItemId ||
+        item.libraryItem?.id ||
+        null
+      const localLibraryItemId =
+        item.localEpisode?.localLibraryItemId ||
+        item.localLibraryItem?.id ||
+        item.localLibraryItemId ||
+        null
+      const serverEpisodeId =
+        item.episodeId ||
+        item.episode?.serverEpisodeId ||
+        item.episode?.id ||
+        null
+      const localEpisodeId = item.localEpisode?.id || item.localEpisodeId || null
+
+      const resolvedLibraryItemId = serverLibraryItemId || localLibraryItemId
+      if (!resolvedLibraryItemId) return null
+
+      return {
+        ...item,
+        libraryItemId: resolvedLibraryItemId,
+        episodeId: serverEpisodeId || localEpisodeId,
+        serverLibraryItemId,
+        serverEpisodeId,
+        localLibraryItemId,
+        localEpisodeId
+      }
+    },
+    getNormalizedPlayableItems() {
+      return this.playableItems.map(this.normalizeQueueItem).filter(Boolean)
+    },
     async fetchPlaylist() {
       const id = this.$route.params.id
       let playlist
@@ -293,47 +329,50 @@ export default {
       }
     },
     playAll() {
-      if (!this.playableItems.length) return
-      const nextItem = this.playableItems[0]
+      const normalizedQueue = this.getNormalizedPlayableItems()
+      if (!normalizedQueue.length) return
+
+      const nextItem = normalizedQueue[0]
       this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
       this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
-      this.$store.commit('setPlayQueue', this.playableItems)
+      this.$store.commit('setPlayQueue', normalizedQueue)
       this.$store.commit('setQueueIndex', 0)
       const payload = {
-        libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
-        episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
-        serverLibraryItemId: nextItem.libraryItemId,
-        serverEpisodeId: nextItem.episodeId,
-        queue: this.playableItems,
+        libraryItemId: nextItem.localLibraryItem?.id || nextItem.localLibraryItemId || nextItem.libraryItemId,
+        episodeId: nextItem.localEpisode?.id || nextItem.localEpisodeId || nextItem.episodeId,
+        serverLibraryItemId: nextItem.serverLibraryItemId || nextItem.libraryItemId,
+        serverEpisodeId: nextItem.serverEpisodeId || nextItem.episodeId,
+        queue: normalizedQueue,
         queueIndex: 0
       }
       this.$eventBus.$emit('play-item', payload)
     },
     playNextItem() {
-      const nowIndex = this.playableItems.findIndex((i) => {
+      const normalizedQueue = this.getNormalizedPlayableItems()
+      const nowIndex = normalizedQueue.findIndex((i) => {
         return this.$store.getters['getIsMediaStreaming'](
           i.localLibraryItem?.id || i.libraryItemId,
           i.localEpisode?.id || i.episodeId
         )
       })
 
-      const nextItem = this.playableItems.slice(nowIndex + 1).find((i) => {
-        const prog = this.$store.getters['user/getUserMediaProgress'](i.libraryItemId, i.episodeId)
+      const nextItem = normalizedQueue.slice(nowIndex + 1).find((i) => {
+        const prog = this.$store.getters['user/getUserMediaProgress'](i.serverLibraryItemId || i.libraryItemId, i.serverEpisodeId || i.episodeId)
         return !prog?.isFinished
       })
 
       if (nextItem) {
-        const nextIndex = this.playableItems.findIndex((i) => i === nextItem)
+        const nextIndex = normalizedQueue.findIndex((i) => i === nextItem)
         this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
         this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
-        this.$store.commit('setPlayQueue', this.playableItems)
+        this.$store.commit('setPlayQueue', normalizedQueue)
         this.$store.commit('setQueueIndex', nextIndex)
         const payload = {
-          libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
-          episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
-          serverLibraryItemId: nextItem.libraryItemId,
-          serverEpisodeId: nextItem.episodeId,
-          queue: this.playableItems,
+          libraryItemId: nextItem.localLibraryItem?.id || nextItem.localLibraryItemId || nextItem.libraryItemId,
+          episodeId: nextItem.localEpisode?.id || nextItem.localEpisodeId || nextItem.episodeId,
+          serverLibraryItemId: nextItem.serverLibraryItemId || nextItem.libraryItemId,
+          serverEpisodeId: nextItem.serverEpisodeId || nextItem.episodeId,
+          queue: normalizedQueue,
           queueIndex: nextIndex
         }
         this.$eventBus.$emit('play-item', payload)
