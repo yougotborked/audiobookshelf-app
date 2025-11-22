@@ -22,8 +22,21 @@ if (!embeddedJdks.isEmpty()) {
 
 include ':app'
 
+def agpVersion = providers.gradleProperty('agpVersion').getOrElse('8.8.2')
+
 def cordovaAndroidPluginsDir = file('./capacitor-cordova-android-plugins/')
 if (cordovaAndroidPluginsDir.exists()) {
+  def cordovaBuildGradle = new File(cordovaAndroidPluginsDir, 'build.gradle')
+  if (cordovaBuildGradle.exists()) {
+    def desiredAgpLine = "com.android.tools.build:gradle:${agpVersion}"
+    def originalScript = cordovaBuildGradle.getText('UTF-8')
+    def updatedScript = originalScript.replaceAll(/com\.android\.tools\.build:gradle:[0-9.]+/, desiredAgpLine)
+
+    if (updatedScript != originalScript) {
+      cordovaBuildGradle.setText(updatedScript, 'UTF-8')
+    }
+  }
+
   include ':capacitor-cordova-android-plugins'
   project(':capacitor-cordova-android-plugins').projectDir = cordovaAndroidPluginsDir
 }
