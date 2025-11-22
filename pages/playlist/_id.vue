@@ -59,6 +59,8 @@ import {
   collectDownloadedEpisodeKeys,
   toCacheablePlaylist
 } from '@/mixins/autoPlaylistHelpers'
+const MAX_QUEUE_ITEMS = 400
+
 export default {
   async asyncData({ store, params, app, redirect, route }) {
     const user = store.state.user.user
@@ -357,17 +359,23 @@ export default {
       const normalizedQueue = this.getNormalizedPlayableItems()
       if (!normalizedQueue.length) return
 
-      const nextItem = normalizedQueue[0]
+      const maxQueueItems = MAX_QUEUE_ITEMS
+      const queue = maxQueueItems > 0 ? normalizedQueue.slice(0, maxQueueItems) : normalizedQueue
+      if (queue.length < normalizedQueue.length) {
+        this.$toast.info(`Queue limited to ${queue.length} items`)
+      }
+
+      const nextItem = queue[0]
       this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
       this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
-      this.$store.commit('setPlayQueue', normalizedQueue)
+      this.$store.commit('setPlayQueue', queue)
       this.$store.commit('setQueueIndex', 0)
       const payload = {
         libraryItemId: nextItem.localLibraryItem?.id || nextItem.localLibraryItemId || nextItem.libraryItemId,
         episodeId: nextItem.localEpisode?.id || nextItem.localEpisodeId || nextItem.episodeId,
         serverLibraryItemId: nextItem.serverLibraryItemId || nextItem.libraryItemId,
         serverEpisodeId: nextItem.serverEpisodeId || nextItem.episodeId,
-        queue: normalizedQueue,
+        queue,
         queueIndex: 0
       }
       this.$eventBus.$emit('play-item', payload)
