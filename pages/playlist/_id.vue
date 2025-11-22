@@ -37,7 +37,15 @@
       </div>
     </div>
 
-    <modals-item-more-menu-modal v-model="showMoreMenu" :library-item="selectedLibraryItem" :episode="selectedEpisode" :playlist="playlist" hide-rss-feed-option :processing.sync="processing" />
+    <modals-item-more-menu-modal
+      v-model="showMoreMenu"
+      :library-item="selectedLibraryItem"
+      :episode="selectedEpisode"
+      :playlist="playlist"
+      hide-rss-feed-option
+      :processing.sync="processing"
+      @removed-from-auto-playlist="onAutoPlaylistItemRemoved"
+    />
     <div v-show="processing" class="fixed top-0 left-0 w-screen h-screen flex items-center justify-center bg-black/50 z-50">
       <ui-loading-indicator />
     </div>
@@ -338,6 +346,27 @@ export default {
       if (this.playlist.id !== playlist.id) return
       this.playlist = playlist
       this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
+    },
+    onAutoPlaylistItemRemoved() {
+      if (this.playlist.id !== 'unfinished') return
+
+      const libraryItemId = this.selectedLibraryItem?.id || this.selectedLibraryItem?.libraryItemId
+      const episodeId = this.selectedEpisode?.id || this.selectedEpisode?.serverEpisodeId || null
+      if (!libraryItemId) return
+
+      const index = this.playlist.items.findIndex((item) => {
+        const itemLibraryId = item.libraryItemId || item.libraryItem?.id
+        const itemEpisodeId = item.episodeId || item.episode?.serverEpisodeId || item.episode?.id || null
+        return itemLibraryId === libraryItemId && itemEpisodeId === episodeId
+      })
+
+      if (index >= 0) {
+        this.playlist.items.splice(index, 1)
+        this.playlist.totalItems = Math.max(0, (this.playlist.totalItems || 0) - 1)
+        this.$localStore.setCachedPlaylist(toCacheablePlaylist(this.playlist))
+      }
+
+      this.showMoreMenu = false
     },
     playlistRemoved(playlist) {
       if (this.playlist.id === playlist.id) {
