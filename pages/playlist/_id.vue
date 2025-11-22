@@ -227,6 +227,13 @@ export default {
 
       if (!resolvedLibraryItemId) return null
 
+      const playbackLibraryItemId =
+        item.localLibraryItem?.id || localLibraryItemId || serverLibraryItemId || rawLibraryItemId
+      const playbackEpisodeId =
+        item.localEpisode?.id || localEpisodeId || serverEpisodeId || rawEpisodeId || null
+
+      if (!playbackLibraryItemId) return null
+
       return {
         ...item,
         libraryItemId: resolvedLibraryItemId,
@@ -234,7 +241,9 @@ export default {
         serverLibraryItemId,
         serverEpisodeId,
         localLibraryItemId,
-        localEpisodeId
+        localEpisodeId,
+        playbackLibraryItemId,
+        playbackEpisodeId
       }
     },
     getNormalizedPlayableItems() {
@@ -374,15 +383,16 @@ export default {
       }
 
       const nextItem = queue[0]
-      this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
+      this.mediaIdStartingPlayback = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
       this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
       this.$store.commit('setPlayQueue', queue)
       this.$store.commit('setQueueIndex', 0)
       const payload = {
-        libraryItemId: nextItem.localLibraryItem?.id || nextItem.localLibraryItemId || nextItem.libraryItemId,
-        episodeId: nextItem.localEpisode?.id || nextItem.localEpisodeId || nextItem.episodeId,
-        serverLibraryItemId: nextItem.serverLibraryItemId || nextItem.libraryItemId,
-        serverEpisodeId: nextItem.serverEpisodeId || nextItem.episodeId,
+        libraryItemId: nextItem.playbackLibraryItemId,
+        episodeId: nextItem.playbackEpisodeId,
+        serverLibraryItemId: nextItem.serverLibraryItemId,
+        serverEpisodeId: nextItem.serverEpisodeId,
+        forceLocal: !!nextItem.localLibraryItemId,
         queue,
         queueIndex: 0
       }
@@ -392,27 +402,31 @@ export default {
       const normalizedQueue = this.getNormalizedPlayableItems()
       const nowIndex = normalizedQueue.findIndex((i) => {
         return this.$store.getters['getIsMediaStreaming'](
-          i.localLibraryItem?.id || i.libraryItemId,
-          i.localEpisode?.id || i.episodeId
+          i.playbackLibraryItemId,
+          i.playbackEpisodeId
         )
       })
 
       const nextItem = normalizedQueue.slice(nowIndex + 1).find((i) => {
-        const prog = this.$store.getters['user/getUserMediaProgress'](i.serverLibraryItemId || i.libraryItemId, i.serverEpisodeId || i.episodeId)
+        const prog = this.$store.getters['user/getUserMediaProgress'](
+          i.serverLibraryItemId || i.playbackLibraryItemId,
+          i.serverEpisodeId || i.playbackEpisodeId
+        )
         return !prog?.isFinished
       })
 
       if (nextItem) {
         const nextIndex = normalizedQueue.findIndex((i) => i === nextItem)
-        this.mediaIdStartingPlayback = nextItem.episodeId || nextItem.libraryItemId
+        this.mediaIdStartingPlayback = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
         this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
         this.$store.commit('setPlayQueue', normalizedQueue)
         this.$store.commit('setQueueIndex', nextIndex)
         const payload = {
-          libraryItemId: nextItem.localLibraryItem?.id || nextItem.localLibraryItemId || nextItem.libraryItemId,
-          episodeId: nextItem.localEpisode?.id || nextItem.localEpisodeId || nextItem.episodeId,
-          serverLibraryItemId: nextItem.serverLibraryItemId || nextItem.libraryItemId,
-          serverEpisodeId: nextItem.serverEpisodeId || nextItem.episodeId,
+          libraryItemId: nextItem.playbackLibraryItemId,
+          episodeId: nextItem.playbackEpisodeId,
+          serverLibraryItemId: nextItem.serverLibraryItemId,
+          serverEpisodeId: nextItem.serverEpisodeId,
+          forceLocal: !!nextItem.localLibraryItemId,
           queue: normalizedQueue,
           queueIndex: nextIndex
         }
