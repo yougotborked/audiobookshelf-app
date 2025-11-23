@@ -60,6 +60,19 @@ import {
   toCacheablePlaylist
 } from '@/mixins/autoPlaylistHelpers'
 const MAX_QUEUE_ITEMS = 400
+const MAX_LOG_LENGTH = 2000
+
+function formatForLog(payload) {
+  try {
+    const json = JSON.stringify(payload)
+    if (json.length > MAX_LOG_LENGTH) {
+      return `${json.substring(0, MAX_LOG_LENGTH)}... (truncated)`
+    }
+    return json
+  } catch (error) {
+    return '[unserializable payload]'
+  }
+}
 
 export default {
   async asyncData({ store, params, app, redirect, route }) {
@@ -334,7 +347,7 @@ export default {
       }
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Normalized playable items: ${JSON.stringify(normalizedDetails)}`
+        message: `Normalized playable items: ${formatForLog(normalizedDetails)}`
       })
       return normalized
     },
@@ -376,7 +389,7 @@ export default {
       }))
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `buildQueueItems complete: ${JSON.stringify({
+        message: `buildQueueItems complete: ${formatForLog({
           normalizedCount: normalized.length,
           queueCount: queueItems.length,
           sample: queueSample
@@ -388,7 +401,7 @@ export default {
     async fetchPlaylist() {
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Fetch playlist start: ${JSON.stringify({
+        message: `Fetch playlist start: ${formatForLog({
           id: this.$route.params.id,
           networkConnected: this.networkConnected,
           autoCacheUnplayedEpisodes: this.autoCacheUnplayedEpisodes
@@ -428,7 +441,7 @@ export default {
         if (!this.$store.state.networkConnected) {
           AbsLogger.info({
             tag: 'PlaylistPage',
-            message: `Not connected, skip fetching remote playlist: ${JSON.stringify({ id })}`
+            message: `Not connected, skip fetching remote playlist: ${formatForLog({ id })}`
           })
           this.checkAutoDownload()
           return
@@ -439,7 +452,7 @@ export default {
 
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Playlist fetched: ${JSON.stringify({
+        message: `Playlist fetched: ${formatForLog({
           id: playlist.id,
           items: playlist.items?.length || 0,
           totalItems: playlist.totalItems,
@@ -534,7 +547,7 @@ export default {
       }
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Playlist ready: ${JSON.stringify(playlistSummary)}`
+        message: `Playlist ready: ${formatForLog(playlistSummary)}`
       })
       this.checkAutoDownload()
     },
@@ -556,7 +569,7 @@ export default {
     playAll() {
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Play button clicked: ${JSON.stringify({
+        message: `Play button clicked: ${formatForLog({
           playerIsPlaying: this.playerIsPlaying,
           isOpenInPlayer: this.isOpenInPlayer,
           playerIsStartingPlayback: this.playerIsStartingPlayback,
@@ -601,7 +614,7 @@ export default {
       }
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Queue built for play: ${JSON.stringify(queueDetails)}`
+        message: `Queue built for play: ${formatForLog(queueDetails)}`
       })
       this.mediaIdStartingPlayback = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
       this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
@@ -618,7 +631,7 @@ export default {
       }
       AbsLogger.info({
         tag: 'PlaylistPage',
-        message: `Emitting play-item: ${JSON.stringify({ payload, queueSize: queue.length })}`
+        message: `Emitting play-item: ${formatForLog({ payload, queueSize: queue.length })}`
       })
       this.$eventBus.$emit('play-item', payload)
     },

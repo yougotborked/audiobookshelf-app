@@ -14,6 +14,20 @@ import { AbsAudioPlayer, AbsLogger } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
 import CellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
 
+const MAX_LOG_LENGTH = 2000
+
+function formatForLog(payload) {
+  try {
+    const json = JSON.stringify(payload)
+    if (json.length > MAX_LOG_LENGTH) {
+      return `${json.substring(0, MAX_LOG_LENGTH)}... (truncated)`
+    }
+    return json
+  } catch (error) {
+    return '[unserializable payload]'
+  }
+}
+
 export default {
   data() {
     return {
@@ -205,7 +219,7 @@ export default {
       const { value: sleepTimeRemaining, isAuto } = payload
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `SLEEP TIMER SET: ${JSON.stringify(payload)}`
+        message: `SLEEP TIMER SET: ${formatForLog(payload)}`
       })
       if (sleepTimeRemaining === 0) {
         AbsLogger.info({ tag: 'AudioPlayerContainer', message: 'Sleep timer canceled' })
@@ -228,7 +242,7 @@ export default {
     async selectSleepTimeout({ time, isChapterTime }) {
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `Setting sleep timer: ${JSON.stringify({ time, isChapterTime })}`
+        message: `Setting sleep timer: ${formatForLog({ time, isChapterTime })}`
       })
       var res = await AbsAudioPlayer.setSleepTimer({ time: String(time), isChapterTime })
       if (!res.success) {
@@ -263,10 +277,10 @@ export default {
       }
     },
     streamReset({ streamId, startTime }) {
-      AbsLogger.info({
-        tag: 'AudioPlayerContainer',
-        message: `received stream reset: ${JSON.stringify({ streamId, startTime })}`
-      })
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `received stream reset: ${formatForLog({ streamId, startTime })}`
+        })
       if (this.$refs.audioPlayer) {
         if (this.stream && this.stream.id === streamId) {
           this.$refs.audioPlayer.resetStream(startTime)
@@ -359,7 +373,7 @@ export default {
           } else {
             AbsLogger.info({
               tag: 'AudioPlayerContainer',
-              message: `Library item play response: ${JSON.stringify(data)}`
+              message: `Library item play response: ${formatForLog(data)}`
             })
             this.serverLibraryItemId = libraryItemId
             this.serverEpisodeId = episodeId
@@ -378,7 +392,7 @@ export default {
       })
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `[AudioPlayerContainer] playLibraryItem received: ${JSON.stringify({
+        message: `[AudioPlayerContainer] playLibraryItem received: ${formatForLog({
           payload,
           storeQueueSize: this.$store.state.playQueue.length,
           storeQueueIndex: this.$store.state.queueIndex,
@@ -390,7 +404,7 @@ export default {
       const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !payload.forceLocal
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `[AudioPlayerContainer] Resolved IDs for play: ${JSON.stringify({
+        message: `[AudioPlayerContainer] Resolved IDs for play: ${formatForLog({
           ids,
           canUseServerIds,
           shouldUseServerIds,
@@ -440,7 +454,7 @@ export default {
       if (this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)) {
         AbsLogger.info({
           tag: 'AudioPlayerContainer',
-          message: `Already streaming item: ${JSON.stringify({ startTime })}`
+          message: `Already streaming item: ${formatForLog({ startTime })}`
         })
         if (startTime !== undefined && startTime !== null) {
           // seek to start time
@@ -492,7 +506,7 @@ export default {
       const queuePayload = this.getQueuePayload(this.$store.state.playQueue, shouldUseServerIds)
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `[AudioPlayerContainer] Queue payload prepared: ${JSON.stringify({
+        message: `[AudioPlayerContainer] Queue payload prepared: ${formatForLog({
           preferServerIds: shouldUseServerIds,
           originalQueueSize: this.$store.state.playQueue.length,
           queuePayloadSize: queuePayload.length,
@@ -513,7 +527,7 @@ export default {
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `[AudioPlayerContainer] Calling AbsAudioPlayer.prepareLibraryItem: ${JSON.stringify({ preparePayload })}`
+        message: `[AudioPlayerContainer] Calling AbsAudioPlayer.prepareLibraryItem: ${formatForLog({ preparePayload })}`
       })
       AbsAudioPlayer.prepareLibraryItem(preparePayload)
         .then((data) => {
@@ -523,7 +537,7 @@ export default {
           } else {
             AbsLogger.info({
               tag: 'AudioPlayerContainer',
-              message: `Library item play response: ${JSON.stringify(data)}`
+              message: `Library item play response: ${formatForLog(data)}`
             })
             if (!this.isLocalId(libraryItemId)) {
               this.serverLibraryItemId = libraryItemId
@@ -560,7 +574,7 @@ export default {
     onLocalMediaProgressUpdate(localMediaProgress) {
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `Got local media progress update: ${JSON.stringify({
+        message: `Got local media progress update: ${formatForLog({
           progress: localMediaProgress.progress,
           payload: localMediaProgress
         })}`
@@ -605,7 +619,10 @@ export default {
             const localLibraryItemId = playbackSession.localLibraryItem?.id
             const localEpisodeId = playbackSession.localEpisodeId
             if (!localLibraryItemId) {
-              console.error('[AudioPlayerContainer] device visibility: no local library item for session', JSON.stringify(playbackSession))
+              AbsLogger.error({
+                tag: 'AudioPlayerContainer',
+                message: `[AudioPlayerContainer] device visibility: no local library item for session ${formatForLog(playbackSession)}`
+              })
               return
             }
             const localMediaProgress = this.$store.state.globals.localMediaProgress.find((mp) => {
@@ -615,7 +632,7 @@ export default {
             if (localMediaProgress) {
               AbsLogger.info({
                 tag: 'AudioPlayerContainer',
-                message: `[AudioPlayerContainer] device visibility: found local media progress: ${JSON.stringify({
+                message: `[AudioPlayerContainer] device visibility: found local media progress: ${formatForLog({
                   currentTime: localMediaProgress.currentTime,
                   playerCurrentTime: this.currentTime
                 })}`
@@ -623,7 +640,10 @@ export default {
               this.$refs.audioPlayer.currentTime = localMediaProgress.currentTime
               this.$refs.audioPlayer.timeupdate()
             } else {
-              console.error('[AudioPlayerContainer] device visibility: Local media progress not found')
+              AbsLogger.error({
+                tag: 'AudioPlayerContainer',
+                message: '[AudioPlayerContainer] device visibility: Local media progress not found'
+              })
             }
           } else {
             const libraryItemId = playbackSession.libraryItemId
@@ -635,7 +655,7 @@ export default {
                 if (!this.$refs.audioPlayer?.isPlaying && data.libraryItemId === libraryItemId) {
                   AbsLogger.info({
                     tag: 'AudioPlayerContainer',
-                    message: `[AudioPlayerContainer] device visibility: got server media progress: ${JSON.stringify({
+                    message: `[AudioPlayerContainer] device visibility: got server media progress: ${formatForLog({
                       currentTime: data.currentTime,
                       playerCurrentTime: this.currentTime
                     })}`
@@ -645,7 +665,10 @@ export default {
                 }
               })
               .catch((error) => {
-                console.error('[AudioPlayerContainer] device visibility: Failed to get progress', error)
+                AbsLogger.error({
+                  tag: 'AudioPlayerContainer',
+                  message: `[AudioPlayerContainer] device visibility: Failed to get progress ${formatForLog(error)}`
+                })
               })
           }
         }

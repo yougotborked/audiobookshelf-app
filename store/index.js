@@ -417,7 +417,14 @@ export const mutations = {
     state.playQueue = sanitizeQueue(queue)
     const sanitizedSummary = {
       sanitizedLength: state.playQueue.length,
-      sample: state.playQueue.slice(0, 5)
+      sample: state.playQueue.slice(0, 5).map((item) => ({
+        libraryItemId: item?.libraryItemId,
+        episodeId: item?.episodeId,
+        serverLibraryItemId: item?.serverLibraryItemId,
+        serverEpisodeId: item?.serverEpisodeId,
+        localLibraryItemId: item?.localLibraryItemId,
+        localEpisodeId: item?.localEpisodeId
+      }))
     }
     AbsLogger.info({ tag: 'Store', message: `[Store] setPlayQueue sanitized: ${JSON.stringify(sanitizedSummary)}` })
     this.$localStore.setPlayQueue(state.playQueue)
