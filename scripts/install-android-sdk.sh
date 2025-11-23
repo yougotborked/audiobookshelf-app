@@ -30,7 +30,7 @@ install_sdk_packages() {
     "build-tools;35.0.0"
   )
 
-  yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+  yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
   "$SDKMANAGER" --sdk_root="$SDK_ROOT" "${packages[@]}"
 }
 
