@@ -431,6 +431,10 @@ export const mutations = {
   },
   setQueueIndex(state, index) {
     state.queueIndex = index
+    AbsLogger.info({
+      tag: 'Store',
+      message: `[Store] setQueueIndex: ${JSON.stringify({ queueIndex: index, queueLength: state.playQueue.length })}`
+    })
     this.$localStore.setQueueIndex(index)
   },
   reorderQueue(state, { oldIndex, newIndex }) {

@@ -454,7 +454,12 @@ export default {
       if (this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)) {
         AbsLogger.info({
           tag: 'AudioPlayerContainer',
-          message: `Already streaming item: ${formatForLog({ startTime })}`
+          message: `Already streaming item: ${formatForLog({
+            startTime,
+            queueSize: payload.queue?.length,
+            storeQueueSize: this.$store.state.playQueue.length,
+            queueIndex: this.$store.state.queueIndex
+          })}`
         })
         if (startTime !== undefined && startTime !== null) {
           // seek to start time
@@ -559,7 +564,10 @@ export default {
           }
         })
         .catch((error) => {
-          console.error('Failed', error)
+          AbsLogger.error({
+            tag: 'AudioPlayerContainer',
+            message: `[AudioPlayerContainer] prepareLibraryItem failed: ${formatForLog({ error: String(error) })}`
+          })
           this.$toast.error('Failed to play')
         })
         .finally(() => {
@@ -704,6 +712,10 @@ export default {
     },
     onQueueIndexUpdate({ value }) {
       if (typeof value === 'number') {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] onQueueIndexUpdate: ${formatForLog({ value, queueLength: this.$store.state.playQueue.length })}`
+        })
         this.$store.commit('setQueueIndex', value)
       }
     },
