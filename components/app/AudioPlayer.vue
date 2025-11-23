@@ -70,13 +70,6 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span
-            class="material-symbols text-3xl text-fg cursor-pointer"
-            :class="hasQueue ? 'text-opacity-75' : 'text-opacity-10'"
-            @click="openQueue"
-          >
-            queue_music
-          </span>
           <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
         </div>
       </div>
@@ -264,9 +257,6 @@ export default {
 
       return items
     },
-    hasQueue() {
-      return (this.$store.state.playQueue || []).length > 0
-    },
     jumpForwardIcon() {
       return this.$store.getters['globals/getJumpForwardIcon'](this.jumpForwardTime)
     },
@@ -442,10 +432,6 @@ export default {
         message: this.$strings.MessageProgressSyncFailed,
         cancelText: this.$strings.ButtonOk
       })
-    },
-    openQueue() {
-      if (!this.hasQueue) return
-      this.$emit('openQueue')
     },
     clickChaptersBtn() {
       if (!this.chapters.length) return

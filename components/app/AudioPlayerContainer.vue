@@ -1,6 +1,6 @@
 <template>
   <div>
-    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" @openQueue="showQueueModal = true" />
+    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" />
 
     <modals-playback-speed-modal v-model="showPlaybackSpeedModal" :playback-rate.sync="playbackSpeed" @update:playbackRate="updatePlaybackSpeed" @change="changePlaybackSpeed" />
     <modals-sleep-timer-modal v-model="showSleepTimerModal" :current-time="sleepTimeRemaining" :sleep-timer-running="isSleepTimerRunning" :current-end-of-chapter-time="currentEndOfChapterTime" :is-auto="isAutoSleepTimer" @change="selectSleepTimeout" @cancel="cancelSleepTimer" @increase="increaseSleepTimer" @decrease="decreaseSleepTimer" />
@@ -452,12 +452,9 @@ export default {
 
       // if already playing this item then jump to start time
       const isAlreadyStreaming = this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)
-      const isCurrentlyActive =
-        this.$store.state.playerIsPlaying ||
-        this.$store.state.playerIsStartingPlayback ||
-        this.$refs.audioPlayer?.isPlaying
+      const isCurrentlyPlaying = this.$store.state.playerIsPlaying || this.$refs.audioPlayer?.isPlaying
 
-      if (isAlreadyStreaming && isCurrentlyActive) {
+      if (isAlreadyStreaming && isCurrentlyPlaying) {
         AbsLogger.info({
           tag: 'AudioPlayerContainer',
           message: `Already streaming item: ${formatForLog({
@@ -466,7 +463,6 @@ export default {
             storeQueueSize: this.$store.state.playQueue.length,
             queueIndex: this.$store.state.queueIndex,
             playerIsPlaying: this.$store.state.playerIsPlaying,
-            playerIsStartingPlayback: this.$store.state.playerIsStartingPlayback,
             audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
           })}`
         })
@@ -478,6 +474,20 @@ export default {
         }
         this.$store.commit('setPlayerDoneStartingPlayback')
         return
+      }
+
+      if (isAlreadyStreaming) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `Item matches current session but player inactive; preparing again: ${formatForLog({
+            queueSize: payload.queue?.length,
+            storeQueueSize: this.$store.state.playQueue.length,
+            queueIndex: this.$store.state.queueIndex,
+            playerIsPlaying: this.$store.state.playerIsPlaying,
+            playerIsStartingPlayback: this.$store.state.playerIsStartingPlayback,
+            audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
+          })}`
+        })
       }
 
       this.serverLibraryItemId = null
