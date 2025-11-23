@@ -4,8 +4,16 @@ import { PlayMethod } from '@/plugins/constants'
 
 function resolveQueueItemIds(item) {
   if (!item || typeof item !== 'object') {
-    return { libraryItemId: null, episodeId: null }
+    return {
+      libraryItemId: null,
+      episodeId: null,
+      playbackLibraryItemId: null,
+      playbackEpisodeId: null
+    }
   }
+
+  const playbackLibraryItemId = item.playbackLibraryItemId ?? null
+  const playbackEpisodeId = item.playbackEpisodeId ?? null
 
   const libraryItem = item.libraryItem || {}
   const libraryItemId =
@@ -16,6 +24,7 @@ function resolveQueueItemIds(item) {
     libraryItem.libraryItemId ??
     libraryItem.id ??
     item.id ??
+    playbackLibraryItemId ??
     null
 
   const episode = item.episode || {}
@@ -25,9 +34,10 @@ function resolveQueueItemIds(item) {
     item.episodeId ??
     episode.serverEpisodeId ??
     episode.id ??
+    playbackEpisodeId ??
     null
 
-  return { libraryItemId, episodeId }
+  return { libraryItemId, episodeId, playbackLibraryItemId, playbackEpisodeId }
 }
 
 function sanitizeQueue(queue = []) {
@@ -36,7 +46,16 @@ function sanitizeQueue(queue = []) {
   queue.forEach((item) => {
     const ids = resolveQueueItemIds(item)
     if (!ids.libraryItemId) return
-    sanitized.push({ ...item, libraryItemId: ids.libraryItemId, episodeId: ids.episodeId ?? item.episodeId ?? null })
+    const episodeId = ids.episodeId ?? ids.playbackEpisodeId ?? item.episodeId ?? null
+    const playbackLibraryItemId = ids.playbackLibraryItemId ?? item.playbackLibraryItemId ?? ids.libraryItemId
+    const playbackEpisodeId = ids.playbackEpisodeId ?? item.playbackEpisodeId ?? episodeId
+    sanitized.push({
+      ...item,
+      libraryItemId: ids.libraryItemId,
+      episodeId,
+      playbackLibraryItemId,
+      playbackEpisodeId
+    })
   })
 
   return sanitized
