@@ -142,18 +142,22 @@ export default {
       return queue
         .map((item) => {
           const ids = this.resolveQueueItemIds(item)
-          const libraryItemId = preferServerIds
-            ? ids.serverLibraryItemId
+
+          let libraryItemId = preferServerIds
+            ? ids.serverLibraryItemId ?? ids.fallbackLibraryItemId
             : ids.localLibraryItemId || ids.fallbackLibraryItemId
+
           if (!libraryItemId) return null
-          if (preferServerIds && this.isLocalId(libraryItemId)) return null
+          if (preferServerIds && this.isLocalId(libraryItemId)) {
+            libraryItemId = ids.fallbackLibraryItemId
+            if (!libraryItemId || this.isLocalId(libraryItemId)) return null
+          }
 
           let episodeId = null
           if (preferServerIds) {
-            episodeId = ids.serverEpisodeId
-            if (episodeId && this.isLocalId(episodeId)) return null
-            if (ids.serverEpisodeId === null && ids.fallbackEpisodeId !== null) {
-              return null
+            episodeId = ids.serverEpisodeId ?? ids.fallbackEpisodeId ?? null
+            if (episodeId && this.isLocalId(episodeId)) {
+              episodeId = ids.fallbackEpisodeId ?? null
             }
           } else {
             episodeId = ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId
