@@ -1001,11 +1001,19 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   fun setPlayQueue(queue: MutableList<PlayQueueItem>, index: Int) {
     playQueue = queue
     queueIndex = index
+    val queueSummary = playQueue.take(5).map { item ->
+      "${item.libraryItemId}:${item.episodeId ?: ""}"
+    }
+    AbsLogger.info(
+      tag,
+      "setPlayQueue: size=${playQueue.size} index=$queueIndex sample=${queueSummary.joinToString()}"
+    )
   }
 
   private fun playQueueIndex(idx: Int) {
     if (idx < 0 || idx >= playQueue.size) return
     queueIndex = idx
+    AbsLogger.info(tag, "playQueueIndex: moving to $queueIndex of ${playQueue.size}")
     val item = playQueue[idx]
     val playbackRate = currentPlayer.playbackParameters.speed
     if (item.libraryItemId.startsWith("local")) {

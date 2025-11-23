@@ -207,8 +207,16 @@ class AbsAudioPlayer : Plugin() {
       try {
         val queue: MutableList<PlayQueueItem> =
           jacksonMapper.readValue(it.toString())
+        val queueSummary = queue.take(5).map { item ->
+          "${item.libraryItemId}:${item.episodeId ?: ""}"
+        }
+        AbsLogger.info(
+          tag,
+          "prepareLibraryItem: parsed queue size=${queue.size} index=$queueIndex sample=${queueSummary.joinToString()}"
+        )
         playerNotificationService.setPlayQueue(queue, queueIndex)
       } catch (e: Exception) {
+        AbsLogger.error(tag, "prepareLibraryItem: failed to parse queue (${e.message})")
         Log.e(tag, "prepareLibraryItem: failed to parse queue", e)
       }
     }
