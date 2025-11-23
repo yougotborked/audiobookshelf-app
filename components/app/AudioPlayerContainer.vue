@@ -451,14 +451,23 @@ export default {
       }
 
       // if already playing this item then jump to start time
-      if (this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)) {
+      const isAlreadyStreaming = this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)
+      const isCurrentlyActive =
+        this.$store.state.playerIsPlaying ||
+        this.$store.state.playerIsStartingPlayback ||
+        this.$refs.audioPlayer?.isPlaying
+
+      if (isAlreadyStreaming && isCurrentlyActive) {
         AbsLogger.info({
           tag: 'AudioPlayerContainer',
           message: `Already streaming item: ${formatForLog({
             startTime,
             queueSize: payload.queue?.length,
             storeQueueSize: this.$store.state.playQueue.length,
-            queueIndex: this.$store.state.queueIndex
+            queueIndex: this.$store.state.queueIndex,
+            playerIsPlaying: this.$store.state.playerIsPlaying,
+            playerIsStartingPlayback: this.$store.state.playerIsStartingPlayback,
+            audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
           })}`
         })
         if (startTime !== undefined && startTime !== null) {
