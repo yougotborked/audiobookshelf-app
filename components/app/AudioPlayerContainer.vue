@@ -142,18 +142,22 @@ export default {
       return queue
         .map((item) => {
           const ids = this.resolveQueueItemIds(item)
-          const libraryItemId = preferServerIds
-            ? ids.serverLibraryItemId
+
+          let libraryItemId = preferServerIds
+            ? ids.serverLibraryItemId ?? ids.fallbackLibraryItemId
             : ids.localLibraryItemId || ids.fallbackLibraryItemId
+
           if (!libraryItemId) return null
-          if (preferServerIds && this.isLocalId(libraryItemId)) return null
+          if (preferServerIds && this.isLocalId(libraryItemId)) {
+            libraryItemId = ids.fallbackLibraryItemId
+            if (!libraryItemId || this.isLocalId(libraryItemId)) return null
+          }
 
           let episodeId = null
           if (preferServerIds) {
-            episodeId = ids.serverEpisodeId
-            if (episodeId && this.isLocalId(episodeId)) return null
-            if (ids.serverEpisodeId === null && ids.fallbackEpisodeId !== null) {
-              return null
+            episodeId = ids.serverEpisodeId ?? ids.fallbackEpisodeId ?? null
+            if (episodeId && this.isLocalId(episodeId)) {
+              episodeId = ids.fallbackEpisodeId ?? null
             }
           } else {
             episodeId = ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId
@@ -341,10 +345,25 @@ export default {
         })
     },
     async playLibraryItem(payload) {
-      await AbsLogger.info({ tag: 'AudioPlayerContainer', message: `playLibraryItem: Received play request for library item ${payload.libraryItemId} ${payload.episodeId ? `episode ${payload.episodeId}` : ''}` })
+      await AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `playLibraryItem: Received play request for library item ${payload.libraryItemId} ${payload.episodeId ? `episode ${payload.episodeId}` : ''}`
+      })
+      console.log('[AudioPlayerContainer] playLibraryItem received', {
+        payload,
+        storeQueueSize: this.$store.state.playQueue.length,
+        storeQueueIndex: this.$store.state.queueIndex,
+        isCasting: this.$store.state.isCasting
+      })
       const ids = this.resolveQueueItemIds(payload)
       const canUseServerIds = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
       const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !payload.forceLocal
+      console.log('[AudioPlayerContainer] Resolved IDs for play', {
+        ids,
+        canUseServerIds,
+        shouldUseServerIds,
+        forceLocal: payload.forceLocal
+      })
       let libraryItemId = shouldUseServerIds
         ? ids.serverLibraryItemId
         : ids.localLibraryItemId || ids.fallbackLibraryItemId
@@ -432,6 +451,12 @@ export default {
 
       console.log('Called playLibraryItem', libraryItemId)
       const queuePayload = this.getQueuePayload(this.$store.state.playQueue, shouldUseServerIds)
+      console.log('[AudioPlayerContainer] Queue payload prepared', {
+        preferServerIds: shouldUseServerIds,
+        originalQueueSize: this.$store.state.playQueue.length,
+        queuePayloadSize: queuePayload.length,
+        queuePayloadSample: queuePayload.slice(0, 5)
+      })
       const preparePayload = {
         libraryItemId,
         episodeId,
@@ -444,6 +469,9 @@ export default {
         preparePayload.queueIndex = this.resolveQueueIndex(queuePayload, libraryItemId, episodeId || null, fallbackIndex)
       }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
+      console.log('[AudioPlayerContainer] Calling AbsAudioPlayer.prepareLibraryItem', {
+        preparePayload
+      })
       AbsAudioPlayer.prepareLibraryItem(preparePayload)
         .then((data) => {
           if (data.error) {

@@ -317,10 +317,26 @@ export default {
       }
     },
     getNormalizedPlayableItems() {
-      return this.playableItems.map(this.normalizeQueueItem).filter(Boolean)
+      const normalized = this.playableItems.map(this.normalizeQueueItem).filter(Boolean)
+      console.log('[PlaylistPage] Normalized playable items', {
+        totalPlayable: this.playableItems.length,
+        normalizedCount: normalized.length,
+        sample: normalized.slice(0, 5).map((item) => ({
+          libraryItemId: item.libraryItemId,
+          episodeId: item.episodeId,
+          serverLibraryItemId: item.serverLibraryItemId,
+          serverEpisodeId: item.serverEpisodeId,
+          localLibraryItemId: item.localLibraryItemId,
+          localEpisodeId: item.localEpisodeId,
+          playbackLibraryItemId: item.playbackLibraryItemId,
+          playbackEpisodeId: item.playbackEpisodeId
+        }))
+      })
+      return normalized
     },
     buildQueueItems() {
-      return this.getNormalizedPlayableItems()
+      const normalized = this.getNormalizedPlayableItems()
+      const queueItems = normalized
         .map((item) => {
           const ids = this.resolveQueueItemIds(item)
           const playbackLibraryItemId =
@@ -343,8 +359,30 @@ export default {
           }
         })
         .filter(Boolean)
+
+      console.log('[PlaylistPage] buildQueueItems complete', {
+        normalizedCount: normalized.length,
+        queueCount: queueItems.length,
+        sample: queueItems.slice(0, 5).map((item) => ({
+          libraryItemId: item.libraryItemId,
+          episodeId: item.episodeId,
+          serverLibraryItemId: item.serverLibraryItemId,
+          serverEpisodeId: item.serverEpisodeId,
+          localLibraryItemId: item.localLibraryItemId,
+          localEpisodeId: item.localEpisodeId,
+          playbackLibraryItemId: item.playbackLibraryItemId,
+          playbackEpisodeId: item.playbackEpisodeId
+        }))
+      })
+
+      return queueItems
     },
     async fetchPlaylist() {
+      console.log('[PlaylistPage] Fetch playlist start', {
+        id: this.$route.params.id,
+        networkConnected: this.networkConnected,
+        autoCacheUnplayedEpisodes: this.autoCacheUnplayedEpisodes
+      })
       const id = this.$route.params.id
       let playlist
       if (id === 'unfinished') {
@@ -377,12 +415,20 @@ export default {
         }
       } else {
         if (!this.$store.state.networkConnected) {
+          console.log('[PlaylistPage] Not connected, skip fetching remote playlist', { id })
           this.checkAutoDownload()
           return
         }
         playlist = await this.$nativeHttp.get(`/api/playlists/${id}`).catch(() => null)
         if (!playlist) return
       }
+
+      console.log('[PlaylistPage] Playlist fetched', {
+        id: playlist.id,
+        items: playlist.items?.length || 0,
+        totalItems: playlist.totalItems,
+        hasLocalDownloads: !!this.downloadedEpisodeKeys
+      })
 
       if (playlist.items.length) {
         const localLibraryItems = (await this.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
@@ -450,6 +496,25 @@ export default {
       playlist.totalItems = playlist.totalItems || playlist.items.length
       await this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
       this.playlist = playlist
+      console.log('[PlaylistPage] Playlist ready', {
+        id: playlist.id,
+        itemCount: playlist.items.length,
+        totalItems: playlist.totalItems,
+        firstItem: playlist.items[0]
+          ? {
+              libraryItemId:
+                playlist.items[0].libraryItemId ||
+                playlist.items[0].libraryItem?.libraryItemId ||
+                playlist.items[0].libraryItem?.id,
+              episodeId:
+                playlist.items[0].episodeId ||
+                playlist.items[0].episode?.serverEpisodeId ||
+                playlist.items[0].episode?.id,
+              hasLocalLibraryItem: !!playlist.items[0].localLibraryItem,
+              hasLocalEpisode: !!playlist.items[0].localEpisode
+            }
+          : null
+      })
       this.checkAutoDownload()
     },
     showMore(playlistItem) {
@@ -468,6 +533,14 @@ export default {
       }
     },
     playAll() {
+      console.log('[PlaylistPage] Play button clicked', {
+        playerIsPlaying: this.playerIsPlaying,
+        isOpenInPlayer: this.isOpenInPlayer,
+        playerIsStartingPlayback: this.playerIsStartingPlayback,
+        playlistId: this.playlist.id,
+        playlistItems: this.playlist.items.length,
+        playableItems: this.playableItems.length
+      })
       const normalizedQueue = this.buildQueueItems()
       if (!normalizedQueue.length) {
         this.$toast.error('No playable items found')
@@ -481,6 +554,27 @@ export default {
       }
 
       const nextItem = queue[0]
+      console.log('[PlaylistPage] Queue built for play', {
+        normalizedCount: normalizedQueue.length,
+        queueCount: queue.length,
+        truncated: queue.length < normalizedQueue.length,
+        nextItem: {
+          playbackLibraryItemId: nextItem.playbackLibraryItemId,
+          playbackEpisodeId: nextItem.playbackEpisodeId,
+          serverLibraryItemId: nextItem.serverLibraryItemId,
+          serverEpisodeId: nextItem.serverEpisodeId,
+          localLibraryItemId: nextItem.localLibraryItemId,
+          localEpisodeId: nextItem.localEpisodeId
+        },
+        queueSample: queue.slice(0, 5).map((item) => ({
+          playbackLibraryItemId: item.playbackLibraryItemId,
+          playbackEpisodeId: item.playbackEpisodeId,
+          serverLibraryItemId: item.serverLibraryItemId,
+          serverEpisodeId: item.serverEpisodeId,
+          localLibraryItemId: item.localLibraryItemId,
+          localEpisodeId: item.localEpisodeId
+        }))
+      })
       this.mediaIdStartingPlayback = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
       this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
       this.$store.commit('setPlayQueue', queue)
@@ -494,6 +588,10 @@ export default {
         queue,
         queueIndex: 0
       }
+      console.log('[PlaylistPage] Emitting play-item', {
+        payload,
+        queueSize: queue.length
+      })
       this.$eventBus.$emit('play-item', payload)
     },
     playNextItem() {

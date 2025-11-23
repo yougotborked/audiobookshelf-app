@@ -391,7 +391,24 @@ export const mutations = {
     state.showSideDrawer = val
   },
   setPlayQueue(state, queue) {
+    console.log('[Store] setPlayQueue called', {
+      incomingLength: Array.isArray(queue) ? queue.length : 0,
+      sample: Array.isArray(queue)
+        ? queue.slice(0, 5).map((item) => ({
+            libraryItemId: item?.libraryItemId,
+            episodeId: item?.episodeId,
+            serverLibraryItemId: item?.serverLibraryItemId,
+            serverEpisodeId: item?.serverEpisodeId,
+            localLibraryItemId: item?.localLibraryItemId,
+            localEpisodeId: item?.localEpisodeId
+          }))
+        : []
+    })
     state.playQueue = sanitizeQueue(queue)
+    console.log('[Store] setPlayQueue sanitized', {
+      sanitizedLength: state.playQueue.length,
+      sample: state.playQueue.slice(0, 5)
+    })
     this.$localStore.setPlayQueue(state.playQueue)
   },
   setQueueIndex(state, index) {
