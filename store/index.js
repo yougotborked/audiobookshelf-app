@@ -9,6 +9,7 @@ function resolveQueueItemIds(item) {
 
   const libraryItem = item.libraryItem || {}
   const libraryItemId =
+    item.playbackLibraryItemId ??
     item.localEpisode?.localLibraryItemId ??
     item.localLibraryItem?.id ??
     item.localLibraryItemId ??
@@ -20,6 +21,7 @@ function resolveQueueItemIds(item) {
 
   const episode = item.episode || {}
   const episodeId =
+    item.playbackEpisodeId ??
     item.localEpisode?.id ??
     item.localEpisodeId ??
     item.episodeId ??
