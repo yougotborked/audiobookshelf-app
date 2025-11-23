@@ -30,6 +30,15 @@ This application is built using [NuxtJS](https://nuxtjs.org/) and [Capacitor](ht
 
 Thank you to [Weblate](https://hosted.weblate.org/engage/audiobookshelf/) for hosting our localization infrastructure pro-bono. If you want to see Audiobookshelf in your language, please help us localize. Additional information on helping with the translations [here](https://www.audiobookshelf.org/faq#how-do-i-help-with-translations). <a href="https://hosted.weblate.org/engage/audiobookshelf/"> <img src="https://hosted.weblate.org/widget/audiobookshelf/abs-mobile-app/horizontal-auto.svg" alt="Translation status" /> </a>
 
+### Codex environment setup
+
+Two helper scripts keep the Codex development environment cached so Android builds do not rely on repeated downloads:
+
+- `scripts/setup.sh` installs baseline tooling, invokes `scripts/install-android-sdk.sh`, prefetches the Gradle wrapper distribution into `GRADLE_USER_HOME`, and places the debug keystore in `~/.android`.
+- `scripts/maintenance.sh` refreshes SDK licenses/packages and prunes Gradle wrapper caches, with `--sdk-only` and `--gradle-only` switches for targeted runs.
+
+These scripts make the expected setup explicit; no separate Codex auto-setup documentation was available.
+
 ### Windows Environment Setup for Android
 
 Required Software:
