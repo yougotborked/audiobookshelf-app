@@ -217,6 +217,11 @@ export async function buildUnfinishedAutoPlaylist({ store, db, localStore, nativ
   const localLibraries = await db.getLocalLibraryItems('podcast')
   const downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraries)
 
+  const hasServerConnection =
+    !!store?.state?.user?.serverConnectionConfig?.address &&
+    !!store?.getters?.['user/getToken']
+  const canFetchServerEpisodes = networkConnected && hasServerConnection
+
   const metadataResults = await Promise.allSettled(
     localLibraries.map((libraryItem) => {
       const libraryId = libraryItem?.libraryItemId || libraryItem?.id
@@ -266,7 +271,8 @@ export async function buildUnfinishedAutoPlaylist({ store, db, localStore, nativ
       }
     }
 
-    const needsServerDates = networkConnected && context.episodes.some((episode) => !episode?.publishedAt && !episode?.pubDate)
+    const needsServerDates =
+      canFetchServerEpisodes && context.episodes.some((episode) => !episode?.publishedAt && !episode?.pubDate)
 
     if (needsServerDates) {
       libraryContexts.push({ ...context, needsServerDates: true })
@@ -276,8 +282,12 @@ export async function buildUnfinishedAutoPlaylist({ store, db, localStore, nativ
     }
   })
 
-  const contextsNeedingServerData = libraryContexts.filter((context) => context.needsServerDates)
-  await fetchServerEpisodesInBatches(contextsNeedingServerData, nativeHttp, localStore)
+  const contextsNeedingServerData = canFetchServerEpisodes
+    ? libraryContexts.filter((context) => context.needsServerDates)
+    : []
+  if (contextsNeedingServerData.length) {
+    await fetchServerEpisodesInBatches(contextsNeedingServerData, nativeHttp, localStore)
+  }
 
   libraryContexts.forEach((context) => {
     const { libraryItem, libraryId, localEpisodeMap } = context
