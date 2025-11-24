@@ -552,8 +552,10 @@ export default {
       this.checkAutoDownload()
     },
     showMore(playlistItem) {
-      this.selectedLibraryItem = playlistItem.libraryItem
-      this.selectedEpisode = playlistItem.episode
+      this.selectedLibraryItem = playlistItem.localLibraryItem || playlistItem.libraryItem
+      this.selectedEpisode = playlistItem.localEpisode
+        ? { ...playlistItem.episode, localEpisode: playlistItem.localEpisode }
+        : playlistItem.episode
       this.showMoreMenu = true
     },
     async playClick() {
