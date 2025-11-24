@@ -554,6 +554,24 @@ export default {
       this.checkAutoDownload()
     },
     showMore(playlistItem) {
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Show more requested: ${formatForLog({
+          playlistItemId: playlistItem?.id,
+          playlistLibraryItemId:
+            playlistItem?.libraryItemId ||
+            playlistItem?.libraryItem?.libraryItemId ||
+            playlistItem?.libraryItem?.id ||
+            null,
+          playlistEpisodeId:
+            playlistItem?.episodeId ||
+            playlistItem?.episode?.serverEpisodeId ||
+            playlistItem?.episode?.id ||
+            null,
+          hasLocalLibraryItem: !!playlistItem?.localLibraryItem,
+          hasLocalEpisode: !!playlistItem?.localEpisode
+        })}`
+      })
       const playlistLibraryItemId =
         playlistItem.libraryItemId || playlistItem.libraryItem?.libraryItemId || playlistItem.libraryItem?.id || null
       const playlistEpisodeId =

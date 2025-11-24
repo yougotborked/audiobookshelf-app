@@ -280,6 +280,19 @@ export default {
       } else if (action === 'removeFromPlaylist') {
         this.removeFromPlaylistClick()
       } else if (action === 'markFinished') {
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `markFinished action: ${JSON.stringify({
+            isPodcast: this.isPodcast,
+            serverLibraryItemId: this.serverLibraryItemId,
+            serverEpisodeId: this.serverEpisodeId,
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId,
+            isLocal: this.isLocal,
+            hasLocalEpisode: !!this.localEpisode,
+            userIsFinished: this.userIsFinished
+          })}`
+        })
         if (this.episode) this.toggleEpisodeFinished()
         else this.toggleFinished()
       } else if (action === 'history') {
@@ -325,10 +338,38 @@ export default {
           }
         }
       } else {
+        const serverLibraryItemId = this.serverLibraryItemId
+        if (!serverLibraryItemId) {
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: 'toggleFinished missing serverLibraryItemId, falling back to local update'
+          })
+          if (this.localLibraryItemId) {
+            await this.setLocalProgressFinished({ isEpisode: false, isFinished: !this.userIsFinished })
+          } else {
+            this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
+          }
+          this.$emit('update:processing', false)
+          return
+        }
+
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
-        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, updatePayload).catch(async (error) => {
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `toggleFinished server request: ${JSON.stringify({
+            serverLibraryItemId,
+            payload: updatePayload
+          })}`
+        })
+        await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}`, updatePayload).catch(async (error) => {
+          const status = error?.response?.status
+          const data = error?.response?.data
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: `toggleFinished server error: ${JSON.stringify({ status, data })}`
+          })
           console.error('Failed', error)
           const status = error?.response?.status
           const serverNotFound = status === 404
@@ -345,6 +386,9 @@ export default {
       await this.$hapticsImpact()
 
       this.$emit('update:processing', true)
+      const serverLibraryItemId = this.serverLibraryItemId
+      const serverEpisodeId = this.serverEpisodeId
+
       if (this.isLocal || this.localEpisode) {
         const isFinished = !this.userIsFinished
         const localLibraryItemId = this.localLibraryItemId
@@ -362,10 +406,43 @@ export default {
           }
         }
       } else {
+        if (!serverLibraryItemId || !serverEpisodeId) {
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: `toggleEpisodeFinished missing server ids, fallback: ${JSON.stringify({
+              serverLibraryItemId,
+              serverEpisodeId,
+              localLibraryItemId: this.localLibraryItemId,
+              localEpisodeId: this.localEpisodeId
+            })}`
+          })
+          if (this.localLibraryItemId && this.localEpisodeId) {
+            await this.setLocalProgressFinished({ isEpisode: true, isFinished: !this.userIsFinished })
+          } else {
+            this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
+          }
+          this.$emit('update:processing', false)
+          return
+        }
+
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
-        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, updatePayload).catch(async (error) => {
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `toggleEpisodeFinished server request: ${JSON.stringify({
+            serverLibraryItemId,
+            serverEpisodeId,
+            payload: updatePayload
+          })}`
+        })
+        await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}/${serverEpisodeId}`, updatePayload).catch(async (error) => {
+          const status = error?.response?.status
+          const data = error?.response?.data
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: `toggleEpisodeFinished server error: ${JSON.stringify({ status, data })}`
+          })
           console.error('Failed', error)
           const status = error?.response?.status
           const serverNotFound = status === 404
