@@ -79,11 +79,10 @@ export default {
     const user = store.state.user.user
     const serverConfig = store.state.user.serverConnectionConfig
     const networkConnected = store.state.networkConnected
-    if (!user && !serverConfig && networkConnected) {
+    const cached = await app.$localStore.getCachedPlaylist(params.id)
+    if (!user && !serverConfig && networkConnected && !cached) {
       return redirect(`/connect?redirect=${route.path}`)
     }
-
-    const cached = await app.$localStore.getCachedPlaylist(params.id)
     const playlist = cached
       ? {
           ...cached,
