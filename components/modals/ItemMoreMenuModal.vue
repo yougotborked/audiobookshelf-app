@@ -371,7 +371,6 @@ export default {
             message: `toggleFinished server error: ${JSON.stringify({ status, data })}`
           })
           console.error('Failed', error)
-          const status = error?.response?.status
           const serverNotFound = status === 404
           if (serverNotFound && this.localLibraryItemId) {
             await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
@@ -444,7 +443,6 @@ export default {
             message: `toggleEpisodeFinished server error: ${JSON.stringify({ status, data })}`
           })
           console.error('Failed', error)
-          const status = error?.response?.status
           const serverNotFound = status === 404
           if (serverNotFound && this.localLibraryItemId) {
             await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
