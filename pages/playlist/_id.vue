@@ -577,22 +577,24 @@ export default {
       const playlistEpisodeId =
         playlistItem.episodeId || playlistItem.episode?.serverEpisodeId || playlistItem.episode?.id || null
 
-      const libraryItem = playlistItem.localLibraryItem || playlistItem.libraryItem
-      const episode = playlistItem.localEpisode
-        ? { ...playlistItem.episode, localEpisode: playlistItem.localEpisode }
-        : playlistItem.episode
+      const useLocal = !!playlistItem.localLibraryItem
+      const libraryItem = useLocal ? playlistItem.localLibraryItem : playlistItem.libraryItem
+      const episode = useLocal ? playlistItem.localEpisode || playlistItem.episode : playlistItem.episode
 
       this.selectedLibraryItem = libraryItem
         ? {
             ...libraryItem,
-            libraryItemId: playlistLibraryItemId || libraryItem.libraryItemId
+            isLocal: useLocal,
+            libraryItemId: playlistLibraryItemId || libraryItem.libraryItemId || libraryItem.id,
+            id: playlistLibraryItemId || libraryItem.id
           }
         : null
       this.selectedEpisode = episode
         ? {
             ...episode,
             serverEpisodeId: playlistEpisodeId || episode?.serverEpisodeId,
-            id: playlistEpisodeId || episode?.id || episode?.serverEpisodeId
+            id: playlistEpisodeId || episode?.id || episode?.serverEpisodeId,
+            localEpisode: useLocal ? playlistItem.localEpisode || episode?.localEpisode : episode?.localEpisode
           }
         : null
       this.selectedLibraryItemId =
