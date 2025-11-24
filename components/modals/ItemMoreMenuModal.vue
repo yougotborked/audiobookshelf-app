@@ -324,6 +324,8 @@ export default {
       }
 
       this.$emit('update:processing', true)
+      let markFinishedSucceeded = false
+
       if (this.isLocal) {
         const isFinished = !this.userIsFinished
         const payload = await this.$db.updateLocalMediaProgressFinished({ localLibraryItemId: this.localLibraryItemId, isFinished })
@@ -335,6 +337,7 @@ export default {
           console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
           if (localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
+            markFinishedSucceeded = true
           }
         }
       } else {
@@ -363,7 +366,9 @@ export default {
             payload: updatePayload
           })}`
         })
+        let serverError = null
         await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}`, updatePayload).catch(async (error) => {
+          serverError = error
           const status = error?.response?.status
           const data = error?.response?.data
           AbsLogger.info({
@@ -373,11 +378,18 @@ export default {
           console.error('Failed', error)
           const serverNotFound = status === 404
           if (serverNotFound && this.localLibraryItemId) {
-            await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
+            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
+            if (localSucceeded) markFinishedSucceeded = true
             return
           }
           this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
         })
+        if (!serverError) {
+          markFinishedSucceeded = true
+        }
+      }
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+        this.$emit('removed-from-auto-playlist', { refresh: true })
       }
       this.$emit('update:processing', false)
     },
@@ -387,6 +399,7 @@ export default {
       this.$emit('update:processing', true)
       const serverLibraryItemId = this.serverLibraryItemId
       const serverEpisodeId = this.serverEpisodeId
+      let markFinishedSucceeded = false
 
       if (this.isLocal || this.localEpisode) {
         const isFinished = !this.userIsFinished
@@ -402,6 +415,7 @@ export default {
           console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
           if (localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
+            markFinishedSucceeded = true
           }
         }
       } else {
@@ -411,12 +425,13 @@ export default {
             message: `toggleEpisodeFinished missing server ids, fallback: ${JSON.stringify({
               serverLibraryItemId,
               serverEpisodeId,
-              localLibraryItemId: this.localLibraryItemId,
-              localEpisodeId: this.localEpisodeId
-            })}`
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId
+          })}`
           })
           if (this.localLibraryItemId && this.localEpisodeId) {
-            await this.setLocalProgressFinished({ isEpisode: true, isFinished: !this.userIsFinished })
+            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: true, isFinished: !this.userIsFinished })
+            markFinishedSucceeded = localSucceeded
           } else {
             this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
           }
@@ -435,7 +450,9 @@ export default {
             payload: updatePayload
           })}`
         })
+        let serverError = null
         await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}/${serverEpisodeId}`, updatePayload).catch(async (error) => {
+          serverError = error
           const status = error?.response?.status
           const data = error?.response?.data
           AbsLogger.info({
@@ -445,11 +462,18 @@ export default {
           console.error('Failed', error)
           const serverNotFound = status === 404
           if (serverNotFound && this.localLibraryItemId) {
-            await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
+            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
+            if (localSucceeded) markFinishedSucceeded = true
             return
           }
           this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
         })
+        if (!serverError) {
+          markFinishedSucceeded = true
+        }
+      }
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+        this.$emit('removed-from-auto-playlist', { refresh: true })
       }
       this.$emit('update:processing', false)
     },
@@ -630,6 +654,8 @@ export default {
           hasLocalEpisode: !!this.localEpisode
         })}`
       })
+      let markFinishedSucceeded = false
+
       if (this.episode) {
         if (this.userIsFinished) return
         if (this.isLocal || this.localEpisode) {
@@ -646,14 +672,20 @@ export default {
 
           if (payload?.localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+            markFinishedSucceeded = true
           }
         } else if (this.serverLibraryItemId && this.serverEpisodeId) {
+          let serverError = null
           await this.$nativeHttp
             .patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, { isFinished: true })
             .catch((error) => {
+              serverError = error
               console.error('Failed to mark finished', error)
               this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
             })
+          if (!serverError) {
+            markFinishedSucceeded = true
+          }
         }
       } else {
         if (this.userIsFinished) return
@@ -670,19 +702,29 @@ export default {
 
           if (payload?.localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+            markFinishedSucceeded = true
           }
         } else if (this.serverLibraryItemId) {
+          let serverError = null
           await this.$nativeHttp
             .patch(`/api/me/progress/${this.serverLibraryItemId}`, { isFinished: true })
             .catch((error) => {
+              serverError = error
               console.error('Failed to mark finished', error)
               this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
             })
+          if (!serverError) {
+            markFinishedSucceeded = true
+          }
         }
+      }
+
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+        this.$emit('removed-from-auto-playlist', { refresh: true })
       }
     },
     async setLocalProgressFinished({ isEpisode, isFinished }) {
-      if (!this.localLibraryItemId) return
+      if (!this.localLibraryItemId) return false
 
       const payload = await this.$db.updateLocalMediaProgressFinished({
         localLibraryItemId: this.localLibraryItemId,
@@ -692,14 +734,17 @@ export default {
 
       if (payload?.error) {
         this.$toast.error(payload?.error || 'Unknown error')
-        return
+        return false
       }
 
       if (payload?.localMediaProgress) {
         this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
         const message = isFinished ? this.$strings.ToastItemMarkedAsFinished : this.$strings.ToastItemMarkedAsNotFinished
         this.$toast.success(message)
+        return true
       }
+
+      return false
     }
   },
   mounted() {}

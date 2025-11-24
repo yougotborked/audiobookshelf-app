@@ -727,7 +727,7 @@ export default {
       this.playlist = playlist
       this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
     },
-    onAutoPlaylistItemRemoved() {
+    async onAutoPlaylistItemRemoved(options = {}) {
       if (this.playlist.id !== 'unfinished') return
 
       const libraryItemId =
@@ -748,6 +748,10 @@ export default {
       }
 
       this.showMoreMenu = false
+
+      if (options.refresh) {
+        await this.fetchPlaylist()
+      }
     },
     playlistRemoved(playlist) {
       if (this.playlist.id === playlist.id) {
