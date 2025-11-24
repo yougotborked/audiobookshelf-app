@@ -1,6 +1,6 @@
 <template>
   <div>
-    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" @openQueue="showQueueModal = true" />
+    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @showQueue="openQueue" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" />
 
     <modals-playback-speed-modal v-model="showPlaybackSpeedModal" :playback-rate.sync="playbackSpeed" @update:playbackRate="updatePlaybackSpeed" @change="changePlaybackSpeed" />
     <modals-sleep-timer-modal v-model="showSleepTimerModal" :current-time="sleepTimeRemaining" :sleep-timer-running="isSleepTimerRunning" :current-end-of-chapter-time="currentEndOfChapterTime" :is-auto="isAutoSleepTimer" @change="selectSleepTimeout" @cancel="cancelSleepTimer" @increase="increaseSleepTimer" @decrease="decreaseSleepTimer" />
@@ -13,6 +13,20 @@
 import { AbsAudioPlayer, AbsLogger } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
 import CellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
+
+const MAX_LOG_LENGTH = 2000
+
+function formatForLog(payload) {
+  try {
+    const json = JSON.stringify(payload)
+    if (json.length > MAX_LOG_LENGTH) {
+      return `${json.substring(0, MAX_LOG_LENGTH)}... (truncated)`
+    }
+    return json
+  } catch (error) {
+    return '[unserializable payload]'
+  }
+}
 
 export default {
   data() {
@@ -142,18 +156,22 @@ export default {
       return queue
         .map((item) => {
           const ids = this.resolveQueueItemIds(item)
-          const libraryItemId = preferServerIds
-            ? ids.serverLibraryItemId
+
+          let libraryItemId = preferServerIds
+            ? ids.serverLibraryItemId ?? ids.fallbackLibraryItemId
             : ids.localLibraryItemId || ids.fallbackLibraryItemId
+
           if (!libraryItemId) return null
-          if (preferServerIds && this.isLocalId(libraryItemId)) return null
+          if (preferServerIds && this.isLocalId(libraryItemId)) {
+            libraryItemId = ids.fallbackLibraryItemId
+            if (!libraryItemId || this.isLocalId(libraryItemId)) return null
+          }
 
           let episodeId = null
           if (preferServerIds) {
-            episodeId = ids.serverEpisodeId
-            if (episodeId && this.isLocalId(episodeId)) return null
-            if (ids.serverEpisodeId === null && ids.fallbackEpisodeId !== null) {
-              return null
+            episodeId = ids.serverEpisodeId ?? ids.fallbackEpisodeId ?? null
+            if (episodeId && this.isLocalId(episodeId)) {
+              episodeId = ids.fallbackEpisodeId ?? null
             }
           } else {
             episodeId = ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId
@@ -180,6 +198,23 @@ export default {
     showBookmarks() {
       this.showBookmarksModal = true
     },
+    openQueue() {
+      const queue = this.$store.state.playQueue
+      if (!Array.isArray(queue) || !queue.length) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: '[AudioPlayerContainer] openQueue requested but queue is empty'
+        })
+        return
+      }
+
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] openQueue: ${formatForLog({ queueLength: queue.length, queueIndex: this.$store.state.queueIndex })}`
+      })
+
+      this.showQueueModal = true
+    },
     selectBookmark(bookmark) {
       this.showBookmarksModal = false
       if (!bookmark || isNaN(bookmark.time)) return
@@ -191,14 +226,20 @@ export default {
     onSleepTimerEnded({ value: currentPosition }) {
       this.isSleepTimerRunning = false
       if (currentPosition) {
-        console.log('Sleep Timer Ended Current Position: ' + currentPosition)
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `Sleep Timer Ended Current Position: ${currentPosition}`
+        })
       }
     },
     onSleepTimerSet(payload) {
       const { value: sleepTimeRemaining, isAuto } = payload
-      console.log('SLEEP TIMER SET', JSON.stringify(payload))
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `SLEEP TIMER SET: ${formatForLog(payload)}`
+      })
       if (sleepTimeRemaining === 0) {
-        console.log('Sleep timer canceled')
+        AbsLogger.info({ tag: 'AudioPlayerContainer', message: 'Sleep timer canceled' })
         this.isSleepTimerRunning = false
       } else {
         this.isSleepTimerRunning = true
@@ -216,7 +257,10 @@ export default {
       this.showSleepTimerModal = true
     },
     async selectSleepTimeout({ time, isChapterTime }) {
-      console.log('Setting sleep timer', time, isChapterTime)
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `Setting sleep timer: ${formatForLog({ time, isChapterTime })}`
+      })
       var res = await AbsAudioPlayer.setSleepTimer({ time: String(time), isChapterTime })
       if (!res.success) {
         return this.$toast.error('Sleep timer did not set, invalid time')
@@ -230,11 +274,11 @@ export default {
       AbsAudioPlayer.decreaseSleepTime({ time: '300000' })
     },
     async cancelSleepTimer() {
-      console.log('Canceling sleep timer')
+      AbsLogger.info({ tag: 'AudioPlayerContainer', message: 'Canceling sleep timer' })
       await AbsAudioPlayer.cancelSleepTimer()
     },
     streamClosed() {
-      console.log('Stream Closed')
+      AbsLogger.info({ tag: 'AudioPlayerContainer', message: 'Stream Closed' })
     },
     streamProgress(data) {
       if (!data.numSegments) return
@@ -244,13 +288,16 @@ export default {
       }
     },
     streamReady() {
-      console.log('[StreamContainer] Stream Ready')
+      AbsLogger.info({ tag: 'AudioPlayerContainer', message: '[StreamContainer] Stream Ready' })
       if (this.$refs.audioPlayer) {
         this.$refs.audioPlayer.setStreamReady()
       }
     },
     streamReset({ streamId, startTime }) {
-      console.log('received stream reset', streamId, startTime)
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `received stream reset: ${formatForLog({ streamId, startTime })}`
+        })
       if (this.$refs.audioPlayer) {
         if (this.stream && this.stream.id === streamId) {
           this.$refs.audioPlayer.resetStream(startTime)
@@ -259,19 +306,31 @@ export default {
     },
     updatePlaybackSpeed(speed) {
       if (this.$refs.audioPlayer) {
-        console.log(`[AudioPlayerContainer] Update Playback Speed: ${speed}`)
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] Update Playback Speed: ${speed}`
+        })
         this.$refs.audioPlayer.setPlaybackSpeed(speed)
       }
     },
     changePlaybackSpeed(speed) {
-      console.log(`[AudioPlayerContainer] Change Playback Speed: ${speed}`)
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] Change Playback Speed: ${speed}`
+      })
       this.$store.dispatch('user/updateUserSettings', { playbackRate: speed })
     },
     settingsUpdated(settings) {
-      console.log(`[AudioPlayerContainer] Settings Update | PlaybackRate: ${settings.playbackRate}`)
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] Settings Update | PlaybackRate: ${settings.playbackRate}`
+      })
       this.playbackSpeed = settings.playbackRate
       if (this.$refs.audioPlayer && this.$refs.audioPlayer.currentPlaybackRate !== settings.playbackRate) {
-        console.log(`[AudioPlayerContainer] PlaybackRate Updated: ${this.playbackSpeed}`)
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] PlaybackRate Updated: ${this.playbackSpeed}`
+        })
         this.$refs.audioPlayer.setPlaybackSpeed(this.playbackSpeed)
       }
 
@@ -329,7 +388,10 @@ export default {
             const errorMsg = data.error || 'Failed to play'
             this.$toast.error(errorMsg)
           } else {
-            console.log('Library item play response', JSON.stringify(data))
+            AbsLogger.info({
+              tag: 'AudioPlayerContainer',
+              message: `Library item play response: ${formatForLog(data)}`
+            })
             this.serverLibraryItemId = libraryItemId
             this.serverEpisodeId = episodeId
             AbsAudioPlayer.requestSession()
@@ -341,10 +403,31 @@ export default {
         })
     },
     async playLibraryItem(payload) {
-      await AbsLogger.info({ tag: 'AudioPlayerContainer', message: `playLibraryItem: Received play request for library item ${payload.libraryItemId} ${payload.episodeId ? `episode ${payload.episodeId}` : ''}` })
+      await AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `playLibraryItem: Received play request for library item ${payload.libraryItemId} ${payload.episodeId ? `episode ${payload.episodeId}` : ''}`
+      })
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] playLibraryItem received: ${formatForLog({
+          payload,
+          storeQueueSize: this.$store.state.playQueue.length,
+          storeQueueIndex: this.$store.state.queueIndex,
+          isCasting: this.$store.state.isCasting
+        })}`
+      })
       const ids = this.resolveQueueItemIds(payload)
       const canUseServerIds = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
       const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !payload.forceLocal
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] Resolved IDs for play: ${formatForLog({
+          ids,
+          canUseServerIds,
+          shouldUseServerIds,
+          forceLocal: payload.forceLocal
+        })}`
+      })
       let libraryItemId = shouldUseServerIds
         ? ids.serverLibraryItemId
         : ids.localLibraryItemId || ids.fallbackLibraryItemId
@@ -385,8 +468,21 @@ export default {
       }
 
       // if already playing this item then jump to start time
-      if (this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)) {
-        console.log('Already streaming item', startTime)
+      const isAlreadyStreaming = this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)
+      const isCurrentlyPlaying = this.$store.state.playerIsPlaying || this.$refs.audioPlayer?.isPlaying
+
+      if (isAlreadyStreaming && isCurrentlyPlaying) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `Already streaming item: ${formatForLog({
+            startTime,
+            queueSize: payload.queue?.length,
+            storeQueueSize: this.$store.state.playQueue.length,
+            queueIndex: this.$store.state.queueIndex,
+            playerIsPlaying: this.$store.state.playerIsPlaying,
+            audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
+          })}`
+        })
         if (startTime !== undefined && startTime !== null) {
           // seek to start time
           AbsAudioPlayer.seek({ value: Math.floor(startTime) })
@@ -395,6 +491,20 @@ export default {
         }
         this.$store.commit('setPlayerDoneStartingPlayback')
         return
+      }
+
+      if (isAlreadyStreaming) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `Item matches current session but player inactive; preparing again: ${formatForLog({
+            queueSize: payload.queue?.length,
+            storeQueueSize: this.$store.state.playQueue.length,
+            queueIndex: this.$store.state.queueIndex,
+            playerIsPlaying: this.$store.state.playerIsPlaying,
+            playerIsStartingPlayback: this.$store.state.playerIsStartingPlayback,
+            audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
+          })}`
+        })
       }
 
       this.serverLibraryItemId = null
@@ -430,8 +540,20 @@ export default {
         this.$store.commit('setQueueIndex', 0)
       }
 
-      console.log('Called playLibraryItem', libraryItemId)
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `Called playLibraryItem: ${libraryItemId}`
+      })
       const queuePayload = this.getQueuePayload(this.$store.state.playQueue, shouldUseServerIds)
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] Queue payload prepared: ${formatForLog({
+          preferServerIds: shouldUseServerIds,
+          originalQueueSize: this.$store.state.playQueue.length,
+          queuePayloadSize: queuePayload.length,
+          queuePayloadSample: queuePayload.slice(0, 5)
+        })}`
+      })
       const preparePayload = {
         libraryItemId,
         episodeId,
@@ -444,13 +566,20 @@ export default {
         preparePayload.queueIndex = this.resolveQueueIndex(queuePayload, libraryItemId, episodeId || null, fallbackIndex)
       }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] Calling AbsAudioPlayer.prepareLibraryItem: ${formatForLog({ preparePayload })}`
+      })
       AbsAudioPlayer.prepareLibraryItem(preparePayload)
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
             this.$toast.error(errorMsg)
           } else {
-            console.log('Library item play response', JSON.stringify(data))
+            AbsLogger.info({
+              tag: 'AudioPlayerContainer',
+              message: `Library item play response: ${formatForLog(data)}`
+            })
             if (!this.isLocalId(libraryItemId)) {
               this.serverLibraryItemId = libraryItemId
             } else if (serverLibraryItemId && !this.isLocalId(serverLibraryItemId)) {
@@ -471,7 +600,10 @@ export default {
           }
         })
         .catch((error) => {
-          console.error('Failed', error)
+          AbsLogger.error({
+            tag: 'AudioPlayerContainer',
+            message: `[AudioPlayerContainer] prepareLibraryItem failed: ${formatForLog({ error: String(error) })}`
+          })
           this.$toast.error('Failed to play')
         })
         .finally(() => {
@@ -484,7 +616,13 @@ export default {
       }
     },
     onLocalMediaProgressUpdate(localMediaProgress) {
-      console.log('Got local media progress update', localMediaProgress.progress, JSON.stringify(localMediaProgress))
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `Got local media progress update: ${formatForLog({
+          progress: localMediaProgress.progress,
+          payload: localMediaProgress
+        })}`
+      })
       this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
     },
     onMediaPlayerChanged(data) {
@@ -500,7 +638,10 @@ export default {
       if (!this.isIos) return
 
       // If settings aren't loaded yet, native player will receive incorrect settings
-      console.log('Notify on ready... settingsLoaded:', this.settingsLoaded, 'isReady:', this.isReady)
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `Notify on ready... settingsLoaded: ${this.settingsLoaded}, isReady: ${this.isReady}`
+      })
       if (this.settingsLoaded && this.isReady && this.$store.state.isFirstAudioLoad) {
         this.$store.commit('setIsFirstAudioLoad', false) // Only run this once on app launch
         AbsAudioPlayer.onReady()
@@ -522,7 +663,10 @@ export default {
             const localLibraryItemId = playbackSession.localLibraryItem?.id
             const localEpisodeId = playbackSession.localEpisodeId
             if (!localLibraryItemId) {
-              console.error('[AudioPlayerContainer] device visibility: no local library item for session', JSON.stringify(playbackSession))
+              AbsLogger.error({
+                tag: 'AudioPlayerContainer',
+                message: `[AudioPlayerContainer] device visibility: no local library item for session ${formatForLog(playbackSession)}`
+              })
               return
             }
             const localMediaProgress = this.$store.state.globals.localMediaProgress.find((mp) => {
@@ -530,11 +674,20 @@ export default {
               return mp.localLibraryItemId === localLibraryItemId
             })
             if (localMediaProgress) {
-              console.log('[AudioPlayerContainer] device visibility: found local media progress', localMediaProgress.currentTime, 'last time in player is', this.currentTime)
+              AbsLogger.info({
+                tag: 'AudioPlayerContainer',
+                message: `[AudioPlayerContainer] device visibility: found local media progress: ${formatForLog({
+                  currentTime: localMediaProgress.currentTime,
+                  playerCurrentTime: this.currentTime
+                })}`
+              })
               this.$refs.audioPlayer.currentTime = localMediaProgress.currentTime
               this.$refs.audioPlayer.timeupdate()
             } else {
-              console.error('[AudioPlayerContainer] device visibility: Local media progress not found')
+              AbsLogger.error({
+                tag: 'AudioPlayerContainer',
+                message: '[AudioPlayerContainer] device visibility: Local media progress not found'
+              })
             }
           } else {
             const libraryItemId = playbackSession.libraryItemId
@@ -544,13 +697,22 @@ export default {
               .get(url)
               .then((data) => {
                 if (!this.$refs.audioPlayer?.isPlaying && data.libraryItemId === libraryItemId) {
-                  console.log('[AudioPlayerContainer] device visibility: got server media progress', data.currentTime, 'last time in player is', this.currentTime)
+                  AbsLogger.info({
+                    tag: 'AudioPlayerContainer',
+                    message: `[AudioPlayerContainer] device visibility: got server media progress: ${formatForLog({
+                      currentTime: data.currentTime,
+                      playerCurrentTime: this.currentTime
+                    })}`
+                  })
                   this.$refs.audioPlayer.currentTime = data.currentTime
                   this.$refs.audioPlayer.timeupdate()
                 }
               })
               .catch((error) => {
-                console.error('[AudioPlayerContainer] device visibility: Failed to get progress', error)
+                AbsLogger.error({
+                  tag: 'AudioPlayerContainer',
+                  message: `[AudioPlayerContainer] device visibility: Failed to get progress ${formatForLog(error)}`
+                })
               })
           }
         }
@@ -586,6 +748,10 @@ export default {
     },
     onQueueIndexUpdate({ value }) {
       if (typeof value === 'number') {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] onQueueIndexUpdate: ${formatForLog({ value, queueLength: this.$store.state.playQueue.length })}`
+        })
         this.$store.commit('setQueueIndex', value)
       }
     },
@@ -632,7 +798,10 @@ export default {
     })
 
     this.playbackSpeed = this.$store.getters['user/getUserSetting']('playbackRate')
-    console.log(`[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`)
+    AbsLogger.info({
+      tag: 'AudioPlayerContainer',
+      message: `[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`
+    })
 
     this.$eventBus.$on('abs-ui-ready', this.onReady)
     this.$eventBus.$on('play-item', this.playLibraryItem)

@@ -70,7 +70,14 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+          <div class="flex items-center gap-3">
+            <span
+              class="material-symbols text-3xl text-fg cursor-pointer"
+              :class="playQueueAvailable ? 'text-opacity-75' : 'text-opacity-10'"
+              @click.stop="clickQueueBtn"
+            >playlist_play</span>
+            <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+          </div>
         </div>
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
@@ -211,6 +218,9 @@ export default {
     }
   },
   computed: {
+    playQueueAvailable() {
+      return Array.isArray(this.$store.state.playQueue) && this.$store.state.playQueue.length > 0
+    },
     theme() {
       return document.documentElement.dataset.theme || 'dark'
     },
@@ -432,6 +442,10 @@ export default {
         message: this.$strings.MessageProgressSyncFailed,
         cancelText: this.$strings.ButtonOk
       })
+    },
+    clickQueueBtn() {
+      if (!this.playQueueAvailable) return
+      this.$emit('showQueue')
     },
     clickChaptersBtn() {
       if (!this.chapters.length) return

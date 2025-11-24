@@ -53,13 +53,26 @@
 </template>
 
 <script>
-import { AbsDownloader } from '@/plugins/capacitor'
+import { AbsDownloader, AbsLogger } from '@/plugins/capacitor'
 import {
   buildUnfinishedAutoPlaylist,
   collectDownloadedEpisodeKeys,
   toCacheablePlaylist
 } from '@/mixins/autoPlaylistHelpers'
 const MAX_QUEUE_ITEMS = 400
+const MAX_LOG_LENGTH = 2000
+
+function formatForLog(payload) {
+  try {
+    const json = JSON.stringify(payload)
+    if (json.length > MAX_LOG_LENGTH) {
+      return `${json.substring(0, MAX_LOG_LENGTH)}... (truncated)`
+    }
+    return json
+  } catch (error) {
+    return '[unserializable payload]'
+  }
+}
 
 export default {
   async asyncData({ store, params, app, redirect, route }) {
@@ -317,10 +330,30 @@ export default {
       }
     },
     getNormalizedPlayableItems() {
-      return this.playableItems.map(this.normalizeQueueItem).filter(Boolean)
+      const normalized = this.playableItems.map(this.normalizeQueueItem).filter(Boolean)
+      const normalizedDetails = {
+        totalPlayable: this.playableItems.length,
+        normalizedCount: normalized.length,
+        sample: normalized.slice(0, 5).map((item) => ({
+          libraryItemId: item.libraryItemId,
+          episodeId: item.episodeId,
+          serverLibraryItemId: item.serverLibraryItemId,
+          serverEpisodeId: item.serverEpisodeId,
+          localLibraryItemId: item.localLibraryItemId,
+          localEpisodeId: item.localEpisodeId,
+          playbackLibraryItemId: item.playbackLibraryItemId,
+          playbackEpisodeId: item.playbackEpisodeId
+        }))
+      }
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Normalized playable items: ${formatForLog(normalizedDetails)}`
+      })
+      return normalized
     },
     buildQueueItems() {
-      return this.getNormalizedPlayableItems()
+      const normalized = this.getNormalizedPlayableItems()
+      const queueItems = normalized
         .map((item) => {
           const ids = this.resolveQueueItemIds(item)
           const playbackLibraryItemId =
@@ -343,8 +376,37 @@ export default {
           }
         })
         .filter(Boolean)
+
+      const queueSample = queueItems.slice(0, 5).map((item) => ({
+        libraryItemId: item.libraryItemId,
+        episodeId: item.episodeId,
+        serverLibraryItemId: item.serverLibraryItemId,
+        serverEpisodeId: item.serverEpisodeId,
+        localLibraryItemId: item.localLibraryItemId,
+        localEpisodeId: item.localEpisodeId,
+        playbackLibraryItemId: item.playbackLibraryItemId,
+        playbackEpisodeId: item.playbackEpisodeId
+      }))
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `buildQueueItems complete: ${formatForLog({
+          normalizedCount: normalized.length,
+          queueCount: queueItems.length,
+          sample: queueSample
+        })}`
+      })
+
+      return queueItems
     },
     async fetchPlaylist() {
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Fetch playlist start: ${formatForLog({
+          id: this.$route.params.id,
+          networkConnected: this.networkConnected,
+          autoCacheUnplayedEpisodes: this.autoCacheUnplayedEpisodes
+        })}`
+      })
       const id = this.$route.params.id
       let playlist
       if (id === 'unfinished') {
@@ -377,12 +439,26 @@ export default {
         }
       } else {
         if (!this.$store.state.networkConnected) {
+          AbsLogger.info({
+            tag: 'PlaylistPage',
+            message: `Not connected, skip fetching remote playlist: ${formatForLog({ id })}`
+          })
           this.checkAutoDownload()
           return
         }
         playlist = await this.$nativeHttp.get(`/api/playlists/${id}`).catch(() => null)
         if (!playlist) return
       }
+
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Playlist fetched: ${formatForLog({
+          id: playlist.id,
+          items: playlist.items?.length || 0,
+          totalItems: playlist.totalItems,
+          hasLocalDownloads: !!this.downloadedEpisodeKeys
+        })}`
+      })
 
       if (playlist.items.length) {
         const localLibraryItems = (await this.$db.getLocalLibraryItems(playlist.items[0].libraryItem.mediaType)) || []
@@ -450,6 +526,29 @@ export default {
       playlist.totalItems = playlist.totalItems || playlist.items.length
       await this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
       this.playlist = playlist
+      const playlistSummary = {
+        id: playlist.id,
+        itemCount: playlist.items.length,
+        totalItems: playlist.totalItems,
+        firstItem: playlist.items[0]
+          ? {
+              libraryItemId:
+                playlist.items[0].libraryItemId ||
+                playlist.items[0].libraryItem?.libraryItemId ||
+                playlist.items[0].libraryItem?.id,
+              episodeId:
+                playlist.items[0].episodeId ||
+                playlist.items[0].episode?.serverEpisodeId ||
+                playlist.items[0].episode?.id,
+              hasLocalLibraryItem: !!playlist.items[0].localLibraryItem,
+              hasLocalEpisode: !!playlist.items[0].localEpisode
+            }
+          : null
+      }
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Playlist ready: ${formatForLog(playlistSummary)}`
+      })
       this.checkAutoDownload()
     },
     showMore(playlistItem) {
@@ -468,6 +567,17 @@ export default {
       }
     },
     playAll() {
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Play button clicked: ${formatForLog({
+          playerIsPlaying: this.playerIsPlaying,
+          isOpenInPlayer: this.isOpenInPlayer,
+          playerIsStartingPlayback: this.playerIsStartingPlayback,
+          playlistId: this.playlist.id,
+          playlistItems: this.playlist.items.length,
+          playableItems: this.playableItems.length
+        })}`
+      })
       const normalizedQueue = this.buildQueueItems()
       if (!normalizedQueue.length) {
         this.$toast.error('No playable items found')
@@ -481,6 +591,31 @@ export default {
       }
 
       const nextItem = queue[0]
+      const queueDetails = {
+        normalizedCount: normalizedQueue.length,
+        queueCount: queue.length,
+        truncated: queue.length < normalizedQueue.length,
+        nextItem: {
+          playbackLibraryItemId: nextItem.playbackLibraryItemId,
+          playbackEpisodeId: nextItem.playbackEpisodeId,
+          serverLibraryItemId: nextItem.serverLibraryItemId,
+          serverEpisodeId: nextItem.serverEpisodeId,
+          localLibraryItemId: nextItem.localLibraryItemId,
+          localEpisodeId: nextItem.localEpisodeId
+        },
+        queueSample: queue.slice(0, 5).map((item) => ({
+          playbackLibraryItemId: item.playbackLibraryItemId,
+          playbackEpisodeId: item.playbackEpisodeId,
+          serverLibraryItemId: item.serverLibraryItemId,
+          serverEpisodeId: item.serverEpisodeId,
+          localLibraryItemId: item.localLibraryItemId,
+          localEpisodeId: item.localEpisodeId
+        }))
+      }
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Queue built for play: ${formatForLog(queueDetails)}`
+      })
       this.mediaIdStartingPlayback = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
       this.$store.commit('setPlayerIsStartingPlayback', this.mediaIdStartingPlayback)
       this.$store.commit('setPlayQueue', queue)
@@ -494,6 +629,10 @@ export default {
         queue,
         queueIndex: 0
       }
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Emitting play-item: ${formatForLog({ payload, queueSize: queue.length })}`
+      })
       this.$eventBus.$emit('play-item', payload)
     },
     playNextItem() {

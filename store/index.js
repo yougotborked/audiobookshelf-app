@@ -1,5 +1,5 @@
 import { Network } from '@capacitor/network'
-import { AbsAudioPlayer, AbsDownloader } from '@/plugins/capacitor'
+import { AbsAudioPlayer, AbsDownloader, AbsLogger } from '@/plugins/capacitor'
 import { PlayMethod } from '@/plugins/constants'
 
 function resolveQueueItemIds(item) {
@@ -266,17 +266,26 @@ export const actions = {
     commit('setNetworkListenerInit', true)
 
     const status = await Network.getStatus()
-    console.log('Network status', status)
+    AbsLogger.info({ tag: 'Store', message: `Network status: ${JSON.stringify(status)}` })
     commit('setNetworkStatus', status)
 
     Network.addListener('networkStatusChange', (status) => {
-      console.log('Network status changed', status.connected, status.connectionType)
+      AbsLogger.info({
+        tag: 'Store',
+        message: `Network status changed: ${JSON.stringify({
+          connected: status.connected,
+          connectionType: status.connectionType
+        })}`
+      })
       commit('setNetworkStatus', status)
     })
 
     AbsAudioPlayer.addListener('onNetworkMeteredChanged', (payload) => {
       const isUnmetered = payload.value
-      console.log('On network metered changed', isUnmetered)
+      AbsLogger.info({
+        tag: 'Store',
+        message: `On network metered changed: ${JSON.stringify({ isUnmetered })}`
+      })
       commit('setIsNetworkUnmetered', isUnmetered)
     })
   }
@@ -391,11 +400,41 @@ export const mutations = {
     state.showSideDrawer = val
   },
   setPlayQueue(state, queue) {
+    const incomingSummary = {
+      incomingLength: Array.isArray(queue) ? queue.length : 0,
+      sample: Array.isArray(queue)
+        ? queue.slice(0, 5).map((item) => ({
+            libraryItemId: item?.libraryItemId,
+            episodeId: item?.episodeId,
+            serverLibraryItemId: item?.serverLibraryItemId,
+            serverEpisodeId: item?.serverEpisodeId,
+            localLibraryItemId: item?.localLibraryItemId,
+            localEpisodeId: item?.localEpisodeId
+          }))
+        : []
+    }
+    AbsLogger.info({ tag: 'Store', message: `[Store] setPlayQueue called: ${JSON.stringify(incomingSummary)}` })
     state.playQueue = sanitizeQueue(queue)
+    const sanitizedSummary = {
+      sanitizedLength: state.playQueue.length,
+      sample: state.playQueue.slice(0, 5).map((item) => ({
+        libraryItemId: item?.libraryItemId,
+        episodeId: item?.episodeId,
+        serverLibraryItemId: item?.serverLibraryItemId,
+        serverEpisodeId: item?.serverEpisodeId,
+        localLibraryItemId: item?.localLibraryItemId,
+        localEpisodeId: item?.localEpisodeId
+      }))
+    }
+    AbsLogger.info({ tag: 'Store', message: `[Store] setPlayQueue sanitized: ${JSON.stringify(sanitizedSummary)}` })
     this.$localStore.setPlayQueue(state.playQueue)
   },
   setQueueIndex(state, index) {
     state.queueIndex = index
+    AbsLogger.info({
+      tag: 'Store',
+      message: `[Store] setQueueIndex: ${JSON.stringify({ queueIndex: index, queueLength: state.playQueue.length })}`
+    })
     this.$localStore.setQueueIndex(index)
   },
   reorderQueue(state, { oldIndex, newIndex }) {
