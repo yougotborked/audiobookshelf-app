@@ -96,7 +96,9 @@ export default {
       showMoreMenu: false,
       processing: false,
       selectedLibraryItem: null,
+      selectedLibraryItemId: null,
       selectedEpisode: null,
+      selectedEpisodeId: null,
       mediaIdStartingPlayback: null,
       downloadedEpisodeKeys: null
     }
@@ -551,8 +553,55 @@ export default {
       this.checkAutoDownload()
     },
     showMore(playlistItem) {
-      this.selectedLibraryItem = playlistItem.libraryItem
-      this.selectedEpisode = playlistItem.episode
+      AbsLogger.info({
+        tag: 'PlaylistPage',
+        message: `Show more requested: ${formatForLog({
+          playlistItemId: playlistItem?.id,
+          playlistLibraryItemId:
+            playlistItem?.libraryItemId ||
+            playlistItem?.libraryItem?.libraryItemId ||
+            playlistItem?.libraryItem?.id ||
+            null,
+          playlistEpisodeId:
+            playlistItem?.episodeId ||
+            playlistItem?.episode?.serverEpisodeId ||
+            playlistItem?.episode?.id ||
+            null,
+          hasLocalLibraryItem: !!playlistItem?.localLibraryItem,
+          hasLocalEpisode: !!playlistItem?.localEpisode
+        })}`
+      })
+      const playlistLibraryItemId =
+        playlistItem.libraryItemId || playlistItem.libraryItem?.libraryItemId || playlistItem.libraryItem?.id || null
+      const playlistEpisodeId =
+        playlistItem.episodeId || playlistItem.episode?.serverEpisodeId || playlistItem.episode?.id || null
+
+      const useLocal = !!playlistItem.localLibraryItem
+      const libraryItem = useLocal ? playlistItem.localLibraryItem : playlistItem.libraryItem
+      const episode = useLocal ? playlistItem.localEpisode || playlistItem.episode : playlistItem.episode
+
+      this.selectedLibraryItem = libraryItem
+        ? {
+            ...libraryItem,
+            isLocal: useLocal,
+            libraryItemId: playlistLibraryItemId || libraryItem.libraryItemId || libraryItem.id,
+            id: playlistLibraryItemId || libraryItem.id
+          }
+        : null
+      this.selectedEpisode = episode
+        ? {
+            ...episode,
+            serverEpisodeId: playlistEpisodeId || episode?.serverEpisodeId,
+            id: playlistEpisodeId || episode?.id || episode?.serverEpisodeId,
+            localEpisode: useLocal ? playlistItem.localEpisode || episode?.localEpisode : episode?.localEpisode
+          }
+        : null
+      this.selectedLibraryItemId =
+        playlistLibraryItemId ||
+        null
+      this.selectedEpisodeId =
+        playlistEpisodeId ||
+        null
       this.showMoreMenu = true
     },
     async playClick() {
@@ -677,11 +726,12 @@ export default {
       this.playlist = playlist
       this.$localStore.setCachedPlaylist(toCacheablePlaylist(playlist))
     },
-    onAutoPlaylistItemRemoved() {
+    async onAutoPlaylistItemRemoved(options = {}) {
       if (this.playlist.id !== 'unfinished') return
 
-      const libraryItemId = this.selectedLibraryItem?.id || this.selectedLibraryItem?.libraryItemId
-      const episodeId = this.selectedEpisode?.id || this.selectedEpisode?.serverEpisodeId || null
+      const libraryItemId =
+        this.selectedLibraryItemId || this.selectedLibraryItem?.libraryItemId || this.selectedLibraryItem?.id
+      const episodeId = this.selectedEpisodeId || this.selectedEpisode?.serverEpisodeId || this.selectedEpisode?.id || null
       if (!libraryItemId) return
 
       const index = this.playlist.items.findIndex((item) => {
@@ -697,6 +747,10 @@ export default {
       }
 
       this.showMoreMenu = false
+
+      if (options.refresh) {
+        await this.fetchPlaylist()
+      }
     },
     playlistRemoved(playlist) {
       if (this.playlist.id === playlist.id) {

@@ -8,7 +8,7 @@
 
 <script>
 import { Dialog } from '@capacitor/dialog'
-import { AbsFileSystem } from '@/plugins/capacitor'
+import { AbsFileSystem, AbsLogger } from '@/plugins/capacitor'
 
 export default {
   props: {
@@ -280,6 +280,19 @@ export default {
       } else if (action === 'removeFromPlaylist') {
         this.removeFromPlaylistClick()
       } else if (action === 'markFinished') {
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `markFinished action: ${JSON.stringify({
+            isPodcast: this.isPodcast,
+            serverLibraryItemId: this.serverLibraryItemId,
+            serverEpisodeId: this.serverEpisodeId,
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId,
+            isLocal: this.isLocal,
+            hasLocalEpisode: !!this.localEpisode,
+            userIsFinished: this.userIsFinished
+          })}`
+        })
         if (this.episode) this.toggleEpisodeFinished()
         else this.toggleFinished()
       } else if (action === 'history') {
@@ -311,6 +324,8 @@ export default {
       }
 
       this.$emit('update:processing', true)
+      let markFinishedSucceeded = false
+
       if (this.isLocal) {
         const isFinished = !this.userIsFinished
         const payload = await this.$db.updateLocalMediaProgressFinished({ localLibraryItemId: this.localLibraryItemId, isFinished })
@@ -322,22 +337,59 @@ export default {
           console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
           if (localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
+            markFinishedSucceeded = true
           }
         }
       } else {
+        const serverLibraryItemId = this.serverLibraryItemId
+        if (!serverLibraryItemId) {
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: 'toggleFinished missing serverLibraryItemId, falling back to local update'
+          })
+          if (this.localLibraryItemId) {
+            await this.setLocalProgressFinished({ isEpisode: false, isFinished: !this.userIsFinished })
+          } else {
+            this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
+          }
+          this.$emit('update:processing', false)
+          return
+        }
+
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
-        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, updatePayload).catch(async (error) => {
-          console.error('Failed', error)
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `toggleFinished server request: ${JSON.stringify({
+            serverLibraryItemId,
+            payload: updatePayload
+          })}`
+        })
+        let serverError = null
+        await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}`, updatePayload).catch(async (error) => {
+          serverError = error
           const status = error?.response?.status
+          const data = error?.response?.data
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: `toggleFinished server error: ${JSON.stringify({ status, data })}`
+          })
+          console.error('Failed', error)
           const serverNotFound = status === 404
           if (serverNotFound && this.localLibraryItemId) {
-            await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
+            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
+            if (localSucceeded) markFinishedSucceeded = true
             return
           }
           this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
         })
+        if (!serverError) {
+          markFinishedSucceeded = true
+        }
+      }
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+        this.$emit('removed-from-auto-playlist', { refresh: true })
       }
       this.$emit('update:processing', false)
     },
@@ -345,6 +397,10 @@ export default {
       await this.$hapticsImpact()
 
       this.$emit('update:processing', true)
+      const serverLibraryItemId = this.serverLibraryItemId
+      const serverEpisodeId = this.serverEpisodeId
+      let markFinishedSucceeded = false
+
       if (this.isLocal || this.localEpisode) {
         const isFinished = !this.userIsFinished
         const localLibraryItemId = this.localLibraryItemId
@@ -359,22 +415,65 @@ export default {
           console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
           if (localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
+            markFinishedSucceeded = true
           }
         }
       } else {
+        if (!serverLibraryItemId || !serverEpisodeId) {
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: `toggleEpisodeFinished missing server ids, fallback: ${JSON.stringify({
+              serverLibraryItemId,
+              serverEpisodeId,
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId
+          })}`
+          })
+          if (this.localLibraryItemId && this.localEpisodeId) {
+            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: true, isFinished: !this.userIsFinished })
+            markFinishedSucceeded = localSucceeded
+          } else {
+            this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
+          }
+          this.$emit('update:processing', false)
+          return
+        }
+
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
-        await this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, updatePayload).catch(async (error) => {
-          console.error('Failed', error)
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `toggleEpisodeFinished server request: ${JSON.stringify({
+            serverLibraryItemId,
+            serverEpisodeId,
+            payload: updatePayload
+          })}`
+        })
+        let serverError = null
+        await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}/${serverEpisodeId}`, updatePayload).catch(async (error) => {
+          serverError = error
           const status = error?.response?.status
+          const data = error?.response?.data
+          AbsLogger.info({
+            tag: 'ItemMoreMenuModal',
+            message: `toggleEpisodeFinished server error: ${JSON.stringify({ status, data })}`
+          })
+          console.error('Failed', error)
           const serverNotFound = status === 404
           if (serverNotFound && this.localLibraryItemId) {
-            await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
+            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
+            if (localSucceeded) markFinishedSucceeded = true
             return
           }
           this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
         })
+        if (!serverError) {
+          markFinishedSucceeded = true
+        }
+      }
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+        this.$emit('removed-from-auto-playlist', { refresh: true })
       }
       this.$emit('update:processing', false)
     },
@@ -503,6 +602,18 @@ export default {
 
       // Unfinished auto playlist items are removed by marking them finished locally/server-side
       if (this.playlist.id === 'unfinished') {
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `removeFromPlaylistClick (auto): ${JSON.stringify({
+            serverLibraryItemId: this.serverLibraryItemId,
+            serverEpisodeId: this.serverEpisodeId,
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId,
+            isLocal: this.isLocal,
+            hasLocalEpisode: !!this.localEpisode,
+            userIsFinished: this.userIsFinished
+          })}`
+        })
         if (this.userIsFinished) {
           this.$toast.success('Item removed from playlist')
           this.$emit('removed-from-auto-playlist')
@@ -532,6 +643,19 @@ export default {
         })
     },
     async forceMarkFinished() {
+      AbsLogger.info({
+        tag: 'ItemMoreMenuModal',
+        message: `forceMarkFinished: ${JSON.stringify({
+          serverLibraryItemId: this.serverLibraryItemId,
+          serverEpisodeId: this.serverEpisodeId,
+          localLibraryItemId: this.localLibraryItemId,
+          localEpisodeId: this.localEpisodeId,
+          isLocal: this.isLocal,
+          hasLocalEpisode: !!this.localEpisode
+        })}`
+      })
+      let markFinishedSucceeded = false
+
       if (this.episode) {
         if (this.userIsFinished) return
         if (this.isLocal || this.localEpisode) {
@@ -548,14 +672,20 @@ export default {
 
           if (payload?.localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+            markFinishedSucceeded = true
           }
         } else if (this.serverLibraryItemId && this.serverEpisodeId) {
+          let serverError = null
           await this.$nativeHttp
             .patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, { isFinished: true })
             .catch((error) => {
+              serverError = error
               console.error('Failed to mark finished', error)
               this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
             })
+          if (!serverError) {
+            markFinishedSucceeded = true
+          }
         }
       } else {
         if (this.userIsFinished) return
@@ -572,19 +702,29 @@ export default {
 
           if (payload?.localMediaProgress) {
             this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
+            markFinishedSucceeded = true
           }
         } else if (this.serverLibraryItemId) {
+          let serverError = null
           await this.$nativeHttp
             .patch(`/api/me/progress/${this.serverLibraryItemId}`, { isFinished: true })
             .catch((error) => {
+              serverError = error
               console.error('Failed to mark finished', error)
               this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
             })
+          if (!serverError) {
+            markFinishedSucceeded = true
+          }
         }
+      }
+
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+        this.$emit('removed-from-auto-playlist', { refresh: true })
       }
     },
     async setLocalProgressFinished({ isEpisode, isFinished }) {
-      if (!this.localLibraryItemId) return
+      if (!this.localLibraryItemId) return false
 
       const payload = await this.$db.updateLocalMediaProgressFinished({
         localLibraryItemId: this.localLibraryItemId,
@@ -594,14 +734,17 @@ export default {
 
       if (payload?.error) {
         this.$toast.error(payload?.error || 'Unknown error')
-        return
+        return false
       }
 
       if (payload?.localMediaProgress) {
         this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
         const message = isFinished ? this.$strings.ToastItemMarkedAsFinished : this.$strings.ToastItemMarkedAsNotFinished
         this.$toast.success(message)
+        return true
       }
+
+      return false
     }
   },
   mounted() {}
