@@ -554,19 +554,34 @@ export default {
       this.checkAutoDownload()
     },
     showMore(playlistItem) {
-      this.selectedLibraryItem = playlistItem.localLibraryItem || playlistItem.libraryItem
-      this.selectedEpisode = playlistItem.localEpisode
+      const playlistLibraryItemId =
+        playlistItem.libraryItemId || playlistItem.libraryItem?.libraryItemId || playlistItem.libraryItem?.id || null
+      const playlistEpisodeId =
+        playlistItem.episodeId || playlistItem.episode?.serverEpisodeId || playlistItem.episode?.id || null
+
+      const libraryItem = playlistItem.localLibraryItem || playlistItem.libraryItem
+      const episode = playlistItem.localEpisode
         ? { ...playlistItem.episode, localEpisode: playlistItem.localEpisode }
         : playlistItem.episode
+
+      this.selectedLibraryItem = libraryItem
+        ? {
+            ...libraryItem,
+            libraryItemId: playlistLibraryItemId || libraryItem.libraryItemId
+          }
+        : null
+      this.selectedEpisode = episode
+        ? {
+            ...episode,
+            serverEpisodeId: playlistEpisodeId || episode?.serverEpisodeId,
+            id: playlistEpisodeId || episode?.id || episode?.serverEpisodeId
+          }
+        : null
       this.selectedLibraryItemId =
-        playlistItem.libraryItemId ||
-        playlistItem.libraryItem?.libraryItemId ||
-        playlistItem.libraryItem?.id ||
+        playlistLibraryItemId ||
         null
       this.selectedEpisodeId =
-        playlistItem.episodeId ||
-        playlistItem.episode?.serverEpisodeId ||
-        playlistItem.episode?.id ||
+        playlistEpisodeId ||
         null
       this.showMoreMenu = true
     },

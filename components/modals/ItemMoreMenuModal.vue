@@ -8,7 +8,7 @@
 
 <script>
 import { Dialog } from '@capacitor/dialog'
-import { AbsFileSystem } from '@/plugins/capacitor'
+import { AbsFileSystem, AbsLogger } from '@/plugins/capacitor'
 
 export default {
   props: {
@@ -503,6 +503,18 @@ export default {
 
       // Unfinished auto playlist items are removed by marking them finished locally/server-side
       if (this.playlist.id === 'unfinished') {
+        AbsLogger.info({
+          tag: 'ItemMoreMenuModal',
+          message: `removeFromPlaylistClick (auto): ${JSON.stringify({
+            serverLibraryItemId: this.serverLibraryItemId,
+            serverEpisodeId: this.serverEpisodeId,
+            localLibraryItemId: this.localLibraryItemId,
+            localEpisodeId: this.localEpisodeId,
+            isLocal: this.isLocal,
+            hasLocalEpisode: !!this.localEpisode,
+            userIsFinished: this.userIsFinished
+          })}`
+        })
         if (this.userIsFinished) {
           this.$toast.success('Item removed from playlist')
           this.$emit('removed-from-auto-playlist')
@@ -532,6 +544,17 @@ export default {
         })
     },
     async forceMarkFinished() {
+      AbsLogger.info({
+        tag: 'ItemMoreMenuModal',
+        message: `forceMarkFinished: ${JSON.stringify({
+          serverLibraryItemId: this.serverLibraryItemId,
+          serverEpisodeId: this.serverEpisodeId,
+          localLibraryItemId: this.localLibraryItemId,
+          localEpisodeId: this.localEpisodeId,
+          isLocal: this.isLocal,
+          hasLocalEpisode: !!this.localEpisode
+        })}`
+      })
       if (this.episode) {
         if (this.userIsFinished) return
         if (this.isLocal || this.localEpisode) {
