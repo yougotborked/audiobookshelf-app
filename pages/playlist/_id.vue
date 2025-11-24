@@ -97,7 +97,9 @@ export default {
       showMoreMenu: false,
       processing: false,
       selectedLibraryItem: null,
+      selectedLibraryItemId: null,
       selectedEpisode: null,
+      selectedEpisodeId: null,
       mediaIdStartingPlayback: null,
       downloadedEpisodeKeys: null
     }
@@ -556,6 +558,16 @@ export default {
       this.selectedEpisode = playlistItem.localEpisode
         ? { ...playlistItem.episode, localEpisode: playlistItem.localEpisode }
         : playlistItem.episode
+      this.selectedLibraryItemId =
+        playlistItem.libraryItemId ||
+        playlistItem.libraryItem?.libraryItemId ||
+        playlistItem.libraryItem?.id ||
+        null
+      this.selectedEpisodeId =
+        playlistItem.episodeId ||
+        playlistItem.episode?.serverEpisodeId ||
+        playlistItem.episode?.id ||
+        null
       this.showMoreMenu = true
     },
     async playClick() {
@@ -683,8 +695,9 @@ export default {
     onAutoPlaylistItemRemoved() {
       if (this.playlist.id !== 'unfinished') return
 
-      const libraryItemId = this.selectedLibraryItem?.id || this.selectedLibraryItem?.libraryItemId
-      const episodeId = this.selectedEpisode?.id || this.selectedEpisode?.serverEpisodeId || null
+      const libraryItemId =
+        this.selectedLibraryItemId || this.selectedLibraryItem?.libraryItemId || this.selectedLibraryItem?.id
+      const episodeId = this.selectedEpisodeId || this.selectedEpisode?.serverEpisodeId || this.selectedEpisode?.id || null
       if (!libraryItemId) return
 
       const index = this.playlist.items.findIndex((item) => {
