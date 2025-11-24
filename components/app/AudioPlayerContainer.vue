@@ -1,6 +1,6 @@
 <template>
   <div>
-    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" />
+    <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @showQueue="openQueue" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" />
 
     <modals-playback-speed-modal v-model="showPlaybackSpeedModal" :playback-rate.sync="playbackSpeed" @update:playbackRate="updatePlaybackSpeed" @change="changePlaybackSpeed" />
     <modals-sleep-timer-modal v-model="showSleepTimerModal" :current-time="sleepTimeRemaining" :sleep-timer-running="isSleepTimerRunning" :current-end-of-chapter-time="currentEndOfChapterTime" :is-auto="isAutoSleepTimer" @change="selectSleepTimeout" @cancel="cancelSleepTimer" @increase="increaseSleepTimer" @decrease="decreaseSleepTimer" />
@@ -197,6 +197,23 @@ export default {
     },
     showBookmarks() {
       this.showBookmarksModal = true
+    },
+    openQueue() {
+      const queue = this.$store.state.playQueue
+      if (!Array.isArray(queue) || !queue.length) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: '[AudioPlayerContainer] openQueue requested but queue is empty'
+        })
+        return
+      }
+
+      AbsLogger.info({
+        tag: 'AudioPlayerContainer',
+        message: `[AudioPlayerContainer] openQueue: ${formatForLog({ queueLength: queue.length, queueIndex: this.$store.state.queueIndex })}`
+      })
+
+      this.showQueueModal = true
     },
     selectBookmark(bookmark) {
       this.showBookmarksModal = false
