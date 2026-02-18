@@ -35,6 +35,9 @@ class AbsAudioPlayer : Plugin() {
   private var isCastAvailable:Boolean = false
   private var isCastSupported:Boolean = false
 
+  // Track foreground state to avoid flooding WebView with events while backgrounded
+  private var isInForeground: Boolean = true
+
   override fun load() {
     mainActivity = (activity as MainActivity)
     apiHandler = ApiHandler(mainActivity)
@@ -63,6 +66,8 @@ class AbsAudioPlayer : Plugin() {
         }
 
         override fun onMetadata(metadata: PlaybackMetadata) {
+          // Skip frequent metadata updates when app is backgrounded to prevent event queue buildup
+          if (!isInForeground) return
           notifyListeners("onMetadata", JSObject(jacksonMapper.writeValueAsString(metadata)))
         }
 
@@ -71,6 +76,8 @@ class AbsAudioPlayer : Plugin() {
         }
 
         override fun onSleepTimerSet(sleepTimeRemaining: Int, isAutoSleepTimer:Boolean) {
+          // Skip sleep timer updates when app is backgrounded to prevent event queue buildup
+          if (!isInForeground) return
           val ret = JSObject()
           ret.put("value", sleepTimeRemaining)
           ret.put("isAuto", isAutoSleepTimer)
@@ -78,6 +85,8 @@ class AbsAudioPlayer : Plugin() {
         }
 
         override fun onLocalMediaProgressUpdate(localMediaProgress: LocalMediaProgress) {
+          // Skip progress updates when app is backgrounded to prevent event queue buildup
+          if (!isInForeground) return
           notifyListeners("onLocalMediaProgressUpdate", JSObject(jacksonMapper.writeValueAsString(localMediaProgress)))
         }
 
@@ -131,6 +140,27 @@ class AbsAudioPlayer : Plugin() {
     val ret = JSObject()
     ret.put("value", value)
     notifyListeners(evtName, ret)
+  }
+
+  override fun handleOnPause() {
+    super.handleOnPause()
+    isInForeground = false
+  }
+
+  override fun handleOnResume() {
+    super.handleOnResume()
+    isInForeground = true
+
+    // Send current state to UI after resume to sync up (with small delay to let WebView fully resume)
+    if (::playerNotificationService.isInitialized && playerNotificationService.currentPlaybackSession != null) {
+      Handler(Looper.getMainLooper()).postDelayed({
+        playerNotificationService.sendClientMetadata(PlayerState.READY)
+        playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()
+        playerNotificationService.mediaProgressSyncer.currentLocalMediaProgress?.let {
+          playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(it)
+        }
+      }, 100)
+    }
   }
 
   private fun initCastManager() {

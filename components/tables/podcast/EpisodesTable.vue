@@ -236,8 +236,8 @@ export default {
       }
 
       const { value } = await Dialog.confirm({
-        title: 'Confirm',
-        message: `Are you sure you want to clear episode download queue?`
+        title: this.$strings.HeaderConfirm,
+        message: this.$strings.MessageConfirmDeleteEpisodeDownloadQueue
       })
 
       if (value) {
