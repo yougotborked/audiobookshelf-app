@@ -190,7 +190,7 @@ export default {
 
       // Show confirmation dialog and start downloading if user chooses so
       const { value } = await Dialog.confirm({
-        title: 'Confirm',
+        title: this.$strings.HeaderConfirm,
         message: startDownloadMessage
       })
       if (value) {

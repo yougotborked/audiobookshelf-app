@@ -161,6 +161,12 @@ npx cap open android
 
 Start coding!
 
+After making changes to the JS layer you need to rebuild the nuxt pages and sync them to the native shells:
+
+```shell
+npm run sync
+```
+
 ### Local CI smoke test
 
 To mirror the "Build APK" GitHub Action locally, run:
@@ -181,7 +187,6 @@ npm run ci:android -- --fresh
 Ensure you are using Node.js 20 (see the `.nvmrc` file) and have Java 21
 available on your PATH so that the Gradle tasks use the same toolchain as
 CI.
-
 ### Mac Environment Setup for iOS
 
 Required Software:
@@ -252,3 +257,9 @@ npx cap open ios
 <br>
 
 Start coding!
+
+After making changes to the JS layer you need to rebuild the nuxt pages and sync them to the native shells:
+
+```shell
+npm run sync
+```
