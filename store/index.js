@@ -221,9 +221,10 @@ export const actions = {
     if (!state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
     if (!state.networkConnected) return
     if (!this.state.user?.user) return
+    const userMediaProgress = this.state.user?.user?.mediaProgress || []
 
     const progressMap = {}
-    ;(state.user?.user?.mediaProgress || []).forEach((mp) => {
+    userMediaProgress.forEach((mp) => {
       if (mp.episodeId) progressMap[mp.episodeId] = mp
     })
 
