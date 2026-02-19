@@ -221,10 +221,17 @@ export const actions = {
     if (!state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
     if (!state.networkConnected) return
     if (!this.state.user?.user) return
+    const userMediaProgress = this.state.user?.user?.mediaProgress || []
+    const localMediaProgress = this.state.globals?.localMediaProgress || []
 
     const progressMap = {}
-    ;(state.user?.user?.mediaProgress || []).forEach((mp) => {
+    userMediaProgress.forEach((mp) => {
       if (mp.episodeId) progressMap[mp.episodeId] = mp
+    })
+    localMediaProgress.forEach((mp) => {
+      if (mp?.episodeId && !progressMap[mp.episodeId]) {
+        progressMap[mp.episodeId] = mp
+      }
     })
 
     const localLibraries = await this.$db.getLocalLibraryItems('podcast')
@@ -254,6 +261,7 @@ export const actions = {
             libraryItemId: liId,
             episodeId: serverId
           })
+          downloadedMap[`${liId}_${serverId}`] = true
         }
         if (episodes.length < 200) break
         page++

@@ -3,6 +3,7 @@ export default function ({ store, redirect, route }) {
   const serverConfig = store.state.user.serverConnectionConfig
 
   if (!user && !serverConfig) {
-    return redirect(`/connect?redirect=${route.path}`)
+    const redirectTarget = route?.fullPath || route?.path || '/'
+    return redirect(`/connect?redirect=${encodeURIComponent(redirectTarget)}`)
   }
 }
