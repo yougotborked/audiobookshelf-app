@@ -42,7 +42,7 @@ require_sdkmanager() {
 refresh_sdk() {
   require_sdkmanager
   log "Accepting Android SDK licenses"
-  yes | "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null
+  yes | "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
 
   log "Updating installed SDK packages"
   "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --update
