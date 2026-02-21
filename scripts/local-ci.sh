@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/codex-java-env.sh"
+
 run_step() {
   local description="$1"
   shift
@@ -30,7 +32,8 @@ fi
 run_step "Running ESLint" npm run lint
 run_step "Generating static Nuxt bundle" npm run generate
 run_step "Synchronising Capacitor project" npx cap sync
-run_step "Running Android static analysis" ./android/gradlew staticAnalysis -p android --no-daemon
+run_step "Installing Android SDK" scripts/install-android-sdk.sh
+run_step "Running Android static analysis" codex_run_with_java21 ./android/gradlew staticAnalysis -p android --no-daemon
 
 if [[ -f "android/debug.keystore" ]]; then
   printf '\n▶ Ensuring Android debug keystore is available\n'
@@ -38,7 +41,7 @@ if [[ -f "android/debug.keystore" ]]; then
   cp "android/debug.keystore" "$HOME/.android/debug.keystore"
 fi
 
-run_step "Assembling debug APK" ./android/gradlew assembleDebug -p android --no-daemon
+run_step "Assembling debug APK" codex_run_with_java21 ./android/gradlew assembleDebug -p android --no-daemon
 
 cat <<'DONE'
 

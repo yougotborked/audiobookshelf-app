@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SDK_ROOT=${ANDROID_SDK_ROOT:-/opt/android-sdk}
 SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
 CMDLINE_ZIP="commandlinetools-linux-11076708_latest.zip"
@@ -23,6 +24,18 @@ ensure_cmdline_tools() {
   rm -rf "$tmp_dir"
 }
 
+
+write_local_properties() {
+  local android_dir="$ROOT_DIR/android"
+  local local_properties="$android_dir/local.properties"
+  if [[ ! -d "$android_dir" ]]; then
+    return
+  fi
+
+  # Gradle checks sdk.dir in local.properties before env vars in some setups.
+  printf 'sdk.dir=%s\n' "$SDK_ROOT" > "$local_properties"
+}
+
 install_sdk_packages() {
   local packages=(
     "platform-tools"
@@ -37,6 +50,7 @@ install_sdk_packages() {
 main() {
   ensure_cmdline_tools
   install_sdk_packages
+  write_local_properties
   echo "Android SDK installed at $SDK_ROOT" >&2
 }
 

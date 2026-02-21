@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/opt/android-sdk}"
 GRADLE_USER_HOME="${GRADLE_USER_HOME:-/opt/gradle}"
-JAVA_HOME_DEFAULT="/usr/lib/jvm/java-17-openjdk-amd64"
-JAVA_HOME="${JAVA_HOME:-$JAVA_HOME_DEFAULT}"
+source "$ROOT_DIR/scripts/codex-java-env.sh"
+JAVA_HOME="$(codex_resolve_java_home 21 2>/dev/null || true)"
 GRADLE_WRAPPER_FILE="$ROOT_DIR/android/gradle/wrapper/gradle-wrapper.properties"
 GRADLE_WRAPPER="$ROOT_DIR/android/gradlew"
 SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
@@ -69,10 +69,7 @@ prefetch_gradle_distribution() {
   fi
 
   log "Prefetching Gradle ${gradle_version} distribution into $GRADLE_USER_HOME"
-  ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
-    GRADLE_USER_HOME="$GRADLE_USER_HOME" \
-    JAVA_HOME="$JAVA_HOME" \
-    "$GRADLE_WRAPPER" --no-daemon --version >/dev/null
+  ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" GRADLE_USER_HOME="$GRADLE_USER_HOME" codex_run_with_java21 "$GRADLE_WRAPPER" --no-daemon --version >/dev/null
 }
 
 prune_gradle_distributions() {
