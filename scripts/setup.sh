@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/opt/android-sdk}"
 GRADLE_USER_HOME="${GRADLE_USER_HOME:-/opt/gradle}"
-JAVA_HOME_DEFAULT="/usr/lib/jvm/java-17-openjdk-amd64"
-JAVA_HOME="${JAVA_HOME:-$JAVA_HOME_DEFAULT}"
+source "$ROOT_DIR/scripts/codex-java-env.sh"
+JAVA_HOME="$(codex_resolve_java_home 21 2>/dev/null || true)"
 GRADLE_WRAPPER_FILE="$ROOT_DIR/android/gradle/wrapper/gradle-wrapper.properties"
 GRADLE_WRAPPER="$ROOT_DIR/android/gradlew"
 
@@ -42,12 +42,8 @@ ensure_tooling() {
   ensure_package unzip
   ensure_package tar
 
-  if ! command -v javac >/dev/null 2>&1; then
-    ensure_package openjdk-17-jdk
-  fi
-
-  if command -v javac >/dev/null 2>&1 && [[ -z "${JAVA_HOME:-}" ]]; then
-    JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+  if ! command -v javac >/dev/null 2>&1 && ! command -v mise >/dev/null 2>&1; then
+    ensure_package openjdk-21-jdk
   fi
 }
 
@@ -70,10 +66,7 @@ prefetch_gradle_distribution() {
   fi
 
   log "Prefetching Gradle ${gradle_version} distribution into $GRADLE_USER_HOME"
-  ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
-    GRADLE_USER_HOME="$GRADLE_USER_HOME" \
-    JAVA_HOME="$JAVA_HOME" \
-    "$GRADLE_WRAPPER" --no-daemon --version >/dev/null
+  ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" GRADLE_USER_HOME="$GRADLE_USER_HOME" codex_run_with_java21 "$GRADLE_WRAPPER" --no-daemon --version >/dev/null
 }
 
 ensure_debug_keystore() {
@@ -92,6 +85,11 @@ main() {
   ensure_tooling
   mkdir -p "$ANDROID_SDK_ROOT" "$GRADLE_USER_HOME"
 
+  if [[ ! -d "$ROOT_DIR/node_modules" ]]; then
+    log "Installing npm dependencies for local lint/test commands"
+    (cd "$ROOT_DIR" && npm ci)
+  fi
+
   ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" "$ROOT_DIR/scripts/install-android-sdk.sh"
   prefetch_gradle_distribution
   ensure_debug_keystore
@@ -101,7 +99,7 @@ main() {
 Environment prepared. Export these variables in Codex:
 export ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT"
 export GRADLE_USER_HOME="$GRADLE_USER_HOME"
-export JAVA_HOME="$JAVA_HOME"
+export JAVA_HOME="$(codex_resolve_java_home 21 2>/dev/null || echo /path/to/java21/home)"
 EOF_SUMMARY
 }
 

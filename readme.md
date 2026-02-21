@@ -36,9 +36,11 @@ Thank you to [Weblate](https://hosted.weblate.org/engage/audiobookshelf/) for ho
 
 ### Codex environment setup
 
-Two helper scripts keep the Codex development environment cached so Android builds do not rely on repeated downloads:
+Codex setup uses a Java 21 toolchain and writes Android SDK settings into `android/local.properties` so Gradle works reliably in fresh containers.
 
-- `scripts/setup.sh` installs baseline tooling, invokes `scripts/install-android-sdk.sh`, prefetches the Gradle wrapper distribution into `GRADLE_USER_HOME`, and places the debug keystore in `~/.android`.
+- `.mise.toml` pins Java `21.0.2` for this repo (run `mise trust .` once per environment).
+- `scripts/codex-java-env.sh` provides helpers to run Gradle with Java 21 (`codex_run_with_java21`).
+- `scripts/setup.sh` installs baseline tooling, installs npm dependencies if needed, invokes `scripts/install-android-sdk.sh`, prefetches the Gradle wrapper distribution into `GRADLE_USER_HOME`, and places the debug keystore in `~/.android`.
 - `scripts/maintenance.sh` refreshes SDK licenses/packages and prunes Gradle wrapper caches, with `--sdk-only` and `--gradle-only` switches for targeted runs.
 
 These scripts make the expected setup explicit; no separate Codex auto-setup documentation was available.
