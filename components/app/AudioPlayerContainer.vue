@@ -195,6 +195,54 @@ export default {
       const safeFallback = Math.max(0, Math.min(fallbackIndex ?? 0, queuePayload.length - 1))
       return safeFallback
     },
+    resolvePlaybackTarget({ ids, preferServerIds, forceLocal }) {
+      const hasServerTarget = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
+      const hasLocalTarget = !!ids.localLibraryItemId
+      const isOffline = !this.$store.state.networkConnected || !this.$store.state.serverReachable
+
+      if (forceLocal && hasLocalTarget) {
+        return {
+          libraryItemId: ids.localLibraryItemId,
+          episodeId: ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId,
+          usingLocalFallback: hasServerTarget,
+          blockedByOffline: false
+        }
+      }
+
+      if (preferServerIds && hasServerTarget && !isOffline) {
+        return {
+          libraryItemId: ids.serverLibraryItemId,
+          episodeId: ids.serverEpisodeId ?? null,
+          usingLocalFallback: false,
+          blockedByOffline: false
+        }
+      }
+
+      if (hasLocalTarget && (isOffline || forceLocal || !hasServerTarget)) {
+        return {
+          libraryItemId: ids.localLibraryItemId,
+          episodeId: ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId,
+          usingLocalFallback: hasServerTarget,
+          blockedByOffline: false
+        }
+      }
+
+      if (hasServerTarget) {
+        return {
+          libraryItemId: ids.serverLibraryItemId,
+          episodeId: ids.serverEpisodeId ?? null,
+          usingLocalFallback: false,
+          blockedByOffline: isOffline
+        }
+      }
+
+      return {
+        libraryItemId: ids.fallbackLibraryItemId,
+        episodeId: ids.fallbackEpisodeId,
+        usingLocalFallback: false,
+        blockedByOffline: isOffline
+      }
+    },
     showBookmarks() {
       this.showBookmarksModal = true
     },
@@ -418,27 +466,60 @@ export default {
       })
       const ids = this.resolveQueueItemIds(payload)
       const canUseServerIds = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
-      const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !payload.forceLocal
+      const effectiveForceLocal = !!payload.forceLocal && !(this.$store.state.isCasting && canUseServerIds)
+      const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !effectiveForceLocal
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
         message: `[AudioPlayerContainer] Resolved IDs for play: ${formatForLog({
           ids,
           canUseServerIds,
           shouldUseServerIds,
-          forceLocal: payload.forceLocal
+          forceLocal: payload.forceLocal,
+          effectiveForceLocal
         })}`
       })
-      let libraryItemId = shouldUseServerIds
-        ? ids.serverLibraryItemId
-        : ids.localLibraryItemId || ids.fallbackLibraryItemId
-      let episodeId = shouldUseServerIds
-        ? ids.serverEpisodeId
-        : ids.localEpisodeId ?? ids.serverEpisodeId ?? ids.fallbackEpisodeId
+      const playbackTarget = this.resolvePlaybackTarget({
+        ids,
+        preferServerIds: shouldUseServerIds,
+        forceLocal: effectiveForceLocal
+      })
+      let libraryItemId = playbackTarget.libraryItemId
+      let episodeId = playbackTarget.episodeId
       if (!libraryItemId) {
         this.$store.commit('setPlayerDoneStartingPlayback')
         this.$toast.error('Unable to determine item to play')
         return
       }
+      if (playbackTarget.blockedByOffline) {
+        this.$store.commit('setPlayerDoneStartingPlayback')
+        this.$toast.error('No offline copy available. Reconnect to stream this item.')
+        return
+      }
+      if (payload.forceLocal && !effectiveForceLocal) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] Ignoring forceLocal while casting because server IDs are available: ${formatForLog({
+            serverLibraryItemId: ids.serverLibraryItemId,
+            serverEpisodeId: ids.serverEpisodeId,
+            localLibraryItemId: ids.localLibraryItemId,
+            localEpisodeId: ids.localEpisodeId
+          })}`
+        })
+      }
+      if (playbackTarget.usingLocalFallback) {
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] Falling back to local playback target: ${formatForLog({
+            serverLibraryItemId: ids.serverLibraryItemId,
+            localLibraryItemId: ids.localLibraryItemId,
+            serverEpisodeId: ids.serverEpisodeId,
+            localEpisodeId: ids.localEpisodeId,
+            networkConnected: this.$store.state.networkConnected,
+            serverReachable: this.$store.state.serverReachable
+          })}`
+        })
+      }
+      const useServerQueueIds = shouldUseServerIds && !this.isLocalId(libraryItemId)
       const startTime = payload.startTime
       const startWhenReady = !payload.paused
 
@@ -522,10 +603,10 @@ export default {
         } else {
           const idx = payload.queue.findIndex((q) => {
             const queueIds = this.resolveQueueItemIds(q)
-            const queueLibraryItemId = shouldUseServerIds
+            const queueLibraryItemId = useServerQueueIds
               ? queueIds.serverLibraryItemId
               : queueIds.localLibraryItemId || queueIds.fallbackLibraryItemId
-            const queueEpisodeId = shouldUseServerIds
+            const queueEpisodeId = useServerQueueIds
               ? queueIds.serverEpisodeId
               : queueIds.localEpisodeId ?? queueIds.serverEpisodeId ?? queueIds.fallbackEpisodeId
             if (!queueLibraryItemId) return false
@@ -544,11 +625,11 @@ export default {
         tag: 'AudioPlayerContainer',
         message: `Called playLibraryItem: ${libraryItemId}`
       })
-      const queuePayload = this.getQueuePayload(this.$store.state.playQueue, shouldUseServerIds)
+      const queuePayload = this.getQueuePayload(this.$store.state.playQueue, useServerQueueIds)
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
         message: `[AudioPlayerContainer] Queue payload prepared: ${formatForLog({
-          preferServerIds: shouldUseServerIds,
+          preferServerIds: useServerQueueIds,
           originalQueueSize: this.$store.state.playQueue.length,
           queuePayloadSize: queuePayload.length,
           queuePayloadSample: queuePayload.slice(0, 5)
