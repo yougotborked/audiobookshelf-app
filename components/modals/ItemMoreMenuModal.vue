@@ -614,7 +614,7 @@ export default {
             userIsFinished: this.userIsFinished
           })}`
         })
-        if (this.userIsFinished) {
+        if (this.userItemProgress?.isFinished) {
           this.$toast.success('Item removed from playlist')
           this.$emit('removed-from-auto-playlist')
           return
@@ -657,7 +657,7 @@ export default {
       let markFinishedSucceeded = false
 
       if (this.episode) {
-        if (this.userIsFinished) return
+        if (this.userItemProgress?.isFinished) return
         if (this.isLocal || this.localEpisode) {
           const payload = await this.$db.updateLocalMediaProgressFinished({
             localLibraryItemId: this.localLibraryItemId,
@@ -688,7 +688,7 @@ export default {
           }
         }
       } else {
-        if (this.userIsFinished) return
+        if (this.userItemProgress?.isFinished) return
         if (this.isLocal) {
           const payload = await this.$db.updateLocalMediaProgressFinished({
             localLibraryItemId: this.localLibraryItemId,
@@ -719,7 +719,7 @@ export default {
         }
       }
 
-      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
+      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userItemProgress?.isFinished) {
         this.$emit('removed-from-auto-playlist', { refresh: true })
       }
     },
