@@ -64,18 +64,16 @@ jobs:
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
 
-      - name: Run static analysis
-        working-directory: android
-        run: ./gradlew --no-daemon staticAnalysis
-
       - name: Setup debug keystore
         run: |
           mkdir -p "$HOME/.android"
           cp android/debug.keystore "$HOME/.android/debug.keystore"
 
-      - name: Build Android app (Debug)
+      # Run both tasks in one Gradle invocation so task outputs/configuration state can be reused
+      # within the same build execution instead of crossing invocation boundaries.
+      - name: Run static analysis + build Android app (Debug)
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon --build-cache --configuration-cache staticAnalysis assembleDebug
 
       - name: Rename APK with timestamp + short SHA
         working-directory: android/app/build/outputs/apk/debug/
