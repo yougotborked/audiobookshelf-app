@@ -167,6 +167,27 @@ After making changes to the JS layer you need to rebuild the nuxt pages and sync
 npm run sync
 ```
 
+### Local CI smoke test
+
+To mirror the "Build APK" GitHub Action locally, run:
+
+```bash
+npm run ci:android
+```
+
+The helper script performs the same Gradle and Capacitor steps as the
+workflow and adds an ESLint pass over the Nuxt source before building the
+APK. Pass `--fresh` to reinstall dependencies with `npm ci` before the
+pipeline runs:
+
+```bash
+npm run ci:android -- --fresh
+```
+
+Ensure you are using Node.js 20 (see the `.nvmrc` file) and have Java 21
+available on your PATH so that the Gradle tasks use the same toolchain as
+CI.
+
 ### Mac Environment Setup for iOS
 
 Required Software:
