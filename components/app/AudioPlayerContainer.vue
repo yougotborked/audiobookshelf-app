@@ -519,7 +519,7 @@ export default {
           })}`
         })
       }
-      const useServerQueueIds = shouldUseServerIds && !this.isLocalId(libraryItemId)
+      const useServerQueueIds = !this.isLocalId(libraryItemId)
       const startTime = payload.startTime
       const startWhenReady = !payload.paused
 
