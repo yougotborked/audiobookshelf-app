@@ -155,6 +155,7 @@ class AbsAudioPlayer : Plugin() {
     if (::playerNotificationService.isInitialized && playerNotificationService.currentPlaybackSession != null) {
       Handler(Looper.getMainLooper()).postDelayed({
         playerNotificationService.sendClientMetadata(PlayerState.READY)
+        playerNotificationService.clientEventEmitter?.onPlayingUpdate(playerNotificationService.currentPlayer.isPlaying)
         playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()
         playerNotificationService.mediaProgressSyncer.currentLocalMediaProgress?.let {
           playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(it)
