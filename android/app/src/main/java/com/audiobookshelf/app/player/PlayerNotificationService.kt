@@ -950,6 +950,15 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       Log.d(tag, "Already playing")
       return
     }
+
+    if ((currentPlayer.playbackState == Player.STATE_IDLE || currentPlayer.mediaItemCount == 0) &&
+            currentPlaybackSession != null
+    ) {
+      Log.i(tag, "play: player is idle/unprepared, re-preparing current playback session")
+      preparePlayer(currentPlaybackSession!!.clone(), true, mediaManager.getSavedPlaybackRate())
+      return
+    }
+
     currentPlayer.volume = 1F
     currentPlayer.play()
   }

@@ -155,6 +155,7 @@ class AbsAudioPlayer : Plugin() {
     if (::playerNotificationService.isInitialized && playerNotificationService.currentPlaybackSession != null) {
       Handler(Looper.getMainLooper()).postDelayed({
         playerNotificationService.sendClientMetadata(PlayerState.READY)
+        playerNotificationService.clientEventEmitter?.onPlayingUpdate(playerNotificationService.currentPlayer.isPlaying)
         playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()
         playerNotificationService.mediaProgressSyncer.currentLocalMediaProgress?.let {
           playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(it)
@@ -284,8 +285,6 @@ class AbsAudioPlayer : Plugin() {
           if (playerNotificationService.mediaProgressSyncer.listeningTimerRunning) { // If progress syncing then first stop before preparing next
             playerNotificationService.mediaProgressSyncer.stop {
               Log.d(tag, "Media progress syncer was already syncing - stopped")
-              PlayerListener.lazyIsPlaying = false
-
               Handler(Looper.getMainLooper()).post { // TODO: This was needed again which is probably a design a flaw
                 playerNotificationService.preparePlayer(
                   playbackSession,
@@ -316,7 +315,6 @@ class AbsAudioPlayer : Plugin() {
 
               Handler(Looper.getMainLooper()).post {
                 Log.d(tag, "Preparing Player playback session ${jacksonMapper.writeValueAsString(it)}")
-                PlayerListener.lazyIsPlaying = false
                 playerNotificationService.preparePlayer(it, playWhenReady, playbackRate)
               }
               call.resolve(JSObject(jacksonMapper.writeValueAsString(it)))
