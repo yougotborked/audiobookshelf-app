@@ -245,7 +245,7 @@ export const actions = {
       }
     }
 
-    const libraries = state.libraries?.libraries || []
+    const libraries = this.state.libraries?.libraries || []
     for (const lib of libraries) {
       if (lib.mediaType !== 'podcast') continue
       let page = 0

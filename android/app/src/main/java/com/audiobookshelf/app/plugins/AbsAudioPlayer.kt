@@ -38,9 +38,6 @@ class AbsAudioPlayer : Plugin() {
   // Track foreground state to avoid flooding WebView with events while backgrounded
   private var isInForeground: Boolean = true
 
-  // Track foreground state to avoid flooding WebView with events while backgrounded
-  private var isInForeground: Boolean = true
-
   override fun load() {
     mainActivity = (activity as MainActivity)
     apiHandler = ApiHandler(mainActivity)

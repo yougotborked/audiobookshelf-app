@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Use Node.js 20.x with npm cache
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -105,7 +105,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download APK artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: audiobookshelf-apk
           path: ./ghpages
