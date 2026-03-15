@@ -1,9 +1,9 @@
 <template>
   <div class="w-full max-w-md mx-auto px-2 sm:px-4 lg:px-8 z-10">
-    <div v-show="!loggedIn" class="mt-8 bg-primary overflow-hidden shadow rounded-lg px-4 py-6 w-full">
+    <div v-show="!loggedIn" class="bg-md-surface-1 rounded-md-xl elevation-2 px-4 py-6 w-full">
       <!-- list of server connection configs -->
       <template v-if="!showForm">
-        <div v-for="config in serverConnectionConfigs" :key="config.id" class="border-b border-fg/10 py-4">
+        <div v-for="config in serverConnectionConfigs" :key="config.id" class="border-b border-md-outline-variant/20 py-4">
           <div class="flex items-center my-1 relative space-x-2" @click="connectToServer(config)">
             <div class="grow inline-flex items-center overflow-hidden">
               <p class="text-base text-fg truncate">{{ config.name }}</p>
@@ -37,7 +37,7 @@
           <div v-if="serverConnectionConfigs.length" class="flex items-center mb-4" @click="showServerList">
             <span class="material-symbols text-fg-muted">arrow_back</span>
           </div>
-          <h2 class="text-lg leading-7 mb-2">{{ $strings.LabelServerAddress }}</h2>
+          <h2 class="text-md-title-m text-md-on-surface mb-3">{{ $strings.LabelServerAddress }}</h2>
           <ui-text-input v-model="serverConfig.address" :disabled="processing || !networkConnected || !!serverConfig.id" placeholder="http://55.55.55.55:13378" type="url" class="w-full h-10" />
           <div class="flex justify-end items-center mt-6">
             <ui-btn :disabled="processing || !networkConnected" type="submit" :padding-x="3" class="h-10">{{ networkConnected ? $strings.ButtonSubmit : $strings.MessageNoNetworkConnection }}</ui-btn>
@@ -54,7 +54,7 @@
             <div class="flex-grow" />
             <span v-if="!serverConfig.id" class="material-symbols" style="font-size: 1.1rem" @click="editServerAddress">edit</span>
           </div>
-          <div class="w-full h-px bg-fg/10 my-2" />
+          <div class="w-full h-px bg-md-outline-variant/20 my-2" />
           <form v-if="isLocalAuthEnabled" @submit.prevent="submitAuth" class="pt-3">
             <ui-text-input v-model="serverConfig.username" :disabled="processing" :placeholder="$strings.LabelUsername" class="w-full mb-2 text-lg" />
             <ui-text-input v-model="password" type="password" :disabled="processing" :placeholder="$strings.LabelPassword" class="w-full mb-2 text-lg" />
@@ -65,24 +65,20 @@
               <ui-btn :disabled="processing || !networkConnected" type="submit" class="mt-1 h-10">{{ networkConnected ? $strings.ButtonSubmit : $strings.MessageNoNetworkConnection }}</ui-btn>
             </div>
           </form>
-          <div v-if="isLocalAuthEnabled && isOpenIDAuthEnabled" class="w-full h-px bg-fg/10 my-4" />
+          <div v-if="isLocalAuthEnabled && isOpenIDAuthEnabled" class="w-full h-px bg-md-outline-variant/20 my-4" />
           <ui-btn v-if="isOpenIDAuthEnabled" :disabled="processing" class="h-10 w-full" @click="clickLoginWithOpenId">{{ oauth.buttonText }}</ui-btn>
         </template>
       </div>
 
       <!-- auth error message -->
-      <div v-show="error" class="w-full rounded-lg bg-red-600 bg-opacity-10 border border-error border-opacity-50 py-3 px-2 flex items-center mt-4">
+      <div v-show="error" class="w-full rounded-md-md bg-md-error-container/20 border border-md-error/40 py-3 px-2 flex items-center mt-4">
         <span class="material-symbols mr-2 text-error" style="font-size: 1.1rem">warning</span>
         <p class="text-error">{{ error }}</p>
       </div>
     </div>
 
     <div :class="processing ? 'opacity-100' : 'opacity-0 pointer-events-none'" class="fixed w-full h-full top-0 left-0 bg-black/75 flex items-center justify-center z-30 transition-opacity duration-500">
-      <div>
-        <svg class="animate-spin w-16 h-16" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-        </svg>
-      </div>
+      <widgets-loading-spinner size="la-2x" />
     </div>
 
     <p v-if="!serverConnectionConfigs.length" class="mt-2 text-center text-error" v-html="$strings.MessageAudiobookshelfServerRequired" />

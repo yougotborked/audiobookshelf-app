@@ -1,5 +1,5 @@
 <template>
-  <div id="bookshelf" class="w-full max-w-full h-full">
+  <div id="bookshelf" class="w-full max-w-full h-full bg-md-surface-0">
     <template v-for="shelf in totalShelves">
       <div :key="shelf" class="w-full px-2 relative" :class="showBookshelfListView || altViewEnabled ? '' : 'bookshelfRow'" :id="`shelf-${shelf - 1}`" :style="{ height: shelfHeight + 'px' }">
         <div v-if="!showBookshelfListView && !altViewEnabled" class="w-full absolute bottom-0 left-0 z-30 bookshelfDivider" style="min-height: 16px" :class="`h-${shelfDividerHeightIndex}`" />
@@ -7,10 +7,11 @@
       </div>
     </template>
 
-    <div v-show="!entities.length && initialized" class="w-full py-16 text-center text-xl">
-      <div v-if="page === 'collections'" class="py-4">{{ $strings.MessageNoCollections }}</div>
-      <div v-else class="py-4 capitalize">No {{ entityName }}</div>
-      <ui-btn v-if="hasFilter" @click="clearFilter">{{ $strings.ButtonClearFilter }}</ui-btn>
+    <div v-show="!entities.length && initialized" class="w-full py-16 flex flex-col items-center gap-3">
+      <span class="material-symbols text-5xl text-md-on-surface-variant/40">library_books</span>
+      <p v-if="page === 'collections'" class="text-md-body-l text-md-on-surface-variant">{{ $strings.MessageNoCollections }}</p>
+      <p v-else class="text-md-body-l text-md-on-surface-variant capitalize">No {{ entityName }}</p>
+      <ui-btn v-if="hasFilter" variant="outlined" @click="clearFilter">{{ $strings.ButtonClearFilter }}</ui-btn>
     </div>
   </div>
 </template>
