@@ -1,5 +1,5 @@
 <template>
-  <div ref="card" tabindex="0" :id="`book-card-${index}`" :style="{ minWidth: width + 'px', maxWidth: width + 'px', height: height + 'px' }" class="rounded-sm z-10 bg-primary cursor-pointer box-shadow-book" @click="clickCard">
+  <div ref="card" tabindex="0" :id="`book-card-${index}`" :style="{ minWidth: width + 'px', maxWidth: width + 'px', height: height + 'px' }" class="rounded-md-md z-10 bg-md-surface-1 cursor-pointer elevation-1 transition-md-standard active:bg-md-surface-2" @click="clickCard">
     <!-- When cover image does not fill -->
     <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-primary">
       <div class="absolute cover-bg" ref="coverBg" />
@@ -17,11 +17,11 @@
       <p v-if="displaySortLine" class="truncate text-fg-muted" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">{{ displaySortLine }}</p>
     </div>
 
-    <div v-if="seriesSequenceList" class="absolute rounded-lg bg-black bg-opacity-90 box-shadow-md z-20 text-right" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem` }" style="background-color: #78350f">
-      <p class="text-white" :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }">#{{ seriesSequenceList }}</p>
+    <div v-if="seriesSequenceList" class="absolute bg-md-surface-4 text-md-on-surface rounded-md-xs z-20 text-right" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem`, fontSize: sizeMultiplier * 0.8 + 'rem' }">
+      #{{ seriesSequenceList }}
     </div>
-    <div v-else-if="booksInSeries" class="absolute rounded-lg bg-black bg-opacity-90 box-shadow-md z-20" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem` }" style="background-color: #cd9d49dd">
-      <p class="text-white" :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }">{{ booksInSeries }}</p>
+    <div v-else-if="booksInSeries" class="absolute bg-md-primary-container text-md-on-primary-container rounded-md-xs z-20" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem`, fontSize: sizeMultiplier * 0.8 + 'rem' }">
+      {{ booksInSeries }}
     </div>
 
     <div class="w-full h-full absolute top-0 left-0 rounded overflow-hidden z-10">
@@ -59,7 +59,9 @@
     </div>
 
     <!-- No progress shown for collapsed series in library -->
-    <div v-if="!collapsedSeries && (!isPodcast || recentEpisode)" class="absolute bottom-0 left-0 h-1 max-w-full z-10 rounded-b box-shadow-progressbar" :class="itemIsFinished ? 'bg-success' : 'bg-yellow-400'" :style="{ width: width * userProgressPercent + 'px' }"></div>
+    <div v-if="!collapsedSeries && (!isPodcast || recentEpisode)" class="absolute bottom-0 left-0 h-1 max-w-full z-10 bg-md-outline-variant/40 rounded-b-md-md overflow-hidden" :style="{ width: width + 'px' }">
+      <div class="h-full rounded-md-full transition-md-standard" :class="itemIsFinished ? 'bg-success' : 'bg-md-primary'" :style="{ width: (userProgressPercent * 100) + '%' }" />
+    </div>
 
     <!-- Downloaded icon -->
     <div v-if="showHasLocalDownload" class="absolute right-0 top-0 z-20" :style="{ top: (isPodcast || (seriesSequence && showSequence) ? 1.75 : 0.375) * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem` }">
