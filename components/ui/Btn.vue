@@ -1,19 +1,15 @@
 <template>
-  <nuxt-link v-if="to" :to="to" class="btn outline-none rounded-md shadow-md relative border border-border text-center" :disabled="disabled || loading" :class="classList">
+  <nuxt-link v-if="to" :to="to" :class="classList" @click.native="click">
+    <span v-if="loading" class="absolute inset-0 flex items-center justify-center bg-inherit rounded-inherit">
+      <span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+    </span>
     <slot />
-    <div v-if="loading" class="text-fg absolute top-0 left-0 w-full h-full flex items-center justify-center">
-      <svg class="animate-spin" style="width: 24px; height: 24px" viewBox="0 0 24 24">
-        <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-      </svg>
-    </div>
   </nuxt-link>
-  <button v-else class="btn outline-none rounded-md shadow-md relative border border-border" :disabled="disabled || loading" :type="type" :class="classList" @mousedown.prevent @click="click">
+  <button v-else :type="type || 'button'" :disabled="disabled || loading" :class="classList" @click="click">
+    <span v-if="loading" class="absolute inset-0 flex items-center justify-center bg-inherit">
+      <span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+    </span>
     <slot />
-    <div v-if="loading" class="text-fg absolute top-0 left-0 w-full h-full flex items-center justify-center">
-      <svg class="animate-spin" style="width: 24px; height: 24px" viewBox="0 0 24 24">
-        <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-      </svg>
-    </div>
   </button>
 </template>
 
@@ -21,76 +17,52 @@
 export default {
   props: {
     to: String,
-    color: {
-      type: String,
-      default: 'primary'
-    },
-    type: {
-      type: String,
-      default: ''
-    },
+    variant: { type: String, default: 'filled' }, // filled | filled-tonal | outlined | text | elevated
+    color: { type: String, default: 'primary' },  // backward-compat
+    type: String,
     paddingX: Number,
     paddingY: Number,
     small: Boolean,
     loading: Boolean,
     disabled: Boolean
   },
-  data() {
-    return {}
-  },
   computed: {
     classList() {
-      var list = []
-      if (this.loading) list.push('text-opacity-0')
-      if (this.color === 'success') {
-        list.push('text-white')
+      const base = [
+        'inline-flex items-center justify-center gap-2 font-medium select-none',
+        'text-md-label-l rounded-md-full transition-md-standard relative overflow-hidden',
+        'active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+        'focus-visible:outline-md-primary',
+        this.small ? 'h-8 px-4 text-md-label-m' : 'h-10 px-6',
+        this.paddingX != null ? `px-${this.paddingX}` : '',
+        this.paddingY != null ? `py-${this.paddingY}` : '',
+        (this.disabled || this.loading) ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''
+      ]
+
+      const variants = {
+        'filled':       'bg-md-primary text-md-on-primary hover:brightness-110 active:brightness-90',
+        'filled-tonal': 'bg-md-primary-container text-md-on-primary-container hover:brightness-110',
+        'outlined':     'bg-transparent border border-md-outline text-md-primary hover:bg-md-primary/10',
+        'text':         'bg-transparent text-md-primary hover:bg-md-primary/10 px-3',
+        'elevated':     'bg-md-surface-1 text-md-primary elevation-1 hover:elevation-2'
       }
-      list.push(`bg-${this.color}`)
-      if (this.small) {
-        list.push('text-sm')
-        if (this.paddingX === undefined) list.push('px-4')
-        if (this.paddingY === undefined) list.push('py-1')
-      } else {
-        if (this.paddingX === undefined) list.push('px-8')
-        if (this.paddingY === undefined) list.push('py-2')
+
+      // backward-compat: map old color prop to specific bg
+      const legacyColorMap = {
+        success:     'bg-success text-white hover:brightness-110',
+        warning:     'bg-warning text-white hover:brightness-110',
+        error:       'bg-error text-white hover:brightness-110',
+        info:        'bg-info text-white hover:brightness-110',
+        successDark: 'bg-successDark text-white hover:brightness-110',
       }
-      if (this.paddingX !== undefined) {
-        list.push(`px-${this.paddingX}`)
-      }
-      if (this.paddingY !== undefined) {
-        list.push(`py-${this.paddingY}`)
-      }
-      if (this.disabled) {
-        list.push('cursor-not-allowed')
-      }
-      return list
+
+      const variantClass = legacyColorMap[this.color] || variants[this.variant] || variants.filled
+
+      return [...base, variantClass].filter(Boolean).join(' ')
     }
   },
   methods: {
-    click(e) {
-      this.$emit('click', e)
-    }
-  },
-  mounted() {}
+    click(e) { if (!this.disabled && !this.loading) this.$emit('click', e) }
+  }
 }
 </script>
-
-<style>
-.btn::before {
-  content: '';
-  position: absolute;
-  border-radius: 6px;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0);
-  transition: all 0.1s ease-in-out;
-}
-.btn:hover:not(:disabled)::before {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-button:disabled::before {
-  background-color: rgba(0, 0, 0, 0.2);
-}
-</style>
