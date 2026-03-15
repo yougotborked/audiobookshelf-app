@@ -41,71 +41,56 @@ textarea {
   min-height: calc(100% - 48px);
 }
 
-.box-shadow-sm {
-  box-shadow: 0px 3px 6px #11111170;
-}
+/* M3 elevation shadows — tinting is the primary elevation signal in dark theme */
+.elevation-1 { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15); }
+.elevation-2 { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15); }
+.elevation-3 { box-shadow: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3); }
+.elevation-4 { box-shadow: 0 6px 10px 4px rgba(0,0,0,.15), 0 2px 3px rgba(0,0,0,.3); }
 
-.box-shadow-md {
-  box-shadow: 2px 8px 6px #111111aa;
-}
-
-.box-shadow-lg-up {
-  box-shadow: 0px -12px 8px #111111ee;
-}
-
-.box-shadow-xl {
-  box-shadow: 2px 14px 8px #111111aa;
-}
-
-.box-shadow-book {
-  box-shadow: 4px 1px 8px #11111166, -4px 1px 8px #11111166, 1px -4px 8px #11111166;
-}
-
-.box-shadow-progressbar {
-  box-shadow: 0px -1px 4px rgb(62, 50, 2, 0.5);
-}
+/* Legacy aliases — kept so existing components don't break during transition */
+.box-shadow-sm      { @apply elevation-1; }
+.box-shadow-md      { @apply elevation-2; }
+.box-shadow-lg-up   { box-shadow: 0 -8px 12px rgba(0,0,0,.4); }
+.box-shadow-xl      { @apply elevation-4; }
+.box-shadow-book    { @apply elevation-3; }
+.box-shadow-progressbar { box-shadow: 0 -1px 4px rgba(62, 50, 2, 0.3); }
 
 .shadow-height {
   height: calc(100% - 4px);
 }
 
+/* Bookshelf — M3 surface-1 background replaces skeuomorphic wood */
 .bookshelfRow {
-  background-image: url(/wood_panels.jpg);
+  background-color: rgb(var(--md-surface-1));
 }
 
 .bookshelfDivider {
-  background: rgb(149, 119, 90);
-  background: linear-gradient(180deg, rgba(149, 119, 90, 1) 0%, rgba(103, 70, 37, 1) 17%, rgba(103, 70, 37, 1) 88%, rgba(71, 48, 25, 1) 100%);
-  box-shadow: 2px 10px 8px #1111117e;
+  background-color: rgb(var(--md-surface-2));
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
 }
 
 .altBookshelfDivider {
-  background: rgb(38 38 38);
-  /*background: linear-gradient(180deg, rgba(191, 193, 195, 1) 0%, rgb(156, 158, 159) 17%, rgb(114, 115, 117) 88%, rgb(120, 120, 122) 100%);*/
-  box-shadow: 2px 10px 8px #1111117e;
+  background: rgb(var(--md-surface-2));
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
 }
 
-/*
-Bookshelf Label
-*/
+/* Bookshelf label placard */
 .categoryPlacard {
   letter-spacing: 1px;
 }
 
 .shinyBlack {
-  background-color: #2d3436;
-  background-image: linear-gradient(315deg, #19191a 0%, rgb(15, 15, 15) 74%);
-  border-color: rgba(255, 244, 182, 0.6);
+  background-color: rgb(var(--md-surface-2));
+  border-color: rgba(255, 244, 182, 0.4);
   border-style: solid;
-  color: #fce3a6;
+  color: rgb(var(--md-on-surface));
 }
 
 .altBookshelfLabel {
-  background-color: #2d3436;
-  background-image: linear-gradient(315deg, #19191a 0%, rgb(15, 15, 15) 74%);
-  border-color: rgb(255, 255, 255);
+  background-color: rgb(var(--md-surface-2));
+  border-color: rgb(var(--md-outline-variant));
   border-style: solid;
-  color: #ffffff;
+  color: rgb(var(--md-on-surface));
 }
 
 .cover-bg {
@@ -125,11 +110,8 @@ Bookshelf Label
   text-overflow: ellipsis;
   display: -webkit-box;
   line-height: 16px;
-  /* fallback */
   max-height: 32px;
-  /* fallback */
   -webkit-line-clamp: 2;
-  /* number of lines to show */
   -webkit-box-orient: vertical;
 }
 
@@ -150,15 +132,15 @@ Bookshelf Label
 .tracksTable {
   border-collapse: collapse;
   width: 100%;
-  border: 1px solid rgb(var(--color-secondary));
+  border: 1px solid rgb(var(--md-outline-variant));
 }
 
 .tracksTable tr:nth-child(even) {
-  background-color: rgb(var(--color-secondary));
+  background-color: rgb(var(--md-surface-2));
 }
 
 .tracksTable tr {
-  background-color: rgb(var(--color-bg));
+  background-color: rgb(var(--md-surface-1));
 }
 
 .tracksTable td {
@@ -168,4 +150,17 @@ Bookshelf Label
 .tracksTable th {
   padding: 4px 8px;
   font-size: 0.75rem;
+}
+
+/* M3 motion utilities — only animated when user hasn't requested reduced motion */
+.transition-md-standard,
+.transition-md-emphasized,
+.transition-md-decelerate,
+.transition-md-accelerate { transition: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .transition-md-standard   { transition: all var(--md-motion-standard); }
+  .transition-md-emphasized { transition: all var(--md-motion-emphasized); }
+  .transition-md-decelerate { transition: all var(--md-motion-decelerate); }
+  .transition-md-accelerate { transition: all var(--md-motion-accelerate); }
 }
