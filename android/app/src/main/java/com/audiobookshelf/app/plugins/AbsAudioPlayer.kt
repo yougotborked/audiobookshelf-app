@@ -283,7 +283,7 @@ class AbsAudioPlayer : Plugin() {
           }
 
           if (playerNotificationService.mediaProgressSyncer.listeningTimerRunning) { // If progress syncing then first stop before preparing next
-            playerNotificationService.mediaProgressSyncer.stop {
+            playerNotificationService.mediaProgressSyncer.stop(true) {
               Log.d(tag, "Media progress syncer was already syncing - stopped")
               Handler(Looper.getMainLooper()).post { // TODO: This was needed again which is probably a design a flaw
                 playerNotificationService.preparePlayer(
@@ -303,7 +303,7 @@ class AbsAudioPlayer : Plugin() {
     } else { // Play library item from server
       val playItemRequestPayload = playerNotificationService.getPlayItemRequestPayload(false)
       Handler(Looper.getMainLooper()).post {
-        playerNotificationService.mediaProgressSyncer.stop {
+        playerNotificationService.mediaProgressSyncer.stop(true) {
           apiHandler.playLibraryItem(libraryItemId, episodeId, playItemRequestPayload) {
             if (it == null) {
               call.resolve(JSObject("{\"error\":\"Server play request failed\"}"))

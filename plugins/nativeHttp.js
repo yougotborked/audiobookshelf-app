@@ -107,10 +107,19 @@ export default function ({ store, $db, $socket }, inject) {
           throw new Error('No refresh token available')
         }
 
-        // Attempt to refresh the token
-        const newTokens = await this.refreshAccessToken(refreshToken, serverConnectionConfig.address)
+        // Attempt to refresh the token with retries for transient network errors
+        let newTokens = null
+        const MAX_REFRESH_RETRIES = 3
+        for (let attempt = 1; attempt <= MAX_REFRESH_RETRIES; attempt++) {
+          newTokens = await this.refreshAccessToken(refreshToken, serverConnectionConfig.address)
+          if (newTokens?.accessToken) break
+          if (attempt < MAX_REFRESH_RETRIES) {
+            console.warn(`[nativeHttp] Token refresh attempt ${attempt} failed, retrying in ${attempt}s...`)
+            await new Promise((resolve) => setTimeout(resolve, attempt * 1000))
+          }
+        }
         if (!newTokens?.accessToken) {
-          console.error('[nativeHttp] Failed to refresh access token')
+          console.error('[nativeHttp] Failed to refresh access token after retries')
           throw new Error('Failed to refresh access token')
         }
 
@@ -139,8 +148,11 @@ export default function ({ store, $db, $socket }, inject) {
       } catch (error) {
         console.error('[nativeHttp] Token refresh failed:', error)
 
-        // If refresh fails, redirect to login
-        await this.handleRefreshFailure(serverConnectionConfig?.id)
+        // Only log the user out if the server explicitly rejected the refresh token (401/403).
+        // For network errors, silently fail so the next request can retry automatically.
+        const status = error?.status ?? error?.response?.status
+        const isTokenRejected = status === 401 || status === 403
+        await this.handleRefreshFailure(serverConnectionConfig?.id, isTokenRejected)
         throw error
       }
     },
@@ -223,8 +235,8 @@ export default function ({ store, $db, $socket }, inject) {
         // Update the store
         store.commit('user/setAccessToken', tokens.accessToken)
 
-        // Re-authenticate socket if necessary
-        if ($socket?.connected && !$socket.isAuthenticated) {
+        // Always re-authenticate socket after token refresh — the old token is no longer valid
+        if ($socket?.connected) {
           $socket.sendAuthenticate()
         } else if (!$socket) {
           console.warn('[nativeHttp] Socket not available, cannot re-authenticate')
@@ -246,9 +258,15 @@ export default function ({ store, $db, $socket }, inject) {
      * @param {string} [serverConnectionConfigId]
      * @returns {Promise} - Promise that resolves when logout is complete
      */
-    async handleRefreshFailure(serverConnectionConfigId) {
+    async handleRefreshFailure(serverConnectionConfigId, isTokenRejected = false) {
       try {
-        console.log('[nativeHttp] Handling refresh failure - logging out user')
+        if (!isTokenRejected) {
+          // Network error during refresh — don't log out, the next request will retry
+          console.warn('[nativeHttp] Token refresh failed due to network/server error, will retry on next request')
+          return
+        }
+
+        console.log('[nativeHttp] Refresh token rejected by server - logging out user')
 
         // Clear store
         await store.dispatch('user/logout')

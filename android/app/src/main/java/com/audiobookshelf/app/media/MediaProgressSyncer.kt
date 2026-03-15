@@ -77,10 +77,8 @@ class MediaProgressSyncer(
             "start: init last sync time $lastSyncTime with playback session id=${currentPlaybackSession?.id}"
     )
 
-    // Sync progress more frequently to improve responsiveness when
-    // auto continuing playback.
     listeningTimerTask =
-            Timer("ListeningTimer", false).schedule(5000L, 5000L) {
+            Timer("ListeningTimer", false).schedule(15000L, 15000L) {
               Handler(Looper.getMainLooper()).post() {
                 if (playerNotificationService.currentPlayer.isPlaying) {
                   // Set auto sleep timer if enabled and within start/end time
@@ -201,9 +199,10 @@ class MediaProgressSyncer(
     Log.d(tag, "finished: Stopping listening for $currentDisplayTitle")
 
     sync(true, currentPlaybackSession?.duration ?: 0.0) { syncResult ->
+      val completedSession = currentPlaybackSession
       reset()
 
-      currentPlaybackSession?.let { playbackSession ->
+      completedSession?.let { playbackSession ->
         MediaEventManager.finishedEvent(playbackSession, syncResult)
       }
 

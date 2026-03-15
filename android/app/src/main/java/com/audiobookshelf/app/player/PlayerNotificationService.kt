@@ -212,6 +212,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   override fun onTaskRemoved(rootIntent: Intent?) {
     super.onTaskRemoved(rootIntent)
     Log.d(tag, "onTaskRemoved")
+    // Only stop the service if playback was explicitly closed (isClosed=true).
+    // When the user swipes the task away while audio is playing, we intentionally
+    // keep the foreground service alive so playback continues uninterrupted.
+    // The service is stopped when the user explicitly closes playback via closePlayback().
     if (isClosed) stopSelf()
   }
 
@@ -594,7 +598,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun setMediaSessionConnectorPlaybackActions() {
-    val playbackActions =
+    var playbackActions =
             PlaybackStateCompat.ACTION_PLAY_PAUSE or
                     PlaybackStateCompat.ACTION_PLAY or
                     PlaybackStateCompat.ACTION_PAUSE or
@@ -602,8 +606,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.ACTION_REWIND or
                     PlaybackStateCompat.ACTION_STOP or
                     PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                    PlaybackStateCompat.ACTION_SEEK_TO
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+    if (DeviceManager.deviceData.deviceSettings?.allowSeekingOnMediaControls == true) {
+      playbackActions = playbackActions or PlaybackStateCompat.ACTION_SEEK_TO
+    }
     mediaSessionConnector.setEnabledPlaybackActions(playbackActions)
   }
 

@@ -95,11 +95,19 @@ export default function ({ $axios, store, $db }) {
       isRefreshing = true
 
       try {
-        // Attempt to refresh the token
-        // Updates store if successful, otherwise clears store and throw error
-        const newAccessToken = await store.dispatch('user/refreshToken')
+        // Attempt to refresh the token with retries for transient network errors
+        let newAccessToken = null
+        const MAX_REFRESH_RETRIES = 3
+        for (let attempt = 1; attempt <= MAX_REFRESH_RETRIES; attempt++) {
+          newAccessToken = await store.dispatch('user/refreshToken')
+          if (newAccessToken) break
+          if (attempt < MAX_REFRESH_RETRIES) {
+            console.warn(`[axios] Token refresh attempt ${attempt} failed, retrying in ${attempt}s...`)
+            await new Promise((resolve) => setTimeout(resolve, attempt * 1000))
+          }
+        }
         if (!newAccessToken) {
-          console.error('No new access token received')
+          console.error('No new access token received after retries')
           return Promise.reject(error)
         }
 

@@ -93,3 +93,8 @@ sw.*
 /android/app/release/
 android/.android-sdk/
 android/.jdk/
+
+# Keystores — store via CI secrets, not in source control
+android/debug.keystore
+android/app/*.keystore
+android/app/*.jks

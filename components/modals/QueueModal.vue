@@ -68,7 +68,6 @@ export default {
     ,
     remove(idx) {
       this.$store.commit('removeQueueItem', idx)
-      this.localQueue.splice(idx, 1)
     },
     dragEnd(evt) {
       if (evt.oldIndex === evt.newIndex) return
