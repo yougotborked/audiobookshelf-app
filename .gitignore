@@ -98,3 +98,8 @@ android/.jdk/
 android/debug.keystore
 android/app/*.keystore
 android/app/*.jks
+
+# Visual testing mock data
+mock/
+docs/screenshots/
+playwright-report/
