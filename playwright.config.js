@@ -4,15 +4,15 @@ module.exports = defineConfig({
   testDir: './scripts',
   testMatch: 'screenshot.js',
   use: {
-    baseURL: 'http://localhost:1337',
+    baseURL: 'http://localhost:3000',
     viewport: { width: 390, height: 844 }, // typical Android viewport
     deviceScaleFactor: 2,
     colorScheme: 'dark'
   },
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:1337',
+    command: '/usr/bin/node node_modules/.bin/nuxt --hostname 127.0.0.1 --port 3000',
+    url: 'http://localhost:3000',
     reuseExistingServer: true,
-    timeout: 60000
+    timeout: 120000
   }
 })
