@@ -13,6 +13,7 @@ import com.audiobookshelf.app.player.PlayerNotificationService
 import com.audiobookshelf.app.server.ApiHandler
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.google.android.gms.cast.CastDevice
@@ -32,6 +33,10 @@ class AbsAudioPlayer : Plugin() {
   lateinit var playerNotificationService: PlayerNotificationService
 
   private var isCastAvailable:Boolean = false
+  private var isCastSupported:Boolean = false
+
+  // Track foreground state to avoid flooding WebView with events while backgrounded
+  private var isInForeground: Boolean = true
 
   // Track foreground state to avoid flooding WebView with events while backgrounded
   private var isInForeground: Boolean = true
@@ -44,6 +49,7 @@ class AbsAudioPlayer : Plugin() {
       initCastManager()
     } catch(e:Exception) {
       Log.e(tag, "initCastManager exception ${e.printStackTrace()}")
+      emit("onCastSupportUpdate", false)
     }
 
     val foregroundServiceReady : () -> Unit = {
@@ -114,6 +120,18 @@ class AbsAudioPlayer : Plugin() {
         override fun onPlaybackSpeedChanged(playbackSpeed:Float) {
           emit("onPlaybackSpeedChanged", playbackSpeed)
         }
+
+        override fun onSkipNextRequest() {
+          emit("onSkipNextRequest", "")
+        }
+
+        override fun onSkipPreviousRequest() {
+          emit("onSkipPreviousRequest", "")
+        }
+
+        override fun onQueueIndexUpdate(index: Int) {
+          emit("onQueueIndexUpdate", index)
+        }
       })
 
       MediaEventManager.clientEventEmitter = playerNotificationService.clientEventEmitter
@@ -140,6 +158,7 @@ class AbsAudioPlayer : Plugin() {
     if (::playerNotificationService.isInitialized && playerNotificationService.currentPlaybackSession != null) {
       Handler(Looper.getMainLooper()).postDelayed({
         playerNotificationService.sendClientMetadata(PlayerState.READY)
+        playerNotificationService.clientEventEmitter?.onPlayingUpdate(playerNotificationService.currentPlayer.isPlaying)
         playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()
         playerNotificationService.mediaProgressSyncer.currentLocalMediaProgress?.let {
           playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(it)
@@ -164,8 +183,13 @@ class AbsAudioPlayer : Plugin() {
         } else if (statusCode == ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED) {
           Log.w(tag, "initCastManager: Google Api Update Required")
         }
+        isCastSupported = false
+        emit("onCastSupportUpdate", false)
         return
     }
+
+    isCastSupported = true
+    emit("onCastSupportUpdate", true)
 
     val connListener = object: CastManager.ChromecastListener() {
       override fun onReceiverAvailableUpdate(available: Boolean) {
@@ -210,6 +234,26 @@ class AbsAudioPlayer : Plugin() {
     val playWhenReady = call.getBoolean("playWhenReady") == true
     val playbackRate = call.getFloat("playbackRate",1f) ?: 1f
     val startTimeOverride = call.getDouble("startTime")
+    val queueIndex: Int = call.getInt("queueIndex") ?: 0
+    val queueJson = call.getArray("queue")
+
+    queueJson?.let {
+      try {
+        val queue: MutableList<PlayQueueItem> =
+          jacksonMapper.readValue(it.toString())
+        val queueSummary = queue.take(5).map { item ->
+          "${item.libraryItemId}:${item.episodeId ?: ""}"
+        }
+        AbsLogger.info(
+          tag,
+          "prepareLibraryItem: parsed queue size=${queue.size} index=$queueIndex sample=${queueSummary.joinToString()}"
+        )
+        playerNotificationService.setPlayQueue(queue, queueIndex)
+      } catch (e: Exception) {
+        AbsLogger.error(tag, "prepareLibraryItem: failed to parse queue (${e.message})")
+        Log.e(tag, "prepareLibraryItem: failed to parse queue", e)
+      }
+    }
 
     AbsLogger.info("AbsAudioPlayer", "prepareLibraryItem: lid=$libraryItemId, startTimeOverride=$startTimeOverride, playbackRate=$playbackRate")
 
@@ -244,8 +288,6 @@ class AbsAudioPlayer : Plugin() {
           if (playerNotificationService.mediaProgressSyncer.listeningTimerRunning) { // If progress syncing then first stop before preparing next
             playerNotificationService.mediaProgressSyncer.stop {
               Log.d(tag, "Media progress syncer was already syncing - stopped")
-              PlayerListener.lazyIsPlaying = false
-
               Handler(Looper.getMainLooper()).post { // TODO: This was needed again which is probably a design a flaw
                 playerNotificationService.preparePlayer(
                   playbackSession,
@@ -276,7 +318,6 @@ class AbsAudioPlayer : Plugin() {
 
               Handler(Looper.getMainLooper()).post {
                 Log.d(tag, "Preparing Player playback session ${jacksonMapper.writeValueAsString(it)}")
-                PlayerListener.lazyIsPlaying = false
                 playerNotificationService.preparePlayer(it, playWhenReady, playbackRate)
               }
               call.resolve(JSObject(jacksonMapper.writeValueAsString(it)))
@@ -285,6 +326,25 @@ class AbsAudioPlayer : Plugin() {
         }
       }
     }
+  }
+
+  @PluginMethod
+  fun setPlayQueue(call: PluginCall) {
+    val queueIndex: Int = call.getInt("queueIndex") ?: 0
+    val queueJson = call.getArray("queue")
+
+    queueJson?.let {
+      try {
+        val queue: MutableList<PlayQueueItem> = jacksonMapper.readValue(it.toString())
+        playerNotificationService.setPlayQueue(queue, queueIndex)
+      } catch (e: Exception) {
+        Log.e(tag, "setPlayQueue: failed to parse queue", e)
+        call.reject("Invalid queue")
+        return
+      }
+    }
+
+    call.resolve()
   }
 
   @PluginMethod
@@ -451,6 +511,13 @@ class AbsAudioPlayer : Plugin() {
   fun getIsCastAvailable(call: PluginCall) {
     val jsobj = JSObject()
     jsobj.put("value", isCastAvailable)
+    call.resolve(jsobj)
+  }
+
+  @PluginMethod
+  fun getIsCastSupported(call: PluginCall) {
+    val jsobj = JSObject()
+    jsobj.put("value", isCastSupported)
     call.resolve(jsobj)
   }
 }

@@ -143,5 +143,6 @@ async function initialize() {
 
 export default ({ app, store }, inject) => {
   $localStore = app.$localStore
+  inject('strings', Vue.prototype.$strings)
   initialize()
 }

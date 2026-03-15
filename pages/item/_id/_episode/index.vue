@@ -66,22 +66,40 @@ export default {
     let libraryItem = null
     let episode = null
     let localEpisode = null
+    let loadedFromCache = false
 
     if (libraryItemId.startsWith('local')) {
       libraryItem = await app.$db.getLocalLibraryItem(libraryItemId)
       console.log('Got lli', libraryItemId)
-    } else if (store.state.user.serverConnectionConfig) {
-      libraryItem = await app.$nativeHttp.get(`/api/items/${libraryItemId}?expanded=1`).catch((error) => {
-        console.error('Failed', error)
-        return false
-      })
+    } else {
+      const canRequest = store.state.networkConnected && store.state.user.serverConnectionConfig
+
+      if (canRequest) {
+        libraryItem = await app.$nativeHttp.get(`/api/items/${libraryItemId}?expanded=1`).catch((error) => {
+          console.error('Failed', error)
+          return null
+        })
+
+        if (libraryItem) {
+          await app.$localStore.setCachedLibraryItem(libraryItem)
+        }
+      }
+
+      if (!libraryItem) {
+        libraryItem = await app.$localStore.getCachedLibraryItem(libraryItemId)
+        loadedFromCache = !!libraryItem
+      }
+
+      if (!libraryItem) {
+        libraryItem = await app.$db.getLocalLibraryItemByLId(libraryItemId)
+        loadedFromCache = !!libraryItem
+      }
 
       if (libraryItem) {
         const localLibraryItem = await app.$db.getLocalLibraryItemByLId(libraryItemId)
         if (localLibraryItem) {
           console.log('Library item has local library item also', localLibraryItem.id)
           libraryItem.localLibraryItem = localLibraryItem
-
           localEpisode = localLibraryItem.media.episodes.find((ep) => ep.serverEpisodeId === episodeId)
         }
       }
@@ -105,7 +123,8 @@ export default {
 
     return {
       libraryItem,
-      episode
+      episode,
+      loadedFromCache
     }
   },
   data() {
@@ -113,7 +132,8 @@ export default {
       showMoreMenu: false,
       processing: false,
       resettingProgress: false,
-      startingDownload: false
+      startingDownload: false,
+      loadedFromCache: false
     }
   },
   mixins: [cellularPermissionHelpers],

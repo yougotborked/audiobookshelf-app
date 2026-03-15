@@ -321,7 +321,7 @@ export default {
       if (this.playerIsStartingPlayback) return
       await this.$hapticsImpact()
       this.$store.commit('setPlayerIsStartingPlayback', this.localLibraryItemId)
-      this.$eventBus.$emit('play-item', { libraryItemId: this.localLibraryItemId })
+      this.$eventBus.$emit('play-item', { libraryItemId: this.localLibraryItemId, serverLibraryItemId: this.libraryItemId })
     },
     getCapImageSrc(contentUrl) {
       return Capacitor.convertFileSrc(contentUrl)

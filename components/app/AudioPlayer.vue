@@ -6,8 +6,16 @@
       <div class="top-4 left-4 absolute cursor-pointer">
         <span class="material-symbols text-5xl" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" @click="collapseFullscreen">keyboard_arrow_down</span>
       </div>
-      <div v-show="showCastBtn" class="top-6 right-16 absolute cursor-pointer">
-        <span class="material-symbols text-3xl" :class="coverBgIsLight && theme !== 'black' ? 'text-black' : ''" @click="castClick">{{ isCasting ? 'cast_connected' : 'cast' }}</span>
+      <div
+        v-show="showCastBtn"
+        class="top-6 right-16 absolute cursor-pointer"
+        :class="{ 'opacity-60': !castAvailable && !isCasting }"
+      >
+        <span
+          class="material-symbols text-3xl"
+          :class="coverBgIsLight && theme !== 'black' ? 'text-black' : ''"
+          @click="castClick"
+        >{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
       <div class="top-6 right-4 absolute cursor-pointer">
         <span class="material-symbols text-3xl" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" @click="showMoreMenuDialog = true">more_vert</span>
@@ -62,7 +70,14 @@
             <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+          <div class="flex items-center gap-3">
+            <span
+              class="material-symbols text-3xl text-fg cursor-pointer"
+              :class="playQueueAvailable ? 'text-opacity-75' : 'text-opacity-10'"
+              @click.stop="clickQueueBtn"
+            >playlist_play</span>
+            <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+          </div>
         </div>
       </div>
       <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
@@ -112,6 +127,7 @@
 
 <script>
 import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
 import { AbsAudioPlayer } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
 import { FastAverageColor } from 'fast-average-color'
@@ -166,7 +182,9 @@ export default {
       coverRgb: 'rgb(55, 56, 56)',
       coverBgIsLight: false,
       titleMarquee: null,
-      isRefreshingUI: false
+      lastNativeCurrentTime: null,
+      isRefreshingUI: false,
+      appStateListener: null
     }
   },
   watch: {
@@ -174,6 +192,31 @@ export default {
       this.updateScreenSize()
       this.$store.commit('setPlayerFullscreen', !!val)
       document.querySelector('body').style.backgroundColor = this.showFullscreen ? this.coverRgb : ''
+    },
+    '$store.state.currentPlaybackSession'(val) {
+      if (!val) {
+        this.playbackSession = null
+        return
+      }
+
+      if (!this.playbackSession || this.playbackSession.id !== val.id) {
+        // Initialize the player UI when a session is restored or changed
+        // so metadata like title and cover image are populated correctly.
+        // Skip loading state so the play button stays interactive.
+        this.onPlaybackSession(val, { isLoading: false })
+      }
+
+      this.totalDuration = Number((val.duration || 0).toFixed(2))
+      this.currentTime = Number((val.currentTime || 0).toFixed(2))
+      this.timeupdate()
+    },
+    async '$store.state.playerIsPlaying'(isPlaying) {
+      if (isPlaying) {
+        await this.refreshCurrentPlaybackPosition()
+        this.startPlayInterval()
+      } else {
+        this.stopPlayInterval()
+      }
     },
     bookCoverAspectRatio() {
       this.updateScreenSize()
@@ -183,6 +226,9 @@ export default {
     }
   },
   computed: {
+    playQueueAvailable() {
+      return Array.isArray(this.$store.state.playQueue) && this.$store.state.playQueue.length > 0
+    },
     theme() {
       return document.documentElement.dataset.theme || 'dark'
     },
@@ -271,6 +317,9 @@ export default {
       }
     },
     showCastBtn() {
+      return this.$store.state.isCastEnabled || this.$store.state.isCasting
+    },
+    castAvailable() {
       return this.$store.state.isCastAvailable
     },
     isCasting() {
@@ -401,6 +450,10 @@ export default {
         message: this.$strings.MessageProgressSyncFailed,
         cancelText: this.$strings.ButtonOk
       })
+    },
+    clickQueueBtn() {
+      if (!this.playQueueAvailable) return
+      this.$emit('showQueue')
     },
     clickChaptersBtn() {
       if (!this.chapters.length) return
@@ -664,6 +717,7 @@ export default {
     },
     stopPlayInterval() {
       clearInterval(this.playInterval)
+      this.playInterval = null
     },
     resetStream(startTime) {
       this.closePlayback()
@@ -791,6 +845,7 @@ export default {
       this.isEnded = false
       this.isLoading = false
       this.playbackSession = null
+      this.lastNativeCurrentTime = null
     },
     async loadPlayerSettings() {
       const savedPlayerSettings = await this.$localStore.getPlayerSettings()
@@ -856,6 +911,7 @@ export default {
       this.isEnded = false
       this.isLoading = true
       this.syncStatus = 0
+      this.lastNativeCurrentTime = null
       this.$store.commit('setPlaybackSession', this.playbackSession)
 
       // Set track width
@@ -951,6 +1007,105 @@ export default {
     },
     showProgressSyncSuccess() {
       this.syncStatus = this.$constants.SyncStatus.SUCCESS
+    },
+    async registerAppStateListener() {
+      if (!Capacitor?.isPluginAvailable || !Capacitor.isPluginAvailable('App')) return
+      try {
+        this.appStateListener = await App.addListener('appStateChange', this.onAppStateChange)
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to register app state listener', error)
+      }
+    },
+    async onAppStateChange(state) {
+      if (!state) return
+      if (state.isActive) {
+        await this.refreshCurrentPlaybackPosition()
+        this.maybeRestartPolling()
+      } else {
+        this.stopPlayInterval()
+      }
+    },
+    async refreshCurrentPlaybackPosition() {
+      if (!this.playbackSession || typeof AbsAudioPlayer?.getCurrentTime !== 'function') return
+      try {
+        const previousNativeTime =
+          typeof this.lastNativeCurrentTime === 'number' ? this.lastNativeCurrentTime : null
+        const data = await AbsAudioPlayer.getCurrentTime()
+        if (!data) return
+
+        const rawCurrentTime = typeof data.value === 'number' ? data.value : null
+
+        if (rawCurrentTime !== null) {
+          this.lastNativeCurrentTime = rawCurrentTime
+          this.currentTime = Number(rawCurrentTime.toFixed(2))
+        }
+        if (typeof data.bufferedTime === 'number') {
+          this.bufferedTime = Number(data.bufferedTime.toFixed(2))
+        }
+
+        if (this.$refs.playedTrack) {
+          this.timeupdate()
+        } else {
+          this.updateTimestamp()
+        }
+
+        const observedChange =
+          previousNativeTime !== null && rawCurrentTime !== null ? rawCurrentTime - previousNativeTime : 0
+        const resumedProgress = observedChange > 0.25
+
+        let nativePlaybackState = resumedProgress ? true : null
+        if (!resumedProgress && !this.isPlaying && !this.$store.state.playerIsPlaying) {
+          nativePlaybackState = await this.determineNativePlaybackState(rawCurrentTime)
+        }
+
+        if (nativePlaybackState === true) {
+          this.isPlaying = true
+          if (!this.$store.state.playerIsPlaying) {
+            this.$store.commit('setPlayerPlaying', true)
+          }
+          this.startPlayInterval()
+        } else if (nativePlaybackState === false) {
+          this.isPlaying = false
+          if (this.$store.state.playerIsPlaying) {
+            this.$store.commit('setPlayerPlaying', false)
+          }
+          this.stopPlayInterval()
+        } else {
+          if (observedChange > 0.05) {
+            this.isPlaying = true
+            if (!this.$store.state.playerIsPlaying) {
+              this.$store.commit('setPlayerPlaying', true)
+            }
+            this.startPlayInterval()
+          } else {
+            this.maybeRestartPolling()
+          }
+        }
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to refresh playback position', error)
+      }
+    },
+    maybeRestartPolling() {
+      if (this.$platform === 'web') return
+      if (!this.isPlaying && !this.$store.state.playerIsPlaying) return
+      this.startPlayInterval()
+    },
+    async determineNativePlaybackState(baselineTime) {
+      if (this.$platform === 'web') return null
+      if (typeof baselineTime !== 'number') return null
+      if (typeof AbsAudioPlayer?.getCurrentTime !== 'function') return null
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 750))
+        if (!this.playbackSession) return null
+        const followUp = await AbsAudioPlayer.getCurrentTime()
+        if (!followUp || typeof followUp.value !== 'number') return null
+        const followUpTime = followUp.value
+        return followUpTime - baselineTime > 0.1
+      } catch (error) {
+        console.error('[AudioPlayer] Failed to evaluate native playback state', error)
+        return null
+      }
     }
   },
   mounted() {
@@ -963,11 +1118,23 @@ export default {
     }
     window.addEventListener('resize', this.screenOrientationChange)
 
+    this.registerAppStateListener()
+
     this.$eventBus.$on('minimize-player', this.minimizePlayerEvt)
     document.body.addEventListener('touchstart', this.touchstart, { passive: false })
     document.body.addEventListener('touchend', this.touchend)
     document.body.addEventListener('touchmove', this.touchmove)
-    this.$nextTick(this.init)
+    this.$nextTick(async () => {
+      await this.init()
+      const saved = this.$store.state.currentPlaybackSession
+      if (saved) {
+        this.onPlaybackSession(saved, { isLoading: false })
+        await this.refreshCurrentPlaybackPosition()
+        if (this.$store.state.playerIsPlaying) {
+          this.startPlayInterval()
+        }
+      }
+    })
   },
   beforeDestroy() {
     if (screen.orientation) {
@@ -993,6 +1160,10 @@ export default {
       AbsAudioPlayer.removeAllListeners()
     }
     clearInterval(this.playInterval)
+    if (this.appStateListener?.remove) {
+      this.appStateListener.remove()
+      this.appStateListener = null
+    }
   }
 }
 </script>

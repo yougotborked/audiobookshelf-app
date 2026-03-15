@@ -98,6 +98,9 @@ export default {
           }
         })
         .sort((a, b) => (a.isItemIncluded ? -1 : 1))
+    },
+    networkConnected() {
+      return this.$store.state.networkConnected
     }
   },
   methods: {
@@ -107,12 +110,18 @@ export default {
       }
       return playlist.items.some((i) => i.libraryItemId === item.libraryItem.id)
     },
-    loadPlaylists() {
+    async loadPlaylists() {
       this.loading = true
+      if (!this.networkConnected) {
+        this.playlists = await this.$localStore.getCachedPlaylists(this.currentLibraryId)
+        this.loading = false
+        return
+      }
       this.$nativeHttp
         .get(`/api/libraries/${this.currentLibraryId}/playlists`)
         .then((data) => {
           this.playlists = data.results || []
+          this.$localStore.setCachedPlaylists(this.currentLibraryId, this.playlists)
         })
         .catch((error) => {
           console.error('Failed', error)
@@ -202,18 +211,25 @@ export default {
     playlistAdded(playlist) {
       if (!this.playlists.some((p) => p.id === playlist.id)) {
         this.playlists.push(playlist)
+        this.$localStore.setCachedPlaylist(playlist)
+        this.$localStore.setCachedPlaylists(this.currentLibraryId, this.playlists)
       }
     },
     playlistUpdated(playlist) {
       const index = this.playlists.findIndex((p) => p.id === playlist.id)
       if (index >= 0) {
         this.playlists.splice(index, 1, playlist)
+        this.$localStore.setCachedPlaylist(playlist)
       } else {
         this.playlists.push(playlist)
+        this.$localStore.setCachedPlaylist(playlist)
       }
+      this.$localStore.setCachedPlaylists(this.currentLibraryId, this.playlists)
     },
     playlistRemoved(playlist) {
       this.playlists = this.playlists.filter((p) => p.id !== playlist.id)
+      this.$localStore.removeCachedPlaylist(playlist.id)
+      this.$localStore.setCachedPlaylists(this.currentLibraryId, this.playlists)
     },
     setListeners() {
       this.$socket.$on('playlist_added', this.playlistAdded)

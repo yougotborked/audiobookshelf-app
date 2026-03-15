@@ -31,7 +31,9 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "decreaseSleepTime", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "increaseSleepTime", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSleepTimerTime", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setSleepTimer", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setSleepTimer", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getIsCastAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getIsCastSupported", returnType: CAPPluginReturnPromise)
     ]
 
     private var initialPlayWhenReady = false
@@ -47,6 +49,8 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
         NotificationCenter.default.addObserver(self, selector: #selector(sendSleepTimerEnded), name: NSNotification.Name(PlayerEvents.sleepEnded.rawValue), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onPlaybackFailed), name: NSNotification.Name(PlayerEvents.failed.rawValue), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onLocalMediaProgressUpdate), name: NSNotification.Name(PlayerEvents.localProgress.rawValue), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(sendSkipNextRequest), name: NSNotification.Name(PlayerEvents.skipNextRequest.rawValue), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(sendSkipPreviousRequest), name: NSNotification.Name(PlayerEvents.skipPreviousRequest.rawValue), object: nil)
 
         self.bridge?.webView?.allowsBackForwardNavigationGestures = true;
         self.bridge?.webView?.scrollView.alwaysBounceVertical = false;
@@ -61,6 +65,14 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
     @objc func onReady(_ call: CAPPluginCall) {
         // TODO: Was used to notify when Abs UI was ready so that last played media could be opened - this was buggy and removed
         call.resolve()
+    }
+
+    @objc func getIsCastAvailable(_ call: CAPPluginCall) {
+        call.resolve(["value": false])
+    }
+
+    @objc func getIsCastSupported(_ call: CAPPluginCall) {
+        call.resolve(["value": false])
     }
 
     @objc func startPlaybackSession(_ session: PlaybackSession, playWhenReady: Bool, playbackRate: Float) throws {
@@ -257,6 +269,14 @@ public class AbsAudioPlayer: CAPPlugin, CAPBridgedPlugin {
         self.notifyListeners("onSleepTimerSet", data: [
             "value": PlayerHandler.getSleepTimeRemaining() ?? 0
         ])
+    }
+
+    @objc func sendSkipNextRequest() {
+        self.notifyListeners("onSkipNextRequest", data: [:])
+    }
+
+    @objc func sendSkipPreviousRequest() {
+        self.notifyListeners("onSkipPreviousRequest", data: [:])
     }
 
     @objc func onLocalMediaProgressUpdate() {

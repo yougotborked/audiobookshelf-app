@@ -21,7 +21,14 @@
       <widgets-download-progress-indicator />
 
       <!-- Must be connected to a server to cast, only supports media items on server -->
-      <button type="button" aria-label="Cast" v-show="isCastAvailable && user" class="mx-2 cursor-pointer flex items-center" @click="castClick">
+      <button
+        v-if="user && (castEnabled || isCasting)"
+        type="button"
+        aria-label="Cast"
+        class="mx-2 cursor-pointer flex items-center"
+        :class="{ 'opacity-60': !isCastAvailable && !isCasting }"
+        @click="castClick"
+      >
         <span class="material-symbols text-2xl leading-none">
           {{ isCasting ? 'cast_connected' : 'cast' }}
         </span>
@@ -44,7 +51,8 @@ import { AbsAudioPlayer } from '@/plugins/capacitor'
 export default {
   data() {
     return {
-      onCastAvailableUpdateListener: null
+      onCastAvailableUpdateListener: null,
+      onCastSupportUpdateListener: null
     }
   },
   computed: {
@@ -54,6 +62,14 @@ export default {
       },
       set(val) {
         this.$store.commit('setCastAvailable', val)
+      }
+    },
+    castEnabled: {
+      get() {
+        return this.$store.state.isCastEnabled
+      },
+      set(val) {
+        this.$store.commit('setCastEnabled', val)
       }
     },
     currentLibrary() {
@@ -98,16 +114,24 @@ export default {
     },
     onCastAvailableUpdate(data) {
       this.isCastAvailable = data && data.value
+    },
+    onCastSupportUpdate(data) {
+      this.castEnabled = data && data.value
     }
   },
   async mounted() {
     AbsAudioPlayer.getIsCastAvailable().then((data) => {
       this.isCastAvailable = data && data.value
     })
+    AbsAudioPlayer.getIsCastSupported?.().then?.((data) => {
+      this.castEnabled = data && data.value
+    })
     this.onCastAvailableUpdateListener = await AbsAudioPlayer.addListener('onCastAvailableUpdate', this.onCastAvailableUpdate)
+    this.onCastSupportUpdateListener = await AbsAudioPlayer.addListener('onCastSupportUpdate', this.onCastSupportUpdate)
   },
   beforeDestroy() {
     this.onCastAvailableUpdateListener?.remove()
+    this.onCastSupportUpdateListener?.remove()
   }
 }
 </script>

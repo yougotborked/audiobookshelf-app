@@ -1,0 +1,69 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Nuxt: dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [{ "regexp": ".+", "file": 1, "location": 2, "message": 3 }],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*Starting development server.*|.*VITE.*",
+            "endsPattern": ".*Local:.*http://.*:3000.*|.*ready in.*"
+          }
+        }
+      ]
+    },
+    {
+      "label": "App: generate web",
+      "type": "shell",
+      "command": "npm run generate"
+    },
+    {
+      "label": "Capacitor: sync",
+      "type": "shell",
+      "command": "npx cap sync"
+    },
+    {
+      "label": "Android: assemble Debug",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["assembleDebug"],
+      "options": {
+        "cwd": "${workspaceFolder}/android"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "windows": {
+        "command": "gradlew.bat",
+        "args": ["assembleDebug"]
+      }
+    },
+    {
+      "label": "Android: bundle Release",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["bundleRelease"],
+      "options": {
+        "cwd": "${workspaceFolder}/android"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "windows": {
+        "command": "gradlew.bat",
+        "args": ["bundleRelease"]
+      }
+    }
+  ]
+}

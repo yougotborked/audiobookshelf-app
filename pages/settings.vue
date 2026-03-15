@@ -67,6 +67,18 @@
       </div>
       <p class="pl-4">{{ $strings.LabelAllowSeekingOnMediaControls }}</p>
     </div>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleAutoContinuePlaylists">
+        <ui-toggle-switch v-model="settings.autoContinuePlaylists" @input="saveSettings" />
+      </div>
+      <p class="pl-4">{{ $strings.LabelAutoContinuePlaylists }}</p>
+    </div>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleAutoCacheUnplayedEpisodes">
+        <ui-toggle-switch v-model="settings.autoCacheUnplayedEpisodes" @input="saveSettings" />
+      </div>
+      <p class="pl-4">{{ $strings.LabelAutoCacheUnplayedEpisodes }}</p>
+    </div>
 
     <!-- Sleep timer settings -->
     <template v-if="!isiOS">
@@ -217,6 +229,8 @@ export default {
         disableSleepTimerFadeOut: false,
         disableSleepTimerResetFeedback: false,
         enableSleepTimerAlmostDoneChime: false,
+        autoContinuePlaylists: false,
+        autoCacheUnplayedEpisodes: false,
         autoSleepTimerAutoRewind: false,
         autoSleepTimerAutoRewindTime: 300000, // 5 minutes
         languageCode: 'en-us',
@@ -611,6 +625,14 @@ export default {
       this.settings.allowSeekingOnMediaControls = !this.settings.allowSeekingOnMediaControls
       this.saveSettings()
     },
+    toggleAutoContinuePlaylists() {
+      this.settings.autoContinuePlaylists = !this.settings.autoContinuePlaylists
+      this.saveSettings()
+    },
+    toggleAutoCacheUnplayedEpisodes() {
+      this.settings.autoCacheUnplayedEpisodes = !this.settings.autoCacheUnplayedEpisodes
+      this.saveSettings()
+    },
     getCurrentOrientation() {
       const orientation = window.screen?.orientation || {}
       const type = orientation.type || ''
@@ -661,6 +683,8 @@ export default {
       this.settings.disableSleepTimerResetFeedback = !!deviceSettings.disableSleepTimerResetFeedback
       this.settings.enableSleepTimerAlmostDoneChime = !!deviceSettings.enableSleepTimerAlmostDoneChime
 
+      this.settings.autoContinuePlaylists = !!deviceSettings.autoContinuePlaylists
+      this.settings.autoCacheUnplayedEpisodes = !!deviceSettings.autoCacheUnplayedEpisodes
       this.settings.autoSleepTimerAutoRewind = !!deviceSettings.autoSleepTimerAutoRewind
       this.settings.autoSleepTimerAutoRewindTime = !isNaN(deviceSettings.autoSleepTimerAutoRewindTime) ? deviceSettings.autoSleepTimerAutoRewindTime : 300000 // 5 minutes
 

@@ -7,11 +7,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.*
 import android.os.*
-import android.provider.MediaStore
 import android.provider.Settings
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -87,6 +87,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     fun onNetworkMeteredChanged(isUnmetered: Boolean)
     fun onMediaItemHistoryUpdated(mediaItemHistory: MediaItemHistory)
     fun onPlaybackSpeedChanged(playbackSpeed: Float)
+    fun onSkipNextRequest()
+    fun onSkipPreviousRequest()
+    fun onQueueIndexUpdate(index: Int)
   }
   private val binder = LocalBinder()
 
@@ -115,6 +118,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
   var currentPlaybackSession: PlaybackSession? = null
   private var initialPlaybackRate: Float? = null
+
+  private var playQueue: MutableList<PlayQueueItem> = mutableListOf()
+  private var queueIndex: Int = 0
 
   private var isAndroidAuto = false
 
@@ -206,8 +212,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   override fun onTaskRemoved(rootIntent: Intent?) {
     super.onTaskRemoved(rootIntent)
     Log.d(tag, "onTaskRemoved")
-
-    stopSelf()
+    if (isClosed) stopSelf()
   }
 
   override fun onCreate() {
@@ -260,11 +265,16 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               PendingIntent.getActivity(this, 0, sessionIntent, PendingIntent.FLAG_IMMUTABLE)
             }
 
-    mediaSession =
-            MediaSessionCompat(this, tag).apply {
-              setSessionActivity(sessionActivityPendingIntent)
-              isActive = true
-            }
+      mediaSession =
+              MediaSessionCompat(this, tag).apply {
+                setSessionActivity(sessionActivityPendingIntent)
+                setFlags(
+                  MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
+                  MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+                )
+                setMediaButtonReceiver(null)
+                isActive = true
+              }
 
     val mediaController = MediaControllerCompat(ctx, mediaSession.sessionToken)
 
@@ -279,12 +289,14 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     playerNotificationManager = builder.build()
     playerNotificationManager.setMediaSessionToken(mediaSession.sessionToken)
     playerNotificationManager.setUsePlayPauseActions(true)
-    playerNotificationManager.setUseNextAction(false)
-    playerNotificationManager.setUsePreviousAction(false)
+    playerNotificationManager.setUseNextAction(true)
+    playerNotificationManager.setUsePreviousAction(true)
     playerNotificationManager.setUseChronometer(false)
     playerNotificationManager.setUseStopAction(false)
     playerNotificationManager.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
     playerNotificationManager.setPriority(NotificationCompat.PRIORITY_MAX)
+    playerNotificationManager.setUseNextActionInCompactView(true)
+    playerNotificationManager.setUsePreviousActionInCompactView(true)
     playerNotificationManager.setUseFastForwardActionInCompactView(true)
     playerNotificationManager.setUseRewindActionInCompactView(true)
     playerNotificationManager.setSmallIcon(R.drawable.icon_monochrome)
@@ -319,16 +331,18 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                 // Local covers get bitmap
                 // Note: In Android Auto for local cover images, setting the icon uri to a local path does not work (cover is blank)
                 // so we create and set the bitmap here instead of AbMediaDescriptionAdapter
-                if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
-                  bitmap =
-                    if (Build.VERSION.SDK_INT < 28) {
-                      MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
-                    } else {
-                      val source: ImageDecoder.Source =
-                        ImageDecoder.createSource(ctx.contentResolver, coverUri)
-                      ImageDecoder.decodeBitmap(source)
-                    }
-                }
+                  if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
+                    bitmap =
+                      if (Build.VERSION.SDK_INT < 28) {
+                        ctx.contentResolver.openInputStream(coverUri)?.use { input ->
+                          BitmapFactory.decodeStream(input)
+                        }
+                      } else {
+                        val source: ImageDecoder.Source =
+                          ImageDecoder.createSource(ctx.contentResolver, coverUri)
+                        ImageDecoder.decodeBitmap(source)
+                      }
+                  }
 
                 // Fix for local images crashing on Android 11 for specific devices
                 // https://stackoverflow.com/questions/64186578/android-11-mediastyle-notification-crash/64232958#64232958
@@ -580,17 +594,16 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun setMediaSessionConnectorPlaybackActions() {
-    var playbackActions =
+    val playbackActions =
             PlaybackStateCompat.ACTION_PLAY_PAUSE or
                     PlaybackStateCompat.ACTION_PLAY or
                     PlaybackStateCompat.ACTION_PAUSE or
                     PlaybackStateCompat.ACTION_FAST_FORWARD or
                     PlaybackStateCompat.ACTION_REWIND or
-                    PlaybackStateCompat.ACTION_STOP
-
-    if (deviceSettings.allowSeekingOnMediaControls) {
-      playbackActions = playbackActions or PlaybackStateCompat.ACTION_SEEK_TO
-    }
+                    PlaybackStateCompat.ACTION_STOP or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                    PlaybackStateCompat.ACTION_SEEK_TO
     mediaSessionConnector.setEnabledPlaybackActions(playbackActions)
   }
 
@@ -622,13 +635,14 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
   fun handlePlaybackEnded() {
     Log.d(tag, "handlePlaybackEnded")
-    if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
-      Log.d(tag, "Podcast playback ended on android auto")
-      val libraryItem = currentPlaybackSession?.libraryItem ?: return
+    val afterSync = afterSync@{
+      if (queueIndex + 1 < playQueue.size) {
+        playNextInQueue()
+      } else if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
+        Log.d(tag, "Podcast playback ended on android auto")
+        val libraryItem = currentPlaybackSession?.libraryItem ?: return@afterSync
 
-      // Need to sync with server to set as finished
-      mediaProgressSyncer.finished {
-        // Need to reload media progress
+        // Need to reload media progress then start next episode
         mediaManager.loadServerUserMediaProgress {
           val podcast = libraryItem.media as Podcast
           val nextEpisode = podcast.getNextUnfinishedEpisode(libraryItem.id, mediaManager)
@@ -646,6 +660,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
         }
       }
     }
+
+    // Always send a final progress sync when playback ends so the next item can
+    // start with the most up-to-date progress.
+    mediaProgressSyncer.finished(afterSync)
   }
 
   fun startNewPlaybackSession() {
@@ -932,6 +950,15 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       Log.d(tag, "Already playing")
       return
     }
+
+    if ((currentPlayer.playbackState == Player.STATE_IDLE || currentPlayer.mediaItemCount == 0) &&
+            currentPlaybackSession != null
+    ) {
+      Log.i(tag, "play: player is idle/unprepared, re-preparing current playback session")
+      preparePlayer(currentPlaybackSession!!.clone(), true, mediaManager.getSavedPlaybackRate())
+      return
+    }
+
     currentPlayer.volume = 1F
     currentPlayer.play()
   }
@@ -972,13 +999,25 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
   }
 
-  fun skipToPrevious() {
-    currentPlayer.seekToPrevious()
-  }
+    fun skipToPrevious() {
+      if (currentPlayer.hasPreviousMediaItem()) {
+        currentPlayer.seekToPrevious()
+      } else if (queueIndex > 0) {
+        playPreviousInQueue()
+      } else {
+        clientEventEmitter?.onSkipPreviousRequest()
+      }
+    }
 
-  fun skipToNext() {
-    currentPlayer.seekToNext()
-  }
+    fun skipToNext() {
+      if (currentPlayer.hasNextMediaItem()) {
+        currentPlayer.seekToNext()
+      } else if (queueIndex + 1 < playQueue.size) {
+        playNextInQueue()
+      } else {
+        clientEventEmitter?.onSkipNextRequest()
+      }
+    }
 
   fun jumpForward() {
     seekForward(deviceSettings.jumpForwardTimeMs)
@@ -1002,6 +1041,69 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     // Refresh Android Auto actions
     mediaProgressSyncer.currentPlaybackSession?.let { setMediaSessionConnectorCustomActions(it) }
+  }
+
+  fun setPlayQueue(queue: MutableList<PlayQueueItem>, index: Int) {
+    playQueue = queue
+    queueIndex = index
+    val queueSummary = playQueue.take(5).map { item ->
+      "${item.libraryItemId}:${item.episodeId ?: ""}"
+    }
+    AbsLogger.info(
+      tag,
+      "setPlayQueue: size=${playQueue.size} index=$queueIndex sample=${queueSummary.joinToString()}"
+    )
+  }
+
+  private fun playQueueIndex(idx: Int) {
+    if (idx < 0 || idx >= playQueue.size) return
+    queueIndex = idx
+    AbsLogger.info(tag, "playQueueIndex: moving to $queueIndex of ${playQueue.size}")
+    val item = playQueue[idx]
+    val playbackRate = currentPlayer.playbackParameters.speed
+    if (item.libraryItemId.startsWith("local")) {
+      DeviceManager.dbManager.getLocalLibraryItem(item.libraryItemId)?.let { localItem ->
+        var episode: PodcastEpisode? = null
+        if (!item.episodeId.isNullOrEmpty()) {
+          val podcastMedia = localItem.media as Podcast
+          episode = podcastMedia.episodes?.find { it.id == item.episodeId }
+        }
+        if (!localItem.hasTracks(episode)) {
+          clientEventEmitter?.onPlaybackFailed("No audio files found on device. Download book again to fix.")
+        } else {
+          mediaProgressSyncer.reset()
+          Handler(Looper.getMainLooper()).post {
+            val playbackSession = localItem.getPlaybackSession(episode, getDeviceInfo())
+            preparePlayer(playbackSession, true, playbackRate)
+          }
+        }
+      }
+    } else {
+      val playItemRequestPayload = getPlayItemRequestPayload(false)
+      mediaProgressSyncer.stop(false) {
+        apiHandler.playLibraryItem(item.libraryItemId, item.episodeId ?: "", playItemRequestPayload) {
+          if (it != null) {
+            Handler(Looper.getMainLooper()).post { preparePlayer(it, true, playbackRate) }
+          } else {
+            clientEventEmitter?.onPlaybackFailed("Server play request failed")
+          }
+        }
+      }
+    }
+  }
+
+  private fun playNextInQueue() {
+    if (queueIndex + 1 < playQueue.size) {
+      playQueueIndex(queueIndex + 1)
+      clientEventEmitter?.onQueueIndexUpdate(queueIndex)
+    }
+  }
+
+  private fun playPreviousInQueue() {
+    if (queueIndex - 1 >= 0) {
+      playQueueIndex(queueIndex - 1)
+      clientEventEmitter?.onQueueIndexUpdate(queueIndex)
+    }
   }
 
   fun closePlayback(calledOnError: Boolean? = false) {

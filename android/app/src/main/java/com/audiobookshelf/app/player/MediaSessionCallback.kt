@@ -199,6 +199,14 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
             Log.d(tag, "handleCallMediaButton: Media Rewind")
             playerNotificationService.jumpBackward()
           }
+          KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD -> {
+            Log.d(tag, "handleCallMediaButton: Media Skip Forward")
+            playerNotificationService.skipToNext()
+          }
+          KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD -> {
+            Log.d(tag, "handleCallMediaButton: Media Skip Backward")
+            playerNotificationService.skipToPrevious()
+          }
         }
       }
 
@@ -228,10 +236,16 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
             handleMediaButtonClickCount()
           }
           KeyEvent.KEYCODE_MEDIA_NEXT -> {
-            playerNotificationService.jumpForward()
+            playerNotificationService.skipToNext()
           }
           KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
-            playerNotificationService.jumpBackward()
+            playerNotificationService.skipToPrevious()
+          }
+          KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD -> {
+            playerNotificationService.skipToNext()
+          }
+          KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD -> {
+            playerNotificationService.skipToPrevious()
           }
           KeyEvent.KEYCODE_MEDIA_STOP -> {
             playerNotificationService.closePlayback()
@@ -257,8 +271,8 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
   }
 
 
-  private val mediaBtnHandler : Handler = @SuppressLint("HandlerLeak")
-  object : Handler(){
+    private val mediaBtnHandler : Handler = @SuppressLint("HandlerLeak")
+    object : Handler(Looper.getMainLooper()){
     override fun handleMessage(msg: Message) {
       super.handleMessage(msg)
       if (2 == msg.what) {

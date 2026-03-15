@@ -18,6 +18,37 @@ class AbsAudioPlayerWeb extends WebPlugin {
     this.audioTracks = []
     this.startTime = 0
     this.trackStartTime = 0
+
+    this.castAvailable = false
+    this.castSupported = false
+
+    if (typeof window !== 'undefined') {
+      // Called by the cast framework once it loads
+      window.__onGCastApiAvailable = (isAvailable) => {
+        this.castSupported = !!isAvailable && !!(window.chrome?.cast || window.cast?.framework)
+        this.castAvailable =
+          this.castSupported &&
+          !!(window.chrome?.cast?.isAvailable || window.cast?.framework)
+        this.notifyListeners('onCastSupportUpdate', {
+          value: this.castSupported
+        })
+        this.notifyListeners('onCastAvailableUpdate', {
+          value: this.castAvailable
+        })
+      }
+
+      // Check immediately in case the API is already available
+      this.castSupported = !!(window.chrome?.cast || window.cast?.framework)
+      this.castAvailable = !!(
+        window.chrome?.cast?.isAvailable || window.cast?.framework
+      )
+      this.notifyListeners('onCastSupportUpdate', {
+        value: this.castSupported
+      })
+      this.notifyListeners('onCastAvailableUpdate', {
+        value: this.castAvailable
+      })
+    }
   }
 
   // Use startTime to find current track index
@@ -58,7 +89,7 @@ class AbsAudioPlayerWeb extends WebPlugin {
   }
 
   // PluginMethod
-  async prepareLibraryItem({ libraryItemId, episodeId, playWhenReady, startTime, playbackRate }) {
+  async prepareLibraryItem({ libraryItemId, episodeId, playWhenReady, startTime, playbackRate, queue, queueIndex }) {
     console.log('[AbsAudioPlayer] Prepare library item', libraryItemId)
 
     if (!isNaN(playbackRate) && playbackRate) this.playbackRate = playbackRate
@@ -82,6 +113,12 @@ class AbsAudioPlayerWeb extends WebPlugin {
       }
     }
     return false
+  }
+
+  // PluginMethod
+  setPlayQueue({ queue, queueIndex }) {
+    this.queue = queue
+    this.queueIndex = queueIndex
   }
 
   // PluginMethod
@@ -168,7 +205,12 @@ class AbsAudioPlayerWeb extends WebPlugin {
 
   // PluginMethod
   async getIsCastAvailable() {
-    return false
+    return { value: this.castAvailable }
+  }
+
+  // PluginMethod
+  async getIsCastSupported() {
+    return { value: this.castSupported }
   }
 
   initializePlayer() {
@@ -234,7 +276,19 @@ class AbsAudioPlayerWeb extends WebPlugin {
       this.player.play()
     }
   }
-  evtTimeupdate() {}
+  evtTimeupdate() {
+    if (!this.player) return
+    let buffered = 0
+    try {
+      if (this.player.buffered && this.player.buffered.length) {
+        buffered = this.player.buffered.end(0)
+      }
+    } catch (e) {}
+    this.notifyListeners('onTimeUpdate', {
+      currentTime: this.overallCurrentTime,
+      bufferedTime: buffered
+    })
+  }
 
   sendPlaybackMetadata(playerState) {
     this.notifyListeners('onMetadata', {

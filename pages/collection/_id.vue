@@ -34,25 +34,51 @@
 <script>
 export default {
   async asyncData({ store, params, app, redirect, route }) {
-    if (!store.state.user.user) {
-      return redirect(`/connect?redirect=${route.path}`)
+    if (!store.state.user.user && !store.state.networkConnected) {
+      const cachedOfflineCollection = await app.$localStore.getCachedCollection(params.id)
+      if (cachedOfflineCollection) {
+        return { collection: cachedOfflineCollection, loadedFromCache: true }
+      }
+      return redirect('/bookshelf')
     }
 
-    var collection = await app.$nativeHttp.get(`/api/collections/${params.id}`).catch((error) => {
-      console.error('Failed', error)
-      return false
-    })
+    const isNetworkAvailable = store.state.networkConnected && !!store.state.user.user
+    let collection = null
+    let loadedFromCache = false
+
+    if (isNetworkAvailable) {
+      collection = await app.$nativeHttp.get(`/api/collections/${params.id}`).catch((error) => {
+        console.error('Failed to fetch collection', error)
+        return null
+      })
+
+      if (collection) {
+        await app.$localStore.setCachedCollection(collection)
+      }
+    }
 
     if (!collection) {
-      return redirect('/bookshelf')
+      collection = await app.$localStore.getCachedCollection(params.id)
+      loadedFromCache = !!collection
+    }
+
+    if (!collection) {
+      return redirect(store.state.networkConnected ? '/bookshelf' : '/bookshelf?error=offlineCollectionUnavailable')
     }
 
     // Lookup matching local items and attach to collection items
     if (collection.books.length) {
       const localLibraryItems = (await app.$db.getLocalLibraryItems('book')) || []
       if (localLibraryItems.length) {
+        const localLibraryItemMap = new Map()
+        localLibraryItems.forEach((item) => {
+          if (item?.libraryItemId) {
+            localLibraryItemMap.set(item.libraryItemId, item)
+          }
+        })
+
         collection.books.forEach((collectionItem) => {
-          const matchingLocalLibraryItem = localLibraryItems.find((lli) => lli.libraryItemId === collectionItem.id)
+          const matchingLocalLibraryItem = localLibraryItemMap.get(collectionItem.id)
           if (!matchingLocalLibraryItem) return
           collectionItem.localLibraryItem = matchingLocalLibraryItem
         })
@@ -60,13 +86,15 @@ export default {
     }
 
     return {
-      collection
+      collection,
+      loadedFromCache
     }
   },
   data() {
     return {
       mediaIdStartingPlayback: null,
-      processingRemove: false
+      processingRemove: false,
+      loadedFromCache: false
     }
   },
   computed: {
@@ -96,6 +124,9 @@ export default {
         return this.$store.getters['getIsMediaStreaming'](i.id)
       })
     },
+    autoContinuePlaylists() {
+      return this.$store.state.deviceData?.deviceSettings?.autoContinuePlaylists
+    },
     playerIsStartingPlayback() {
       // Play has been pressed and waiting for native play response
       return this.$store.state.playerIsStartingPlayback
@@ -121,7 +152,12 @@ export default {
       }
     },
     playNextItem() {
-      const nextBookNotRead = this.playableItems.find((pb) => {
+      const nowIndex = this.playableItems.findIndex((i) => {
+        return this.$store.getters['getIsMediaStreaming'](
+          i.localLibraryItem?.id || i.id
+        )
+      })
+      const nextBookNotRead = this.playableItems.slice(nowIndex + 1).find((pb) => {
         const prog = this.$store.getters['user/getUserMediaProgress'](pb.id)
         return !prog?.isFinished
       })
@@ -135,8 +171,18 @@ export default {
           this.$eventBus.$emit('play-item', { libraryItemId: nextBookNotRead.id })
         }
       }
+    },
+    onPlaybackEnded() {
+      if (this.autoContinuePlaylists) {
+        this.playNextItem()
+      }
     }
   },
-  mounted() {}
+  mounted() {
+    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+  },
+  beforeDestroy() {
+    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
+  }
 }
 </script>

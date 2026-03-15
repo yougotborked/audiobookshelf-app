@@ -1,6 +1,7 @@
 package com.audiobookshelf.app.player
 
 import android.annotation.SuppressLint
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import kotlin.math.roundToInt
@@ -10,6 +11,8 @@ import android.view.SurfaceView
 import android.view.TextureView
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.C.TrackType
+import com.google.android.exoplayer2.DeviceInfo
+import com.google.android.exoplayer2.DeviceInfo.*
 import com.google.android.exoplayer2.MediaMetadata
 import com.google.android.exoplayer2.Player.*
 import com.google.android.exoplayer2.Tracks.Group
@@ -32,6 +35,7 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.api.PendingResult
 import com.google.android.gms.common.api.ResultCallback
 import org.json.JSONObject
+import kotlin.math.roundToInt
 
 
 class CastPlayer(var castContext: CastContext) : BasePlayer() {
@@ -65,6 +69,12 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   val timelineTracker: CastTimelineTracker
   val period: Timeline.Period
   var listeners: ListenerSet<Player.Listener>
+  private val mainHandler = Handler(Looper.getMainLooper())
+  // DeviceInfo.Builder is not available in the ExoPlayer version used by this project (2.18.x).
+  // Use the UNKNOWN sentinel as a safe default; when a cast session exists we return a
+  // remote-specific DeviceInfo elsewhere (see getDeviceInfo()).
+  private val remoteDeviceInfo = com.google.android.exoplayer2.DeviceInfo.UNKNOWN
+  private val volumeStep = 0.05
 
   /* package */
   val PERMANENT_AVAILABLE_COMMANDS = Commands.Builder()
@@ -119,6 +129,43 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     sessionManager.addSessionManagerListener(statusListener, CastSession::class.java)
     val session = sessionManager.currentCastSession
     setRemoteMediaClient(session?.remoteMediaClient)
+  }
+
+  private fun currentCastSession(): CastSession? {
+    return castContext.sessionManager.currentCastSession
+  }
+
+  private fun setRemoteVolume(session: CastSession, targetVolume: Double) {
+    val clamped = targetVolume.coerceIn(0.0, 1.0)
+    mainHandler.post {
+      try {
+        session.setVolume(clamped)
+      } catch (e: Exception) {
+        Log.e(tag, "Failed to set cast volume", e)
+      }
+    }
+  }
+
+  private fun adjustRemoteVolume(delta: Double) {
+    val session = currentCastSession() ?: return
+    mainHandler.post {
+      try {
+        val updated = (session.volume + delta).coerceIn(0.0, 1.0)
+        session.setVolume(updated)
+      } catch (e: Exception) {
+        Log.e(tag, "Failed to adjust cast volume", e)
+      }
+    }
+  }
+
+  private fun setRemoteMute(session: CastSession, muted: Boolean) {
+    mainHandler.post {
+      try {
+        session.setMute(muted)
+      } catch (e: Exception) {
+        Log.e(tag, "Failed to set cast mute", e)
+      }
+    }
   }
 
   fun load(mediaItems:List<MediaItem>, startIndex:Int, startTime:Long, playWhenReady:Boolean, playbackRate:Float, mediaType:String) {
@@ -732,9 +779,10 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     remoteMediaClient?.stop()
   }
 
-  override fun stop(reset: Boolean) {
-    stop()
-  }
+    @Deprecated("Deprecated in Player")
+    override fun stop(reset: Boolean) {
+      stop()
+    }
 
   override fun release() {
     val sessionManager = castContext.sessionManager
@@ -864,8 +912,8 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
     return CueGroup.EMPTY_TIME_ZERO
   }
 
-  override fun getDeviceInfo(): DeviceInfo {
-    return DeviceInfo.UNKNOWN
+  override fun getDeviceInfo(): com.google.android.exoplayer2.DeviceInfo {
+    return if (currentCastSession() != null) remoteDeviceInfo else com.google.android.exoplayer2.DeviceInfo.UNKNOWN
   }
 
   override fun getDeviceVolume(): Int {

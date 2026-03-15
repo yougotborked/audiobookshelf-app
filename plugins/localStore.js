@@ -15,7 +15,7 @@ class LocalStorage {
 
   async getUserSettings() {
     try {
-      const settingsObj = await Preferences.get({ key: 'userSettings' }) || {}
+      const settingsObj = (await Preferences.get({ key: 'userSettings' })) || {}
       return settingsObj.value ? JSON.parse(settingsObj.value) : null
     } catch (error) {
       console.error('[LocalStorage] Failed to get user settings', error)
@@ -34,7 +34,7 @@ class LocalStorage {
 
   async getServerSettings() {
     try {
-      var settingsObj = await Preferences.get({ key: 'serverSettings' }) || {}
+      var settingsObj = (await Preferences.get({ key: 'serverSettings' })) || {}
       return settingsObj.value ? JSON.parse(settingsObj.value) : null
     } catch (error) {
       console.error('[LocalStorage] Failed to get server settings', error)
@@ -52,7 +52,7 @@ class LocalStorage {
 
   async getPlayerSettings() {
     try {
-      const playerSettingsObj = await Preferences.get({ key: 'playerSettings' }) || {}
+      const playerSettingsObj = (await Preferences.get({ key: 'playerSettings' })) || {}
       return playerSettingsObj.value ? JSON.parse(playerSettingsObj.value) : null
     } catch (error) {
       console.error('[LocalStorage] Failed to get player settings', error)
@@ -70,7 +70,7 @@ class LocalStorage {
 
   async getBookshelfListView() {
     try {
-      var obj = await Preferences.get({ key: 'bookshelfListView' }) || {}
+      var obj = (await Preferences.get({ key: 'bookshelfListView' })) || {}
       return obj.value === '1'
     } catch (error) {
       console.error('[LocalStorage] Failed to get bookshelf list view', error)
@@ -98,7 +98,7 @@ class LocalStorage {
 
   async getLastLibraryId() {
     try {
-      var obj = await Preferences.get({ key: 'lastLibraryId' }) || {}
+      var obj = (await Preferences.get({ key: 'lastLibraryId' })) || {}
       return obj.value || null
     } catch (error) {
       console.error('[LocalStorage] Failed to get last library id', error)
@@ -117,7 +117,7 @@ class LocalStorage {
 
   async getTheme() {
     try {
-      var obj = await Preferences.get({ key: 'theme' }) || {}
+      var obj = (await Preferences.get({ key: 'theme' })) || {}
       return obj.value || null
     } catch (error) {
       console.error('[LocalStorage] Failed to get theme', error)
@@ -136,7 +136,7 @@ class LocalStorage {
 
   async getLanguage() {
     try {
-      var obj = await Preferences.get({ key: 'lang' }) || {}
+      var obj = (await Preferences.get({ key: 'lang' })) || {}
       return obj.value || null
     } catch (error) {
       console.error('[LocalStorage] Failed to get lang', error)
@@ -144,15 +144,272 @@ class LocalStorage {
     }
   }
 
+  async setCachedPlaylist(playlist) {
+    try {
+      await Preferences.set({
+        key: `playlist_${playlist.id}`,
+        value: JSON.stringify(playlist)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache playlist', error)
+    }
+  }
+
+  async getCachedPlaylist(id) {
+    try {
+      const obj = (await Preferences.get({ key: `playlist_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached playlist', error)
+      return null
+    }
+  }
+
+  async removeCachedPlaylist(id) {
+    try {
+      await Preferences.remove({ key: `playlist_${id}` })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to remove cached playlist', error)
+    }
+  }
+
+  async setCachedCollection(collection) {
+    try {
+      if (!collection?.id) return
+      await Preferences.set({
+        key: `collection_${collection.id}`,
+        value: JSON.stringify(collection)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache collection', error)
+    }
+  }
+
+  async getCachedCollection(id) {
+    try {
+      const obj = (await Preferences.get({ key: `collection_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached collection', error)
+      return null
+    }
+  }
+
+  async setCachedSeries(series) {
+    try {
+      if (!series?.id) return
+      await Preferences.set({
+        key: `series_${series.id}`,
+        value: JSON.stringify(series)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache series', error)
+    }
+  }
+
+  async getCachedSeries(id) {
+    try {
+      const obj = (await Preferences.get({ key: `series_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached series', error)
+      return null
+    }
+  }
+
+  async setCachedPlaylists(libraryId, playlists) {
+    try {
+      await Preferences.set({
+        key: `playlists_${libraryId}`,
+        value: JSON.stringify(playlists)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache playlists', error)
+    }
+  }
+
+  async getCachedPlaylists(libraryId) {
+    try {
+      const obj = (await Preferences.get({ key: `playlists_${libraryId}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached playlists', error)
+      return []
+    }
+  }
+
+  async hasCachedPlaylists() {
+    try {
+      const { keys } = await Preferences.keys()
+      for (const key of keys || []) {
+        if (key.startsWith('playlists_')) {
+          const obj = await Preferences.get({ key })
+          const playlists = obj.value ? JSON.parse(obj.value) : []
+          if (Array.isArray(playlists) && playlists.length) return true
+        }
+      }
+    } catch (error) {
+      console.error('[LocalStorage] Failed to check cached playlists', error)
+    }
+    return false
+  }
+
+  async setCachedAuthors(libraryId, authors) {
+    try {
+      if (!libraryId) return
+      await Preferences.set({
+        key: `authors_${libraryId}`,
+        value: JSON.stringify(authors || [])
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache authors', error)
+    }
+  }
+
+  async getCachedAuthors(libraryId) {
+    try {
+      if (!libraryId) return []
+      const obj = (await Preferences.get({ key: `authors_${libraryId}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached authors', error)
+      return []
+    }
+  }
+
+  async setCachedLatestEpisodes(libraryId, episodes) {
+    try {
+      await Preferences.set({
+        key: `latest_${libraryId}`,
+        value: JSON.stringify(episodes)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache latest episodes', error)
+    }
+  }
+
+  async getCachedLatestEpisodes(libraryId) {
+    try {
+      const obj = (await Preferences.get({ key: `latest_${libraryId}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached latest episodes', error)
+      return []
+    }
+  }
+
+  async setEpisodeMetadata(libraryItemId, episodes) {
+    try {
+      await Preferences.set({
+        key: `epmeta_${libraryItemId}`,
+        value: JSON.stringify(episodes)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache episode metadata', error)
+    }
+  }
+
+  async getEpisodeMetadata(libraryItemId) {
+    try {
+      const obj = (await Preferences.get({ key: `epmeta_${libraryItemId}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get episode metadata', error)
+      return []
+    }
+  }
+
+  async setCachedLibraryItem(libraryItem) {
+    try {
+      if (!libraryItem?.id) return
+      await Preferences.set({
+        key: `libraryItem_${libraryItem.id}`,
+        value: JSON.stringify(libraryItem)
+      })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache library item', error)
+    }
+  }
+
+  async getCachedLibraryItem(id) {
+    try {
+      const obj = (await Preferences.get({ key: `libraryItem_${id}` })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached library item', error)
+      return null
+    }
+  }
+
+  async setPlayQueue(queue) {
+    try {
+      await Preferences.set({ key: 'playQueue', value: JSON.stringify(queue || []) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set play queue', error)
+    }
+  }
+
+  async getPlayQueue() {
+    try {
+      const obj = (await Preferences.get({ key: 'playQueue' })) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get play queue', error)
+      return []
+    }
+  }
+
+  async setQueueIndex(index) {
+    try {
+      await Preferences.set({ key: 'queueIndex', value: String(index) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set queue index', error)
+    }
+  }
+
+  async getQueueIndex() {
+    try {
+      const obj = (await Preferences.get({ key: 'queueIndex' })) || {}
+      if (!obj.value) return null
+      const num = Number(obj.value)
+      return isNaN(num) ? null : num
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get queue index', error)
+      return null
+    }
+  }
+
+  async setPlaybackSession(session) {
+    try {
+      if (session) {
+        await Preferences.set({ key: 'playbackSession', value: JSON.stringify(session) })
+      } else {
+        await Preferences.remove({ key: 'playbackSession' })
+      }
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set playback session', error)
+    }
+  }
+
+  async getPlaybackSession() {
+    try {
+      const obj = (await Preferences.get({ key: 'playbackSession' })) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get playback session', error)
+      return null
+    }
+  }
+
   /**
    * Get preference value by key
-   * 
-   * @param {string} key 
+   *
+   * @param {string} key
    * @returns {Promise<string>}
    */
   async getPreferenceByKey(key) {
     try {
-      const obj = await Preferences.get({ key }) || {}
+      const obj = (await Preferences.get({ key })) || {}
       return obj.value || null
     } catch (error) {
       console.error(`[LocalStorage] Failed to get preference "${key}"`, error)
@@ -160,7 +417,6 @@ class LocalStorage {
     }
   }
 }
-
 
 export default ({ app, store }, inject) => {
   inject('localStore', new LocalStorage(store))

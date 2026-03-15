@@ -104,6 +104,9 @@ export default {
     socketConnected() {
       return this.$store.state.socketConnected
     },
+    networkConnected() {
+      return this.$store.state.networkConnected
+    },
     libraryItemId() {
       return this.libraryItem?.id || null
     },
@@ -227,6 +230,11 @@ export default {
   },
   methods: {
     async clearDownloadQueue() {
+      if (!this.networkConnected) {
+        this.$toast.error(this.$strings.MessageNoNetworkConnection)
+        return
+      }
+
       const { value } = await Dialog.confirm({
         title: this.$strings.HeaderConfirm,
         message: this.$strings.MessageConfirmDeleteEpisodeDownloadQueue
@@ -237,7 +245,7 @@ export default {
           .get(`/api/podcasts/${this.libraryItemId}/clear-queue`)
           .then(() => {
             this.$toast.success('Episode download queue cleared')
-            this.episodeDownloadQueued = []
+            this.episodeDownloadsQueued = []
           })
           .catch((error) => {
             console.error('Failed to clear queue', error)
@@ -246,7 +254,7 @@ export default {
       }
     },
     async searchEpisodes() {
-      if (!this.socketConnected) {
+      if (!this.networkConnected || !this.socketConnected) {
         return this.$toast.error(this.$strings.MessageNoNetworkConnection)
       }
 

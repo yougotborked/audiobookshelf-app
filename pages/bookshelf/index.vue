@@ -237,6 +237,15 @@ export default {
 
       // Set local library items first
       this.localLibraryItems = await this.$db.getLocalLibraryItems()
+      const localLibraryItemsById = new Map()
+      this.localLibraryItems.forEach((item) => {
+        if (item?.libraryItemId) {
+          localLibraryItemsById.set(item.libraryItemId, item)
+        }
+      })
+
+      const types = [...new Set(this.localLibraryItems.map((li) => li.mediaType))]
+      this.$store.commit('libraries/setOfflineMediaTypes', types)
       const localCategories = this.getLocalMediaItemCategories()
       this.shelves = localCategories
       console.log('[categories] Local shelves set', this.shelves.length, this.lastLocalFetch)
@@ -260,9 +269,7 @@ export default {
           if (cat.type == 'book' || cat.type == 'podcast' || cat.type == 'episode') {
             // Map localLibraryItem to entities
             cat.entities = cat.entities.map((entity) => {
-              const localLibraryItem = this.localLibraryItems.find((lli) => {
-                return lli.libraryItemId == entity.id
-              })
+              const localLibraryItem = localLibraryItemsById.get(entity.id)
               if (localLibraryItem) {
                 entity.localLibraryItem = localLibraryItem
               }

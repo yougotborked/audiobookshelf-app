@@ -1,6 +1,12 @@
 import { CapacitorHttp } from '@capacitor/core'
 
 export default function ({ store, $db, $socket }, inject) {
+  const getSafeLogUrl = (url = '') => {
+    if (!url || typeof url !== 'string') return url
+    const queryStart = url.indexOf('?')
+    return queryStart === -1 ? url : url.slice(0, queryStart)
+  }
+
   const nativeHttp = {
     async request(method, _url, data, options = {}) {
       // When authorizing before a config is set, server config gets passed in as an option
@@ -27,26 +33,52 @@ export default function ({ store, $db, $socket }, inject) {
         headers = { ...headers, ...options.headers }
         delete options.headers
       }
-      console.log(`[nativeHttp] Making ${method} request to ${url}`)
+      console.log(`[nativeHttp] Making ${method} request to ${getSafeLogUrl(url)}`)
 
-      return CapacitorHttp.request({
-        method,
-        url,
-        data,
-        headers,
-        ...options
-      }).then((res) => {
+      try {
+        const res = await CapacitorHttp.request({
+          method,
+          url,
+          data,
+          headers,
+          ...options
+        })
+
+        store.commit('setServerReachable', true)
+
         if (res.status === 401) {
-          console.error(`[nativeHttp] 401 status for url "${url}"`)
+          console.error(`[nativeHttp] 401 status for url "${getSafeLogUrl(url)}"`)
           // Handle refresh token automatically
           return this.handleTokenRefresh(method, url, data, headers, options, serverConnectionConfig)
         }
         if (res.status >= 400) {
-          console.error(`[nativeHttp] ${res.status} status for url "${url}"`)
-          throw new Error(res.data)
+          console.error(`[nativeHttp] ${res.status} status for url "${getSafeLogUrl(url)}"`)
+          const error = new Error(res.data)
+          error.status = res.status
+          error.url = url
+          throw error
         }
         return res.data
-      })
+      } catch (error) {
+        const status = error?.status ?? error?.response?.status
+        const errorCode = (error?.code || '').toString().toUpperCase()
+        const message = (error?.message || '').toLowerCase()
+        const isLikelyNetworkError =
+          status === 0 ||
+          ['ERR_NETWORK', 'ECONNABORTED', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(errorCode) ||
+          message.includes('network') ||
+          message.includes('connection') ||
+          message.includes('timed out') ||
+          message.includes('offline')
+
+        if (typeof status === 'number' && status >= 400 && !isLikelyNetworkError) {
+          store.commit('setServerReachable', true)
+        } else if (isLikelyNetworkError) {
+          store.commit('setServerReachable', false)
+        }
+
+        throw error
+      }
     },
 
     /**
@@ -172,10 +204,17 @@ export default function ({ store, $db, $socket }, inject) {
         }
 
         // Update the config with new tokens
+        const preservedRefreshToken =
+          tokens.refreshToken || serverConnectionConfig.refreshToken || (await $db.getRefreshToken(serverConnectionConfig.id))
+
+        if (!preservedRefreshToken) {
+          throw new Error('No refresh token available after refresh')
+        }
+
         const updatedConfig = {
           ...serverConnectionConfig,
           token: tokens.accessToken,
-          refreshToken: tokens.refreshToken
+          refreshToken: preservedRefreshToken
         }
 
         // Save updated config to secure storage, persists refresh token in secure storage
@@ -220,8 +259,12 @@ export default function ({ store, $db, $socket }, inject) {
         }
 
         // Redirect to login page
-        if (window.location.pathname !== '/connect') {
-          window.location.href = '/connect?error=refreshTokenFailed&serverConnectionConfigId=' + serverConnectionConfigId
+        if (typeof window !== 'undefined' && window.location.pathname !== '/connect') {
+          const query = new URLSearchParams({ error: 'refreshTokenFailed' })
+          if (serverConnectionConfigId) {
+            query.set('serverConnectionConfigId', serverConnectionConfigId)
+          }
+          window.location.href = `/connect?${query.toString()}`
         }
       } catch (error) {
         console.error('[nativeHttp] Failed to handle refresh failure:', error)

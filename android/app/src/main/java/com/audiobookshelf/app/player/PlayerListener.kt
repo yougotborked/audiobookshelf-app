@@ -14,7 +14,6 @@ class PlayerListener(var playerNotificationService:PlayerNotificationService) : 
 
   companion object {
     var lastPauseTime: Long = 0   //ms
-    var lazyIsPlaying: Boolean = false
   }
 
   override fun onPlayerError(error: PlaybackException) {
@@ -49,13 +48,6 @@ class PlayerListener(var playerNotificationService:PlayerNotificationService) : 
       Log.d(tag, "onIsPlayingChanged: Pause event when buffering is ignored")
       return
     }
-    if (lazyIsPlaying == isPlaying) {
-      Log.d(tag, "onIsPlayingChanged: Lazy is playing $lazyIsPlaying is already set to this so ignoring")
-      return
-    }
-
-    lazyIsPlaying = isPlaying
-
     // Update widget
     DeviceManager.widgetUpdater?.onPlayerChanged(playerNotificationService)
 

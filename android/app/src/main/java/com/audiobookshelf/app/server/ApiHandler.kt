@@ -423,14 +423,19 @@ class ApiHandler(var ctx:Context) {
     }
   }
 
-  fun getCurrentUser(cb: (User?) -> Unit) {
+  fun getCurrentUser(cb: (User?, String?) -> Unit) {
     getRequest("/api/me", null, null) {
       if (it.has("error")) {
-        Log.e(tag, it.getString("error") ?: "getCurrentUser Failed")
-        cb(null)
+        val errorMsg = it.getString("error") ?: "getCurrentUser Failed"
+        Log.e(tag, errorMsg)
+        AbsLogger.error(
+          tag,
+          "getCurrentUser: Failed to load current user from ${DeviceManager.serverConnectionConfigName}. Error: $errorMsg"
+        )
+        cb(null, errorMsg)
       } else {
         val user = jacksonMapper.readValue<User>(it.toString())
-        cb(user)
+        cb(user, null)
       }
     }
   }
@@ -790,9 +795,13 @@ class ApiHandler(var ctx:Context) {
 
     AbsLogger.info("ApiHandler", "syncLocalMediaProgressForUser: Found ${allLocalMediaProgress.size} local media progress")
 
-    getCurrentUser { user ->
+    getCurrentUser { user, errorMsg ->
       if (user == null) {
-        AbsLogger.error("ApiHandler", "syncLocalMediaProgressForUser: Failed to load user from server (${DeviceManager.serverConnectionConfigName})")
+        val reason = errorMsg ?: "Unknown error"
+        AbsLogger.error(
+          "ApiHandler",
+          "syncLocalMediaProgressForUser: Failed to load user from server (${DeviceManager.serverConnectionConfigName}). Reason: $reason"
+        )
       } else {
         var numLocalMediaProgressUptToDate = 0
         var numLocalMediaProgressUpdated = 0
