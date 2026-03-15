@@ -60,9 +60,9 @@
     --color-border:         63 73 69;
     --color-bg-toggle:      30 30 30;
     --color-bg-toggle-selected: 39 39 39;
-    --color-track-cursor:   226 232 229;
-    --color-track:          142 153 148;
-    --color-track-buffered: 40 40 40;
+    --color-track-cursor:   26 214 145;   /* md-primary */
+    --color-track:          178 204 192;  /* md-on-surface-variant */
+    --color-track-buffered: 30 30 30;
     --gradient-item-page:   linear-gradient(rgb(18 18 18) 0%, rgb(34 34 34) 100%);
     --gradient-audio-player: linear-gradient(0deg, rgb(18 18 18) 0%, transparent 100%);
     --gradient-minimized-audio-player: linear-gradient(180deg, transparent 0%, rgb(40 40 40) 100%);

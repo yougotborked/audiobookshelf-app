@@ -1,8 +1,8 @@
 <template>
-  <div v-if="!libraryItem" class="w-full h-full relative flex items-center justify-center bg-bg">
+  <div v-if="!libraryItem" class="w-full h-full relative flex items-center justify-center bg-md-surface-0">
     <ui-loading-indicator />
   </div>
-  <div v-else id="item-page" class="w-full h-full overflow-y-auto overflow-x-hidden relative bg-bg">
+  <div v-else id="item-page" class="w-full h-full overflow-y-auto overflow-x-hidden relative bg-md-surface-0">
     <!-- cover -->
     <div class="w-full flex justify-center relative">
       <div style="width: 0; transform: translateX(-50vw); overflow: visible">
@@ -14,7 +14,7 @@
       </div>
       <div class="relative" @click="showFullscreenCover = true">
         <covers-book-cover :library-item="libraryItem" :width="coverWidth" :book-cover-aspect-ratio="bookCoverAspectRatio" no-bg raw @imageLoaded="coverImageLoaded" />
-        <div v-if="!isPodcast" class="absolute bottom-0 left-0 h-1 z-10 box-shadow-progressbar" :class="userIsFinished ? 'bg-success' : 'bg-yellow-400'" :style="{ width: coverWidth * progressPercent + 'px' }"></div>
+        <div v-if="!isPodcast" class="absolute bottom-0 left-0 h-1 z-10 rounded-r-md-full" :class="userIsFinished ? 'bg-success' : 'bg-md-primary'" :style="{ width: coverWidth * progressPercent + 'px' }"></div>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
         <!-- title -->
         <div class="text-center mb-2">
           <div class="flex items-center justify-center">
-            <h1 class="text-xl font-semibold">{{ title }}</h1>
+            <h1 class="text-md-headline-s font-medium">{{ title }}</h1>
             <widgets-explicit-indicator v-if="isExplicit" />
             <widgets-abridged-indicator v-if="isAbridged" />
           </div>
@@ -71,7 +71,7 @@
             <span class="px-1 text-base">{{ $strings.LabelMissing }}</span>
           </ui-btn>
 
-          <div v-if="!isPodcast && progressPercent > 0" class="px-4 py-2 bg-primary text-sm font-semibold rounded-md text-fg mt-4 text-center">
+          <div v-if="!isPodcast && progressPercent > 0" class="px-4 py-2 bg-md-surface-2 text-md-body-m rounded-md-md text-md-on-surface mt-4 text-center">
             <p>{{ $strings.LabelYourProgress }}: {{ Math.round(progressPercent * 100) }}%</p>
             <p v-if="!useEBookProgress && !userIsFinished" class="text-fg-muted text-xs">{{ $getString('LabelTimeRemaining', [$elapsedPretty(userTimeRemaining)]) }}</p>
             <p v-else-if="userIsFinished" class="text-fg-muted text-xs">{{ $strings.LabelFinished }} {{ $formatDate(userProgressFinishedAt) }}</p>
@@ -85,7 +85,7 @@
 
         <!-- metadata -->
         <div id="metadata" class="grid gap-2 my-2" style>
-          <div v-if="podcastAuthor || bookAuthors?.length" class="text-fg-muted uppercase text-sm">{{ $strings.LabelAuthor }}</div>
+          <div v-if="podcastAuthor || bookAuthors?.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelAuthor }}</div>
           <div v-if="podcastAuthor" class="text-sm">{{ podcastAuthor }}</div>
           <div v-else-if="bookAuthors?.length" class="text-sm">
             <template v-for="(author, index) in bookAuthors">
@@ -94,10 +94,10 @@
             </template>
           </div>
 
-          <div v-if="podcastType" class="text-fg-muted uppercase text-sm">{{ $strings.LabelType }}</div>
+          <div v-if="podcastType" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelType }}</div>
           <div v-if="podcastType" class="text-sm capitalize">{{ podcastType }}</div>
 
-          <div v-if="series?.length" class="text-fg-muted uppercase text-sm">{{ $strings.LabelSeries }}</div>
+          <div v-if="series?.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelSeries }}</div>
           <div v-if="series?.length" class="text-sm">
             <template v-for="(series, index) in seriesList">
               <nuxt-link :key="series.id" :to="`/bookshelf/series/${series.id}`" class="underline whitespace-nowrap">{{ series.text }}</nuxt-link
@@ -105,10 +105,10 @@
             </template>
           </div>
 
-          <div v-if="numTracks" class="text-fg-muted uppercase text-sm">{{ $strings.LabelDuration }}</div>
+          <div v-if="numTracks" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelDuration }}</div>
           <div v-if="numTracks" class="text-sm">{{ $elapsedPretty(duration) }}</div>
 
-          <div v-if="narrators?.length" class="text-fg-muted uppercase text-sm">{{ $strings.LabelNarrators }}</div>
+          <div v-if="narrators?.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelNarrators }}</div>
           <div v-if="narrators?.length" class="text-sm">
             <template v-for="(narrator, index) in narrators">
               <nuxt-link :key="narrator" :to="`/bookshelf/library?filter=narrators.${$encode(narrator)}`" class="underline whitespace-nowrap">{{ narrator }}</nuxt-link
@@ -116,7 +116,7 @@
             </template>
           </div>
 
-          <div v-if="genres.length" class="text-fg-muted uppercase text-sm">{{ $strings.LabelGenres }}</div>
+          <div v-if="genres.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelGenres }}</div>
           <div v-if="genres.length" class="text-sm">
             <template v-for="(genre, index) in genres">
               <nuxt-link :key="genre" :to="`/bookshelf/library?filter=genres.${$encode(genre)}`" class="underline whitespace-nowrap">{{ genre }}</nuxt-link
@@ -124,7 +124,7 @@
             </template>
           </div>
 
-          <div v-if="tags.length" class="text-fg-muted uppercase text-sm">{{ $strings.LabelTags }}</div>
+          <div v-if="tags.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelTags }}</div>
           <div v-if="tags.length" class="text-sm">
             <template v-for="(tag, index) in tags">
               <nuxt-link :key="tag" :to="`/bookshelf/library?filter=tags.${$encode(tag)}`" class="underline whitespace-nowrap">{{ tag }}</nuxt-link
@@ -132,7 +132,7 @@
             </template>
           </div>
 
-          <div v-if="publishedYear" class="text-fg-muted uppercase text-sm">{{ $strings.LabelPublishYear }}</div>
+          <div v-if="publishedYear" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelPublishYear }}</div>
           <div v-if="publishedYear" class="text-sm">{{ publishedYear }}</div>
         </div>
 
