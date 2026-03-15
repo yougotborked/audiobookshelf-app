@@ -1,6 +1,13 @@
 <template>
-  <div v-if="icon" class="flex h-full items-center px-2">
-    <span class="material-symbols text-lg" :class="iconClass" @click="showAlertDialog">{{ icon }}</span>
+  <div v-if="icon" class="flex h-full items-center px-1">
+    <button
+      type="button"
+      :aria-label="icon"
+      class="flex items-center gap-1 px-2 py-0.5 rounded-md-full bg-md-surface-2 transition-md-standard"
+      @click="showAlertDialog"
+    >
+      <span class="material-symbols text-base leading-none" :class="iconClass">{{ icon }}</span>
+    </button>
   </div>
 </template>
 
@@ -52,10 +59,10 @@ export default {
       }
     },
     iconClass() {
-      if (!this.networkConnected) return 'text-error'
-      else if (!this.socketConnected || !this.serverReachable) return 'text-error'
-      else if (!this.isNetworkUnmetered) return 'text-yellow-400'
-      else if (this.isCellular) return 'text-gray-200'
+      if (!this.networkConnected) return 'text-md-error'
+      else if (!this.socketConnected || !this.serverReachable) return 'text-md-error'
+      else if (!this.isNetworkUnmetered) return 'text-warning'
+      else if (this.isCellular) return 'text-md-on-surface-variant'
       else return 'text-success'
     }
   },

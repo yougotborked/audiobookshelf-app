@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-16 bg-primary relative z-20">
+  <div class="w-full h-16 bg-md-surface-4 relative z-20 elevation-1">
     <div id="appbar" class="absolute top-0 left-0 w-full h-full flex items-center px-2">
       <nuxt-link v-show="!showBack" to="/" class="mr-3">
         <img src="/Logo.png" class="h-10 w-10" />
@@ -10,7 +10,7 @@
       <div v-if="user && currentLibrary">
         <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-bg bg-opacity-30 rounded-md flex items-center" @click="clickShowLibraryModal">
           <ui-library-icon :icon="currentLibraryIcon" :size="4" font-size="base" />
-          <p class="text-sm leading-4 ml-2 mt-0.5 max-w-24 truncate">{{ currentLibraryName }}</p>
+          <p class="text-md-body-m leading-4 ml-2 mt-0.5 max-w-24 truncate text-md-on-surface">{{ currentLibraryName }}</p>
         </button>
       </div>
 
@@ -137,9 +137,7 @@ export default {
 </script>
 
 <style>
-#appbar {
-  box-shadow: 0px 5px 5px #11111155;
-}
+/* elevation-1 utility handles the shadow */
 .loader-dots div {
   animation-timing-function: cubic-bezier(0, 1, 1, 0);
 }
