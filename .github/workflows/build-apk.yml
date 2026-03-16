@@ -173,16 +173,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES=$(cat <<'EOF'
-          Debug APK built from `master` at ${{ steps.info.outputs.date }}
-          
-          Commit: [`${{ steps.info.outputs.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          
-          > This release is automatically overwritten on every push to master.
-          EOF
-          )
+          printf 'Debug APK built from `master` at %s\n\nCommit: [%s](https://github.com/%s/commit/%s)\n\n> This release is automatically overwritten on every push to master.\n' \
+            "${{ steps.info.outputs.date }}" \
+            "${{ steps.info.outputs.sha }}" \
+            "${{ github.repository }}" \
+            "${{ github.sha }}" > release-notes.md
           gh release create latest \
             --title "Latest build (${{ steps.info.outputs.sha }})" \
-            --notes "$NOTES" \
+            --notes-file release-notes.md \
             --prerelease \
             "${{ steps.info.outputs.apk }}"
