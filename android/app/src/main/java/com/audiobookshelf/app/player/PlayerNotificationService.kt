@@ -174,7 +174,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     Log.d(tag, "onStart $startId")
   }
 
-  @RequiresApi(Build.VERSION_CODES.O)
   private fun createNotificationChannel(channelId: String, channelName: String): String {
     val chan = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
     chan.lightColor = Color.DKGRAY
@@ -259,10 +258,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     // Initialize media manager
     mediaManager = MediaManager(apiHandler, ctx)
 
-    channelId =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-              createNotificationChannel(channelId, channelName)
-            } else ""
+    channelId = createNotificationChannel(channelId, channelName)
 
     val sessionActivityPendingIntent =
             packageManager?.getLaunchIntentForPackage(packageName)?.let { sessionIntent ->
