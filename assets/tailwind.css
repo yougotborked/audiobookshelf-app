@@ -1,6 +1,86 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* ── Backward-compat legacy tokens ── */
+  --color-bg: rgb(var(--color-bg));
+  --color-bg-hover: rgb(var(--color-bg-hover));
+  --color-fg: rgb(var(--color-fg));
+  --color-fg-muted: rgb(var(--color-fg-muted));
+  --color-secondary: rgb(var(--color-secondary));
+  --color-primary: rgb(var(--color-primary));
+  --color-border: rgb(var(--color-border));
+  --color-bg-toggle: rgb(var(--color-bg-toggle));
+  --color-bg-toggle-selected: rgb(var(--color-bg-toggle-selected));
+  --color-track-cursor: rgb(var(--color-track-cursor));
+  --color-track: rgb(var(--color-track));
+  --color-track-buffered: rgb(var(--color-track-buffered));
+  --color-accent: #1ad691;
+  --color-error: #FF5252;
+  --color-info: #2196F3;
+  --color-success: #4CAF50;
+  --color-successDark: #3b8a3e;
+  --color-warning: #FB8C00;
+
+  /* ── M3 Surface Levels ── */
+  --color-md-surface-0: rgb(var(--md-surface-0));
+  --color-md-surface-1: rgb(var(--md-surface-1));
+  --color-md-surface-2: rgb(var(--md-surface-2));
+  --color-md-surface-3: rgb(var(--md-surface-3));
+  --color-md-surface-4: rgb(var(--md-surface-4));
+  --color-md-surface-5: rgb(var(--md-surface-5));
+  --color-md-primary: rgb(var(--md-primary));
+  --color-md-on-primary: rgb(var(--md-on-primary));
+  --color-md-primary-container: rgb(var(--md-primary-container));
+  --color-md-on-primary-container: rgb(var(--md-on-primary-container));
+  --color-md-on-surface: rgb(var(--md-on-surface));
+  --color-md-on-surface-variant: rgb(var(--md-on-surface-variant));
+  --color-md-outline: rgb(var(--md-outline));
+  --color-md-outline-variant: rgb(var(--md-outline-variant));
+  --color-md-error: rgb(var(--md-error));
+  --color-md-error-container: rgb(var(--md-error-container));
+  --color-dynamic-primary: rgb(var(--dynamic-primary));
+  --color-dynamic-surface: rgb(var(--dynamic-surface));
+
+  /* ── M3 Shape ── */
+  --radius-md-xs: var(--md-shape-xs);
+  --radius-md-sm: var(--md-shape-sm);
+  --radius-md-md: var(--md-shape-md);
+  --radius-md-lg: var(--md-shape-lg);
+  --radius-md-xl: var(--md-shape-xl);
+  --radius-md-2xl: 36px;
+  --radius-md-full: var(--md-shape-full);
+
+  /* ── M3 Type Scale ── */
+  --font-size-1-5xl: 1.375rem;
+  --font-size-xxs: 0.625rem;
+  --font-size-md-display-l: 3.5625rem;
+  --font-size-md-display-m: 2.8125rem;
+  --font-size-md-display-s: 2.25rem;
+  --font-size-md-headline-l: 2rem;
+  --font-size-md-headline-m: 1.75rem;
+  --font-size-md-headline-s: 1.5rem;
+  --font-size-md-title-l: 1.375rem;
+  --font-size-md-title-m: 1rem;
+  --font-size-md-title-s: 0.875rem;
+  --font-size-md-body-l: 1rem;
+  --font-size-md-body-m: 0.875rem;
+  --font-size-md-body-s: 0.75rem;
+  --font-size-md-label-l: 0.875rem;
+  --font-size-md-label-m: 0.75rem;
+  --font-size-md-label-s: 0.6875rem;
+
+  /* ── Spacing extras ── */
+  --spacing-4-5: 1.125rem;
+  --spacing-18: 4.5rem;
+
+  /* ── Fonts ── */
+  --font-family-sans: 'Source Sans Pro', sans-serif;
+  --font-family-mono: 'Ubuntu Mono', monospace;
+}
+
+/* Tailwind 4 screen variants (custom breakpoints) */
+@custom-variant short (@media (max-height: 500px));
+@custom-variant landscape (@media (orientation: landscape));
 
 @layer base {
   :root {
