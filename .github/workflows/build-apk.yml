@@ -133,3 +133,56 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+
+  release:
+    needs: main
+    runs-on: ubuntu-latest
+    # Only publish releases for commits pushed to master
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: audiobookshelf-apk
+          path: ./apk
+
+      - name: Get APK filename and commit info
+        id: info
+        run: |
+          echo "apk=$(ls apk/*.apk | head -1)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
+
+      # Delete the existing 'latest' tag+release (if any) then recreate it.
+      # This keeps the Releases page to a single entry instead of accumulating
+      # one release per commit. Force-pushing a tag to master is safe here
+      # because 'latest' is a rolling pointer, not a semantic version.
+      - name: Delete existing 'latest' release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes 2>/dev/null || true
+          git push --delete origin latest 2>/dev/null || true
+      - name: Create 'latest' release and attach APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES=$(cat <<'EOF'
+          Debug APK built from `master` at ${{ steps.info.outputs.date }}
+          
+          Commit: [`${{ steps.info.outputs.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          
+          > This release is automatically overwritten on every push to master.
+          EOF
+          )
+          gh release create latest \
+            --title "Latest build (${{ steps.info.outputs.sha }})" \
+            --notes "$NOTES" \
+            --prerelease \
+            "${{ steps.info.outputs.apk }}"
