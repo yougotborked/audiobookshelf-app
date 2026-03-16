@@ -76,6 +76,7 @@ module.exports = {
         'md-md':   'var(--md-shape-md)',
         'md-lg':   'var(--md-shape-lg)',
         'md-xl':   'var(--md-shape-xl)',
+        'md-2xl':  '36px',
         'md-full': 'var(--md-shape-full)',
       },
       fontFamily: {
