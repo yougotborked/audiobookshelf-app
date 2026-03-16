@@ -188,29 +188,39 @@ export default {
       }
     },
     async playNext() {
-      const episode = this.unfinishedEpisodes[0]
-      if (!episode) return
+      const episodes = this.unfinishedEpisodes
+      if (!episodes.length) return
 
       await this.$hapticsImpact()
 
-      this.$store.commit('setPlayerIsStartingPlayback', episode.id)
+      // Build a queue for all unfinished episodes so playback continues
+      // automatically without user interaction — same pattern as playlist "play all".
+      const queue = episodes.map((ep) => {
+        const localEp = this.localEpisodeMap[ep.id]
+        const localLibraryItemId = localEp?.localLibraryItemId
+        return {
+          libraryItemId: (localEp && localLibraryItemId) ? localLibraryItemId : ep.libraryItemId,
+          episodeId: (localEp && localLibraryItemId) ? localEp.id : ep.id,
+          serverLibraryItemId: ep.libraryItemId,
+          serverEpisodeId: ep.id,
+          episode: ep,
+          localEpisode: localEp || null
+        }
+      })
 
-      const localEpisode = this.localEpisodeMap[episode.id]
-      const localLibraryItemId = localEpisode && localEpisode.localLibraryItemId
+      const first = queue[0]
+      this.$store.commit('setPlayQueue', queue)
+      this.$store.commit('setQueueIndex', 0)
+      this.$store.commit('setPlayerIsStartingPlayback', first.episodeId)
 
-      if (localEpisode && localLibraryItemId) {
-        this.$eventBus.$emit('play-item', {
-          libraryItemId: localLibraryItemId,
-          episodeId: localEpisode.id,
-          serverLibraryItemId: episode.libraryItemId,
-          serverEpisodeId: episode.id
-        })
-      } else {
-        this.$eventBus.$emit('play-item', {
-          libraryItemId: episode.libraryItemId,
-          episodeId: episode.id
-        })
-      }
+      this.$eventBus.$emit('play-item', {
+        libraryItemId: first.libraryItemId,
+        episodeId: first.episodeId,
+        serverLibraryItemId: first.serverLibraryItemId,
+        serverEpisodeId: first.serverEpisodeId,
+        queue,
+        queueIndex: 0
+      })
     },
     async addEpisodeToPlaylist(episode) {
       const libraryItem = await this.$nativeHttp.get(`/api/items/${episode.libraryItemId}`).catch((error) => {
