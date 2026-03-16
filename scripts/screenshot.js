@@ -9,7 +9,8 @@ const OUT_DIR = path.join(__dirname, '..', 'docs', 'screenshots', TIMESTAMP)
 // Mock auth state injected into every page before load
 const MOCK_USER = {
   id: 'usr_mock01', username: 'mockuser', type: 'admin', token: 'mock-token-abc123',
-  mediaProgress: [], permissions: { download: true, update: true, delete: true }
+  mediaProgress: [], permissions: { download: true, update: true, delete: true },
+  librariesAccessible: []
 }
 const MOCK_AUTH = {
   'abs-user': JSON.stringify(MOCK_USER),
@@ -36,13 +37,27 @@ const MOCK_ITEMS = {
   total: 5, page: 0, limit: 50
 }
 
-async function setupMockAuth(page) {
-  await page.addInitScript((auth) => {
-    for (const [k, v] of Object.entries(auth)) localStorage.setItem(k, v)
-  }, MOCK_AUTH)
+const MOCK_PODCAST_ITEMS = {
+  results: [
+    { id: 'lp_001', libraryId: 'lib_podcasts', mediaType: 'podcast', media: { metadata: { title: 'Hardcore History', author: 'Dan Carlin' }, coverPath: null, numEpisodes: 72 }, userMediaProgress: { currentTime: 3600, progress: 0.12, isFinished: false } },
+    { id: 'lp_002', libraryId: 'lib_podcasts', mediaType: 'podcast', media: { metadata: { title: 'Lex Fridman Podcast', author: 'Lex Fridman' }, coverPath: null, numEpisodes: 410 }, userMediaProgress: null },
+    { id: 'lp_003', libraryId: 'lib_podcasts', mediaType: 'podcast', media: { metadata: { title: 'The Tim Ferriss Show', author: 'Tim Ferriss' }, coverPath: null, numEpisodes: 700 }, userMediaProgress: { currentTime: 1800, progress: 0.45, isFinished: false } },
+    { id: 'lp_004', libraryId: 'lib_podcasts', mediaType: 'podcast', media: { metadata: { title: 'Darknet Diaries', author: 'Jack Rhysider' }, coverPath: null, numEpisodes: 148 }, userMediaProgress: { currentTime: 0, progress: 0, isFinished: false } }
+  ],
+  total: 4, page: 0, limit: 50
+}
+
+async function setupMockAuth(page, { libraryId } = {}) {
+  const auth = libraryId
+    ? { ...MOCK_AUTH, '_cap_lastLibraryId': libraryId }
+    : MOCK_AUTH
+  await page.addInitScript((a) => {
+    for (const [k, v] of Object.entries(a)) localStorage.setItem(k, v)
+  }, auth)
 
   await page.route('**/api/me', route => route.fulfill({ json: MOCK_USER }))
   await page.route('**/api/libraries', route => route.fulfill({ json: MOCK_LIBRARIES }))
+  await page.route('**/api/libraries/lib_podcasts/items', route => route.fulfill({ json: MOCK_PODCAST_ITEMS }))
   await page.route('**/api/libraries/*/items', route => route.fulfill({ json: MOCK_ITEMS }))
   await page.route('**/api/**', route => route.fulfill({ status: 200, json: {} }))
   await page.route('**/socket.io/**', route => route.abort())
@@ -65,6 +80,32 @@ test('bookshelf page', async ({ page }) => {
   await page.goto('/bookshelf')
   await page.waitForTimeout(2000)
   await page.screenshot({ path: shot('02-bookshelf'), fullPage: true })
+})
+
+test('bookshelf - podcast library', async ({ page }) => {
+  await setupMockAuth(page, { libraryId: 'lib_podcasts' })
+  await page.goto('/bookshelf')
+  await page.waitForTimeout(2000)
+  await page.screenshot({ path: shot('02b-bookshelf-podcasts'), fullPage: true })
+})
+
+test('libraries modal', async ({ page }) => {
+  await setupMockAuth(page)
+  await page.goto('/bookshelf')
+  await page.waitForTimeout(2000)
+  // Inject auth + library state directly into Vuex store (Capacitor DB not available in web/test)
+  const storeData = { user: MOCK_USER, libraries: MOCK_LIBRARIES.libraries }
+  await page.evaluate((data) => {
+    const store = window.$nuxt?.$store
+    if (!store) return
+    store.commit('user/setUser', data.user)
+    store.commit('libraries/set', data.libraries)
+    store.commit('libraries/setCurrentLibrary', data.libraries[0].id)
+  }, storeData)
+  await page.waitForSelector('[aria-label="Show library modal"]', { timeout: 5000 })
+  await page.click('[aria-label="Show library modal"]')
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: shot('02c-libraries-modal'), fullPage: true })
 })
 
 test('settings page', async ({ page }) => {

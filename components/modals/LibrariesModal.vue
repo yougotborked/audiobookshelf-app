@@ -1,25 +1,24 @@
 <template>
-  <modals-modal v-model="show" :width="300" :processing="processing" height="100%">
-    <template #outer>
-      <div class="absolute top-11 left-4 z-40" style="max-width: 80%">
-        <p class="text-white text-2xl truncate">{{ $strings.HeaderLibraries }}</p>
-      </div>
-    </template>
-
-    <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
-      <div class="w-full overflow-x-hidden overflow-y-auto bg-secondary rounded-lg border border-border" style="max-height: 75%" @click.stop>
-        <ul class="h-full w-full" role="listbox" aria-labelledby="listbox-label">
-          <template v-for="library in libraries">
-            <li :key="library.id" class="text-fg select-none relative py-3 cursor-pointer" :class="currentLibraryId === library.id ? 'bg-primary bg-opacity-80' : ''" role="option" @click="clickedOption(library)">
-              <div v-show="currentLibraryId === library.id" class="absolute top-0 left-0 w-0.5 bg-warning h-full" />
-              <div class="flex items-center px-3">
-                <ui-library-icon :icon="library.icon" />
-                <span class="font-normal block truncate text-lg ml-4">{{ library.name }}</span>
-              </div>
-            </li>
-          </template>
-        </ul>
-      </div>
+  <modals-modal v-model="show" :processing="processing">
+    <div class="px-4 pt-2 pb-2">
+      <p class="text-md-title-m text-md-on-surface mb-3">{{ $strings.HeaderLibraries }}</p>
+      <ul class="w-full" role="listbox">
+        <template v-for="library in libraries">
+          <li
+            :key="library.id"
+            class="select-none relative rounded-md-md cursor-pointer mb-1"
+            :class="currentLibraryId === library.id ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'"
+            role="option"
+            @click="clickedOption(library)"
+          >
+            <div v-show="currentLibraryId === library.id" class="absolute top-0 left-0 w-0.5 bg-md-primary rounded-l-md-md h-full" />
+            <div class="flex items-center px-3 py-3">
+              <ui-library-icon :icon="library.icon" />
+              <span class="text-md-body-l text-md-on-surface font-normal block truncate ml-4">{{ library.name }}</span>
+            </div>
+          </li>
+        </template>
+      </ul>
     </div>
   </modals-modal>
 </template>
