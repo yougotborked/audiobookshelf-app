@@ -1,12 +1,12 @@
 <template>
   <div class="fixed top-0 left-0 right-0 layout-wrapper w-full z-50 overflow-hidden pointer-events-none">
     <div class="absolute top-0 left-0 w-full h-full bg-black transition-opacity duration-200" :class="show ? 'bg-opacity-60 pointer-events-auto' : 'bg-opacity-0'" @click="clickBackground" />
-    <div class="absolute top-0 right-0 w-64 h-full bg-bg transform transition-transform py-6 pointer-events-auto" :class="show ? '' : 'translate-x-64'" @click.stop>
+    <div class="absolute top-0 right-0 w-64 h-full bg-bg transform transition-transform py-6 landscape:py-2 pointer-events-auto" :class="show ? '' : 'translate-x-64'" @click.stop>
       <div class="px-6 mb-4">
         <p v-if="user" class="text-base" v-html="$getString('HeaderWelcome', [username])" />
       </div>
 
-      <div class="w-full overflow-y-auto">
+      <div class="w-full overflow-y-auto" style="max-height: calc(100vh - 180px)">
         <template v-for="item in navItems">
           <button v-if="item.action" :key="item.text" :tabindex="show ? 0 : -1" class="w-full hover:bg-bg/60 flex items-center py-3 px-6 text-fg-muted" @click="clickAction(item.action)">
             <span class="material-symbols fill text-lg">{{ item.icon }}</span>
