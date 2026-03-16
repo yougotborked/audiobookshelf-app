@@ -18,6 +18,7 @@ import androidx.core.view.updateLayoutParams
 import android.view.WindowInsets
 import com.anggrayudi.storage.SimpleStorage
 import com.anggrayudi.storage.SimpleStorageHelper
+import com.audiobookshelf.app.device.PermissionHelper
 import com.audiobookshelf.app.managers.DbManager
 import com.audiobookshelf.app.player.PlayerNotificationService
 import com.audiobookshelf.app.plugins.AbsAudioPlayer
@@ -42,7 +43,7 @@ class MainActivity : BridgeActivity() {
 
   val REQUEST_PERMISSIONS = 1
   var PERMISSIONS_ALL = arrayOf(
-    Manifest.permission.READ_EXTERNAL_STORAGE
+    PermissionHelper.requiredAudioPermission()
   )
 
   public override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,7 +97,7 @@ class MainActivity : BridgeActivity() {
       }
     }
 
-    val permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+    val permission = ActivityCompat.checkSelfPermission(this, PermissionHelper.requiredAudioPermission())
     if (permission != PackageManager.PERMISSION_GRANTED) {
       ActivityCompat.requestPermissions(this,
         PERMISSIONS_ALL,
