@@ -6,13 +6,18 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.PowerManager
+import android.provider.Settings
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.activity.OnBackPressedCallback
 import androidx.core.app.ActivityCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import android.view.WindowInsets
@@ -58,6 +63,24 @@ class MainActivity : BridgeActivity() {
     super.onCreate(savedInstanceState)
     Log.d(tag, "onCreate")
 
+    // 4.2 — Edge-to-edge: allow content to draw behind status/nav bars
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+
+    // 4.1 — Replace deprecated onBackPressed() with OnBackPressedDispatcher API
+    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+      override fun handleOnBackPressed() {
+        // Delegate back navigation to the WebView if it can go back,
+        // otherwise finish the activity.
+        val webView: WebView? = findViewById(R.id.webview)
+        if (webView != null && webView.canGoBack()) {
+          webView.goBack()
+        } else {
+          isEnabled = false
+          onBackPressedDispatcher.onBackPressed()
+        }
+      }
+    })
+
     // Update the margins to handle edge-to-edge enforced in SDK 35
     // See: https://developer.android.com/develop/ui/views/layout/edge-to-edge
     val webView: WebView = findViewById(R.id.webview)
@@ -102,6 +125,15 @@ class MainActivity : BridgeActivity() {
       ActivityCompat.requestPermissions(this,
         PERMISSIONS_ALL,
         REQUEST_PERMISSIONS)
+    }
+
+    // 4.3 — Request battery optimization exemption for persistent background playback
+    // minSdk is 26 (>= M=23), so no API guard needed
+    val pm = getSystemService(POWER_SERVICE) as PowerManager
+    if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+      val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+      intent.data = Uri.parse("package:$packageName")
+      startActivity(intent)
     }
   }
 
