@@ -11,7 +11,7 @@ import androidx.mediarouter.app.MediaRouteChooserDialog
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.getcapacitor.PluginCall
-import com.google.android.exoplayer2.ext.cast.SessionAvailabilityListener
+import androidx.media3.cast.SessionAvailabilityListener
 import com.google.android.gms.cast.*
 import com.google.android.gms.cast.framework.*
 import org.json.JSONObject
