@@ -1418,17 +1418,62 @@ export default {
     display: none !important;
   }
 
-  /* Mini-player (non-fullscreen) — compact strip */
+  /* ── Mini-player landscape: seek bar as translucent background fill ── */
+
+  /* Compact padding — content floats on top of the fill */
   #streamContainer:not(.fullscreen) #playerContent {
     padding: 4px 8px;
+    overflow: hidden;
   }
+
+  /* Stretch track container to fill the full mini-player height, sit behind content */
+  #streamContainer:not(.fullscreen) #playerTrack {
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    padding: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Hide timestamps — progress communicated by fill color alone */
+  #streamContainer:not(.fullscreen) #playerTrack > div:first-child {
+    display: none;
+  }
+
+  /* Track line: stretch to full height, no rounding, transparent base */
+  #streamContainer:not(.fullscreen) #playerTrack > div:last-child {
+    height: 100%;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  /* Played fill: semi-transparent primary green wash */
+  #streamContainer:not(.fullscreen) #playerTrack .bg-track-cursor {
+    background-color: rgba(26, 214, 145, 0.22) !important;
+    border-radius: 0;
+  }
+
+  /* Buffer/ready fills: barely-visible tint */
+  #streamContainer:not(.fullscreen) #playerTrack .bg-track-buffered,
+  #streamContainer:not(.fullscreen) #playerTrack .bg-track {
+    background-color: rgba(26, 214, 145, 0.07) !important;
+    border-radius: 0;
+  }
+
+  /* Hide scrub cursor handle — no scrubbing in mini-player */
+  #streamContainer:not(.fullscreen) #playerTrack .h-7.w-7.rounded-full {
+    display: none;
+  }
+
+  /* Controls and cover float above the fill */
   #streamContainer:not(.fullscreen) #playerControls {
     position: relative;
+    z-index: 1;
     padding: 0;
   }
-  /* Hide cover art in mini-player landscape; space is too tight */
   #streamContainer:not(.fullscreen) .cover-wrapper {
-    display: none;
+    z-index: 1;
   }
 }
 </style>
