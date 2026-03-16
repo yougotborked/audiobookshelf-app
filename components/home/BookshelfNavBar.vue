@@ -9,28 +9,34 @@
         :aria-label="item.text"
         :aria-current="routeName === item.routeName ? 'page' : undefined"
       >
-        <!-- Active indicator pill -->
-        <span
-          v-if="routeName === item.routeName"
-          class="absolute inset-x-4 top-1 h-8 rounded-md-full bg-md-primary-container"
-        />
-        <!-- Icon -->
-        <span class="relative z-10 flex items-center justify-center h-6">
+        <!-- Active: pill wraps icon + label -->
+        <div v-if="routeName === item.routeName"
+             class="flex flex-col items-center justify-center rounded-md-full bg-md-primary-container px-5 py-1 min-w-[64px]">
+          <span class="flex items-center justify-center h-6">
+            <span
+              v-if="item.iconPack === 'abs-icons'"
+              class="abs-icons text-md-on-primary-container text-xl"
+              :class="`icon-${item.icon}`"
+            />
+            <span
+              v-else
+              :class="[item.iconPack, 'text-md-on-primary-container text-xl']"
+            >{{ item.icon }}</span>
+          </span>
+          <span class="text-md-label-m text-md-on-primary-container leading-tight">{{ item.text }}</span>
+        </div>
+        <!-- Inactive: icon only, no pill -->
+        <span v-else class="flex items-center justify-center h-6">
           <span
             v-if="item.iconPack === 'abs-icons'"
-            class="abs-icons"
-            :class="[`icon-${item.icon}`, routeName === item.routeName ? 'text-md-on-primary-container text-xl' : 'text-md-on-surface-variant text-xl']"
+            class="abs-icons text-md-on-surface-variant text-xl"
+            :class="`icon-${item.icon}`"
           />
           <span
             v-else
-            :class="[item.iconPack, routeName === item.routeName ? 'text-md-on-primary-container text-xl' : 'text-md-on-surface-variant text-xl']"
+            :class="[item.iconPack, 'text-md-on-surface-variant text-xl']"
           >{{ item.icon }}</span>
         </span>
-        <!-- Label — only shown for active tab -->
-        <span
-          v-if="routeName === item.routeName"
-          class="relative z-10 text-md-label-m text-md-on-surface mt-0.5"
-        >{{ item.text }}</span>
       </nuxt-link>
     </nav>
   </div>
