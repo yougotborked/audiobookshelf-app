@@ -263,12 +263,8 @@ constructor(private val playerNotificationService: PlayerNotificationService) {
     }
 
     vibrator.let {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val vibrationEffect = VibrationEffect.createWaveform(longArrayOf(0, 150, 150, 150), -1)
-        it.vibrate(vibrationEffect)
-      } else {
-        @Suppress("DEPRECATION") it.vibrate(10)
-      }
+      val vibrationEffect = VibrationEffect.createWaveform(longArrayOf(0, 150, 150, 150), -1)
+      it.vibrate(vibrationEffect)
     }
   }
 
