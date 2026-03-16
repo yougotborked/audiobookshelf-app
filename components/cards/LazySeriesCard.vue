@@ -1,11 +1,11 @@
 <template>
   <div ref="card" :id="`series-card-${index}`" :style="{ width: width + 'px', height: height + 'px' }" class="rounded-sm cursor-pointer z-30" @click="clickCard">
     <div class="absolute top-0 left-0 w-full box-shadow-book shadow-height" />
-    <div class="w-full h-full bg-primary relative rounded overflow-hidden">
+    <div class="w-full h-full bg-md-surface-3 relative rounded overflow-hidden">
       <covers-group-cover v-if="series" ref="cover" :id="seriesId" :name="title" :book-items="books" :width="width" :height="height" :book-cover-aspect-ratio="bookCoverAspectRatio" />
     </div>
 
-    <div v-if="seriesPercentInProgress > 0" class="absolute bottom-0 left-0 h-1 max-w-full z-10 rounded-b w-full box-shadow-progressbar" :class="isSeriesFinished ? 'bg-success' : 'bg-yellow-400'" :style="{ width: seriesPercentInProgress * 100 + '%' }" />
+    <div v-if="seriesPercentInProgress > 0" class="absolute bottom-0 left-0 h-1 max-w-full z-10 rounded-b w-full box-shadow-progressbar" :class="isSeriesFinished ? 'bg-md-primary' : 'bg-yellow-400'" :style="{ width: seriesPercentInProgress * 100 + '%' }" />
 
     <div v-if="isAltViewEnabled && isCategorized" class="absolute z-30 left-0 right-0 mx-auto -bottom-8 h-8 py-1 rounded-md text-center">
       <p class="truncate" :style="{ fontSize: labelFontSize + 'rem' }">{{ title }}</p>

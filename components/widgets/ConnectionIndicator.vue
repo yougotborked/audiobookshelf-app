@@ -63,7 +63,7 @@ export default {
       else if (!this.socketConnected || !this.serverReachable) return 'text-md-error'
       else if (!this.isNetworkUnmetered) return 'text-warning'
       else if (this.isCellular) return 'text-md-on-surface-variant'
-      else return 'text-success'
+      else return 'text-md-primary'
     }
   },
   methods: {

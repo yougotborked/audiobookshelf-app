@@ -2,10 +2,10 @@
   <div class="w-full h-16 bg-md-surface-4 relative z-20 elevation-1">
     <div id="appbar" class="absolute top-0 left-0 w-full h-full flex items-center px-2">
       <a v-if="showBack" @click="back" aria-label="Back" class="rounded-full h-10 w-10 flex items-center justify-center mr-2 cursor-pointer">
-        <span class="material-symbols text-3xl text-fg">arrow_back</span>
+        <span class="material-symbols text-3xl text-md-on-surface">arrow_back</span>
       </a>
       <div v-if="user && currentLibrary">
-        <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-bg bg-opacity-30 rounded-md flex items-center" @click="clickShowLibraryModal">
+        <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-md-surface-1 bg-opacity-30 rounded-md flex items-center" @click="clickShowLibraryModal">
           <ui-library-icon :icon="currentLibraryIcon" :size="4" font-size="base" />
           <p class="text-md-body-m leading-4 ml-2 mt-0.5 max-w-24 truncate text-md-on-surface landscape:hidden">{{ currentLibraryName }}</p>
         </button>

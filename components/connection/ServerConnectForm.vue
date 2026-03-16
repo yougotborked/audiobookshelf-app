@@ -6,13 +6,13 @@
         <div v-for="config in serverConnectionConfigs" :key="config.id" class="border-b border-md-outline-variant/20 py-4">
           <div class="flex items-center my-1 relative space-x-2" @click="connectToServer(config)">
             <div class="grow inline-flex items-center overflow-hidden">
-              <p class="text-base text-fg truncate">{{ config.name }}</p>
+              <p class="text-base text-md-on-surface truncate">{{ config.name }}</p>
             </div>
             <div class="h-full w-6 flex items-center" @click.stop="editServerConfig(config)">
-              <span class="material-symbols text-2xl text-fg-muted">more_vert</span>
+              <span class="material-symbols text-2xl text-md-on-surface-variant">more_vert</span>
             </div>
             <div class="h-full w-6 flex items-center" @click.stop="removeServerConfigClick(config)">
-              <span class="material-symbols fill text-1.5xl text-fg-muted">delete</span>
+              <span class="material-symbols fill text-1.5xl text-md-on-surface-variant">delete</span>
             </div>
           </div>
           <!-- warning message if server connection config is using an old user id -->
@@ -35,7 +35,7 @@
         <!-- server address input -->
         <form v-if="!showAuth" @submit.prevent="submit(false)" novalidate class="w-full">
           <div v-if="serverConnectionConfigs.length" class="flex items-center mb-4" @click="showServerList">
-            <span class="material-symbols text-fg-muted">arrow_back</span>
+            <span class="material-symbols text-md-on-surface-variant">arrow_back</span>
           </div>
           <h2 class="text-md-title-m text-md-on-surface mb-3">{{ $strings.LabelServerAddress }}</h2>
           <ui-text-input v-model="serverConfig.address" :disabled="processing || !networkConnected || !!serverConfig.id" placeholder="http://55.55.55.55:13378" type="url" class="w-full h-10" />
@@ -46,11 +46,11 @@
         <!-- username/password and auth methods -->
         <template v-else>
           <div v-if="serverConfig.id" class="flex items-center mb-4" @click="showServerList">
-            <span class="material-symbols text-fg-muted">arrow_back</span>
+            <span class="material-symbols text-md-on-surface-variant">arrow_back</span>
           </div>
 
           <div class="flex items-center">
-            <p class="text-fg-muted">{{ serverConfig.address }}</p>
+            <p class="text-md-on-surface-variant">{{ serverConfig.address }}</p>
             <div class="flex-grow" />
             <span v-if="!serverConfig.id" class="material-symbols" style="font-size: 1.1rem" @click="editServerAddress">edit</span>
           </div>

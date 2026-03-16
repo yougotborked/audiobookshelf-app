@@ -6,7 +6,7 @@
       </div>
     </template>
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
-      <div ref="container" class="w-full rounded-lg bg-primary border border-white border-opacity-20 overflow-y-auto overflow-x-hidden" style="max-height: 80vh" @click.stop>
+      <div ref="container" class="w-full rounded-lg bg-md-surface-3 border border-white border-opacity-20 overflow-y-auto overflow-x-hidden" style="max-height: 80vh" @click.stop>
         <div class="w-full h-full p-4" v-if="showAddHeader">
           <div class="mb-4">
             <ui-icon-btn icon="arrow_back" borderless @click="showAddHeader = false" />

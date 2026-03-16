@@ -19,7 +19,7 @@
         </div>
 
         <div class="my-8 max-w-2xl px-2">
-          <p class="text-base text-fg">{{ description }}</p>
+          <p class="text-base text-md-on-surface">{{ description }}</p>
         </div>
 
         <tables-collection-books-table :books="bookItems" :collection-id="collection.id" />

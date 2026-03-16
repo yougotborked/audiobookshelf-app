@@ -1,7 +1,7 @@
 <template>
   <div class="relative rounded-sm overflow-hidden" :style="{ height: height + 'px', width: width + 'px', maxWidth: width + 'px', minWidth: width + 'px' }">
-    <div class="w-full h-full relative" :class="{ 'bg-bg': !noBg }">
-      <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-primary">
+    <div class="w-full h-full relative" :class="{ 'bg-md-surface-1': !noBg }">
+      <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-md-surface-3">
         <div class="absolute cover-bg" ref="coverBg" />
       </div>
 
