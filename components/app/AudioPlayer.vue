@@ -57,7 +57,7 @@
     </div>
 
     <div id="playerContent"
-         class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all"
+         class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden"
          :class="{ 'bg-md-surface-4': !showFullscreen }"
          :style="showFullscreen ? { backgroundColor: coverRgb } : {}"
          @click="clickContainer">
