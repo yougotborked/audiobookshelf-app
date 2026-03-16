@@ -55,7 +55,11 @@
       <p class="author-text text-fg text-opacity-75 truncate">{{ authorName }}</p>
     </div>
 
-    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all" :style="{ backgroundColor: showFullscreen ? '' : coverRgb }" @click="clickContainer">
+    <div id="playerContent"
+         class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all"
+         :class="{ 'bg-md-surface-4': !showFullscreen }"
+         :style="showFullscreen ? { backgroundColor: coverRgb } : {}"
+         @click="clickContainer">
       <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-fg-muted cursor-pointer" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
@@ -80,7 +84,9 @@
           </div>
         </div>
       </div>
-      <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-minimized-audio-player)" />
+      <div v-else
+           class="w-full h-full absolute top-0 left-0 pointer-events-none rounded-t-md-lg"
+           :style="{ backgroundColor: coverRgb, opacity: 0.15 }" />
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
