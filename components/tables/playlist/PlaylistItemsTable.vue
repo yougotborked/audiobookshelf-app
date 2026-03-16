@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-primary/50 rounded-lg">
+  <div class="w-full bg-md-secondary-container rounded-lg">
     <div class="w-full h-14 flex items-center px-3">
       <p class="pr-2">{{ $strings.HeaderPlaylistItems }}</p>
 
@@ -8,7 +8,7 @@
       </div>
 
       <div class="flex-grow" />
-      <p v-if="totalDuration" class="text-sm text-fg">{{ totalDurationPretty }}</p>
+      <p v-if="totalDuration" class="text-sm text-md-on-surface">{{ totalDurationPretty }}</p>
     </div>
     <template v-for="item in items">
       <tables-playlist-item-table-row

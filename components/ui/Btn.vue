@@ -49,7 +49,7 @@ export default {
 
       // backward-compat: map old color prop to specific bg
       const legacyColorMap = {
-        success:     'bg-success text-white hover:brightness-110',
+        success:     'bg-md-primary text-white hover:brightness-110',
         warning:     'bg-warning text-white hover:brightness-110',
         error:       'bg-error text-white hover:brightness-110',
         info:        'bg-info text-white hover:brightness-110',

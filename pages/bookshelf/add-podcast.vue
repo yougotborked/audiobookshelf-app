@@ -16,18 +16,18 @@
           <div :key="podcast.id" class="p-2 border-b border-fg border-opacity-10" @click="selectPodcast(podcast)">
             <div class="flex">
               <div class="w-8 min-w-8 py-1">
-                <div class="h-8 w-full bg-primary">
+                <div class="h-8 w-full bg-md-surface-3">
                   <img v-if="podcast.cover" :src="podcast.cover" class="h-full w-full" />
                 </div>
               </div>
               <div class="flex-grow pl-2">
-                <p class="text-xs text-fg whitespace-nowrap truncate">{{ podcast.artistName }}</p>
-                <p class="text-xxs text-fg leading-5">{{ podcast.trackCount }} {{ $strings.HeaderEpisodes }}</p>
+                <p class="text-xs text-md-on-surface whitespace-nowrap truncate">{{ podcast.artistName }}</p>
+                <p class="text-xxs text-md-on-surface leading-5">{{ podcast.trackCount }} {{ $strings.HeaderEpisodes }}</p>
               </div>
             </div>
 
-            <p class="text-sm text-fg mb-1">{{ podcast.title }}</p>
-            <p class="text-xs text-fg-muted leading-5">{{ podcast.genres.join(', ') }}</p>
+            <p class="text-sm text-md-on-surface mb-1">{{ podcast.title }}</p>
+            <p class="text-xs text-md-on-surface-variant leading-5">{{ podcast.genres.join(', ') }}</p>
           </div>
         </template>
       </div>
@@ -35,8 +35,8 @@
     <template v-else>
       <div class="flex items-center px-2 h-16">
         <div class="flex items-center" @click="clearSelected">
-          <span class="material-symbols text-2xl text-fg-muted">arrow_back</span>
-          <p class="pl-2 uppercase text-sm font-semibold text-fg-muted leading-4 pb-px">{{ $strings.ButtonBack }}</p>
+          <span class="material-symbols text-2xl text-md-on-surface-variant">arrow_back</span>
+          <p class="pl-2 uppercase text-sm font-semibold text-md-on-surface-variant leading-4 pb-px">{{ $strings.ButtonBack }}</p>
         </div>
       </div>
 

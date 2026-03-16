@@ -1,29 +1,29 @@
 <template>
   <div class="w-full h-full py-6 px-4 overflow-y-auto">
-    <p class="mb-2 text-base text-fg">{{ $strings.HeaderDownloads }} ({{ localLibraryItems.length }})</p>
+    <p class="mb-2 text-base text-md-on-surface">{{ $strings.HeaderDownloads }} ({{ localLibraryItems.length }})</p>
 
     <div class="w-full">
       <template v-for="(mediaItem, num) in localLibraryItems">
         <div :key="mediaItem.id" class="w-full">
           <nuxt-link :to="`/localMedia/item/${mediaItem.id}`" class="flex items-center">
-            <div class="w-16 h-16 min-w-16 min-h-16 flex-none bg-primary relative">
+            <div class="w-16 h-16 min-w-16 min-h-16 flex-none bg-md-surface-3 relative">
               <img v-if="mediaItem.coverPathSrc" :src="mediaItem.coverPathSrc" class="w-full h-full object-contain" />
             </div>
             <div class="px-2 flex-grow">
               <p class="text-sm">{{ mediaItem.media.metadata.title }}</p>
-              <p v-if="mediaItem.mediaType == 'book'" class="text-xs text-fg-muted">{{ mediaItem.media.tracks.length }} {{ $strings.LabelTracks }}</p>
-              <p v-else-if="mediaItem.mediaType == 'podcast'" class="text-xs text-fg-muted">{{ mediaItem.media.episodes.length }} {{ $strings.HeaderEpisodes }}</p>
-              <p v-if="mediaItem.size" class="text-xs text-fg-muted">{{ $bytesPretty(mediaItem.size) }}</p>
+              <p v-if="mediaItem.mediaType == 'book'" class="text-xs text-md-on-surface-variant">{{ mediaItem.media.tracks.length }} {{ $strings.LabelTracks }}</p>
+              <p v-else-if="mediaItem.mediaType == 'podcast'" class="text-xs text-md-on-surface-variant">{{ mediaItem.media.episodes.length }} {{ $strings.HeaderEpisodes }}</p>
+              <p v-if="mediaItem.size" class="text-xs text-md-on-surface-variant">{{ $bytesPretty(mediaItem.size) }}</p>
             </div>
             <div class="w-12 h-12 flex items-center justify-center">
-              <span class="material-symbols text-2xl text-fg-muted">chevron_right</span>
+              <span class="material-symbols text-2xl text-md-on-surface-variant">chevron_right</span>
             </div>
           </nuxt-link>
           <div v-if="num + 1 < localLibraryItems.length" class="flex border-t border-fg/10 my-3" />
         </div>
       </template>
     </div>
-    <div v-if="localLibraryItems.length" class="mt-4 text-sm text-fg-muted">{{ $strings.LabelTotalSize }}: {{ $bytesPretty(localLibraryItems.reduce((acc, item) => acc + item.size, 0)) }}</div>
+    <div v-if="localLibraryItems.length" class="mt-4 text-sm text-md-on-surface-variant">{{ $strings.LabelTotalSize }}: {{ $bytesPretty(localLibraryItems.reduce((acc, item) => acc + item.size, 0)) }}</div>
   </div>
 </template>
 

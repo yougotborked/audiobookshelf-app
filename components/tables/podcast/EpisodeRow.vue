@@ -11,11 +11,11 @@
         <p v-else>No Local Media Progress</p>
       </template>-->
 
-      <p v-if="publishedAt" class="text-xs text-fg-muted mb-1">{{ $getString('LabelPublishedDate', [$formatDate(publishedAt, 'MMM do, yyyy')]) }}</p>
+      <p v-if="publishedAt" class="text-xs text-md-on-surface-variant mb-1">{{ $getString('LabelPublishedDate', [$formatDate(publishedAt, 'MMM do, yyyy')]) }}</p>
 
       <p class="text-sm font-semibold">{{ title }}</p>
 
-      <p class="text-sm text-fg episode-subtitle mt-1.5 mb-0.5" v-html="subtitle" />
+      <p class="text-sm text-md-on-surface episode-subtitle mt-1.5 mb-0.5" v-html="subtitle" />
 
       <p v-if="sortKey === 'audioFile.metadata.filename'" class="text-xs text-fg-muted truncate mt-2 mb-0.5">
         <span class="font-semibold">{{ $getString('LabelFilename') }}</span
@@ -23,14 +23,14 @@
       </p>
 
       <div v-if="episodeNumber || season || episodeType" class="flex py-2 items-center -mx-0.5">
-        <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-50 rounded-full text-xs font-light text-fg">Episode #{{ episodeNumber }}</div>
-        <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-50 rounded-full text-xs font-light text-fg">Season #{{ season }}</div>
-        <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-50 rounded-full text-xs font-light text-fg capitalize">{{ episodeType }}</div>
+        <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">Episode #{{ episodeNumber }}</div>
+        <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">Season #{{ season }}</div>
+        <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface capitalize">{{ episodeType }}</div>
       </div>
 
       <div class="flex items-center pt-2">
         <!-- Play/Pause Button -->
-        <div class="h-10 px-4 border border-border rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-white text-opacity-40' : ''" @click.stop="playClick">
+        <div class="h-10 px-4 border border-md-outline-variant rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-white text-opacity-40' : ''" @click.stop="playClick">
           <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-md-primary'">
             {{ streamIsPlaying ? 'pause' : 'play_arrow' }}
           </span>

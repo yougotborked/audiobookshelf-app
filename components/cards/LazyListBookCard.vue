@@ -3,7 +3,7 @@
     <div class="h-full flex relative">
       <div class="list-card-cover relative">
         <!-- When cover image does not fill -->
-        <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-primary">
+        <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-md-surface-3">
           <div class="absolute cover-bg" ref="coverBg" />
         </div>
 
@@ -12,7 +12,7 @@
         </div>
 
         <!-- No progress shown for collapsed series or podcasts in library -->
-        <div v-if="!isPodcast && !collapsedSeries" class="absolute bottom-0 left-0 h-1 shadow-sm max-w-full z-10 rounded-b" :class="itemIsFinished ? 'bg-success' : 'bg-yellow-400'" :style="{ width: coverWidth * userProgressPercent + 'px' }"></div>
+        <div v-if="!isPodcast && !collapsedSeries" class="absolute bottom-0 left-0 h-1 shadow-sm max-w-full z-10 rounded-b" :class="itemIsFinished ? 'bg-md-primary' : 'bg-yellow-400'" :style="{ width: coverWidth * userProgressPercent + 'px' }"></div>
       </div>
       <div class="flex-grow pl-2" :class="showPlayButton ? 'pr-12' : 'pr-2'">
         <p class="whitespace-normal line-clamp-2" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">
@@ -32,7 +32,7 @@
       <div v-if="showPlayButton" class="absolute top-0 bottom-0 right-0 h-full flex items-center justify-center z-20 pr-1">
         <button type="button" class="relative rounded-full bg-fg-muted/50" :class="{ 'p-2': !playerIsStartingForThisMedia }" @click.stop.prevent="play">
           <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill text-white">{{ playerIsPlaying ? 'pause' : 'play_arrow' }}</span>
-          <div v-else class="p-2 text-fg w-10 h-10 flex items-center justify-center bg-fg-muted/80 rounded-full overflow-hidden">
+          <div v-else class="p-2 text-md-on-surface w-10 h-10 flex items-center justify-center bg-fg-muted/80 rounded-full overflow-hidden">
             <svg class="animate-spin" style="width: 24px; height: 24px" viewBox="0 0 24 24">
               <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
             </svg>
@@ -41,7 +41,7 @@
       </div>
 
       <div v-if="localLibraryItem || isLocal" class="absolute top-0 right-0 z-20" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem` }">
-        <span class="material-symbols text-2xl text-success">download_done</span>
+        <span class="material-symbols text-2xl text-md-primary">download_done</span>
       </div>
     </div>
   </div>

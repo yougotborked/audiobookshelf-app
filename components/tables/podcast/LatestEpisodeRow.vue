@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full py-4 overflow-hidden relative border-b border-border" @click.stop="goToEpisodePage">
+  <div class="w-full py-4 overflow-hidden relative border-b border-md-outline-variant" @click.stop="goToEpisodePage">
     <div v-if="episode" class="w-full px-1">
       <div class="flex mb-2">
         <div class="w-10 min-w-10">
@@ -8,27 +8,27 @@
         <div class="flex-grow px-2">
           <div class="flex items-center">
             <div class="-mt-0.5 mb-0.5" @click.stop>
-              <nuxt-link :to="`/item/${libraryItemId}`" class="text-sm text-fg underline">{{ podcast.metadata.title }}</nuxt-link>
+              <nuxt-link :to="`/item/${libraryItemId}`" class="text-sm text-md-on-surface underline">{{ podcast.metadata.title }}</nuxt-link>
             </div>
             <widgets-explicit-indicator v-if="podcast.metadata.explicit" />
           </div>
-          <p v-if="publishedAt" class="text-xs text-fg-muted">{{ $dateDistanceFromNow(publishedAt) }}</p>
+          <p v-if="publishedAt" class="text-xs text-md-on-surface-variant">{{ $dateDistanceFromNow(publishedAt) }}</p>
         </div>
       </div>
 
       <p class="text-sm font-semibold">{{ title }}</p>
 
-      <p class="text-sm text-fg episode-subtitle mt-1.5 mb-0.5" v-html="subtitle" />
+      <p class="text-sm text-md-on-surface episode-subtitle mt-1.5 mb-0.5" v-html="subtitle" />
 
       <div v-if="episodeNumber || season || episodeType" class="flex pt-2 items-center -mx-0.5">
-        <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-50 rounded-full text-xs font-light text-fg">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
-        <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-50 rounded-full text-xs font-light text-fg">{{ $strings.LabelSeason }} #{{ season }}</div>
-        <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-50 rounded-full text-xs font-light text-fg capitalize">{{ episodeType }}</div>
+        <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
+        <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ $strings.LabelSeason }} #{{ season }}</div>
+        <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface capitalize">{{ episodeType }}</div>
       </div>
 
       <div class="flex items-center pt-2">
         <!-- Play/Pause Button -->
-        <div class="h-9 px-4 border border-border hover:bg-white hover:bg-opacity-10 rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-fg text-opacity-40' : ''" @click.stop="playClick">
+        <div class="h-9 px-4 border border-md-outline-variant hover:bg-white hover:bg-opacity-10 rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-md-on-surface text-opacity-40' : ''" @click.stop="playClick">
           <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-md-primary'">
             {{ streamIsPlaying ? 'pause' : 'play_arrow' }}
           </span>

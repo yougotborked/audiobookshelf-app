@@ -1,5 +1,5 @@
 <template>
-  <textarea ref="input" v-model="inputValue" :rows="rows" :readonly="readonly" :disabled="disabled" :placeholder="placeholder" class="py-2 px-3 rounded bg-primary text-fg focus:outline-none" :class="transparent ? '' : 'border border-border'" @change="change" />
+  <textarea ref="input" v-model="inputValue" :rows="rows" :readonly="readonly" :disabled="disabled" :placeholder="placeholder" class="py-2 px-3 rounded bg-md-surface-3 text-md-on-surface focus:outline-none" :class="transparent ? '' : 'border border-md-outline-variant'" @change="change" />
 </template>
 
 <script>

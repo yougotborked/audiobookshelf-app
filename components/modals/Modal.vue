@@ -6,7 +6,7 @@
       <span class="material-symbols text-2xl">close</span>
     </div>
     <slot name="outer" />
-    <div ref="content" class="relative text-fg bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle)" v-click-outside="clickBg">
+    <div ref="content" class="relative text-md-on-surface bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle)" v-click-outside="clickBg">
       <!-- Drag handle -->
       <div class="w-8 h-1 rounded-md-full bg-md-on-surface-variant/40 mx-auto mt-3 mb-1" />
       <slot />

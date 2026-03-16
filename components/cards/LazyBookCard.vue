@@ -1,7 +1,7 @@
 <template>
   <div ref="card" tabindex="0" :id="`book-card-${index}`" :style="{ minWidth: width + 'px', maxWidth: width + 'px', height: height + 'px' }" class="rounded-md-md z-10 bg-md-surface-1 cursor-pointer elevation-1 transition-md-standard active:bg-md-surface-2" @click="clickCard">
     <!-- When cover image does not fill -->
-    <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-primary">
+    <div v-show="showCoverBg" class="absolute top-0 left-0 w-full h-full overflow-hidden rounded-sm bg-md-surface-3">
       <div class="absolute cover-bg" ref="coverBg" />
     </div>
 
@@ -51,7 +51,7 @@
     <!-- Play/pause button for podcast episode -->
     <div v-if="recentEpisode" class="absolute z-10 top-0 left-0 bottom-0 right-0 m-auto flex items-center justify-center w-12 h-12 rounded-full" :class="{ 'bg-white/70': !playerIsStartingForThisMedia }" @click.stop="playEpisode">
       <span v-if="!playerIsStartingForThisMedia" class="material-symbols fill text-6xl text-black/80">{{ streamIsPlaying ? 'pause_circle' : 'play_circle' }}</span>
-      <div v-else class="text-fg absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/80 rounded-full overflow-hidden">
+      <div v-else class="text-md-on-surface absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/80 rounded-full overflow-hidden">
         <svg class="animate-spin" style="width: 24px; height: 24px" viewBox="0 0 24 24">
           <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
         </svg>
@@ -60,12 +60,12 @@
 
     <!-- No progress shown for collapsed series in library -->
     <div v-if="!collapsedSeries && (!isPodcast || recentEpisode)" class="absolute bottom-0 left-0 h-1 max-w-full z-10 bg-md-outline-variant/40 rounded-b-md-md overflow-hidden" :style="{ width: width + 'px' }">
-      <div class="h-full rounded-md-full transition-md-standard" :class="itemIsFinished ? 'bg-success' : 'bg-md-primary'" :style="{ width: (userProgressPercent * 100) + '%' }" />
+      <div class="h-full rounded-md-full transition-md-standard" :class="itemIsFinished ? 'bg-md-primary' : 'bg-md-primary'" :style="{ width: (userProgressPercent * 100) + '%' }" />
     </div>
 
     <!-- Downloaded icon -->
     <div v-if="showHasLocalDownload" class="absolute right-0 top-0 z-20" :style="{ top: (isPodcast || (seriesSequence && showSequence) ? 1.75 : 0.375) * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem` }">
-      <span class="material-symbols text-2xl text-success">download_done</span>
+      <span class="material-symbols text-2xl text-md-primary">download_done</span>
     </div>
 
     <!-- Error widget -->
@@ -74,7 +74,7 @@
     </div>
 
     <!-- rss feed icon -->
-    <div v-if="rssFeed" class="absolute text-success top-0 left-0 z-10" :style="{ padding: 0.375 * sizeMultiplier + 'rem' }">
+    <div v-if="rssFeed" class="absolute text-md-primary top-0 left-0 z-10" :style="{ padding: 0.375 * sizeMultiplier + 'rem' }">
       <span class="material-symbols" :style="{ fontSize: sizeMultiplier * 1.5 + 'rem' }">rss_feed</span>
     </div>
 

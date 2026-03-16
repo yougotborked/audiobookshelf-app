@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full layout-wrapper bg-bg">
+  <div class="w-full layout-wrapper bg-md-surface-1">
     <app-appbar />
     <div id="content" class="overflow-hidden relative" :class="isPlayerOpen ? 'playerOpen' : ''">
       <Nuxt :key="currentLang" />

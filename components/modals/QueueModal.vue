@@ -5,7 +5,7 @@
       <draggable v-model="localQueue" handle=".drag" tag="div" @end="dragEnd">
         <transition-group type="transition" name="list">
           <div v-for="(item, idx) in localQueue" :key="idx" class="flex items-center px-4 py-2 border-b border-fg/10 cursor-pointer" :class="{ 'bg-md-secondary-container': idx === currentIndex }" @click="select(idx)">
-            <span class="material-symbols drag mr-2 text-fg-muted cursor-move">drag_handle</span>
+            <span class="material-symbols drag mr-2 text-md-on-surface-variant cursor-move">drag_handle</span>
             <p class="flex-grow truncate">{{ itemTitle(item) }}</p>
             <span v-if="idx === currentIndex" class="material-symbols text-md-primary">play_arrow</span>
             <span class="material-symbols text-error ml-2" @click.stop="remove(idx)">close</span>
@@ -13,7 +13,7 @@
         </transition-group>
       </draggable>
       <div v-if="!queue.length" class="flex items-center justify-center p-4">
-        <p class="text-base text-fg-muted">{{ $strings.MessageNoItems }}</p>
+        <p class="text-base text-md-on-surface-variant">{{ $strings.MessageNoItems }}</p>
       </div>
     </div>
   </modals-modal>

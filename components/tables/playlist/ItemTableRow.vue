@@ -1,6 +1,6 @@
 <template>
   <div class="w-full px-1.5 pb-1.5">
-    <div class="w-full h-full p-2 rounded-lg relative bg-bg overflow-hidden">
+    <div class="w-full h-full p-2 rounded-lg relative bg-md-surface-1 overflow-hidden">
       <nuxt-link v-if="libraryItem" :to="itemUrl" class="flex items-center w-full">
         <div class="h-full relative" :style="{ width: '50px' }">
           <covers-book-cover :library-item="libraryItem" :width="50" :book-cover-aspect-ratio="bookCoverAspectRatio" />
@@ -11,8 +11,8 @@
               <p class="truncate text-sm flex-grow">{{ itemTitle }}</p>
               <span v-if="localLibraryItem" class="material-symbols text-md-primary text-base flex-shrink-0 ml-1">download_done</span>
             </div>
-            <p v-if="authorName" class="truncate block text-fg-muted text-xs">{{ authorName }}</p>
-            <p class="text-xxs text-fg-muted">{{ itemDuration }}</p>
+            <p v-if="authorName" class="truncate block text-md-on-surface-variant text-xs">{{ authorName }}</p>
+            <p class="text-xxs text-md-on-surface-variant">{{ itemDuration }}</p>
           </div>
         </div>
         <div class="w-8 min-w-8 flex justify-center">

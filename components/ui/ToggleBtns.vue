@@ -1,6 +1,6 @@
 <template>
   <div class="inline-flex toggle-btn-wrapper shadow-md">
-    <button v-for="(item, index) in items" :key="`${name}-${index}`" type="button" class="toggle-btn outline-none relative border border-border px-4 py-1" :class="{ selected: item.value === value }" @click.stop="clickBtn(item.value)">
+    <button v-for="(item, index) in items" :key="`${name}-${index}`" type="button" class="toggle-btn outline-none relative border border-md-outline-variant px-4 py-1" :class="{ selected: item.value === value }" @click.stop="clickBtn(item.value)">
       {{ item.text }}
     </button>
   </div>
