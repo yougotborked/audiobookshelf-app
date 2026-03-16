@@ -3,7 +3,8 @@ module.exports = {
   content: ['components/**/*.vue', 'layouts/**/*.vue', 'pages/**/*.vue', 'mixins/**/*.js', 'plugins/**/*.js'],
   theme: {
     screens: {
-      short: { raw: '(max-height: 500px)' }
+      short: { raw: '(max-height: 500px)' },
+      landscape: { raw: '(orientation: landscape)' }
     },
     extend: {
       /* ── Backward-compat semantic colours (components use these class names) ── */

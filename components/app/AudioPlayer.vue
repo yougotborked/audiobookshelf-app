@@ -2,9 +2,11 @@
   <div v-if="playbackSession" id="streamContainer" class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none" :class="{ fullscreen: showFullscreen, 'ios-player': $platform === 'ios', 'web-player': $platform === 'web' }">
     <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-auto" :style="{ backgroundColor: coverRgb }">
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-audio-player)" />
+      <!-- Extra darkening overlay for light cover art so controls stay readable -->
+      <div v-if="coverBgIsLight && theme !== 'black'" class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: rgba(0,0,0,0.6)" />
 
       <div class="top-4 left-4 absolute cursor-pointer">
-        <span class="material-symbols text-5xl" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" @click="collapseFullscreen">keyboard_arrow_down</span>
+        <span class="material-symbols text-5xl" @click="collapseFullscreen">keyboard_arrow_down</span>
       </div>
       <div
         v-show="showCastBtn"
@@ -13,14 +15,13 @@
       >
         <span
           class="material-symbols text-3xl"
-          :class="coverBgIsLight && theme !== 'black' ? 'text-black' : ''"
           @click="castClick"
         >{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
       <div class="top-6 right-4 absolute cursor-pointer">
-        <span class="material-symbols text-3xl" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" @click="showMoreMenuDialog = true">more_vert</span>
+        <span class="material-symbols text-3xl" @click="showMoreMenuDialog = true">more_vert</span>
       </div>
-      <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-opacity-75" :class="{ 'text-black text-opacity-75': coverBgIsLight && theme !== 'black' }" style="font-size: 10px">{{ isDirectPlayMethod ? $strings.LabelPlaybackDirect : isLocalPlayMethod ? $strings.LabelPlaybackLocal : $strings.LabelPlaybackTranscode }}</p>
+      <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-opacity-75" style="font-size: 10px">{{ isDirectPlayMethod ? $strings.LabelPlaybackDirect : isLocalPlayMethod ? $strings.LabelPlaybackLocal : $strings.LabelPlaybackTranscode }}</p>
     </div>
 
     <div v-if="playerSettings.useChapterTrack && playerSettings.useTotalTrack && showFullscreen" class="absolute total-track w-full z-30 px-6">
@@ -56,7 +57,7 @@
     </div>
 
     <div id="playerContent"
-         class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all"
+         class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden"
          :class="{ 'bg-md-surface-4': !showFullscreen }"
          :style="showFullscreen ? { backgroundColor: coverRgb } : {}"
          @click="clickContainer">
@@ -71,7 +72,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
           <div v-else class="h-7 w-7 flex items-center justify-around cursor-pointer" @click.stop="$emit('showSleepTimer')">
-            <p class="text-xl font-mono text-success">{{ sleepTimeRemainingPretty }}</p>
+            <p class="text-xl font-mono text-md-primary">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
           <div class="flex items-center gap-3">
@@ -1327,5 +1328,61 @@ export default {
 }
 .fullscreen #playerControls .play-btn .material-symbols {
   font-size: 2.1rem;
+}
+
+/* ── Landscape fullscreen: two-column layout ── */
+@media (orientation: landscape) {
+  /* Cover moves to left half */
+  .fullscreen .cover-wrapper {
+    left: 5%;
+    width: var(--cover-image-height); /* square-ish in landscape */
+    height: var(--cover-image-height);
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+
+  /* Title/author to right column, vertically centered */
+  .fullscreen .title-author-texts {
+    left: 52%;
+    width: 44%;
+    text-align: left;
+    bottom: unset;
+    top: 12%;
+    padding-bottom: 0;
+  }
+
+  /* Player controls to right column, near bottom */
+  .fullscreen #playerControls {
+    left: 52%;
+    width: 44%;
+    padding-left: 0;
+    padding-right: 0;
+    bottom: 90px;
+  }
+
+  /* Track bar to right column */
+  .fullscreen #playerTrack {
+    left: 52%;
+    width: 44%;
+    padding-left: 0;
+    padding-right: 0;
+    bottom: 58px;
+  }
+
+  /* In landscape, the playerContent bar stays full-width but transparent
+     background is handled by the z-10 cover div underneath */
+  .fullscreen .playerContainer {
+    height: 100%;
+    background-color: transparent !important;
+  }
+
+  /* Total track bar to right column */
+  .fullscreen .total-track {
+    left: 52%;
+    right: 4%;
+    bottom: 125px;
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 </style>
