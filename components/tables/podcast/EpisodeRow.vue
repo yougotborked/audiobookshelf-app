@@ -31,7 +31,7 @@
       <div class="flex items-center pt-2">
         <!-- Play/Pause Button -->
         <div class="h-10 px-4 border border-border rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-white text-opacity-40' : ''" @click.stop="playClick">
-          <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-success'">
+          <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-md-primary'">
             {{ streamIsPlaying ? 'pause' : 'play_arrow' }}
           </span>
           <svg v-else class="animate-spin" style="width: 28px; height: 28px" viewBox="0 0 24 24">
@@ -50,11 +50,11 @@
 
         <!-- Download Section -->
         <div v-if="userCanDownload" class="flex items-center">
-          <span v-if="isLocal" class="material-symbols px-2 text-success text-2xl leading-none">audio_file</span>
+          <span v-if="isLocal" class="material-symbols px-2 text-md-primary text-2xl leading-none">audio_file</span>
           <span v-else-if="!localEpisode" class="material-symbols mx-1.5 text-2xl leading-none" :class="downloadItem || startingDownload ? 'animate-bounce text-warning text-opacity-75' : ''" @click.stop="downloadClick">
             {{ downloadItem || startingDownload ? 'downloading' : 'download' }}
           </span>
-          <span v-else class="material-symbols px-2 text-success text-2xl leading-none">download_done</span>
+          <span v-else class="material-symbols px-2 text-md-primary text-2xl leading-none">download_done</span>
         </div>
 
         <!-- Spacer to push elements left -->
