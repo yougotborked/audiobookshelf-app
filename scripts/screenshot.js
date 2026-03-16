@@ -3,6 +3,10 @@ const { test } = require('@playwright/test')
 const path = require('path')
 const fs = require('fs')
 
+const SERVER_URL = process.env.ABS_SERVER_URL
+const API_TOKEN = process.env.ABS_API_TOKEN
+const USE_REAL_SERVER = !!(SERVER_URL && API_TOKEN)
+
 const TIMESTAMP = new Date().toISOString().slice(0, 16).replace('T', '-').replace(/:/g, '-')
 const OUT_DIR = path.join(__dirname, '..', 'docs', 'screenshots', TIMESTAMP)
 
@@ -47,7 +51,15 @@ const MOCK_PODCAST_ITEMS = {
   total: 4, page: 0, limit: 50
 }
 
-async function setupMockAuth(page, { libraryId } = {}) {
+async function setupAuth(page, { libraryId } = {}) {
+  if (USE_REAL_SERVER) {
+    await page.addInitScript(({ url, token }) => {
+      localStorage.setItem('AbsToken', token)
+      localStorage.setItem('serverAddress', url)
+    }, { url: SERVER_URL, token: API_TOKEN })
+    return
+  }
+
   const auth = libraryId
     ? { ...MOCK_AUTH, '_cap_lastLibraryId': libraryId }
     : MOCK_AUTH
@@ -76,21 +88,41 @@ test('connect page', async ({ page }) => {
 })
 
 test('bookshelf page', async ({ page }) => {
-  await setupMockAuth(page)
+  await setupAuth(page)
   await page.goto('/bookshelf')
   await page.waitForTimeout(2000)
   await page.screenshot({ path: shot('02-bookshelf'), fullPage: true })
+
+  if (USE_REAL_SERVER) {
+    const response = await page.request.get(`${SERVER_URL}/api/libraries`, {
+      headers: { 'Authorization': `Bearer ${API_TOKEN}` }
+    })
+    const libraries = await response.json()
+    const firstLibId = libraries.libraries?.[0]?.id
+    if (firstLibId) {
+      const itemsResp = await page.request.get(`${SERVER_URL}/api/libraries/${firstLibId}/items?limit=1`, {
+        headers: { 'Authorization': `Bearer ${API_TOKEN}` }
+      })
+      const items = await itemsResp.json()
+      const firstItemId = items.results?.[0]?.id
+      if (firstItemId) {
+        await page.goto(`http://127.0.0.1:3000/item/${firstItemId}`)
+        await page.waitForTimeout(2000)
+        await page.screenshot({ path: shot('item-detail'), fullPage: true })
+      }
+    }
+  }
 })
 
 test('bookshelf - podcast library', async ({ page }) => {
-  await setupMockAuth(page, { libraryId: 'lib_podcasts' })
+  await setupAuth(page, { libraryId: 'lib_podcasts' })
   await page.goto('/bookshelf')
   await page.waitForTimeout(2000)
   await page.screenshot({ path: shot('02b-bookshelf-podcasts'), fullPage: true })
 })
 
 test('libraries modal', async ({ page }) => {
-  await setupMockAuth(page)
+  await setupAuth(page)
   await page.goto('/bookshelf')
   await page.waitForTimeout(2000)
   // Inject auth + library state directly into Vuex store (Capacitor DB not available in web/test)
@@ -109,21 +141,21 @@ test('libraries modal', async ({ page }) => {
 })
 
 test('settings page', async ({ page }) => {
-  await setupMockAuth(page)
+  await setupAuth(page)
   await page.goto('/settings')
   await page.waitForTimeout(1500)
   await page.screenshot({ path: shot('03-settings'), fullPage: true })
 })
 
 test('downloads page', async ({ page }) => {
-  await setupMockAuth(page)
+  await setupAuth(page)
   await page.goto('/downloads')
   await page.waitForTimeout(1500)
   await page.screenshot({ path: shot('04-downloads'), fullPage: true })
 })
 
 test('search page', async ({ page }) => {
-  await setupMockAuth(page)
+  await setupAuth(page)
   await page.goto('/search')
   await page.waitForTimeout(1500)
   await page.screenshot({ path: shot('05-search'), fullPage: true })
