@@ -19,7 +19,7 @@
       :placeholder="placeholder"
       :class="inputClass"
       @keyup="keyup"
-      @focus="focused = true"
+      @focus="onFocus"
       @blur="focused = false"
     />
     <div v-if="prependIcon" class="absolute top-0 left-0 h-full px-2.5 flex items-center justify-center text-md-on-surface-variant pointer-events-none">
@@ -70,6 +70,7 @@ export default {
     }
   },
   methods: {
+    onFocus() { if (!this.readonly) this.focused = true },
     clear() { this.input = '' },
     focus() {
       if (this.$refs.input) {
