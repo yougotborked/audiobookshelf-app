@@ -1329,4 +1329,60 @@ export default {
 .fullscreen #playerControls .play-btn .material-symbols {
   font-size: 2.1rem;
 }
+
+/* ── Landscape fullscreen: two-column layout ── */
+@media (orientation: landscape) {
+  /* Cover moves to left half */
+  .fullscreen .cover-wrapper {
+    left: 5%;
+    width: var(--cover-image-height); /* square-ish in landscape */
+    height: var(--cover-image-height);
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+
+  /* Title/author to right column, vertically centered */
+  .fullscreen .title-author-texts {
+    left: 52%;
+    width: 44%;
+    text-align: left;
+    bottom: unset;
+    top: 12%;
+    padding-bottom: 0;
+  }
+
+  /* Player controls to right column, near bottom */
+  .fullscreen #playerControls {
+    left: 52%;
+    width: 44%;
+    padding-left: 0;
+    padding-right: 0;
+    bottom: 90px;
+  }
+
+  /* Track bar to right column */
+  .fullscreen #playerTrack {
+    left: 52%;
+    width: 44%;
+    padding-left: 0;
+    padding-right: 0;
+    bottom: 58px;
+  }
+
+  /* In landscape, the playerContent bar stays full-width but transparent
+     background is handled by the z-10 cover div underneath */
+  .fullscreen .playerContainer {
+    height: 100%;
+    background-color: transparent !important;
+  }
+
+  /* Total track bar to right column */
+  .fullscreen .total-track {
+    left: 52%;
+    right: 4%;
+    bottom: 125px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
 </style>
