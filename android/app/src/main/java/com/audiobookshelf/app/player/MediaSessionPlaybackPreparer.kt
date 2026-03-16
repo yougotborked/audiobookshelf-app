@@ -9,10 +9,29 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import com.audiobookshelf.app.data.LibraryItemWrapper
 import com.audiobookshelf.app.data.PodcastEpisode
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
+import androidx.media3.common.Player
 
-class MediaSessionPlaybackPreparer(var playerNotificationService:PlayerNotificationService) : MediaSessionConnector.PlaybackPreparer {
+// TODO(media3): MediaSessionConnector was removed in Media3 — MediaSession handles connector
+// behaviour natively via MediaSession.Callback.  The PlaybackPreparer interface no longer exists.
+// This class is replaced by a local stub interface so the file continues to compile while the full
+// Media3 MediaSession rewrite is deferred.
+
+/**
+ * Stub that mirrors the old MediaSessionConnector.PlaybackPreparer API.
+ * TODO(media3): replace with MediaSession.Callback.onPrepare / onPlayFromMediaId overrides.
+ */
+interface PlaybackPreparerCompat {
+  fun onCommand(player: Player, command: String, extras: Bundle?, cb: ResultReceiver?): Boolean
+  fun getSupportedPrepareActions(): Long
+  fun onPrepare(playWhenReady: Boolean)
+  fun onPrepareFromMediaId(mediaId: String, playWhenReady: Boolean, extras: Bundle?)
+  fun onPrepareFromSearch(query: String, playWhenReady: Boolean, extras: Bundle?)
+  fun onPrepareFromUri(uri: Uri, playWhenReady: Boolean, extras: Bundle?)
+}
+
+class MediaSessionPlaybackPreparer(var playerNotificationService: PlayerNotificationService) :
+  PlaybackPreparerCompat {
+
   var tag = "MediaSessionPlaybackPreparer"
 
   override fun onCommand(player: Player, command: String, extras: Bundle?, cb: ResultReceiver?): Boolean {

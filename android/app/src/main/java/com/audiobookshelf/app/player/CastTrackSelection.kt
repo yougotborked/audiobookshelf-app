@@ -15,65 +15,43 @@
  */
 package com.audiobookshelf.app.player
 
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.Format
-import com.google.android.exoplayer2.source.TrackGroup
-import com.google.android.exoplayer2.trackselection.TrackSelection
-import com.google.android.exoplayer2.util.Assertions
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.TrackGroup
+import androidx.media3.common.util.Assertions
 
-/**
- * [TrackSelection] that only selects the first track of the provided [TrackGroup].
- *
- *
- * This relies on [CastPlayer] track groups only having one track.
- */
+// TODO(media3): TrackSelection interface was removed in Media3.  CastTrackSelection is no longer
+// a formal TrackSelection — it is now a plain helper class used only internally by CastPlayer to
+// map between TrackGroup indices and renderer slots.  A full rewrite of CastPlayer's track
+// selection logic is deferred; this stub keeps the code compiling.
+
+/** Helper that selects the first (and only) track of the provided [TrackGroup]. */
 /* package */
-internal class CastTrackSelection
-/** @param trackGroup The [TrackGroup] from which the first track will only be selected.
- */(private val trackGroup: TrackGroup) : TrackSelection {
-  override fun getType(): Int {
-    return TrackSelection.TYPE_UNSET
-  }
+internal class CastTrackSelection(val trackGroup: TrackGroup) {
 
-  override fun getTrackGroup(): TrackGroup {
-    return trackGroup
-  }
+  fun length(): Int = 1
 
-  override fun length(): Int {
-    return 1
-  }
-
-  override fun getFormat(index: Int): Format {
+  fun getFormat(index: Int): Format {
     Assertions.checkArgument(index == 0)
     return trackGroup.getFormat(0)
   }
 
-  override fun getIndexInTrackGroup(index: Int): Int {
-    return if (index == 0) 0 else C.INDEX_UNSET
-  }
+  fun getIndexInTrackGroup(index: Int): Int =
+    if (index == 0) 0 else C.INDEX_UNSET
 
-  override fun indexOf(format: Format): Int {
-    return if (format === trackGroup.getFormat(0)) 0 else C.INDEX_UNSET
-  }
+  fun indexOf(format: Format): Int =
+    if (format === trackGroup.getFormat(0)) 0 else C.INDEX_UNSET
 
-  override fun indexOf(indexInTrackGroup: Int): Int {
-    return if (indexInTrackGroup == 0) 0 else C.INDEX_UNSET
-  }
+  fun indexOf(indexInTrackGroup: Int): Int =
+    if (indexInTrackGroup == 0) 0 else C.INDEX_UNSET
 
   // Object overrides.
-  override fun hashCode(): Int {
-    return System.identityHashCode(trackGroup)
-  }
+  override fun hashCode(): Int = System.identityHashCode(trackGroup)
 
   // Track groups are compared by identity not value, as distinct groups may have the same value.
-  override fun equals(obj: Any?): Boolean {
-    if (this === obj) {
-      return true
-    }
-    if (obj == null || javaClass != obj.javaClass) {
-      return false
-    }
-    val other = obj as CastTrackSelection
-    return trackGroup === other.trackGroup
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || javaClass != other.javaClass) return false
+    return trackGroup === (other as CastTrackSelection).trackGroup
   }
 }

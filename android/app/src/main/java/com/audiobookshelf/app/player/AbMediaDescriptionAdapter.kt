@@ -10,8 +10,8 @@ import android.support.v4.media.session.MediaControllerCompat
 import com.audiobookshelf.app.BuildConfig
 import com.audiobookshelf.app.R
 import com.bumptech.glide.Glide
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.ui.PlayerNotificationManager
+import androidx.media3.common.Player
+import androidx.media3.ui.PlayerNotificationManager
 import kotlinx.coroutines.*
 
 class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, private val playerNotificationService: PlayerNotificationService) : PlayerNotificationManager.MediaDescriptionAdapter {

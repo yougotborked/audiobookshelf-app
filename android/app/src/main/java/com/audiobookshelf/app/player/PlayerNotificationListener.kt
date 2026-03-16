@@ -4,7 +4,7 @@ import android.app.Notification
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
-import com.google.android.exoplayer2.ui.PlayerNotificationManager
+import androidx.media3.ui.PlayerNotificationManager
 
 class PlayerNotificationListener(var playerNotificationService:PlayerNotificationService) : PlayerNotificationManager.NotificationListener {
   var tag = "PlayerNotificationListener"
