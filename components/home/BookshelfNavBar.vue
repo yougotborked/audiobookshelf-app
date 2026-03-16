@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-md-surface-4 relative z-30 elevation-2">
+  <div class="w-full bg-md-surface-4 relative z-30 elevation-2 landscape:w-16 landscape:fixed landscape:left-0 landscape:top-0 landscape:bottom-0 landscape:h-full">
     <nav id="bookshelf-navbar" class="flex h-full pointer-events-auto">
       <nuxt-link
         v-for="item in items"
@@ -92,3 +92,26 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+@media (orientation: landscape) {
+  #bookshelf-navbar {
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 64px;
+    height: 100%;
+    z-index: 30;
+    padding-top: 56px; /* leave room for appbar */
+    padding-bottom: 72px; /* leave room for mini-player */
+    overflow-y: auto;
+  }
+  #bookshelf-navbar > a {
+    flex: none;
+    width: 100%;
+    min-height: 56px;
+  }
+}
+</style>

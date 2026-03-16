@@ -6,7 +6,7 @@
       <span class="material-symbols text-2xl">close</span>
     </div>
     <slot name="outer" />
-    <div ref="content" class="relative text-fg bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="{ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }" v-click-outside="clickBg">
+    <div ref="content" class="relative text-fg bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle)" v-click-outside="clickBg">
       <!-- Drag handle -->
       <div class="w-8 h-1 rounded-md-full bg-md-on-surface-variant/40 mx-auto mt-3 mb-1" />
       <slot />
@@ -22,7 +22,8 @@ export default {
     persistent: { type: Boolean, default: true },
     width: { type: [String, Number], default: 500 },
     height: { type: [String, Number], default: 'unset' },
-    maxWidth: { type: String, default: '100%' }
+    maxWidth: { type: String, default: '100%' },
+    anchorSelector: { type: String, default: null }
   },
   data() {
     return { el: null, content: null }
@@ -41,6 +42,29 @@ export default {
     modalHeight() {
       if (typeof this.height === 'string') return this.height
       return this.height + 'px'
+    },
+    popoverStyle() {
+      if (!this.anchorSelector) return {}
+      if (typeof window === 'undefined') return {}
+      const isLandscape = window.innerWidth > window.innerHeight
+      if (!isLandscape) return {}
+      const anchor = document.querySelector(this.anchorSelector)
+      if (!anchor) return {}
+      const rect = anchor.getBoundingClientRect()
+      const margin = 8
+      const estWidth = Math.min(280, window.innerWidth - 32)
+      const left = Math.max(margin, Math.min(rect.left, window.innerWidth - estWidth - margin))
+      const top = Math.min(rect.bottom + margin, window.innerHeight - 100)
+      return {
+        position: 'fixed',
+        left: left + 'px',
+        top: top + 'px',
+        bottom: 'auto',
+        borderRadius: '12px',
+        width: estWidth + 'px',
+        transform: 'none',
+        maxHeight: '60vh'
+      }
     }
   },
   methods: {
@@ -53,8 +77,16 @@ export default {
     setShow() {
       this.$store.commit('globals/setIsModalOpen', true)
       document.body.appendChild(this.el)
+      const isPopover = !!this.anchorSelector && typeof window !== 'undefined' && window.innerWidth > window.innerHeight
+      if (isPopover) {
+        this.content.style.transform = 'scale(0.95)'
+        this.content.style.opacity = '0'
+      } else {
+        this.content.style.transform = 'translateY(100%)'
+        this.content.style.opacity = '0'
+      }
       setTimeout(() => {
-        this.content.style.transform = 'translateY(0)'
+        this.content.style.transform = isPopover ? 'scale(1)' : 'translateY(0)'
         this.content.style.opacity = '1'
       }, 10)
       document.documentElement.classList.add('modal-open')

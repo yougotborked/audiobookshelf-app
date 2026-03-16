@@ -1417,5 +1417,18 @@ export default {
   .fullscreen .top-4.absolute.left-0.right-0 {
     display: none !important;
   }
+
+  /* Mini-player (non-fullscreen) — compact strip */
+  #streamContainer:not(.fullscreen) #playerContent {
+    padding: 4px 8px;
+  }
+  #streamContainer:not(.fullscreen) #playerControls {
+    position: relative;
+    padding: 0;
+  }
+  /* Hide cover art in mini-player landscape; space is too tight */
+  #streamContainer:not(.fullscreen) .cover-wrapper {
+    display: none;
+  }
 }
 </style>

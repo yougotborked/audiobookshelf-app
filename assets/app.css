@@ -152,6 +152,32 @@ textarea {
   font-size: 0.75rem;
 }
 
+/* ── Landscape layout overrides ── */
+@media (orientation: landscape) {
+  /* Left rail is 64px wide; shift content right */
+  #content {
+    height: calc(100% - 56px); /* appbar only; nav is now a side rail */
+    min-height: calc(100% - 56px);
+    max-height: calc(100% - 56px);
+    margin-left: 64px;
+  }
+  #content.playerOpen {
+    height: calc(100% - 136px); /* appbar 56px + mini-player 80px */
+    min-height: calc(100% - 136px);
+    max-height: calc(100% - 136px);
+    margin-left: 64px;
+  }
+  #bookshelf {
+    height: calc(100% - 40px);
+    min-height: calc(100% - 40px);
+    margin-left: 0; /* already accounted for by #content */
+  }
+  /* Appbar gets left padding so it doesn't overlap the rail */
+  #appbar {
+    padding-left: 72px;
+  }
+}
+
 /* M3 motion utilities — only animated when user hasn't requested reduced motion */
 .transition-md-standard,
 .transition-md-emphasized,

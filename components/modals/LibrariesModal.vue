@@ -1,5 +1,5 @@
 <template>
-  <modals-modal v-model="show" :processing="processing">
+  <modals-modal v-model="show" :processing="processing" anchor-selector="[aria-label='Show library modal']">
     <div class="px-4 pt-2 pb-2">
       <p class="text-md-title-m text-md-on-surface mb-3">{{ $strings.HeaderLibraries }}</p>
       <ul class="w-full" role="listbox">
