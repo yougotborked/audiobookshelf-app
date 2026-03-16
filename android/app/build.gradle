@@ -135,6 +135,9 @@ dependencies {
 
   // Jackson for JSON
   implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3'
+
+  testImplementation "org.robolectric:robolectric:4.13"
+  testImplementation "junit:junit:$junit_version"
 }
 
 tasks.register('staticAnalysis') {
