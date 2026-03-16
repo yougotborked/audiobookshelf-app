@@ -2,8 +2,8 @@
   <div v-if="playbackSession" id="streamContainer" class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none" :class="{ fullscreen: showFullscreen, 'ios-player': $platform === 'ios', 'web-player': $platform === 'web' }">
     <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-auto" :style="{ backgroundColor: coverRgb }">
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-audio-player)" />
-      <!-- Extra darkening overlay for light cover art so controls stay readable -->
-      <div v-if="coverBgIsLight && theme !== 'black'" class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: rgba(0,0,0,0.6)" />
+      <!-- Darkening overlay: always applied for contrast, heavier for light cover art -->
+      <div class="w-full h-full absolute top-0 left-0 pointer-events-none" :style="{ background: coverBgIsLight && theme !== 'black' ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.4)' }" />
 
       <div class="top-4 left-4 absolute cursor-pointer">
         <span class="material-symbols text-5xl" @click="collapseFullscreen">keyboard_arrow_down</span>
@@ -59,7 +59,7 @@
     <div id="playerContent"
          class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden"
          :class="{ 'bg-md-surface-4': !showFullscreen }"
-         :style="showFullscreen ? { backgroundColor: coverRgb } : {}"
+         :style="showFullscreen ? { background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 60%, transparent 100%)' } : {}"
          @click="clickContainer">
       <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
@@ -81,7 +81,7 @@
               :class="playQueueAvailable ? 'text-opacity-75' : 'text-opacity-10'"
               @click.stop="clickQueueBtn"
             >playlist_play</span>
-            <span class="material-symbols text-3xl text-fg cursor-pointer" :class="chapters.length ? 'text-opacity-75' : 'text-opacity-10'" @click="clickChaptersBtn">format_list_bulleted</span>
+            <span v-show="chapters.length > 0" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer" @click="clickChaptersBtn">format_list_bulleted</span>
           </div>
         </div>
       </div>
@@ -106,7 +106,7 @@
             <span class="material-symbols text-3xl leading-none">forward_media</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpForwardLabel }}</span>
           </div>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="nextChapter && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapter">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-fg cursor-pointer" :class="(nextChapter || nextQueueItem) && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
         </div>
       </div>
 
@@ -235,6 +235,9 @@ export default {
   computed: {
     playQueueAvailable() {
       return Array.isArray(this.$store.state.playQueue) && this.$store.state.playQueue.length > 0
+    },
+    nextQueueItem() {
+      return this.$store.getters['getNextQueueItem']
     },
     theme() {
       return document.documentElement.dataset.theme || 'dark'
@@ -524,6 +527,15 @@ export default {
       if (this.isLoading) return
       if (!this.nextChapter) return
       this.seek(this.nextChapter.start)
+    },
+    async jumpNextChapterOrQueue() {
+      await this.$hapticsImpact()
+      if (this.isLoading) return
+      if (this.nextChapter) {
+        this.seek(this.nextChapter.start)
+      } else if (this.nextQueueItem) {
+        this.$emit('skipNextQueue')
+      }
     },
     async jumpChapterStart() {
       await this.$hapticsImpact()
@@ -1351,13 +1363,13 @@ export default {
     padding-bottom: 0;
   }
 
-  /* Player controls to right column, near bottom */
+  /* Player controls to right column, near bottom — shifted up to make room for toolbar */
   .fullscreen #playerControls {
     left: 52%;
     width: 44%;
     padding-left: 0;
     padding-right: 0;
-    bottom: 90px;
+    bottom: 50px !important;
   }
 
   /* Track bar to right column */
@@ -1366,7 +1378,7 @@ export default {
     width: 44%;
     padding-left: 0;
     padding-right: 0;
-    bottom: 58px;
+    bottom: 22px !important;
   }
 
   /* In landscape, the playerContent bar stays full-width but transparent
@@ -1383,6 +1395,27 @@ export default {
     bottom: 125px;
     padding-left: 0;
     padding-right: 0;
+  }
+
+  /* Top bar controls: smaller top offset to avoid overlapping cover art */
+  .fullscreen .top-4.left-4 { top: 8px !important; }
+  .fullscreen .top-6.right-4 { top: 8px !important; }
+  .fullscreen .top-6.right-16 { top: 8px !important; }
+
+  /* Fullscreen bottom toolbar (bookmark/speed/sleep/queue/chapters):
+     move to right column, above the seek track */
+  .fullscreen #playerContent .absolute.bottom-4 {
+    left: 52%;
+    width: 44%;
+    bottom: 8px;
+    padding: 0;
+    max-width: none;
+  }
+
+  /* Hide the playback method label (Direct/Local/Transcode) in landscape —
+     it overlaps the album art title text */
+  .fullscreen .top-4.absolute.left-0.right-0 {
+    display: none !important;
   }
 }
 </style>
