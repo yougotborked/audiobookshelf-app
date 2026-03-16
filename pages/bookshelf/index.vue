@@ -9,7 +9,8 @@
       <p class="pl-4">{{ $strings.MessageLoadingServerData }}</p>
     </div>
 
-    <div class="w-full" :class="{ 'py-6': altViewEnabled }">
+    <bookshelf-podcast-catch-up-feed v-if="currentLibraryIsPodcast" :current-library-id="currentLibraryId" />
+    <div v-else class="w-full" :class="{ 'py-6': altViewEnabled }">
       <template v-for="(shelf, index) in shelves">
         <bookshelf-shelf :key="shelf.id" :label="getShelfLabel(shelf)" :entities="shelf.entities" :type="shelf.type" :style="{ zIndex: shelves.length - index }" />
       </template>
@@ -207,6 +208,8 @@ export default {
       return categories
     },
     async fetchCategories() {
+      if (this.currentLibraryIsPodcast) return // podcast home manages its own data
+
       console.log(`[categories] fetchCategories networkConnected=${this.networkConnected}, lastServerFetch=${this.lastServerFetch}, lastLocalFetch=${this.lastLocalFetch}`)
 
       // TODO: Find a better way to keep the shelf up-to-date with local vs server library because this is a disaster
