@@ -30,32 +30,35 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    label: {
-      type: String,
-      default: 'Menu'
-    },
-    items: {
-      type: Array,
-      default: () => []
-    }
-  },
-  data() {
-    return {
-      showMenu: false
-    }
-  },
-  methods: {
-    clickOutside() {
-      this.showMenu = false
-    },
-    clickedOption(itemValue) {
-      this.$emit('action', itemValue)
-      this.showMenu = false
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { ref } from 'vue'
+
+interface MenuItem {
+  value: string | number
+  text: string
+  to?: string
+}
+
+withDefaults(defineProps<{
+  label?: string
+  items?: MenuItem[]
+}>(), {
+  label: 'Menu',
+  items: () => []
+})
+
+const emit = defineEmits<{
+  action: [value: string | number]
+}>()
+
+const showMenu = ref(false)
+
+function clickOutside() {
+  showMenu.value = false
+}
+
+function clickedOption(itemValue: string | number) {
+  emit('action', itemValue)
+  showMenu.value = false
 }
 </script>

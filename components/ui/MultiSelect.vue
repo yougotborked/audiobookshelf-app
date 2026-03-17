@@ -36,218 +36,226 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    value: {
-      type: Array,
-      default: () => []
-    },
-    items: {
-      type: Array,
-      default: () => []
-    },
-    label: String,
-    disabled: Boolean,
-    readonly: Boolean,
-    showEdit: Boolean
-  },
-  data() {
-    return {
-      textInput: null,
-      currentSearch: null,
-      typingTimeout: null,
-      isFocused: false,
-      menu: null
+<script setup lang="ts">
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
+
+const props = defineProps<{
+  modelValue?: string[]
+  items?: string[]
+  label?: string
+  disabled?: boolean
+  readonly?: boolean
+  showEdit?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: string[]]
+  edit: [item: string]
+  removedItem: [item: string]
+  newItem: [item: string]
+}>()
+
+const inputWrapper = ref<HTMLElement | null>(null)
+const input = ref<HTMLInputElement | null>(null)
+const menu = ref<HTMLElement | null>(null)
+let detachedMenu: HTMLElement | null = null
+
+const textInput = ref<string | null>(null)
+const currentSearch = ref<string | null>(null)
+const typingTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+const isFocused = ref(false)
+
+const selected = computed(() => props.modelValue || [])
+
+const showMenu = computed(() => isFocused.value)
+
+const wrapperClass = computed(() => {
+  const classes: string[] = []
+  if (props.disabled) classes.push('bg-black-300')
+  else classes.push('bg-md-surface-3')
+  if (!props.readonly) classes.push('cursor-text')
+  return classes.join(' ')
+})
+
+const itemsToShow = computed(() => {
+  if (!currentSearch.value || !textInput.value) {
+    return props.items || []
+  }
+  return (props.items || []).filter((i) => {
+    const iValue = String(i).toLowerCase()
+    return iValue.includes(currentSearch.value!.toLowerCase())
+  })
+})
+
+watch(showMenu, (newVal) => {
+  if (newVal) setListener()
+  else removeListener()
+})
+
+function editItem(item: string) {
+  emit('edit', item)
+}
+
+function keydownInput() {
+  if (typingTimeout.value) clearTimeout(typingTimeout.value)
+  typingTimeout.value = setTimeout(() => {
+    currentSearch.value = textInput.value
+  }, 100)
+  setInputWidth()
+}
+
+function setInputWidth() {
+  setTimeout(() => {
+    if (!input.value) return
+    const value = input.value.value
+    const len = value.length * 7 + 24
+    input.value.style.width = len + 'px'
+    recalcMenuPos()
+  }, 50)
+}
+
+function recalcMenuPos() {
+  if (!detachedMenu || !inputWrapper.value) return
+  const boundingBox = inputWrapper.value.getBoundingClientRect()
+  if (boundingBox.y > window.innerHeight - 8) {
+    return forceBlur()
+  }
+  const menuHeight = detachedMenu.clientHeight
+  let top = boundingBox.y + boundingBox.height - 4
+  if (top + menuHeight > window.innerHeight - 20) {
+    top = boundingBox.y - menuHeight - 4
+  }
+
+  detachedMenu.style.top = top + 'px'
+  detachedMenu.style.left = boundingBox.x + 'px'
+  detachedMenu.style.width = boundingBox.width + 'px'
+}
+
+function unmountMountMenu() {
+  if (!menu.value || !inputWrapper.value) return
+  detachedMenu = menu.value
+
+  const boundingBox = inputWrapper.value.getBoundingClientRect()
+  detachedMenu.remove()
+  document.body.appendChild(detachedMenu)
+  detachedMenu.style.top = boundingBox.y + boundingBox.height - 4 + 'px'
+  detachedMenu.style.left = boundingBox.x + 'px'
+  detachedMenu.style.width = boundingBox.width + 'px'
+}
+
+function inputFocus() {
+  if (!detachedMenu) {
+    unmountMountMenu()
+  }
+  isFocused.value = true
+  nextTick(recalcMenuPos)
+}
+
+function inputBlur() {
+  if (!isFocused.value) return
+
+  setTimeout(() => {
+    if (document.activeElement === input.value) {
+      return
     }
-  },
-  watch: {
-    showMenu(newVal) {
-      if (newVal) this.setListener()
-      else this.removeListener()
-    }
-  },
-  computed: {
-    selected: {
-      get() {
-        return this.value || []
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    showMenu() {
-      return this.isFocused
-    },
-    wrapperClass() {
-      var classes = []
-      if (this.disabled) classes.push('bg-black-300')
-      else classes.push('bg-md-surface-3')
-      if (!this.readonly) classes.push('cursor-text')
-      return classes.join(' ')
-    },
-    itemsToShow() {
-      if (!this.currentSearch || !this.textInput) {
-        return this.items
-      }
+    isFocused.value = false
+    if (textInput.value) submitForm()
+  }, 50)
+}
 
-      return this.items.filter((i) => {
-        var iValue = String(i).toLowerCase()
-        return iValue.includes(this.currentSearch.toLowerCase())
-      })
-    }
-  },
-  methods: {
-    editItem(item) {
-      this.$emit('edit', item)
-    },
-    keydownInput() {
-      clearTimeout(this.typingTimeout)
-      this.typingTimeout = setTimeout(() => {
-        this.currentSearch = this.textInput
-      }, 100)
-      this.setInputWidth()
-    },
-    setInputWidth() {
-      setTimeout(() => {
-        var value = this.$refs.input.value
-        var len = value.length * 7 + 24
-        this.$refs.input.style.width = len + 'px'
-        this.recalcMenuPos()
-      }, 50)
-    },
-    recalcMenuPos() {
-      if (!this.menu) return
-      var boundingBox = this.$refs.inputWrapper.getBoundingClientRect()
-      if (boundingBox.y > window.innerHeight - 8) {
-        // Input is off the page
-        return this.forceBlur()
-      }
-      var menuHeight = this.menu.clientHeight
-      var top = boundingBox.y + boundingBox.height - 4
-      if (top + menuHeight > window.innerHeight - 20) {
-        // Reverse menu to open upwards
-        top = boundingBox.y - menuHeight - 4
-      }
+function focus() {
+  if (input.value) input.value.focus()
+}
 
-      this.menu.style.top = top + 'px'
-      this.menu.style.left = boundingBox.x + 'px'
-      this.menu.style.width = boundingBox.width + 'px'
-    },
-    unmountMountMenu() {
-      if (!this.$refs.menu) return
-      this.menu = this.$refs.menu
+function blur() {
+  if (input.value) input.value.blur()
+}
 
-      var boundingBox = this.$refs.inputWrapper.getBoundingClientRect()
-      this.menu.remove()
-      document.body.appendChild(this.menu)
-      this.menu.style.top = boundingBox.y + boundingBox.height - 4 + 'px'
-      this.menu.style.left = boundingBox.x + 'px'
-      this.menu.style.width = boundingBox.width + 'px'
-    },
-    inputFocus() {
-      if (!this.menu) {
-        this.unmountMountMenu()
-      }
-      this.isFocused = true
-      this.$nextTick(this.recalcMenuPos)
-    },
-    inputBlur() {
-      if (!this.isFocused) return
+function forceBlur() {
+  isFocused.value = false
+  if (textInput.value) submitForm()
+  if (input.value) input.value.blur()
+}
 
-      setTimeout(() => {
-        if (document.activeElement === this.$refs.input) {
-          return
-        }
-        this.isFocused = false
-        if (this.textInput) this.submitForm()
-      }, 50)
-    },
-    focus() {
-      if (this.$refs.input) this.$refs.input.focus()
-    },
-    blur() {
-      if (this.$refs.input) this.$refs.input.blur()
-    },
-    forceBlur() {
-      this.isFocused = false
-      if (this.textInput) this.submitForm()
-      if (this.$refs.input) this.$refs.input.blur()
-    },
-    clickedOption(e, itemValue) {
-      if (e) {
-        e.stopPropagation()
-        e.preventDefault()
-      }
-      if (this.$refs.input) this.$refs.input.focus()
+function clickedOption(e: MouseEvent | null, itemValue: string) {
+  if (e) {
+    e.stopPropagation()
+    e.preventDefault()
+  }
+  if (input.value) input.value.focus()
 
-      var newSelected = null
-      if (this.selected.includes(itemValue)) {
-        newSelected = this.selected.filter((s) => s !== itemValue)
-        this.$emit('removedItem', itemValue)
-      } else {
-        newSelected = this.selected.concat([itemValue])
-      }
-      this.textInput = null
-      this.currentSearch = null
-      this.$emit('input', newSelected)
-      this.$nextTick(() => {
-        this.recalcMenuPos()
-      })
-    },
-    clickWrapper() {
-      if (this.disabled) return
-      if (this.showMenu) {
-        return this.blur()
-      }
-      this.focus()
-    },
-    removeItem(item) {
-      var remaining = this.selected.filter((i) => i !== item)
-      this.$emit('input', remaining)
-      this.$emit('removedItem', item)
-      this.$nextTick(() => {
-        this.recalcMenuPos()
-      })
-    },
-    insertNewItem(item) {
-      this.selected.push(item)
-      this.$emit('input', this.selected)
-      this.$emit('newItem', item)
-      this.textInput = null
-      this.currentSearch = null
-      this.$nextTick(() => {
-        this.blur()
-      })
-    },
-    submitForm() {
-      if (!this.textInput) return
+  let newSelected: string[]
+  if (selected.value.includes(itemValue)) {
+    newSelected = selected.value.filter((s) => s !== itemValue)
+    emit('removedItem', itemValue)
+  } else {
+    newSelected = selected.value.concat([itemValue])
+  }
+  textInput.value = null
+  currentSearch.value = null
+  emit('update:modelValue', newSelected)
+  nextTick(() => {
+    recalcMenuPos()
+  })
+}
 
-      var cleaned = this.textInput.trim()
-      var matchesItem = this.items.find((i) => {
-        return i === cleaned
-      })
-      if (matchesItem) {
-        this.clickedOption(null, matchesItem)
-      } else {
-        this.insertNewItem(this.textInput)
-      }
-    },
-    scroll() {
-      this.recalcMenuPos()
-    },
-    setListener() {
-      document.addEventListener('scroll', this.scroll, true)
-    },
-    removeListener() {
-      document.removeEventListener('scroll', this.scroll, true)
-    }
-  },
-  mounted() {},
-  beforeDestroy() {
-    if (this.menu) this.menu.remove()
+function clickWrapper() {
+  if (props.disabled) return
+  if (showMenu.value) {
+    return blur()
+  }
+  focus()
+}
+
+function removeItem(item: string) {
+  const remaining = selected.value.filter((i) => i !== item)
+  emit('update:modelValue', remaining)
+  emit('removedItem', item)
+  nextTick(() => {
+    recalcMenuPos()
+  })
+}
+
+function insertNewItem(item: string) {
+  const newSelected = selected.value.concat([item])
+  emit('update:modelValue', newSelected)
+  emit('newItem', item)
+  textInput.value = null
+  currentSearch.value = null
+  nextTick(() => {
+    blur()
+  })
+}
+
+function submitForm() {
+  if (!textInput.value) return
+
+  const cleaned = textInput.value.trim()
+  const matchesItem = (props.items || []).find((i) => i === cleaned)
+  if (matchesItem) {
+    clickedOption(null, matchesItem)
+  } else {
+    insertNewItem(textInput.value)
   }
 }
+
+function scroll() {
+  recalcMenuPos()
+}
+
+function setListener() {
+  document.addEventListener('scroll', scroll, true)
+}
+
+function removeListener() {
+  document.removeEventListener('scroll', scroll, true)
+}
+
+defineExpose({ focus, blur })
+
+onBeforeUnmount(() => {
+  if (detachedMenu) detachedMenu.remove()
+})
 </script>
 
 <style scoped>

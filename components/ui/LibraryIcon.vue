@@ -4,34 +4,18 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    icon: {
-      type: String,
-      default: 'audiobookshelf'
-    },
-    fontSize: {
-      type: String,
-      default: 'lg'
-    },
-    size: {
-      type: Number,
-      default: 5
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    iconToUse() {
-      return this.icons.includes(this.icon) ? this.icon : 'audiobookshelf'
-    },
-    icons() {
-      return this.$store.state.globals.libraryIcons
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useGlobalsStore } from '~/stores/globals'
+
+const props = defineProps<{
+  icon?: string
+  fontSize?: string
+  size?: number
+}>()
+
+const globalsStore = useGlobalsStore()
+
+const icons = computed(() => globalsStore.libraryIcons)
+const iconToUse = computed(() => icons.value.includes(props.icon ?? '') ? props.icon : 'audiobookshelf')
 </script>

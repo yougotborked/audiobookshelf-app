@@ -12,15 +12,12 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    text: {
-      type: String,
-      default: 'Please Wait...'
-    }
-  }
-}
+<script setup lang="ts">
+withDefaults(defineProps<{
+  text?: string
+}>(), {
+  text: 'Please Wait...'
+})
 </script>
 
 <style>

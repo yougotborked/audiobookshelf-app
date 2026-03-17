@@ -1,31 +1,29 @@
 <template>
   <div class="inline-flex toggle-btn-wrapper shadow-md">
-    <button v-for="(item, index) in items" :key="`${name}-${index}`" type="button" class="toggle-btn outline-none relative border border-md-outline-variant px-4 py-1" :class="{ selected: item.value === value }" @click.stop="clickBtn(item.value)">
+    <button v-for="(item, index) in items" :key="`${name}-${index}`" type="button" class="toggle-btn outline-none relative border border-md-outline-variant px-4 py-1" :class="{ selected: item.value === modelValue }" @click.stop="clickBtn(item.value)">
       {{ item.text }}
     </button>
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    name: String,
-    value: [String, Number, Boolean],
-    items: {
-      type: Array,
-      default: Object
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {
-    clickBtn(value) {
-      this.$emit('input', value)
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+interface ToggleItem {
+  value: string | number | boolean
+  text: string
+}
+
+const props = defineProps<{
+  name?: string
+  modelValue?: string | number | boolean
+  items?: ToggleItem[]
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: string | number | boolean]
+}>()
+
+function clickBtn(value: string | number | boolean) {
+  emit('update:modelValue', value)
 }
 </script>
 

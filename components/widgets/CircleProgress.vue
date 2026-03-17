@@ -8,48 +8,39 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Number,
-    count: Number
-  },
-  data() {
-    return {
-      lastProgress: 0,
-      updateTimeout: null
-    }
-  },
-  watch: {
-    value: {
-      handler(newVal, oldVal) {
-        this.updateProgress()
-      }
-    }
-  },
-  computed: {},
-  methods: {
-    updateProgress() {
-      const progbar = this.$refs.progressbar
-      const circle = this.$refs.circle
-      if (!progbar || !circle) return
+<script setup lang="ts">
+import { ref, watch } from 'vue'
 
-      clearTimeout(this.updateTimeout)
-      const progress = Math.min(this.value || 0, 1)
+const props = defineProps<{
+  value?: number
+  count?: number
+}>()
 
-      progbar.style.setProperty('--progress-percent-before', this.lastProgress)
-      progbar.style.setProperty('--progress-percent', progress)
+const progressbar = ref<HTMLElement | null>(null)
+const circle = ref<SVGCircleElement | null>(null)
+let lastProgress = 0
+let updateTimeout: ReturnType<typeof setTimeout> | null = null
 
-      this.lastProgress = progress
-      circle.classList.remove('circle-static')
-      circle.classList.add('circle-anim')
-      this.updateTimeout = setTimeout(() => {
-        circle.classList.remove('circle-anim')
-        circle.classList.add('circle-static')
-      }, 500)
-    }
-  },
-  mounted() {}
+watch(() => props.value, () => {
+  updateProgress()
+})
+
+function updateProgress() {
+  if (!progressbar.value || !circle.value) return
+
+  if (updateTimeout) clearTimeout(updateTimeout)
+  const progress = Math.min(props.value || 0, 1)
+
+  progressbar.value.style.setProperty('--progress-percent-before', String(lastProgress))
+  progressbar.value.style.setProperty('--progress-percent', String(progress))
+
+  lastProgress = progress
+  circle.value.classList.remove('circle-static')
+  circle.value.classList.add('circle-anim')
+  updateTimeout = setTimeout(() => {
+    circle.value?.classList.remove('circle-anim')
+    circle.value?.classList.add('circle-static')
+  }, 500)
 }
 </script>
 

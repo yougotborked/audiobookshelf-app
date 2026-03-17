@@ -55,14 +55,5 @@
   </svg>
 </template>
 
-<script>
-export default {
-  props: {},
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
 </script>

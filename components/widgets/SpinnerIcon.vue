@@ -11,15 +11,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
 </script>
 
 <style scoped>

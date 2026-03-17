@@ -9,51 +9,44 @@
   </button>
 </template>
 
-<script>
-export default {
-  props: {
-    icon: String,
-    type: {
-      type: String,
-      default: 'button'
-    },
-    disabled: Boolean,
-    bgColor: {
-      type: String,
-      default: 'md-surface-3'
-    },
-    outlined: Boolean,
-    borderless: Boolean,
-    loading: Boolean
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    className() {
-      var classes = []
-      if (!this.borderless) {
-        classes.push(`bg-${this.bgColor} border border-gray-600`)
-      }
-      return classes.join(' ')
-    },
-    fontSize() {
-      if (this.icon === 'edit') return '1.25rem'
-      return '1.4rem'
-    }
-  },
-  methods: {
-    clickBtn(e) {
-      if (this.disabled || this.loading) {
-        e.preventDefault()
-        return
-      }
-      e.preventDefault()
-      this.$emit('click')
-      e.stopPropagation()
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = defineProps<{
+  icon?: string
+  type?: string
+  disabled?: boolean
+  bgColor?: string
+  outlined?: boolean
+  borderless?: boolean
+  loading?: boolean
+}>()
+
+const emit = defineEmits<{
+  click: []
+}>()
+
+const className = computed(() => {
+  const classes: string[] = []
+  if (!props.borderless) {
+    classes.push(`bg-${props.bgColor ?? 'md-surface-3'} border border-gray-600`)
+  }
+  return classes.join(' ')
+})
+
+const fontSize = computed(() => {
+  if (props.icon === 'edit') return '1.25rem'
+  return '1.4rem'
+})
+
+function clickBtn(e: MouseEvent) {
+  if (props.disabled || props.loading) {
+    e.preventDefault()
+    return
+  }
+  e.preventDefault()
+  emit('click')
+  e.stopPropagation()
 }
 </script>
 

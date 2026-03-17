@@ -8,64 +8,49 @@
   </label>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    label: String,
-    small: Boolean,
-    checkboxBg: {
-      type: String,
-      default: 'white'
-    },
-    borderColor: {
-      type: String,
-      default: 'gray-400'
-    },
-    checkColor: {
-      type: String,
-      default: 'green-500'
-    },
-    labelClass: {
-      type: String,
-      default: ''
-    },
-    disabled: Boolean
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    selected: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', !!val)
-      }
-    },
-    wrapperClass() {
-      var classes = [`bg-${this.checkboxBg} border-${this.borderColor}`]
-      if (this.small) classes.push('w-4 h-4')
-      else classes.push('w-6 h-6')
+<script setup lang="ts">
+const props = defineProps<{
+  modelValue: boolean
+  label?: string
+  small?: boolean
+  checkboxBg?: string
+  borderColor?: string
+  checkColor?: string
+  labelClass?: string
+  disabled?: boolean
+}>()
 
-      return classes.join(' ')
-    },
-    labelClassname() {
-      if (this.labelClass) return this.labelClass
-      var classes = ['pl-1']
-      if (this.small) classes.push('text-xs md:text-sm')
-      return classes.join(' ')
-    },
-    svgClass() {
-      var classes = [`text-${this.checkColor}`]
-      if (this.small) classes.push('w-3 h-3')
-      else classes.push('w-4 h-4')
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+}>()
 
-      return classes.join(' ')
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+const checkboxBg = computed(() => props.checkboxBg ?? 'white')
+const borderColor = computed(() => props.borderColor ?? 'gray-400')
+const checkColor = computed(() => props.checkColor ?? 'green-500')
+
+const selected = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', !!val) }
+})
+
+const wrapperClass = computed(() => {
+  const classes = [`bg-${checkboxBg.value} border-${borderColor.value}`]
+  if (props.small) classes.push('w-4 h-4')
+  else classes.push('w-6 h-6')
+  return classes.join(' ')
+})
+
+const labelClassname = computed(() => {
+  if (props.labelClass) return props.labelClass
+  const classes = ['pl-1']
+  if (props.small) classes.push('text-xs md:text-sm')
+  return classes.join(' ')
+})
+
+const svgClass = computed(() => {
+  const classes = [`text-${checkColor.value}`]
+  if (props.small) classes.push('w-3 h-3')
+  else classes.push('w-4 h-4')
+  return classes.join(' ')
+})
 </script>

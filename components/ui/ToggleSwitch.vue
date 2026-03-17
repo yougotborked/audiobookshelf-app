@@ -28,24 +28,25 @@
   </button>
 </template>
 
-<script>
-export default {
-  model: { prop: 'value', event: 'input' },
-  props: {
-    value: Boolean,
-    disabled: Boolean,
-    // kept for backward compat — ignored (M3 uses primary for on state)
-    onColor:  { type: String, default: 'success' },
-    offColor: { type: String, default: 'primary' }
-  },
-  computed: {
-    toggleValue: {
-      get() { return this.value },
-      set(v) { this.$emit('input', v) }
-    }
-  },
-  methods: {
-    clickToggle() { if (!this.disabled) this.toggleValue = !this.toggleValue }
-  }
-}
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = defineProps<{
+  modelValue?: boolean
+  disabled?: boolean
+  // kept for backward compat — ignored (M3 uses primary for on state)
+  onColor?: string
+  offColor?: string
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+}>()
+
+const toggleValue = computed({
+  get() { return props.modelValue ?? false },
+  set(v: boolean) { emit('update:modelValue', v) }
+})
+
+function clickToggle() { if (!props.disabled) toggleValue.value = !toggleValue.value }
 </script>

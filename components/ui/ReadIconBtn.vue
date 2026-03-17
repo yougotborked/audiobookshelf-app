@@ -11,28 +11,24 @@
   </button>
 </template>
 
-<script>
-export default {
-  props: {
-    isRead: Boolean,
-    disabled: Boolean,
-    borderless: Boolean
-  },
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {
-    clickBtn(e) {
-      if (this.disabled) {
-        e.preventDefault()
-        return
-      }
-      this.$emit('click', e)
-      e.stopPropagation()
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+const props = defineProps<{
+  isRead?: boolean
+  disabled?: boolean
+  borderless?: boolean
+}>()
+
+const emit = defineEmits<{
+  click: [e: MouseEvent]
+}>()
+
+function clickBtn(e: MouseEvent) {
+  if (props.disabled) {
+    e.preventDefault()
+    return
+  }
+  emit('click', e)
+  e.stopPropagation()
 }
 </script>
 
