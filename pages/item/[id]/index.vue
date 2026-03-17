@@ -157,7 +157,7 @@
     </div>
 
     <!-- modals -->
-    <modals-item-more-menu-modal v-model="showMoreMenu" :library-item="libraryItem" :rss-feed="rssFeed" :processing.sync="processing" />
+    <modals-item-more-menu-modal v-model="showMoreMenu" :library-item="libraryItem" :rss-feed="rssFeed" v-model:processing="processing" />
 
     <modals-select-local-folder-modal v-model="showSelectLocalFolder" :media-type="mediaType" @select="selectedLocalFolder" />
 
@@ -213,7 +213,6 @@ const descriptionEl = ref<HTMLElement | null>(null)
 
 // Computed
 const isIos = computed(() => platform === 'ios')
-const store = useNuxtApp().$store as any
 
 const userCanDownload = computed(() => userStore.getUserCanDownload)
 const userIsAdminOrUp = computed(() => userStore.getIsAdminOrUp)
@@ -635,7 +634,7 @@ function rssFeedClosed(data: any) {
 
 async function setLibrary() {
   if (!libraryItem.value?.libraryId) return
-  await store.dispatch('libraries/fetch', libraryItem.value.libraryId)
+  await librariesStore.fetch(libraryItem.value.libraryId)
   localStore.setLastLibraryId(libraryItem.value.libraryId)
 }
 

@@ -83,7 +83,7 @@
 
     <p v-if="!serverConnectionConfigs.length" class="mt-2 text-center text-error" v-html="$strings.MessageAudiobookshelfServerRequired" />
 
-    <modals-custom-headers-modal v-model="showAddCustomHeaders" :custom-headers.sync="serverConfig.customHeaders" />
+    <modals-custom-headers-modal v-model="showAddCustomHeaders" v-model:custom-headers="serverConfig.customHeaders" />
   </div>
 </template>
 

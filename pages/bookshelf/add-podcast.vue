@@ -41,11 +41,11 @@
       </div>
 
       <div class="w-full py-2 overflow-y-auto overflow-x-hidden h-[calc(100%-69px)]">
-        <forms-new-podcast-form :podcast-data="selectedPodcast" :podcast-feed-data="selectedPodcastFeed" :processing.sync="processing" />
+        <forms-new-podcast-form :podcast-data="selectedPodcast" :podcast-feed-data="selectedPodcastFeed" v-model:processing="processing" />
       </div>
     </template>
 
-    <div v-show="processing" class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-25 z-40">
+    <div v-show="processing" class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/25 z-40">
       <ui-loading-indicator />
     </div>
   </div>

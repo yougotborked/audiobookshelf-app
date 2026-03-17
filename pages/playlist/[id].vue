@@ -43,7 +43,7 @@
       :episode="selectedEpisode"
       :playlist="playlist"
       hide-rss-feed-option
-      :processing.sync="processing"
+      v-model:processing="processing"
       @removed-from-auto-playlist="onAutoPlaylistItemRemoved"
     />
     <div v-show="processing" class="fixed top-0 left-0 w-screen h-screen flex items-center justify-center bg-black/50 z-50">

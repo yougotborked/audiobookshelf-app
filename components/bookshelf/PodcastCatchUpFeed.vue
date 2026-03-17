@@ -55,8 +55,15 @@ export default {
   setup() {
     const appStore = useAppStore()
     const userStore = useUserStore()
+    const globalsStore = useGlobalsStore()
     const eventBus = useEventBus()
-    return { appStore, userStore, eventBus }
+    const db = useDb()
+    const localStore = useLocalStore()
+    const nativeHttp = useNativeHttp()
+    const toast = useToast()
+    const strings = useStrings()
+    const { impact: hapticsImpact } = useHaptics()
+    return { appStore, userStore, globalsStore, eventBus, db, localStore, nativeHttp, toast, strings, hapticsImpact }
   },
   data() {
     return {
@@ -133,14 +140,14 @@ export default {
   },
   methods: {
     async loadLocalPodcastLibraryItems() {
-      this.localLibraryItems = await this.$db.getLocalLibraryItems('podcast')
+      this.localLibraryItems = await this.db.getLocalLibraryItems('podcast')
     },
     async useOfflineEpisodes({ showToast = false } = {}) {
       if (!this.localLibraryItems.length) {
         await this.loadLocalPodcastLibraryItems()
       }
 
-      const cached = await this.$localStore.getCachedLatestEpisodes(this.currentLibraryId)
+      const cached = await this.localStore.getCachedLatestEpisodes(this.currentLibraryId)
       if (cached.length) {
         this.episodes = cached
       } else {
@@ -167,7 +174,7 @@ export default {
       }
 
       if (showToast && !this.offlineToastShown) {
-        this.$toast.error(this.$strings.MessageServerConnectionUnavailable)
+        this.toast.error(this.strings.MessageServerConnectionUnavailable)
         this.offlineToastShown = true
       }
     },
@@ -184,7 +191,7 @@ export default {
           return
         }
 
-        const episodePayload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200`)
+        const episodePayload = await this.nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200`)
 
         if (!episodePayload) {
           throw new Error('Empty response payload')
@@ -192,7 +199,7 @@ export default {
 
         this.episodes = episodePayload.episodes || []
         this.offlineToastShown = false
-        this.$localStore.setCachedLatestEpisodes(this.currentLibraryId, this.episodes)
+        this.localStore.setCachedLatestEpisodes(this.currentLibraryId, this.episodes)
       } catch (error) {
         console.error('[PodcastCatchUpFeed] Failed to get recent episodes', error)
         await this.useOfflineEpisodes({ showToast: true })
@@ -204,7 +211,7 @@ export default {
       const episodes = this.unfinishedEpisodes
       if (!episodes.length) return
 
-      await this.$hapticsImpact()
+      await this.hapticsImpact()
 
       // Build a queue for all unfinished episodes so playback continues
       // automatically without user interaction — same pattern as playlist "play all".
@@ -251,15 +258,15 @@ export default {
       this.eventBus.emit('play-item', playPayload)
     },
     async addEpisodeToPlaylist(episode) {
-      const libraryItem = await this.$nativeHttp.get(`/api/items/${episode.libraryItemId}`).catch((error) => {
+      const libraryItem = await this.nativeHttp.get(`/api/items/${episode.libraryItemId}`).catch((error) => {
         console.error('[PodcastCatchUpFeed] Failed to get library item', error)
-        this.$toast.error('Failed to get library item')
+        this.toast.error('Failed to get library item')
         return null
       })
       if (!libraryItem) return
 
-      this.$store.commit('globals/setSelectedPlaylistItems', [{ libraryItem, episode }])
-      this.$store.commit('globals/setShowPlaylistsAddCreateModal', true)
+      this.globalsStore.selectedPlaylistItems = [{ libraryItem, episode }]
+      this.globalsStore.showPlaylistsAddCreateModal = true
     }
   },
   async mounted() {

@@ -1,5 +1,5 @@
 <template>
-  <modals-modal v-model="show" width="90%" height="100%">
+  <modals-modal v-model="show" width="90%">
     <template #outer>
       <div v-show="selected !== 'all'" class="absolute top-12 left-4 z-40">
         <ui-btn class="text-lg border-yellow-400 border-opacity-40 h-10" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>

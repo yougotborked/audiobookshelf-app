@@ -1,7 +1,7 @@
 <template>
   <div class="w-full">
     <!-- Podcast episode downloads queue -->
-    <div v-if="episodeDownloadsQueued.length" class="px-4 py-2 my-2 bg-info bg-opacity-40 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
+    <div v-if="episodeDownloadsQueued.length" class="px-4 py-2 my-2 bg-info/40 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
       <div class="flex items-center">
         <p class="text-sm py-1">{{ getString('MessageEpisodesQueuedForDownload', [episodeDownloadsQueued.length]) }}</p>
         <div class="flex-grow" />
@@ -10,7 +10,7 @@
     </div>
 
     <!-- Podcast episodes currently downloading -->
-    <div v-if="episodesDownloading.length" class="px-4 py-2 my-2 bg-md-primary bg-opacity-20 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
+    <div v-if="episodesDownloading.length" class="px-4 py-2 my-2 bg-md-primary/20 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
       <div v-for="episode in episodesDownloading" :key="(episode.id as string)" class="flex items-center">
         <widgets-loading-spinner />
         <p class="text-sm py-1 pl-4">{{ strings.MessageDownloadingEpisode }} "{{ (episode as any).episodeDisplayTitle }}"</p>
@@ -32,7 +32,7 @@
         <div v-show="filterKey !== 'all' && episodesAreFiltered" class="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-md-primary border border-green-300 shadow-sm z-10 pointer-events-none" />
       </button>
 
-      <div class="flex items-center border border-white border-opacity-25 rounded px-2" @click="clickSort">
+      <div class="flex items-center border border-white/25 rounded px-2" @click="clickSort">
         <p class="text-sm text-md-on-surface">{{ sortText }}</p>
         <span class="material-symbols ml-1 text-md-on-surface">{{ sortDesc ? 'arrow_drop_down' : 'arrow_drop_up' }}</span>
       </div>

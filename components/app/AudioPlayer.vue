@@ -21,7 +21,7 @@
       <div class="top-6 right-4 absolute cursor-pointer">
         <span class="material-symbols text-3xl" @click="showMoreMenuDialog = true">more_vert</span>
       </div>
-      <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-opacity-75" style="font-size: 10px">{{ isDirectPlayMethod ? getString('LabelPlaybackDirect') : isLocalPlayMethod ? getString('LabelPlaybackLocal') : getString('LabelPlaybackTranscode') }}</p>
+      <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-white/75" style="font-size: 10px">{{ isDirectPlayMethod ? getString('LabelPlaybackDirect') : isLocalPlayMethod ? getString('LabelPlaybackLocal') : getString('LabelPlaybackTranscode') }}</p>
     </div>
 
     <div v-if="playerSettings.useChapterTrack && playerSettings.useTotalTrack && showFullscreen" class="absolute total-track w-full z-30 px-6">
@@ -53,7 +53,7 @@
       <div ref="titlewrapper" class="overflow-hidden relative">
         <p class="title-text whitespace-nowrap"></p>
       </div>
-      <p class="author-text text-md-on-surface text-opacity-75 truncate">{{ authorName }}</p>
+      <p class="author-text text-md-on-surface/75 truncate">{{ authorName }}</p>
     </div>
 
     <div id="playerContent"
@@ -65,7 +65,7 @@
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
           <!-- hidden for podcasts but still using this as a placeholder -->
-          <span v-else class="material-symbols text-3xl text-white text-opacity-0">bookmark</span>
+          <span v-else class="material-symbols text-3xl text-transparent">bookmark</span>
 
           <span class="font-mono text-md-on-surface-variant cursor-pointer" style="font-size: 1.35rem" @click="$emit('selectPlaybackSpeed')">{{ currentPlaybackRate }}x</span>
           <svg v-if="!sleepTimerRunning" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-md-on-surface-variant cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" @click.stop="$emit('showSleepTimer')">
@@ -78,7 +78,7 @@
           <div class="flex items-center gap-3">
             <span
               class="material-symbols text-3xl text-md-on-surface cursor-pointer"
-              :class="playQueueAvailable ? 'text-opacity-75' : 'text-opacity-10'"
+              :class="playQueueAvailable ? 'opacity-75' : 'opacity-10'"
               @click.stop="clickQueueBtn"
             >playlist_play</span>
             <span v-show="chapters.length > 0" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer" @click="clickChaptersBtn">format_list_bulleted</span>
@@ -91,22 +91,22 @@
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpChapterStart">first_page</span>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpBackwards">
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
             <span class="material-symbols text-3xl leading-none">replay</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpBackwardsLabel }}</span>
           </div>
           <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
-            <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white bg-opacity-20 pointer-events-none" />
+            <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white/20 pointer-events-none" />
 
             <span v-if="!isLoading" class="material-symbols fill" :class="{ 'text-white': coverRgb && !coverBgIsLight }">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'text-opacity-10' : 'text-opacity-75'" @click.stop="jumpForward">
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
             <span class="material-symbols text-3xl leading-none">forward_media</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpForwardLabel }}</span>
           </div>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !isLoading ? 'text-opacity-75' : 'text-opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !isLoading ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
         </div>
       </div>
 
@@ -458,6 +458,7 @@ watch(() => appStore.currentPlaybackSession, (val) => {
 })
 
 watch(() => appStore.playerIsPlaying, async (isPlayingVal) => {
+  isPlaying.value = isPlayingVal
   if (isPlayingVal) {
     await refreshCurrentPlaybackPosition()
     startPlayInterval()
