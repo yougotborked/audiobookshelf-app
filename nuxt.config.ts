@@ -3,6 +3,23 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   telemetry: false,
 
+  ignore: [
+    'pages/**/_id.vue',
+    'pages/**/_id/**',
+    'plugins/capacitor/**'
+  ],
+
+  plugins: [
+    '~/plugins/01.capacitor.client.ts',
+    '~/plugins/02.socket.client.ts',
+    '~/plugins/03.strings.ts',
+    '~/plugins/04.toast.client.ts'
+  ],
+
+  dir: {
+    public: 'static'
+  },
+
   modules: ['@pinia/nuxt', '@vueuse/nuxt'],
 
   css: ['~/assets/tailwind.css', '~/assets/app.css'],

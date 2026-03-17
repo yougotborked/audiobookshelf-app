@@ -1,7 +1,7 @@
 import { registerPlugin, WebPlugin } from '@capacitor/core'
-import { AbsLogger } from '@/plugins/capacitor'
+import { AbsLogger } from './AbsLogger.js'
 import { nanoid } from 'nanoid'
-const { PlayerState } = require('../constants')
+import { PlayerState } from '~/constants'
 
 var $axios = null
 var vuexStore = null
