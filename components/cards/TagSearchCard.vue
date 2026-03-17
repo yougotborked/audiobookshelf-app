@@ -9,18 +9,10 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    tag: String
-  },
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+defineProps<{
+  tag?: string
+}>()
 </script>
 
 <style>

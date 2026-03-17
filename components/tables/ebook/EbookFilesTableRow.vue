@@ -10,51 +10,45 @@
   </tr>
 </template>
 
-<script>
-export default {
-  props: {
-    libraryItemId: String,
-    showFullPath: Boolean,
-    file: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    userCanUpdate() {
-      return this.$store.getters['user/getUserCanUpdate']
-    },
-    isPrimary() {
-      return !this.file.isSupplementary
-    },
-    libraryIsAudiobooksOnly() {
-      return this.$store.getters['libraries/getLibraryIsAudiobooksOnly']
-    },
-    contextMenuItems() {
-      const items = []
-      if (this.userCanUpdate && !this.libraryIsAudiobooksOnly) {
-        items.push({
-          text: this.isPrimary ? this.$strings.LabelSetEbookAsSupplementary : this.$strings.LabelSetEbookAsPrimary,
-          value: 'updateStatus'
-        })
-      }
-      return items
-    }
-  },
-  methods: {
-    clickMore() {
-      this.$emit('more', {
-        file: this.file,
-        items: this.contextMenuItems
-      })
-    },
-    readEbook() {
-      this.$emit('read', this.file.ino)
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+const props = defineProps<{
+  libraryItemId?: string
+  showFullPath?: boolean
+  file: Record<string, unknown>
+}>()
+
+const emit = defineEmits<{
+  more: [payload: { file: Record<string, unknown>; items: { text: string; value: string }[] }]
+  read: [ino: unknown]
+}>()
+
+const strings = useStrings()
+const userStore = useUserStore()
+const librariesStore = useLibrariesStore()
+
+const userCanUpdate = computed(() => userStore.getUserCanUpdate)
+const isPrimary = computed(() => !props.file.isSupplementary)
+const libraryIsAudiobooksOnly = computed(() => librariesStore.getLibraryIsAudiobooksOnly)
+
+const contextMenuItems = computed(() => {
+  const items: { text: string; value: string }[] = []
+  if (userCanUpdate.value && !libraryIsAudiobooksOnly.value) {
+    items.push({
+      text: isPrimary.value ? strings.LabelSetEbookAsSupplementary : strings.LabelSetEbookAsPrimary,
+      value: 'updateStatus'
+    })
+  }
+  return items
+})
+
+function clickMore() {
+  emit('more', {
+    file: props.file,
+    items: contextMenuItems.value
+  })
+}
+
+function readEbook() {
+  emit('read', props.file.ino)
 }
 </script>

@@ -2,7 +2,7 @@
   <modals-modal v-model="show" :width="400" height="100%">
     <template #outer>
       <div class="absolute top-11 left-4 z-40">
-        <p class="text-white text-2xl truncate">{{ $strings.HeaderDetails }}</p>
+        <p class="text-white text-2xl truncate">{{ strings.HeaderDetails }}</p>
       </div>
     </template>
 
@@ -10,7 +10,7 @@
       <div class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-3 rounded-lg border border-md-outline-variant p-2" style="max-height: 75%" @click.stop>
         <p class="mb-2">{{ mediaMetadata.title }}</p>
 
-        <div v-if="size" class="text-sm mb-2">{{ $strings.LabelSize }}: {{ $bytesPretty(size) }}</div>
+        <div v-if="size" class="text-sm mb-2">{{ strings.LabelSize }}: {{ utils.bytesPretty(size) }}</div>
 
         <p class="mb-1 text-xs text-md-on-surface">ID: {{ _libraryItem.id }}</p>
       </div>
@@ -18,41 +18,29 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    _libraryItem() {
-      return this.libraryItem || {}
-    },
-    media() {
-      return this._libraryItem.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    size() {
-      return this.media.size
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+import { useUtils } from '~/composables/useUtils'
+
+const props = defineProps<{
+  modelValue: boolean
+  libraryItem: Record<string, unknown>
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+}>()
+
+const strings = useStrings()
+const utils = useUtils()
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const _libraryItem = computed(() => props.libraryItem || {})
+const media = computed(() => (_libraryItem.value.media as Record<string, unknown>) || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+const size = computed(() => media.value.size as number | undefined)
 </script>

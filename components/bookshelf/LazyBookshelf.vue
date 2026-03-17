@@ -16,578 +16,602 @@
   </div>
 </template>
 
-<script>
-import bookshelfCardsHelpers from '@/mixins/bookshelfCardsHelpers'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount, onUpdated } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { useLibrariesStore } from '@/stores/libraries'
+import { useAppStore } from '@/stores/app'
+import { useGlobalsStore } from '@/stores/globals'
+import { useEventBus } from '@/composables/useEventBus'
+import { useSocket } from '@/composables/useSocket'
+import { useNativeHttp } from '@/composables/useNativeHttp'
+import { useDb } from '@/composables/useDb'
+import { useLocalStore } from '@/composables/useLocalStore'
+import { useRouter } from 'vue-router'
+import { useUtils } from '@/composables/useUtils'
+import { useBookshelfCards } from '@/composables/useBookshelfCards'
 
-export default {
-  props: {
-    page: String,
-    seriesId: String
-  },
-  mixins: [bookshelfCardsHelpers],
-  data() {
-    return {
-      routeFullPath: null,
-      entitiesPerShelf: 2,
-      bookshelfHeight: 0,
-      bookshelfWidth: 0,
-      bookshelfMarginLeft: 0,
-      shelvesPerPage: 0,
-      currentPage: 0,
-      booksPerFetch: 20,
-      initialized: false,
-      currentSFQueryString: null,
-      isFetchingEntities: false,
-      entities: [],
-      totalEntities: 0,
-      totalShelves: 0,
-      entityComponentRefs: {},
-      entityIndexesMounted: [],
-      pagesLoaded: {},
-      isFirstInit: false,
-      pendingReset: false,
-      localLibraryItems: [],
-      localLibraryItemMap: new Map()
+const props = defineProps<{
+  page: string
+  seriesId?: string
+}>()
+
+const userStore = useUserStore()
+const librariesStore = useLibrariesStore()
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const eventBus = useEventBus()
+const socket = useSocket()
+const nativeHttp = useNativeHttp()
+const db = useDb()
+const localStore = useLocalStore()
+const router = useRouter()
+const { encode } = useUtils()
+
+// State
+const routeFullPath = ref<string | null>(null)
+const entitiesPerShelf = ref(2)
+const bookshelfHeight = ref(0)
+const bookshelfWidth = ref(0)
+const bookshelfMarginLeft = ref(0)
+const shelvesPerPage = ref(0)
+const currentPage = ref(0)
+const booksPerFetch = ref(20)
+const initialized = ref(false)
+const currentSFQueryString = ref<string | null>(null)
+const isFetchingEntities = ref(false)
+const entities = ref<Record<string, unknown>[]>([])
+const totalEntities = ref(0)
+const totalShelves = ref(0)
+const pagesLoaded = ref<Record<number, boolean>>({})
+const isFirstInit = ref(false)
+const pendingReset = ref(false)
+const localLibraryItems = ref<Record<string, unknown>[]>([])
+const localLibraryItemMap = ref<Map<string, Record<string, unknown>> | null>(new Map())
+
+// Computed
+const user = computed(() => userStore.user)
+const entityName = computed(() => props.page)
+const isBookEntity = computed(() => entityName.value === 'books' || entityName.value === 'series-books')
+const shelfDividerHeightIndex = computed(() => (isBookEntity.value ? 4 : 6))
+const bookshelfListView = computed(() => globalsStore.bookshelfListView)
+const showBookshelfListView = computed(() => isBookEntity.value && bookshelfListView.value)
+const sortingIgnorePrefix = computed(() => appStore.getServerSetting('sortingIgnorePrefix'))
+const hasFilter = computed(() => {
+  if (props.page === 'series' || props.page === 'collections' || props.page === 'playlists') return false
+  return filterBy.value !== 'all'
+})
+const orderBy = computed(() => userStore.getUserSetting('mobileOrderBy'))
+const orderDesc = computed(() => userStore.getUserSetting('mobileOrderDesc'))
+const filterBy = computed(() => userStore.getUserSetting('mobileFilterBy'))
+const collapseSeries = computed(() => userStore.getUserSetting('collapseSeries'))
+const collapseBookSeries = computed(() => userStore.getUserSetting('collapseBookSeries'))
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
+const isCoverSquareAspectRatio = computed(() => bookCoverAspectRatio.value === 1)
+const bookWidth = computed(() => {
+  const availableWidth = window.innerWidth - 16
+  let coverSize = 100
+  // Smaller screens fill width with 2 items per row
+  if (availableWidth <= 400) {
+    coverSize = Math.floor(availableWidth / 2 - 24)
+    if (coverSize < 120) {
+      // Fallback to 1 item per row
+      coverSize = Math.min(availableWidth - 24, 200)
     }
-  },
-  watch: {
-    showBookshelfListView(newVal) {
-      this.resetEntities()
-    },
-    seriesId() {
-      this.resetEntities()
+    if (isCoverSquareAspectRatio.value || entityName.value === 'playlists') coverSize /= 1.6
+  }
+  if (isCoverSquareAspectRatio.value || entityName.value === 'playlists') return coverSize * 1.6
+  return coverSize
+})
+const bookHeight = computed(() => {
+  if (isCoverSquareAspectRatio.value || entityName.value === 'playlists') return bookWidth.value
+  return bookWidth.value * 1.6
+})
+const entityWidth = computed(() => {
+  if (showBookshelfListView.value) return bookshelfWidth.value - 16
+  if (isBookEntity.value || entityName.value === 'playlists') return bookWidth.value
+  return bookWidth.value * 2
+})
+const entityHeight = computed(() => {
+  if (showBookshelfListView.value) return 88
+  return bookHeight.value
+})
+const currentLibraryId = computed(() => librariesStore.currentLibraryId)
+const currentLibraryMediaType = computed(() => librariesStore.getCurrentLibraryMediaType)
+const networkConnected = computed(() => appStore.networkConnected)
+const altViewEnabled = computed(() => appStore.getAltViewEnabled)
+const sizeMultiplier = computed(() => {
+  const baseSize = isCoverSquareAspectRatio.value ? 192 : 120
+  return entityWidth.value / baseSize
+})
+const shelfHeight = computed(() => {
+  if (showBookshelfListView.value) return entityHeight.value + 16
+  if (altViewEnabled.value) {
+    var extraTitleSpace = isBookEntity.value ? 80 : 40
+    return entityHeight.value + extraTitleSpace * sizeMultiplier.value
+  }
+  return entityHeight.value + 40
+})
+const totalEntityCardWidth = computed(() => {
+  if (showBookshelfListView.value) return entityWidth.value
+  // Includes margin
+  return entityWidth.value + 24
+})
+
+// useBookshelfCards composable
+const { entityIndexesMounted, entityComponentRefs, mountEntityCard, cardsHelpers } = useBookshelfCards({
+  entityName,
+  entitiesPerShelf,
+  entityWidth,
+  entityHeight,
+  totalEntityCardWidth,
+  bookshelfMarginLeft,
+  bookCoverAspectRatio,
+  altViewEnabled,
+  showBookshelfListView,
+  isBookEntity,
+  entities,
+  localLibraryItems,
+  localLibraryItemMap,
+  filterBy,
+  orderBy,
+  sortingIgnorePrefix
+})
+
+// Watches
+watch(showBookshelfListView, () => {
+  resetEntities()
+})
+watch(() => props.seriesId, () => {
+  resetEntities()
+})
+
+// Methods
+function buildLocalLibraryItemMap(items: Record<string, unknown>[] = []) {
+  const map = new Map<string, Record<string, unknown>>()
+  items.forEach((item) => {
+    if (item?.libraryItemId) {
+      map.set(item.libraryItemId as string, item)
     }
-  },
-  computed: {
-    user() {
-      return this.$store.state.user.user
-    },
-    isBookEntity() {
-      return this.entityName === 'books' || this.entityName === 'series-books'
-    },
-    shelfDividerHeightIndex() {
-      if (this.isBookEntity) return 4
-      return 6
-    },
-    bookshelfListView() {
-      return this.$store.state.globals.bookshelfListView
-    },
-    showBookshelfListView() {
-      return this.isBookEntity && this.bookshelfListView
-    },
-    sortingIgnorePrefix() {
-      return this.$store.getters['getServerSetting']('sortingIgnorePrefix')
-    },
-    entityName() {
-      return this.page
-    },
-    hasFilter() {
-      if (this.page === 'series' || this.page === 'collections' || this.page === 'playlists') return false
-      return this.filterBy !== 'all'
-    },
-    orderBy() {
-      return this.$store.getters['user/getUserSetting']('mobileOrderBy')
-    },
-    orderDesc() {
-      return this.$store.getters['user/getUserSetting']('mobileOrderDesc')
-    },
-    filterBy() {
-      return this.$store.getters['user/getUserSetting']('mobileFilterBy')
-    },
-    collapseSeries() {
-      return this.$store.getters['user/getUserSetting']('collapseSeries')
-    },
-    collapseBookSeries() {
-      return this.$store.getters['user/getUserSetting']('collapseBookSeries')
-    },
-    isCoverSquareAspectRatio() {
-      return this.bookCoverAspectRatio === 1
-    },
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    },
-    bookWidth() {
-      const availableWidth = window.innerWidth - 16
-      let coverSize = 100
+  })
+  return map
+}
 
-      // Smaller screens fill width with 2 items per row
-      if (availableWidth <= 400) {
-        coverSize = Math.floor(availableWidth / 2 - 24)
-        if (coverSize < 120) {
-          // Fallback to 1 item per row
-          coverSize = Math.min(availableWidth - 24, 200)
-        }
-        if (this.isCoverSquareAspectRatio || this.entityName === 'playlists') coverSize /= 1.6
-      }
+function clearFilter() {
+  userStore.updateUserSettings({
+    mobileFilterBy: 'all'
+  })
+}
 
-      if (this.isCoverSquareAspectRatio || this.entityName === 'playlists') return coverSize * 1.6
-      return coverSize
-    },
-    bookHeight() {
-      if (this.isCoverSquareAspectRatio || this.entityName === 'playlists') return this.bookWidth
-      return this.bookWidth * 1.6
-    },
-    entityWidth() {
-      if (this.showBookshelfListView) return this.bookshelfWidth - 16
-      if (this.isBookEntity || this.entityName === 'playlists') return this.bookWidth
-      return this.bookWidth * 2
-    },
-    entityHeight() {
-      if (this.showBookshelfListView) return 88
-      return this.bookHeight
-    },
-    currentLibraryId() {
-      return this.$store.state.libraries.currentLibraryId
-    },
-    currentLibraryMediaType() {
-      return this.$store.getters['libraries/getCurrentLibraryMediaType']
-    },
-    networkConnected() {
-      return this.$store.state.networkConnected
-    },
-    shelfHeight() {
-      if (this.showBookshelfListView) return this.entityHeight + 16
-      if (this.altViewEnabled) {
-        var extraTitleSpace = this.isBookEntity ? 80 : 40
-        return this.entityHeight + extraTitleSpace * this.sizeMultiplier
-      }
-      return this.entityHeight + 40
-    },
-    totalEntityCardWidth() {
-      if (this.showBookshelfListView) return this.entityWidth
-      // Includes margin
-      return this.entityWidth + 24
-    },
-    altViewEnabled() {
-      return this.$store.getters['getAltViewEnabled']
-    },
-    sizeMultiplier() {
-      const baseSize = this.isCoverSquareAspectRatio ? 192 : 120
-      return this.entityWidth / baseSize
+async function fetchEntities(page: number) {
+  const startIndex = page * booksPerFetch.value
+
+  isFetchingEntities.value = true
+
+  if (!initialized.value) {
+    currentSFQueryString.value = buildSearchParams()
+  }
+
+  const entityPath = entityName.value === 'books' || entityName.value === 'series-books' ? `items` : entityName.value
+  const sfQueryString = currentSFQueryString.value ? currentSFQueryString.value + '&' : ''
+  const fullQueryString = `?${sfQueryString}limit=${booksPerFetch.value}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
+
+  let payload: { results: Record<string, unknown>[]; total: number } | null
+  if (!networkConnected.value) {
+    if (entityName.value === 'playlists') {
+      const cached = await localStore.getCachedPlaylists(currentLibraryId.value)
+      payload = { results: cached.slice(startIndex, startIndex + booksPerFetch.value), total: cached.length }
+    } else if (entityName.value === 'books' || entityName.value === 'series-books') {
+      const results = localLibraryItems.value.slice(startIndex, startIndex + booksPerFetch.value)
+      payload = { results, total: localLibraryItems.value.length }
+    } else {
+      payload = { results: [], total: 0 }
     }
-  },
-  methods: {
-    buildLocalLibraryItemMap(items = []) {
-      const map = new Map()
-      items.forEach((item) => {
-        if (item?.libraryItemId) {
-          map.set(item.libraryItemId, item)
-        }
-      })
-      return map
-    },
-    clearFilter() {
-      this.$store.dispatch('user/updateUserSettings', {
-        mobileFilterBy: 'all'
-      })
-    },
-    async fetchEntities(page) {
-      const startIndex = page * this.booksPerFetch
+  } else {
+    payload = await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/${entityPath}${fullQueryString}`).catch((error: unknown) => {
+      console.error('failed to fetch books', error)
+      return null
+    })
+    if (payload && entityName.value === 'playlists' && payload.results) {
+      localStore.setCachedPlaylists(currentLibraryId.value, payload.results)
+    }
+  }
 
-      this.isFetchingEntities = true
+  isFetchingEntities.value = false
+  if (pendingReset.value) {
+    pendingReset.value = false
+    resetEntities()
+    return
+  }
+  if (payload && payload.results) {
+    console.log('Received payload', payload)
+    if (!initialized.value) {
+      initialized.value = true
+      totalEntities.value = payload.total
+      totalShelves.value = Math.ceil(totalEntities.value / entitiesPerShelf.value)
+      entities.value = new Array(totalEntities.value)
+      eventBus.emit('bookshelf-total-entities', totalEntities.value)
+    }
 
-      if (!this.initialized) {
-        this.currentSFQueryString = this.buildSearchParams()
-      }
+    for (let i = 0; i < payload.results.length; i++) {
+      const index = i + startIndex
+      entities.value[index] = payload.results[i]
+      if (entityComponentRefs.value[index]) {
+        entityComponentRefs.value[index].setEntity(entities.value[index])
 
-      const entityPath = this.entityName === 'books' || this.entityName === 'series-books' ? `items` : this.entityName
-      const sfQueryString = this.currentSFQueryString ? this.currentSFQueryString + '&' : ''
-      const fullQueryString = `?${sfQueryString}limit=${this.booksPerFetch}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
-
-      let payload
-      if (!this.networkConnected) {
-        if (this.entityName === 'playlists') {
-          const cached = await this.$localStore.getCachedPlaylists(this.currentLibraryId)
-          payload = { results: cached.slice(startIndex, startIndex + this.booksPerFetch), total: cached.length }
-        } else if (this.entityName === 'books' || this.entityName === 'series-books') {
-          const results = this.localLibraryItems.slice(startIndex, startIndex + this.booksPerFetch)
-          payload = { results, total: this.localLibraryItems.length }
-        } else {
-          payload = { results: [], total: 0 }
-        }
-      } else {
-        payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}${fullQueryString}`).catch((error) => {
-          console.error('failed to fetch books', error)
-          return null
-        })
-        if (payload && this.entityName === 'playlists' && payload.results) {
-          this.$localStore.setCachedPlaylists(this.currentLibraryId, payload.results)
-        }
-      }
-
-      this.isFetchingEntities = false
-      if (this.pendingReset) {
-        this.pendingReset = false
-        this.resetEntities()
-        return
-      }
-      if (payload && payload.results) {
-        console.log('Received payload', payload)
-        if (!this.initialized) {
-          this.initialized = true
-          this.totalEntities = payload.total
-          this.totalShelves = Math.ceil(this.totalEntities / this.entitiesPerShelf)
-          this.entities = new Array(this.totalEntities)
-          this.$eventBus.$emit('bookshelf-total-entities', this.totalEntities)
-        }
-
-        for (let i = 0; i < payload.results.length; i++) {
-          const index = i + startIndex
-          this.entities[index] = payload.results[i]
-          if (this.entityComponentRefs[index]) {
-            this.entityComponentRefs[index].setEntity(this.entities[index])
-
-            if (this.isBookEntity) {
-              const localLibraryItem = this.localLibraryItemMap.get(this.entities[index].id)
-              if (localLibraryItem) {
-                this.entityComponentRefs[index].setLocalLibraryItem(localLibraryItem)
-              }
-            }
+        if (isBookEntity.value) {
+          const localLibraryItem = localLibraryItemMap.value?.get(entities.value[index].id as string)
+          if (localLibraryItem) {
+            entityComponentRefs.value[index].setLocalLibraryItem(localLibraryItem)
           }
         }
       }
-    },
-    async loadPage(page) {
-      if (this.networkConnected && !this.currentLibraryId) {
-        console.error('[LazyBookshelf] loadPage current library id not set')
-        return
-      }
-      this.pagesLoaded[page] = true
-      await this.fetchEntities(page)
-    },
-    mountEntites(fromIndex, toIndex) {
-      for (let i = fromIndex; i < toIndex; i++) {
-        if (!this.entityIndexesMounted.includes(i)) {
-          this.cardsHelpers.mountEntityCard(i)
-        }
-      }
-    },
-    handleScroll(scrollTop) {
-      this.currScrollTop = scrollTop
-      var firstShelfIndex = Math.floor(scrollTop / this.shelfHeight)
-      var lastShelfIndex = Math.ceil((scrollTop + this.bookshelfHeight) / this.shelfHeight)
-      lastShelfIndex = Math.min(this.totalShelves - 1, lastShelfIndex)
-
-      var firstBookIndex = firstShelfIndex * this.entitiesPerShelf
-      var lastBookIndex = lastShelfIndex * this.entitiesPerShelf + this.entitiesPerShelf
-      lastBookIndex = Math.min(this.totalEntities, lastBookIndex)
-
-      var firstBookPage = Math.floor(firstBookIndex / this.booksPerFetch)
-      var lastBookPage = Math.floor(lastBookIndex / this.booksPerFetch)
-      if (!this.pagesLoaded[firstBookPage]) {
-        console.log('Must load next batch', firstBookPage, 'book index', firstBookIndex)
-        this.loadPage(firstBookPage)
-      }
-      if (!this.pagesLoaded[lastBookPage]) {
-        console.log('Must load last next batch', lastBookPage, 'book index', lastBookIndex)
-        this.loadPage(lastBookPage)
-      }
-
-      // Remove entities out of view
-      this.entityIndexesMounted = this.entityIndexesMounted.filter((_index) => {
-        if (_index < firstBookIndex || _index >= lastBookIndex) {
-          var el = document.getElementById(`book-card-${_index}`)
-          if (el) el.remove()
-          return false
-        }
-        return true
-      })
-      this.mountEntites(firstBookIndex, lastBookIndex)
-    },
-    destroyEntityComponents() {
-      for (const key in this.entityComponentRefs) {
-        if (this.entityComponentRefs[key] && this.entityComponentRefs[key].destroy) {
-          this.entityComponentRefs[key].destroy()
-        }
-      }
-    },
-    setDownloads() {
-      if (this.entityName === 'books') {
-        this.entities = []
-        // TOOD: Sort and filter here
-        this.totalEntities = this.entities.length
-        this.totalShelves = Math.ceil(this.totalEntities / this.entitiesPerShelf)
-      } else {
-        // TODO: Support offline series and collections
-        this.entities = []
-        this.totalEntities = 0
-        this.totalShelves = 0
-      }
-      this.$eventBus.$emit('bookshelf-total-entities', this.totalEntities)
-    },
-    async resetEntities() {
-      if (this.isFetchingEntities) {
-        this.pendingReset = true
-        return
-      }
-      this.destroyEntityComponents()
-      this.entityIndexesMounted = []
-      this.entityComponentRefs = {}
-      this.pagesLoaded = {}
-      this.entities = []
-      this.totalShelves = 0
-      this.totalEntities = 0
-      this.currentPage = 0
-      this.initialized = false
-
-      this.initSizeData()
-      if (this.user) {
-        await this.loadPage(0)
-        var lastBookIndex = Math.min(this.totalEntities, this.shelvesPerPage * this.entitiesPerShelf)
-        this.mountEntites(0, lastBookIndex)
-      } else {
-        // Local only
-      }
-    },
-    remountEntities() {
-      // Remount when an entity is removed
-      for (const key in this.entityComponentRefs) {
-        if (this.entityComponentRefs[key]) {
-          this.entityComponentRefs[key].destroy()
-        }
-      }
-      this.entityComponentRefs = {}
-      this.entityIndexesMounted.forEach((i) => {
-        this.cardsHelpers.mountEntityCard(i)
-      })
-    },
-    initSizeData() {
-      var bookshelf = document.getElementById('bookshelf')
-      if (!bookshelf) {
-        console.error('Failed to init size data')
-        return
-      }
-      var entitiesPerShelfBefore = this.entitiesPerShelf
-
-      var { clientHeight, clientWidth } = bookshelf
-      this.bookshelfHeight = clientHeight
-      this.bookshelfWidth = clientWidth
-      this.entitiesPerShelf = Math.max(1, this.showBookshelfListView ? 1 : Math.floor((this.bookshelfWidth - 16) / this.totalEntityCardWidth))
-      this.shelvesPerPage = Math.ceil(this.bookshelfHeight / this.shelfHeight) + 2
-      this.bookshelfMarginLeft = (this.bookshelfWidth - this.entitiesPerShelf * this.totalEntityCardWidth) / 2
-
-      const entitiesPerPage = this.shelvesPerPage * this.entitiesPerShelf
-      this.booksPerFetch = Math.ceil(entitiesPerPage / 20) * 20 // Round up to the nearest 20
-
-      if (this.totalEntities) {
-        this.totalShelves = Math.ceil(this.totalEntities / this.entitiesPerShelf)
-      }
-      return entitiesPerShelfBefore < this.entitiesPerShelf // Books per shelf has changed
-    },
-    async init() {
-      if (this.isFirstInit) return
-      if (!this.user) {
-        // Offline support not available
-        await this.resetEntities()
-        this.$eventBus.$emit('bookshelf-total-entities', 0)
-        return
-      }
-
-      this.localLibraryItems = await this.$db.getLocalLibraryItems(this.currentLibraryMediaType)
-      this.localLibraryItemMap = this.buildLocalLibraryItemMap(this.localLibraryItems)
-      console.log('Local library items loaded for lazy bookshelf', this.localLibraryItems.length)
-
-      this.isFirstInit = true
-      this.initSizeData()
-      await this.loadPage(0)
-      var lastBookIndex = Math.min(this.totalEntities, this.shelvesPerPage * this.entitiesPerShelf)
-      this.mountEntites(0, lastBookIndex)
-
-      // Set last scroll position for this bookshelf page
-      if (this.$store.state.lastBookshelfScrollData[this.page] && window['bookshelf-wrapper']) {
-        const { path, scrollTop } = this.$store.state.lastBookshelfScrollData[this.page]
-        if (path === this.routeFullPath) {
-          // Exact path match with query so use scroll position
-          window['bookshelf-wrapper'].scrollTop = scrollTop
-        }
-      }
-    },
-    scroll(e) {
-      if (!e || !e.target) return
-      if (!this.user) return
-      var { scrollTop } = e.target
-      this.handleScroll(scrollTop)
-    },
-    buildSearchParams() {
-      if (this.page === 'search' || this.page === 'collections') {
-        return ''
-      } else if (this.page === 'series') {
-        // Sort by name ascending
-        let searchParams = new URLSearchParams()
-        searchParams.set('sort', 'name')
-        searchParams.set('desc', 0)
-        return searchParams.toString()
-      }
-
-      let searchParams = new URLSearchParams()
-      if (this.page === 'series-books') {
-        searchParams.set('filter', `series.${this.$encode(this.seriesId)}`)
-        if (this.collapseBookSeries) {
-          searchParams.set('collapseseries', 1)
-        }
-      } else {
-        if (this.filterBy && this.filterBy !== 'all') {
-          searchParams.set('filter', this.filterBy)
-        }
-        if (this.orderBy) {
-          searchParams.set('sort', this.orderBy)
-          searchParams.set('desc', this.orderDesc ? 1 : 0)
-        }
-        if (this.collapseSeries) {
-          searchParams.set('collapseseries', 1)
-        }
-      }
-      return searchParams.toString()
-    },
-    checkUpdateSearchParams() {
-      const newSearchParams = this.buildSearchParams()
-      let currentQueryString = window.location.search
-      if (currentQueryString && currentQueryString.startsWith('?')) currentQueryString = currentQueryString.slice(1)
-
-      if (newSearchParams === '' && !currentQueryString) {
-        return false
-      }
-      if (newSearchParams !== this.currentSFQueryString || newSearchParams !== currentQueryString) {
-        const queryString = newSearchParams ? `?${newSearchParams}` : ''
-        let newurl = window.location.protocol + '//' + window.location.host + window.location.pathname + queryString
-        window.history.replaceState({ path: newurl }, '', newurl)
-
-        this.routeFullPath = window.location.pathname + (window.location.search || '') // Update for saving scroll position
-        return true
-      }
-
-      return false
-    },
-    settingsUpdated(settings) {
-      const wasUpdated = this.checkUpdateSearchParams()
-      if (wasUpdated) {
-        this.resetEntities()
-      }
-    },
-    libraryChanged() {
-      if (this.currentLibraryMediaType !== 'book' && (this.page === 'series' || this.page === 'collections' || this.page === 'series-books')) {
-        this.$router.replace('/bookshelf')
-        return
-      }
-
-      if (this.hasFilter) {
-        this.clearFilter()
-      } else {
-        this.resetEntities()
-      }
-    },
-    libraryItemAdded(libraryItem) {
-      console.log('libraryItem added', libraryItem)
-      // TODO: Check if item would be on this shelf
-      this.resetEntities()
-    },
-    libraryItemUpdated(libraryItem) {
-      console.log('Item updated', libraryItem)
-      if (this.entityName === 'books' || this.entityName === 'series-books') {
-        var indexOf = this.entities.findIndex((ent) => ent && ent.id === libraryItem.id)
-        if (indexOf >= 0) {
-          this.entities[indexOf] = libraryItem
-          if (this.entityComponentRefs[indexOf]) {
-            this.entityComponentRefs[indexOf].setEntity(libraryItem)
-
-            if (this.isBookEntity) {
-              const localLibraryItem = this.localLibraryItemMap.get(libraryItem.id)
-              if (localLibraryItem) {
-                this.entityComponentRefs[indexOf].setLocalLibraryItem(localLibraryItem)
-              }
-            }
-          }
-        }
-      }
-    },
-    libraryItemRemoved(libraryItem) {
-      if (this.entityName === 'books' || this.entityName === 'series-books') {
-        var indexOf = this.entities.findIndex((ent) => ent && ent.id === libraryItem.id)
-        if (indexOf >= 0) {
-          this.entities = this.entities.filter((ent) => ent.id !== libraryItem.id)
-          this.totalEntities = this.entities.length
-          this.$eventBus.$emit('bookshelf-total-entities', this.totalEntities)
-          this.executeRebuild()
-        }
-      }
-    },
-    libraryItemsAdded(libraryItems) {
-      console.log('items added', libraryItems)
-      // TODO: Check if item would be on this shelf
-      this.resetEntities()
-    },
-    libraryItemsUpdated(libraryItems) {
-      libraryItems.forEach((ab) => {
-        this.libraryItemUpdated(ab)
-      })
-    },
-    screenOrientationChange() {
-      setTimeout(() => {
-        console.log('LazyBookshelf Screen orientation change')
-        this.resetEntities()
-      }, 50)
-    },
-    initListeners() {
-      const bookshelf = document.getElementById('bookshelf-wrapper')
-      if (bookshelf) {
-        bookshelf.addEventListener('scroll', this.scroll)
-      }
-
-      this.$eventBus.$on('library-changed', this.libraryChanged)
-      this.$eventBus.$on('user-settings', this.settingsUpdated)
-
-      this.$socket.$on('item_updated', this.libraryItemUpdated)
-      this.$socket.$on('item_added', this.libraryItemAdded)
-      this.$socket.$on('item_removed', this.libraryItemRemoved)
-      this.$socket.$on('items_updated', this.libraryItemsUpdated)
-      this.$socket.$on('items_added', this.libraryItemsAdded)
-
-      if (screen.orientation) {
-        // Not available on ios
-        screen.orientation.addEventListener('change', this.screenOrientationChange)
-      } else {
-        document.addEventListener('orientationchange', this.screenOrientationChange)
-      }
-    },
-    removeListeners() {
-      const bookshelf = document.getElementById('bookshelf-wrapper')
-      if (bookshelf) {
-        bookshelf.removeEventListener('scroll', this.scroll)
-      }
-
-      this.$eventBus.$off('library-changed', this.libraryChanged)
-      this.$eventBus.$off('user-settings', this.settingsUpdated)
-
-      this.$socket.$off('item_updated', this.libraryItemUpdated)
-      this.$socket.$off('item_added', this.libraryItemAdded)
-      this.$socket.$off('item_removed', this.libraryItemRemoved)
-      this.$socket.$off('items_updated', this.libraryItemsUpdated)
-      this.$socket.$off('items_added', this.libraryItemsAdded)
-
-      if (screen.orientation) {
-        // Not available on ios
-        screen.orientation.removeEventListener('change', this.screenOrientationChange)
-      } else {
-        document.removeEventListener('orientationchange', this.screenOrientationChange)
-      }
-    }
-  },
-  updated() {
-    this.routeFullPath = window.location.pathname + (window.location.search || '')
-  },
-  mounted() {
-    this.routeFullPath = window.location.pathname + (window.location.search || '')
-
-    this.init()
-    this.initListeners()
-  },
-  beforeDestroy() {
-    this.removeListeners()
-
-    // Set bookshelf scroll position for specific bookshelf page and query
-    if (window['bookshelf-wrapper']) {
-      this.$store.commit('setLastBookshelfScrollData', { scrollTop: window['bookshelf-wrapper'].scrollTop || 0, path: this.routeFullPath, name: this.page })
     }
   }
 }
+
+async function loadPage(page: number) {
+  if (networkConnected.value && !currentLibraryId.value) {
+    console.error('[LazyBookshelf] loadPage current library id not set')
+    return
+  }
+  pagesLoaded.value[page] = true
+  await fetchEntities(page)
+}
+
+function mountEntites(fromIndex: number, toIndex: number) {
+  for (let i = fromIndex; i < toIndex; i++) {
+    if (!entityIndexesMounted.value.includes(i)) {
+      cardsHelpers.mountEntityCard(i)
+    }
+  }
+}
+
+function handleScroll(scrollTop: number) {
+  var firstShelfIndex = Math.floor(scrollTop / shelfHeight.value)
+  var lastShelfIndex = Math.ceil((scrollTop + bookshelfHeight.value) / shelfHeight.value)
+  lastShelfIndex = Math.min(totalShelves.value - 1, lastShelfIndex)
+
+  var firstBookIndex = firstShelfIndex * entitiesPerShelf.value
+  var lastBookIndex = lastShelfIndex * entitiesPerShelf.value + entitiesPerShelf.value
+  lastBookIndex = Math.min(totalEntities.value, lastBookIndex)
+
+  var firstBookPage = Math.floor(firstBookIndex / booksPerFetch.value)
+  var lastBookPage = Math.floor(lastBookIndex / booksPerFetch.value)
+  if (!pagesLoaded.value[firstBookPage]) {
+    loadPage(firstBookPage)
+  }
+  if (!pagesLoaded.value[lastBookPage]) {
+    loadPage(lastBookPage)
+  }
+
+  // Remove entities out of view
+  entityIndexesMounted.value = entityIndexesMounted.value.filter((_index) => {
+    if (_index < firstBookIndex || _index >= lastBookIndex) {
+      var el = document.getElementById(`book-card-${_index}`)
+      if (el) el.remove()
+      return false
+    }
+    return true
+  })
+  mountEntites(firstBookIndex, lastBookIndex)
+}
+
+function destroyEntityComponents() {
+  for (const key in entityComponentRefs.value) {
+    if (entityComponentRefs.value[key] && entityComponentRefs.value[key].destroy) {
+      entityComponentRefs.value[key].destroy()
+    }
+  }
+}
+
+function setDownloads() {
+  if (entityName.value === 'books') {
+    entities.value = []
+    // TOOD: Sort and filter here
+    totalEntities.value = entities.value.length
+    totalShelves.value = Math.ceil(totalEntities.value / entitiesPerShelf.value)
+  } else {
+    // TODO: Support offline series and collections
+    entities.value = []
+    totalEntities.value = 0
+    totalShelves.value = 0
+  }
+  eventBus.emit('bookshelf-total-entities', totalEntities.value)
+}
+
+async function resetEntities() {
+  if (isFetchingEntities.value) {
+    pendingReset.value = true
+    return
+  }
+  destroyEntityComponents()
+  entityIndexesMounted.value = []
+  entityComponentRefs.value = {}
+  pagesLoaded.value = {}
+  entities.value = []
+  totalShelves.value = 0
+  totalEntities.value = 0
+  currentPage.value = 0
+  initialized.value = false
+
+  initSizeData()
+  if (user.value) {
+    await loadPage(0)
+    var lastBookIndex = Math.min(totalEntities.value, shelvesPerPage.value * entitiesPerShelf.value)
+    mountEntites(0, lastBookIndex)
+  } else {
+    // Local only
+  }
+}
+
+function remountEntities() {
+  // Remount when an entity is removed
+  for (const key in entityComponentRefs.value) {
+    if (entityComponentRefs.value[key]) {
+      entityComponentRefs.value[key].destroy()
+    }
+  }
+  entityComponentRefs.value = {}
+  entityIndexesMounted.value.forEach((i) => {
+    cardsHelpers.mountEntityCard(i)
+  })
+}
+
+function initSizeData() {
+  var bookshelf = document.getElementById('bookshelf')
+  if (!bookshelf) {
+    console.error('Failed to init size data')
+    return
+  }
+  var entitiesPerShelfBefore = entitiesPerShelf.value
+
+  var { clientHeight, clientWidth } = bookshelf
+  bookshelfHeight.value = clientHeight
+  bookshelfWidth.value = clientWidth
+  entitiesPerShelf.value = Math.max(1, showBookshelfListView.value ? 1 : Math.floor((bookshelfWidth.value - 16) / totalEntityCardWidth.value))
+  shelvesPerPage.value = Math.ceil(bookshelfHeight.value / shelfHeight.value) + 2
+  bookshelfMarginLeft.value = (bookshelfWidth.value - entitiesPerShelf.value * totalEntityCardWidth.value) / 2
+
+  const entitiesPerPage = shelvesPerPage.value * entitiesPerShelf.value
+  booksPerFetch.value = Math.ceil(entitiesPerPage / 20) * 20 // Round up to the nearest 20
+
+  if (totalEntities.value) {
+    totalShelves.value = Math.ceil(totalEntities.value / entitiesPerShelf.value)
+  }
+  return entitiesPerShelfBefore < entitiesPerShelf.value // Books per shelf has changed
+}
+
+async function init() {
+  if (isFirstInit.value) return
+  if (!user.value) {
+    // Offline support not available
+    await resetEntities()
+    eventBus.emit('bookshelf-total-entities', 0)
+    return
+  }
+
+  localLibraryItems.value = await db.getLocalLibraryItems(currentLibraryMediaType.value)
+  localLibraryItemMap.value = buildLocalLibraryItemMap(localLibraryItems.value)
+  console.log('Local library items loaded for lazy bookshelf', localLibraryItems.value.length)
+
+  isFirstInit.value = true
+  initSizeData()
+  await loadPage(0)
+  var lastBookIndex = Math.min(totalEntities.value, shelvesPerPage.value * entitiesPerShelf.value)
+  mountEntites(0, lastBookIndex)
+
+  // Set last scroll position for this bookshelf page
+  if (appStore.lastBookshelfScrollData[props.page] && window['bookshelf-wrapper']) {
+    const { path, scrollTop } = appStore.lastBookshelfScrollData[props.page]
+    if (path === routeFullPath.value) {
+      // Exact path match with query so use scroll position
+      window['bookshelf-wrapper'].scrollTop = scrollTop
+    }
+  }
+}
+
+function scroll(e: Event) {
+  if (!e || !e.target) return
+  if (!user.value) return
+  var { scrollTop } = e.target as HTMLElement
+  handleScroll(scrollTop)
+}
+
+function buildSearchParams() {
+  if (props.page === 'search' || props.page === 'collections') {
+    return ''
+  } else if (props.page === 'series') {
+    // Sort by name ascending
+    let searchParams = new URLSearchParams()
+    searchParams.set('sort', 'name')
+    searchParams.set('desc', '0')
+    return searchParams.toString()
+  }
+
+  let searchParams = new URLSearchParams()
+  if (props.page === 'series-books') {
+    searchParams.set('filter', `series.${encode(props.seriesId ?? '')}`)
+    if (collapseBookSeries.value) {
+      searchParams.set('collapseseries', '1')
+    }
+  } else {
+    if (filterBy.value && filterBy.value !== 'all') {
+      searchParams.set('filter', filterBy.value)
+    }
+    if (orderBy.value) {
+      searchParams.set('sort', orderBy.value)
+      searchParams.set('desc', orderDesc.value ? '1' : '0')
+    }
+    if (collapseSeries.value) {
+      searchParams.set('collapseseries', '1')
+    }
+  }
+  return searchParams.toString()
+}
+
+function checkUpdateSearchParams() {
+  const newSearchParams = buildSearchParams()
+  let currentQueryString = window.location.search
+  if (currentQueryString && currentQueryString.startsWith('?')) currentQueryString = currentQueryString.slice(1)
+
+  if (newSearchParams === '' && !currentQueryString) {
+    return false
+  }
+  if (newSearchParams !== currentSFQueryString.value || newSearchParams !== currentQueryString) {
+    const queryString = newSearchParams ? `?${newSearchParams}` : ''
+    let newurl = window.location.protocol + '//' + window.location.host + window.location.pathname + queryString
+    window.history.replaceState({ path: newurl }, '', newurl)
+
+    routeFullPath.value = window.location.pathname + (window.location.search || '') // Update for saving scroll position
+    return true
+  }
+
+  return false
+}
+
+function settingsUpdated(_settings?: unknown) {
+  const wasUpdated = checkUpdateSearchParams()
+  if (wasUpdated) {
+    resetEntities()
+  }
+}
+
+function libraryChanged() {
+  if (currentLibraryMediaType.value !== 'book' && (props.page === 'series' || props.page === 'collections' || props.page === 'series-books')) {
+    router.replace('/bookshelf')
+    return
+  }
+
+  if (hasFilter.value) {
+    clearFilter()
+  } else {
+    resetEntities()
+  }
+}
+
+function libraryItemAdded(libraryItem: Record<string, unknown>) {
+  console.log('libraryItem added', libraryItem)
+  // TODO: Check if item would be on this shelf
+  resetEntities()
+}
+
+function libraryItemUpdated(libraryItem: Record<string, unknown>) {
+  console.log('Item updated', libraryItem)
+  if (entityName.value === 'books' || entityName.value === 'series-books') {
+    var indexOf = entities.value.findIndex((ent) => ent && ent.id === libraryItem.id)
+    if (indexOf >= 0) {
+      entities.value[indexOf] = libraryItem
+      if (entityComponentRefs.value[indexOf]) {
+        entityComponentRefs.value[indexOf].setEntity(libraryItem)
+
+        if (isBookEntity.value) {
+          const localLibraryItem = localLibraryItemMap.value?.get(libraryItem.id as string)
+          if (localLibraryItem) {
+            entityComponentRefs.value[indexOf].setLocalLibraryItem(localLibraryItem)
+          }
+        }
+      }
+    }
+  }
+}
+
+function libraryItemRemoved(libraryItem: Record<string, unknown>) {
+  if (entityName.value === 'books' || entityName.value === 'series-books') {
+    var indexOf = entities.value.findIndex((ent) => ent && ent.id === libraryItem.id)
+    if (indexOf >= 0) {
+      entities.value = entities.value.filter((ent) => ent.id !== libraryItem.id)
+      totalEntities.value = entities.value.length
+      eventBus.emit('bookshelf-total-entities', totalEntities.value)
+      remountEntities()
+    }
+  }
+}
+
+function libraryItemsAdded(libraryItems: Record<string, unknown>[]) {
+  console.log('items added', libraryItems)
+  // TODO: Check if item would be on this shelf
+  resetEntities()
+}
+
+function libraryItemsUpdated(libraryItems: Record<string, unknown>[]) {
+  libraryItems.forEach((ab) => {
+    libraryItemUpdated(ab)
+  })
+}
+
+function screenOrientationChange() {
+  setTimeout(() => {
+    console.log('LazyBookshelf Screen orientation change')
+    resetEntities()
+  }, 50)
+}
+
+function initListeners() {
+  const bookshelf = document.getElementById('bookshelf-wrapper')
+  if (bookshelf) {
+    bookshelf.addEventListener('scroll', scroll)
+  }
+
+  eventBus.on('library-changed', libraryChanged)
+  eventBus.on('user-settings', settingsUpdated)
+
+  socket.on('item_updated', libraryItemUpdated)
+  socket.on('item_added', libraryItemAdded)
+  socket.on('item_removed', libraryItemRemoved)
+  socket.on('items_updated', libraryItemsUpdated)
+  socket.on('items_added', libraryItemsAdded)
+
+  if (screen.orientation) {
+    // Not available on ios
+    screen.orientation.addEventListener('change', screenOrientationChange)
+  } else {
+    document.addEventListener('orientationchange', screenOrientationChange)
+  }
+}
+
+function removeListeners() {
+  const bookshelf = document.getElementById('bookshelf-wrapper')
+  if (bookshelf) {
+    bookshelf.removeEventListener('scroll', scroll)
+  }
+
+  eventBus.off('library-changed', libraryChanged)
+  eventBus.off('user-settings', settingsUpdated)
+
+  socket.off('item_updated', libraryItemUpdated)
+  socket.off('item_added', libraryItemAdded)
+  socket.off('item_removed', libraryItemRemoved)
+  socket.off('items_updated', libraryItemsUpdated)
+  socket.off('items_added', libraryItemsAdded)
+
+  if (screen.orientation) {
+    // Not available on ios
+    screen.orientation.removeEventListener('change', screenOrientationChange)
+  } else {
+    document.removeEventListener('orientationchange', screenOrientationChange)
+  }
+}
+
+// Lifecycle
+onUpdated(() => {
+  routeFullPath.value = window.location.pathname + (window.location.search || '')
+})
+
+onMounted(() => {
+  routeFullPath.value = window.location.pathname + (window.location.search || '')
+  init()
+  initListeners()
+})
+
+onBeforeUnmount(() => {
+  removeListeners()
+
+  // Set bookshelf scroll position for specific bookshelf page and query
+  if (window['bookshelf-wrapper']) {
+    appStore.lastBookshelfScrollData[props.page] = { scrollTop: (window['bookshelf-wrapper'] as HTMLElement).scrollTop || 0, path: routeFullPath.value ?? '' }
+  }
+})
+
+defineExpose({ init, handleScroll, resetEntities, settingsUpdated, libraryChanged })
 </script>

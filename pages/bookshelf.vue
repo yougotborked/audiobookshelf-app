@@ -3,31 +3,18 @@
     <home-bookshelf-nav-bar />
     <home-bookshelf-toolbar v-show="!hideToolbar" />
     <div id="bookshelf-wrapper" class="main-content overflow-y-auto overflow-x-hidden relative" :class="hideToolbar ? 'no-toolbar' : ''">
-      <nuxt-child />
+      <NuxtPage />
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {}
-  },
-  computed: {
-    hideToolbar() {
-      return this.isHome || this.isLatest || this.isPodcastSearch
-    },
-    isHome() {
-      return this.$route.name === 'bookshelf'
-    },
-    isLatest() {
-      return this.$route.name === 'bookshelf-latest'
-    },
-    isPodcastSearch() {
-      return this.$route.name === 'bookshelf-add-podcast'
-    }
-  }
-}
+<script setup lang="ts">
+const route = useRoute()
+
+const hideToolbar = computed(() => isHome.value || isLatest.value || isPodcastSearch.value)
+const isHome = computed(() => route.name === 'bookshelf')
+const isLatest = computed(() => route.name === 'bookshelf-latest')
+const isPodcastSearch = computed(() => route.name === 'bookshelf-add-podcast')
 </script>
 
 <style>

@@ -20,72 +20,65 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    title: String,
-    items: {
-      type: Array,
-      default: () => []
-    },
-    selected: [String, Number], // optional
-    itemPaddingY: {
-      type: String,
-      default: '16px'
-    },
-    width: {
-      type: [String, Number],
-      default: 300
+<script setup lang="ts">
+import { ref, computed, watch, nextTick } from 'vue'
+
+interface DialogItem {
+  text: string
+  value: string
+  icon?: string
+}
+
+const props = defineProps<{
+  modelValue: boolean
+  title?: string
+  items: (DialogItem | string)[]
+  selected?: string | number
+  itemPaddingY?: string
+  width?: string | number
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  action: [value: string]
+}>()
+
+const container = ref<HTMLElement | null>(null)
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const itemsToShow = computed((): DialogItem[] => {
+  return (props.items || []).map((i) => {
+    if (typeof i === 'string') {
+      return { text: i, value: i }
     }
-  },
-  data() {
-    return {}
-  },
-  watch: {
-    show: {
-      immediate: true,
-      handler(newVal) {
-        if (newVal) this.$nextTick(this.init)
-      }
+    return i
+  })
+})
+
+watch(show, {
+  immediate: true,
+  handler(newVal) {
+    if (newVal) nextTick(init)
+  }
+})
+
+function clickedOption(action: string) {
+  emit('action', action)
+}
+
+function init() {
+  const selectedVal = props.selected
+  if (selectedVal && container.value) {
+    const itemEl = (container.value.querySelector(`[data-value="${selectedVal}"]`) || document.querySelector(`[id="item-${selectedVal}"]`)) as HTMLElement | null
+    if (itemEl) {
+      const containerOffset = container.value.offsetTop + container.value.clientHeight / 2
+      const scrollAmount = itemEl.offsetTop - containerOffset
+      container.value.scrollTo({ top: scrollAmount })
     }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    itemsToShow() {
-      return this.items.map((i) => {
-        if (typeof i === 'string') {
-          return {
-            text: i,
-            value: i
-          }
-        }
-        return i
-      })
-    }
-  },
-  methods: {
-    clickedOption(action) {
-      this.$emit('action', action)
-    },
-    init() {
-      if (this.selected && this.$refs[`item-${this.selected}`]?.[0]) {
-        // Set scroll position so that selected item is in the center
-        const containerOffset = this.$refs.container.offsetTop + this.$refs.container.clientHeight / 2
-        const scrollAmount = this.$refs[`item-${this.selected}`][0].offsetTop - containerOffset
-        this.$refs.container.scrollTo({
-          top: scrollAmount
-        })
-      }
-    }
-  },
-  mounted() {}
+  }
 }
 </script>

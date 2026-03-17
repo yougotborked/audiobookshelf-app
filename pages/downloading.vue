@@ -21,23 +21,16 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {}
-  },
-  computed: {
-    downloadItems() {
-      return this.$store.state.globals.itemDownloads
-    },
-    downloadItemParts() {
-      let parts = []
-      this.downloadItems.forEach((di) => parts.push(...di.downloadItemParts))
-      return parts
-    }
-  },
-  mounted() {},
-  beforeDestroy() {}
-}
+<script setup lang="ts">
+import { useGlobalsStore } from '~/stores/globals'
+
+const globalsStore = useGlobalsStore()
+
+const downloadItems = computed(() => globalsStore.itemDownloads)
+const downloadItemParts = computed(() => {
+  const parts: unknown[] = []
+  downloadItems.value.forEach((di) => parts.push(...di.downloadItemParts))
+  return parts
+})
 </script>
 

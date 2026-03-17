@@ -114,7 +114,14 @@ export default {
         return isNaN(p) ? 0 : p
       }
       return this.episodes
-        .filter((ep) => ep.progress == null || ep.progress.isFinished !== true)
+        .filter((ep) => {
+          if (ep.progress?.isFinished) return false
+          if (ep.libraryItemId) {
+            const storeProgress = this.$store.getters['user/getUserMediaProgress'](ep.libraryItemId, ep.id)
+            if (storeProgress?.isFinished) return false
+          }
+          return true
+        })
         .sort((a, b) => parseDate(a) - parseDate(b))
     }
   },
@@ -195,32 +202,46 @@ export default {
 
       // Build a queue for all unfinished episodes so playback continues
       // automatically without user interaction — same pattern as playlist "play all".
-      const queue = episodes.map((ep) => {
-        const localEp = this.localEpisodeMap[ep.id]
-        const localLibraryItemId = localEp?.localLibraryItemId
-        return {
-          libraryItemId: (localEp && localLibraryItemId) ? localLibraryItemId : ep.libraryItemId,
-          episodeId: (localEp && localLibraryItemId) ? localEp.id : ep.id,
-          serverLibraryItemId: ep.libraryItemId,
-          serverEpisodeId: ep.id,
-          episode: ep,
-          localEpisode: localEp || null
-        }
-      })
+      const queue = episodes
+        .map((ep) => {
+          if (!ep.libraryItemId) return null
+          const localEp = this.localEpisodeMap[ep.id]
+          const localLibraryItemId = localEp?.localLibraryItemId
+          return {
+            libraryItemId: (localEp && localLibraryItemId) ? localLibraryItemId : ep.libraryItemId,
+            episodeId: (localEp && localLibraryItemId) ? localEp.id : ep.id,
+            serverLibraryItemId: ep.libraryItemId,
+            serverEpisodeId: ep.id,
+            episode: ep,
+            localEpisode: localEp || null
+          }
+        })
+        .filter(Boolean)
+
+      if (!queue.length) return
 
       const first = queue[0]
+
+      const firstProgress = first.serverLibraryItemId
+        ? this.$store.getters['user/getUserMediaProgress'](first.serverLibraryItemId, first.serverEpisodeId)
+        : null
+      const startTime = firstProgress?.currentTime || null
+
       this.$store.commit('setPlayQueue', queue)
       this.$store.commit('setQueueIndex', 0)
       this.$store.commit('setPlayerIsStartingPlayback', first.episodeId)
 
-      this.$eventBus.$emit('play-item', {
+      const playPayload = {
         libraryItemId: first.libraryItemId,
         episodeId: first.episodeId,
         serverLibraryItemId: first.serverLibraryItemId,
         serverEpisodeId: first.serverEpisodeId,
         queue,
         queueIndex: 0
-      })
+      }
+      if (startTime) playPayload.startTime = startTime
+
+      this.$eventBus.$emit('play-item', playPayload)
     },
     async addEpisodeToPlaylist(episode) {
       const libraryItem = await this.$nativeHttp.get(`/api/items/${episode.libraryItemId}`).catch((error) => {

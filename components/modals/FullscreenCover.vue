@@ -6,65 +6,61 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {
-      width: 0
-    }
-  },
-  watch: {
-    show(val) {
-      if (val) {
-        this.setWidth()
-        this.setListeners()
-      } else {
-        this.removeListeners()
-      }
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    }
-  },
-  methods: {
-    screenOrientationChange() {
-      setTimeout(this.setWidth, 50)
-    },
-    setListeners() {
-      screen.orientation.addEventListener('change', this.screenOrientationChange)
-    },
-    removeListeners() {
-      screen.orientation.removeEventListener('change', this.screenOrientationChange)
-    },
-    setWidth() {
-      if (window.innerHeight > window.innerWidth) {
-        this.width = window.innerWidth
-      } else {
-        this.width = window.innerHeight / this.bookCoverAspectRatio
-      }
-    }
-  },
-  mounted() {
-    this.setWidth()
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+import { useGlobalsStore } from '~/stores/globals'
+
+const props = defineProps<{
+  modelValue: boolean
+  libraryItem: Record<string, unknown>
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+}>()
+
+const globalsStore = useGlobalsStore()
+
+const width = ref(0)
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
+
+watch(show, (val) => {
+  if (val) {
+    setWidth()
+    setListeners()
+  } else {
+    removeListeners()
+  }
+})
+
+function screenOrientationChange() {
+  setTimeout(setWidth, 50)
+}
+
+function setListeners() {
+  screen.orientation.addEventListener('change', screenOrientationChange)
+}
+
+function removeListeners() {
+  screen.orientation.removeEventListener('change', screenOrientationChange)
+}
+
+function setWidth() {
+  if (window.innerHeight > window.innerWidth) {
+    width.value = window.innerWidth
+  } else {
+    width.value = window.innerHeight / bookCoverAspectRatio.value
   }
 }
+
+onMounted(() => {
+  setWidth()
+})
 </script>
 
 <style>

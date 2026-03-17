@@ -2,751 +2,679 @@
   <div>
     <modals-dialog v-model="show" :items="moreMenuItems" @action="moreMenuAction" />
     <modals-item-details-modal v-model="showDetailsModal" :library-item="libraryItem" />
-    <modals-dialog v-model="showSendEbookDevicesModal" :title="$strings.LabelSelectADevice" :items="ereaderDeviceItems" @action="sendEbookToDeviceAction" />
+    <modals-dialog v-model="showSendEbookDevicesModal" :title="strings.LabelSelectADevice" :items="ereaderDeviceItems" @action="sendEbookToDeviceAction" />
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, nextTick } from 'vue'
 import { Dialog } from '@capacitor/dialog'
 import { AbsFileSystem, AbsLogger } from '@/plugins/capacitor'
+import { useStrings } from '~/composables/useStrings'
+import { useHaptics } from '~/composables/useHaptics'
+import { useNativeHttp } from '~/composables/useNativeHttp'
+import { useToast } from '~/composables/useToast'
+import { useDb } from '~/composables/useDb'
+import { usePlatform } from '~/composables/usePlatform'
+import { useUserStore } from '~/stores/user'
+import { useGlobalsStore } from '~/stores/globals'
+import { useLibrariesStore } from '~/stores/libraries'
+import { useRouter } from 'vue-router'
 
-export default {
-  props: {
-    value: Boolean,
-    processing: Boolean,
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    },
-    episode: {
-      type: Object,
-      default: () => {}
-    },
-    rssFeed: {
-      type: Object,
-      default: () => null
-    },
-    playlist: {
-      type: Object,
-      default: () => null
-    },
-    hideRssFeedOption: Boolean
-  },
-  data() {
-    return {
-      showDetailsModal: false,
-      showSendEbookDevicesModal: false
+const props = defineProps<{
+  modelValue: boolean
+  processing?: boolean
+  libraryItem: Record<string, unknown>
+  episode?: Record<string, unknown>
+  rssFeed?: Record<string, unknown> | null
+  playlist?: Record<string, unknown> | null
+  hideRssFeedOption?: boolean
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  'update:processing': [val: boolean]
+  'removed-from-auto-playlist': [payload?: { refresh: boolean }]
+}>()
+
+const strings = useStrings()
+const { impact } = useHaptics()
+const nativeHttp = useNativeHttp()
+const toast = useToast()
+const db = useDb()
+const platform = usePlatform()
+const userStore = useUserStore()
+const globalsStore = useGlobalsStore()
+const librariesStore = useLibrariesStore()
+const router = useRouter()
+
+const showDetailsModal = ref(false)
+const showSendEbookDevicesModal = ref(false)
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const userIsAdminOrUp = computed(() => userStore.getIsAdminOrUp)
+
+const isLocal = computed(() => !!props.libraryItem?.isLocal)
+
+const localLibraryItem = computed(() => {
+  if (isLocal.value) return props.libraryItem
+  return (props.libraryItem?.localLibraryItem as Record<string, unknown>) || null
+})
+
+const localLibraryItemId = computed(() => (localLibraryItem.value?.id as string) || null)
+
+const serverLibraryItemId = computed(() => {
+  if (!isLocal.value) return (props.libraryItem?.id || props.libraryItem?.libraryItemId) as string
+  if (isConnectedToServer.value) {
+    return props.libraryItem.libraryItemId as string
+  }
+  return (props.libraryItem?.libraryItemId || props.libraryItem?.id || null) as string | null
+})
+
+const isConnectedToServer = computed(() => {
+  if (!isLocal.value) return true
+  if (!props.libraryItem?.serverAddress) return false
+  return userStore.getServerAddress === props.libraryItem.serverAddress
+})
+
+const localEpisode = computed(() => {
+  if (isLocal.value) return props.episode
+  return (props.episode?.localEpisode as Record<string, unknown>) || undefined
+})
+
+const localEpisodeId = computed(() => (localEpisode.value?.id as string) || null)
+
+const serverEpisodeId = computed(() => {
+  if (!isLocal.value) return (props.episode?.id || props.episode?.serverEpisodeId) as string
+  if (isConnectedToServer.value) {
+    return props.episode?.serverEpisodeId as string
+  }
+  return (props.episode?.serverEpisodeId || props.episode?.id || null) as string | null
+})
+
+const mediaType = computed(() => props.libraryItem?.mediaType as string)
+const isPodcast = computed(() => mediaType.value == 'podcast')
+const media = computed(() => (props.libraryItem?.media as Record<string, unknown>) || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+const title = computed(() => mediaMetadata.value.title as string)
+const tracks = computed(() => (media.value.tracks as unknown[]) || [])
+const episodes = computed(() => (media.value.episodes as unknown[]) || [])
+const ebookFile = computed(() => media.value.ebookFile)
+
+const localItemProgress = computed(() => {
+  if (isPodcast.value) {
+    if (!localEpisodeId.value) return null
+    return globalsStore.getLocalMediaProgressById(localLibraryItemId.value!, localEpisodeId.value)
+  }
+  return globalsStore.getLocalMediaProgressById(localLibraryItemId.value!)
+})
+
+const serverItemProgress = computed(() => {
+  if (isPodcast.value) {
+    if (!serverEpisodeId.value) return null
+    return userStore.getUserMediaProgress(serverLibraryItemId.value!, serverEpisodeId.value)
+  }
+  return userStore.getUserMediaProgress(serverLibraryItemId.value!)
+})
+
+const userItemProgress = computed(() => {
+  if (isLocal.value) return localItemProgress.value
+  return serverItemProgress.value
+})
+
+const userIsFinished = computed(() => {
+  if ((userItemProgress.value as Record<string, unknown>)?.isFinished) return true
+  return progressPercent.value >= 0.97
+})
+
+const useEBookProgress = computed(() => {
+  if (!userItemProgress.value || (userItemProgress.value as Record<string, unknown>).progress) return false
+  return (userItemProgress.value as Record<string, unknown>).ebookProgress as number > 0
+})
+
+const progressPercent = computed(() => {
+  if (useEBookProgress.value) return Math.max(Math.min(1, (userItemProgress.value as Record<string, unknown>).ebookProgress as number), 0)
+  return Math.max(Math.min(1, ((userItemProgress.value as Record<string, unknown>)?.progress as number) || 0), 0)
+})
+
+const ereaderDeviceItems = computed(() => {
+  if (!ebookFile.value || !librariesStore.ereaderDevices?.length) return []
+  return librariesStore.ereaderDevices.map((d) => {
+    const device = d as Record<string, string>
+    return { text: device.name, value: device.name }
+  })
+})
+
+const showRSSFeedOption = computed(() => {
+  if (props.hideRssFeedOption) return false
+  if (!serverLibraryItemId.value) return false
+  if (!props.rssFeed && !episodes.value.length && !tracks.value.length) return false
+  return userIsAdminOrUp.value || !!props.rssFeed
+})
+
+const mediaId = computed(() => {
+  if (isPodcast.value) return null
+  return serverLibraryItemId.value || localLibraryItemId.value
+})
+
+const moreMenuItems = computed(() => {
+  const items: { text: string; value: string; icon: string }[] = []
+
+  if (platform !== 'ios' && !isPodcast.value) {
+    items.push({ text: strings.ButtonHistory, value: 'history', icon: 'history' })
+  }
+
+  if (!isPodcast.value || props.episode) {
+    if (!userIsFinished.value) {
+      items.push({ text: strings.MessageMarkAsFinished, value: 'markFinished', icon: 'beenhere' })
     }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    userIsAdminOrUp() {
-      return this.$store.getters['user/getIsAdminOrUp']
-    },
-    moreMenuItems() {
-      const items = []
 
-      // TODO: Implement on iOS
-      if (this.$platform !== 'ios' && !this.isPodcast) {
-        items.push({
-          text: this.$strings.ButtonHistory,
-          value: 'history',
-          icon: 'history'
-        })
-      }
-
-      if (!this.isPodcast || this.episode) {
-        if (!this.userIsFinished) {
-          items.push({
-            text: this.$strings.MessageMarkAsFinished,
-            value: 'markFinished',
-            icon: 'beenhere'
-          })
-        }
-
-        if (this.progressPercent > 0) {
-          items.push({
-            text: this.$strings.MessageDiscardProgress,
-            value: 'discardProgress',
-            icon: 'backspace'
-          })
-        }
-      }
-
-      if ((!this.isPodcast && this.serverLibraryItemId) || (this.episode && this.serverEpisodeId)) {
-        items.push({
-          text: this.$strings.LabelAddToPlaylist,
-          value: 'playlist',
-          icon: 'playlist_add'
-        })
-
-        if (this.ereaderDeviceItems.length) {
-          items.push({
-            text: this.$strings.ButtonSendEbookToDevice,
-            value: 'sendEbook',
-            icon: 'send'
-          })
-        }
-      }
-
-      // If on playlist page show remove from playlist option
-      if (this.playlist) {
-        items.push({
-          text: this.$strings.LabelRemoveFromPlaylist,
-          value: 'removeFromPlaylist',
-          icon: 'playlist_remove'
-        })
-      }
-
-      if (this.showRSSFeedOption) {
-        items.push({
-          text: this.rssFeed ? this.$strings.HeaderRSSFeed : this.$strings.HeaderOpenRSSFeed,
-          value: 'rssFeed',
-          icon: 'rss_feed'
-        })
-      }
-
-      if (this.localLibraryItemId) {
-        items.push({
-          text: this.$strings.ButtonManageLocalFiles,
-          value: 'manageLocal',
-          icon: 'folder'
-        })
-
-        if (!this.isPodcast) {
-          items.push({
-            text: this.$strings.ButtonDeleteLocalItem,
-            value: 'deleteLocal',
-            icon: 'delete'
-          })
-        } else if (this.localEpisodeId) {
-          items.push({
-            text: this.$strings.ButtonDeleteLocalEpisode,
-            value: 'deleteLocalEpisode',
-            icon: 'delete'
-          })
-        }
-      }
-
-      if (this.isConnectedToServer) {
-        items.push({
-          text: this.$strings.ButtonGoToWebClient,
-          value: 'openWebClient',
-          icon: 'language'
-        })
-      }
-
-      if (!this.episode) {
-        items.push({
-          text: this.$strings.LabelMoreInfo,
-          value: 'details',
-          icon: 'info'
-        })
-      }
-
-      return items
-    },
-    ereaderDeviceItems() {
-      if (!this.ebookFile || !this.$store.state.libraries.ereaderDevices?.length) return []
-      return this.$store.state.libraries.ereaderDevices.map((d) => {
-        return {
-          text: d.name,
-          value: d.name
-        }
-      })
-    },
-    isConnectedToServer() {
-      if (!this.isLocal) return true
-      if (!this.libraryItem?.serverAddress) return false
-      return this.$store.getters['user/getServerAddress'] === this.libraryItem.serverAddress
-    },
-    isLocal() {
-      return !!this.libraryItem?.isLocal
-    },
-    localLibraryItem() {
-      if (this.isLocal) return this.libraryItem
-      return this.libraryItem?.localLibraryItem || null
-    },
-    localLibraryItemId() {
-      return this.localLibraryItem?.id || null
-    },
-    serverLibraryItemId() {
-      if (!this.isLocal) return this.libraryItem?.id || this.libraryItem?.libraryItemId
-      if (this.isConnectedToServer) {
-        return this.libraryItem.libraryItemId
-      }
-      return this.libraryItem?.libraryItemId || this.libraryItem?.id || null
-    },
-    localEpisode() {
-      if (this.isLocal) return this.episode
-      return this.episode?.localEpisode
-    },
-    localEpisodeId() {
-      return this.localEpisode?.id || null
-    },
-    serverEpisodeId() {
-      if (!this.isLocal) return this.episode?.id || this.episode?.serverEpisodeId
-      if (this.isConnectedToServer) {
-        return this.episode.serverEpisodeId
-      }
-      return this.episode?.serverEpisodeId || this.episode?.id || null
-    },
-    mediaType() {
-      return this.libraryItem?.mediaType
-    },
-    isPodcast() {
-      return this.mediaType == 'podcast'
-    },
-    media() {
-      return this.libraryItem?.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    title() {
-      return this.mediaMetadata.title
-    },
-    tracks() {
-      return this.media.tracks || []
-    },
-    episodes() {
-      return this.media.episodes || []
-    },
-    ebookFile() {
-      return this.media.ebookFile
-    },
-    localItemProgress() {
-      if (this.isPodcast) {
-        if (!this.localEpisodeId) return null
-        return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId, this.localEpisodeId)
-      }
-      return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId)
-    },
-    serverItemProgress() {
-      if (this.isPodcast) {
-        if (!this.serverEpisodeId) return null
-        return this.$store.getters['user/getUserMediaProgress'](this.serverLibraryItemId, this.serverEpisodeId)
-      }
-      return this.$store.getters['user/getUserMediaProgress'](this.serverLibraryItemId)
-    },
-    userItemProgress() {
-      if (this.isLocal) return this.localItemProgress
-      return this.serverItemProgress
-    },
-    userIsFinished() {
-      if (this.userItemProgress?.isFinished) return true
-      return this.progressPercent >= 0.97
-    },
-    useEBookProgress() {
-      if (!this.userItemProgress || this.userItemProgress.progress) return false
-      return this.userItemProgress.ebookProgress > 0
-    },
-    progressPercent() {
-      if (this.useEBookProgress) return Math.max(Math.min(1, this.userItemProgress.ebookProgress), 0)
-      return Math.max(Math.min(1, this.userItemProgress?.progress || 0), 0)
-    },
-    showRSSFeedOption() {
-      if (this.hideRssFeedOption) return false
-      if (!this.serverLibraryItemId) return false
-      if (!this.rssFeed && !this.episodes.length && !this.tracks.length) return false // Cannot open RSS feed with no episodes/tracks
-
-      // If rss feed is open then show feed url to users otherwise just show to admins
-      return this.userIsAdminOrUp || this.rssFeed
-    },
-    mediaId() {
-      if (this.isPodcast) return null
-      return this.serverLibraryItemId || this.localLibraryItemId
+    if (progressPercent.value > 0) {
+      items.push({ text: strings.MessageDiscardProgress, value: 'discardProgress', icon: 'backspace' })
     }
-  },
-  methods: {
-    moreMenuAction(action) {
-      this.show = false
-      if (action === 'manageLocal') {
-        this.$nextTick(() => {
-          this.$router.push(`/localMedia/item/${this.localLibraryItemId}`)
-        })
-      } else if (action === 'details') {
-        this.showDetailsModal = true
-      } else if (action === 'playlist') {
-        this.$store.commit('globals/setSelectedPlaylistItems', [{ libraryItem: this.libraryItem, episode: this.episode }])
-        this.$store.commit('globals/setShowPlaylistsAddCreateModal', true)
-      } else if (action === 'removeFromPlaylist') {
-        this.removeFromPlaylistClick()
-      } else if (action === 'markFinished') {
-        AbsLogger.info({
-          tag: 'ItemMoreMenuModal',
-          message: `markFinished action: ${JSON.stringify({
-            isPodcast: this.isPodcast,
-            serverLibraryItemId: this.serverLibraryItemId,
-            serverEpisodeId: this.serverEpisodeId,
-            localLibraryItemId: this.localLibraryItemId,
-            localEpisodeId: this.localEpisodeId,
-            isLocal: this.isLocal,
-            hasLocalEpisode: !!this.localEpisode,
-            userIsFinished: this.userIsFinished
-          })}`
-        })
-        if (this.episode) this.toggleEpisodeFinished()
-        else this.toggleFinished()
-      } else if (action === 'history') {
-        this.$router.push(`/media/${this.mediaId}/history?title=${this.title}`)
-      } else if (action === 'discardProgress') {
-        this.clearProgressClick()
-      } else if (action === 'deleteLocal') {
-        this.deleteLocalItem()
-      } else if (action === 'deleteLocalEpisode') {
-        this.deleteLocalEpisode()
-      } else if (action === 'rssFeed') {
-        this.clickRSSFeed()
-      } else if (action === 'sendEbook') {
-        this.showSendEbookDevicesModal = true
-      } else if (action === 'openWebClient') {
-        this.$store.dispatch('user/openWebClient', `/item/${this.serverLibraryItemId}`)
+  }
+
+  if ((!isPodcast.value && serverLibraryItemId.value) || (props.episode && serverEpisodeId.value)) {
+    items.push({ text: strings.LabelAddToPlaylist, value: 'playlist', icon: 'playlist_add' })
+
+    if (ereaderDeviceItems.value.length) {
+      items.push({ text: strings.ButtonSendEbookToDevice, value: 'sendEbook', icon: 'send' })
+    }
+  }
+
+  if (props.playlist) {
+    items.push({ text: strings.LabelRemoveFromPlaylist, value: 'removeFromPlaylist', icon: 'playlist_remove' })
+  }
+
+  if (showRSSFeedOption.value) {
+    items.push({
+      text: props.rssFeed ? strings.HeaderRSSFeed : strings.HeaderOpenRSSFeed,
+      value: 'rssFeed',
+      icon: 'rss_feed'
+    })
+  }
+
+  if (localLibraryItemId.value) {
+    items.push({ text: strings.ButtonManageLocalFiles, value: 'manageLocal', icon: 'folder' })
+
+    if (!isPodcast.value) {
+      items.push({ text: strings.ButtonDeleteLocalItem, value: 'deleteLocal', icon: 'delete' })
+    } else if (localEpisodeId.value) {
+      items.push({ text: strings.ButtonDeleteLocalEpisode, value: 'deleteLocalEpisode', icon: 'delete' })
+    }
+  }
+
+  if (isConnectedToServer.value) {
+    items.push({ text: strings.ButtonGoToWebClient, value: 'openWebClient', icon: 'language' })
+  }
+
+  if (!props.episode) {
+    items.push({ text: strings.LabelMoreInfo, value: 'details', icon: 'info' })
+  }
+
+  return items
+})
+
+function moreMenuAction(action: string) {
+  show.value = false
+  if (action === 'manageLocal') {
+    nextTick(() => {
+      router.push(`/localMedia/item/${localLibraryItemId.value}`)
+    })
+  } else if (action === 'details') {
+    showDetailsModal.value = true
+  } else if (action === 'playlist') {
+    globalsStore.selectedPlaylistItems = [{ libraryItem: props.libraryItem, episode: props.episode }]
+    globalsStore.showPlaylistsAddCreateModal = true
+  } else if (action === 'removeFromPlaylist') {
+    removeFromPlaylistClick()
+  } else if (action === 'markFinished') {
+    AbsLogger.info({
+      tag: 'ItemMoreMenuModal',
+      message: `markFinished action: ${JSON.stringify({
+        isPodcast: isPodcast.value,
+        serverLibraryItemId: serverLibraryItemId.value,
+        serverEpisodeId: serverEpisodeId.value,
+        localLibraryItemId: localLibraryItemId.value,
+        localEpisodeId: localEpisodeId.value,
+        isLocal: isLocal.value,
+        hasLocalEpisode: !!localEpisode.value,
+        userIsFinished: userIsFinished.value
+      })}`
+    })
+    if (props.episode) toggleEpisodeFinished()
+    else toggleFinished()
+  } else if (action === 'history') {
+    router.push(`/media/${mediaId.value}/history?title=${title.value}`)
+  } else if (action === 'discardProgress') {
+    clearProgressClick()
+  } else if (action === 'deleteLocal') {
+    deleteLocalItem()
+  } else if (action === 'deleteLocalEpisode') {
+    deleteLocalEpisode()
+  } else if (action === 'rssFeed') {
+    clickRSSFeed()
+  } else if (action === 'sendEbook') {
+    showSendEbookDevicesModal.value = true
+  } else if (action === 'openWebClient') {
+    userStore.openWebClient(`/item/${serverLibraryItemId.value}`)
+  }
+}
+
+async function toggleFinished() {
+  await impact()
+
+  if (userItemProgress.value && (userItemProgress.value as Record<string, unknown>).progress as number > 0 && !userIsFinished.value) {
+    const { value } = await Dialog.confirm({
+      title: strings.HeaderConfirm,
+      message: strings.MessageConfirmMarkAsFinished
+    })
+    if (!value) return
+  }
+
+  emit('update:processing', true)
+  let markFinishedSucceeded = false
+
+  if (isLocal.value) {
+    const isFinished = !userIsFinished.value
+    const payload = await db.updateLocalMediaProgressFinished({ localLibraryItemId: localLibraryItemId.value, isFinished }) as Record<string, unknown>
+    console.log('toggleFinished payload', JSON.stringify(payload))
+    if (payload?.error) {
+      toast.error((payload?.error || 'Unknown error') as string)
+    } else {
+      const localMediaProgress = payload.localMediaProgress as Record<string, unknown>
+      console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
+      if (localMediaProgress) {
+        globalsStore.updateLocalMediaProgress(localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+        markFinishedSucceeded = true
       }
-    },
-    async toggleFinished() {
-      await this.$hapticsImpact()
-
-      // Show confirm if item has progress since it will reset
-      if (this.userItemProgress && this.userItemProgress.progress > 0 && !this.userIsFinished) {
-        const { value } = await Dialog.confirm({
-          title: this.$strings.HeaderConfirm,
-          message: this.$strings.MessageConfirmMarkAsFinished
-        })
-        if (!value) return
-      }
-
-      this.$emit('update:processing', true)
-      let markFinishedSucceeded = false
-
-      if (this.isLocal) {
-        const isFinished = !this.userIsFinished
-        const payload = await this.$db.updateLocalMediaProgressFinished({ localLibraryItemId: this.localLibraryItemId, isFinished })
-        console.log('toggleFinished payload', JSON.stringify(payload))
-        if (payload?.error) {
-          this.$toast.error(payload?.error || 'Unknown error')
-        } else {
-          const localMediaProgress = payload.localMediaProgress
-          console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
-          if (localMediaProgress) {
-            this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
-            markFinishedSucceeded = true
-          }
-        }
+    }
+  } else {
+    const _serverLibraryItemId = serverLibraryItemId.value
+    if (!_serverLibraryItemId) {
+      AbsLogger.info({ tag: 'ItemMoreMenuModal', message: 'toggleFinished missing serverLibraryItemId, falling back to local update' })
+      if (localLibraryItemId.value) {
+        await setLocalProgressFinished({ isEpisode: false, isFinished: !userIsFinished.value })
       } else {
-        const serverLibraryItemId = this.serverLibraryItemId
-        if (!serverLibraryItemId) {
-          AbsLogger.info({
-            tag: 'ItemMoreMenuModal',
-            message: 'toggleFinished missing serverLibraryItemId, falling back to local update'
-          })
-          if (this.localLibraryItemId) {
-            await this.setLocalProgressFinished({ isEpisode: false, isFinished: !this.userIsFinished })
-          } else {
-            this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
-          }
-          this.$emit('update:processing', false)
-          return
-        }
-
-        const updatePayload = {
-          isFinished: !this.userIsFinished
-        }
-        AbsLogger.info({
-          tag: 'ItemMoreMenuModal',
-          message: `toggleFinished server request: ${JSON.stringify({
-            serverLibraryItemId,
-            payload: updatePayload
-          })}`
-        })
-        let serverError = null
-        await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}`, updatePayload).catch(async (error) => {
-          serverError = error
-          const status = error?.response?.status
-          const data = error?.response?.data
-          AbsLogger.info({
-            tag: 'ItemMoreMenuModal',
-            message: `toggleFinished server error: ${JSON.stringify({ status, data })}`
-          })
-          console.error('Failed', error)
-          const serverNotFound = status === 404
-          if (serverNotFound && this.localLibraryItemId) {
-            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
-            if (localSucceeded) markFinishedSucceeded = true
-            return
-          }
-          this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
-        })
-        if (!serverError) {
-          markFinishedSucceeded = true
-        }
+        toast.error(strings.ToastItemMarkedAsFinishedFailed)
       }
-      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
-        this.$emit('removed-from-auto-playlist', { refresh: true })
-      }
-      this.$emit('update:processing', false)
-    },
-    async toggleEpisodeFinished() {
-      await this.$hapticsImpact()
+      emit('update:processing', false)
+      return
+    }
 
-      this.$emit('update:processing', true)
-      const serverLibraryItemId = this.serverLibraryItemId
-      const serverEpisodeId = this.serverEpisodeId
-      let markFinishedSucceeded = false
-
-      if (this.isLocal || this.localEpisode) {
-        const isFinished = !this.userIsFinished
-        const localLibraryItemId = this.localLibraryItemId
-        const localEpisodeId = this.localEpisodeId
-        const payload = await this.$db.updateLocalMediaProgressFinished({ localLibraryItemId, localEpisodeId, isFinished })
-        console.log('toggleFinished payload', JSON.stringify(payload))
-
-        if (payload?.error) {
-          this.$toast.error(payload?.error || 'Unknown error')
-        } else {
-          const localMediaProgress = payload.localMediaProgress
-          console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
-          if (localMediaProgress) {
-            this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
-            markFinishedSucceeded = true
-          }
-        }
-      } else {
-        if (!serverLibraryItemId || !serverEpisodeId) {
-          AbsLogger.info({
-            tag: 'ItemMoreMenuModal',
-            message: `toggleEpisodeFinished missing server ids, fallback: ${JSON.stringify({
-              serverLibraryItemId,
-              serverEpisodeId,
-            localLibraryItemId: this.localLibraryItemId,
-            localEpisodeId: this.localEpisodeId
-          })}`
-          })
-          if (this.localLibraryItemId && this.localEpisodeId) {
-            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: true, isFinished: !this.userIsFinished })
-            markFinishedSucceeded = localSucceeded
-          } else {
-            this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
-          }
-          this.$emit('update:processing', false)
-          return
-        }
-
-        const updatePayload = {
-          isFinished: !this.userIsFinished
-        }
-        AbsLogger.info({
-          tag: 'ItemMoreMenuModal',
-          message: `toggleEpisodeFinished server request: ${JSON.stringify({
-            serverLibraryItemId,
-            serverEpisodeId,
-            payload: updatePayload
-          })}`
-        })
-        let serverError = null
-        await this.$nativeHttp.patch(`/api/me/progress/${serverLibraryItemId}/${serverEpisodeId}`, updatePayload).catch(async (error) => {
-          serverError = error
-          const status = error?.response?.status
-          const data = error?.response?.data
-          AbsLogger.info({
-            tag: 'ItemMoreMenuModal',
-            message: `toggleEpisodeFinished server error: ${JSON.stringify({ status, data })}`
-          })
-          console.error('Failed', error)
-          const serverNotFound = status === 404
-          if (serverNotFound && this.localLibraryItemId) {
-            const localSucceeded = await this.setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
-            if (localSucceeded) markFinishedSucceeded = true
-            return
-          }
-          this.$toast.error(updatePayload.isFinished ? this.$strings.ToastItemMarkedAsFinishedFailed : this.$strings.ToastItemMarkedAsNotFinishedFailed)
-        })
-        if (!serverError) {
-          markFinishedSucceeded = true
-        }
-      }
-      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userIsFinished) {
-        this.$emit('removed-from-auto-playlist', { refresh: true })
-      }
-      this.$emit('update:processing', false)
-    },
-    async clearProgressClick() {
-      await this.$hapticsImpact()
-
-      const { value } = await Dialog.confirm({
-        title: this.$strings.HeaderConfirm,
-        message: this.$strings.MessageConfirmDiscardProgress
-      })
-      if (value) {
-        this.$emit('update:processing', true)
-        const serverMediaProgressId = this.serverItemProgress?.id
-        if (this.localItemProgress) {
-          await this.$db.removeLocalMediaProgress(this.localItemProgress.id)
-          this.$store.commit('globals/removeLocalMediaProgressForItem', this.localItemProgress.id)
-        }
-
-        if (serverMediaProgressId) {
-          await this.$nativeHttp
-            .delete(`/api/me/progress/${serverMediaProgressId}`)
-            .then(() => {
-              console.log('Progress reset complete')
-              this.$toast.success(`Your progress was reset`)
-              this.$store.commit('user/removeMediaProgress', serverMediaProgressId)
-            })
-            .catch((error) => {
-              console.error('Progress reset failed', error)
-            })
-        }
-
-        this.$emit('update:processing', false)
-      }
-    },
-    async deleteLocalEpisode() {
-      await this.$hapticsImpact()
-
-      const localEpisodeAudioTrack = this.localEpisode.audioTrack
-      const localFile = this.localLibraryItem.localFiles.find((lf) => lf.id === localEpisodeAudioTrack.localFileId)
-      if (!localFile) {
-        this.$toast.error('Audio track does not have matching local file..')
+    const updatePayload = { isFinished: !userIsFinished.value }
+    AbsLogger.info({ tag: 'ItemMoreMenuModal', message: `toggleFinished server request: ${JSON.stringify({ _serverLibraryItemId, payload: updatePayload })}` })
+    let serverError = null
+    await nativeHttp.patch(`/api/me/progress/${_serverLibraryItemId}`, updatePayload).catch(async (error) => {
+      serverError = error
+      const status = (error?.response?.status as number)
+      const data = error?.response?.data
+      AbsLogger.info({ tag: 'ItemMoreMenuModal', message: `toggleFinished server error: ${JSON.stringify({ status, data })}` })
+      console.error('Failed', error)
+      const serverNotFound = status === 404
+      if (serverNotFound && localLibraryItemId.value) {
+        const localSucceeded = await setLocalProgressFinished({ isEpisode: false, isFinished: updatePayload.isFinished })
+        if (localSucceeded) markFinishedSucceeded = true
         return
       }
+      toast.error(updatePayload.isFinished ? strings.ToastItemMarkedAsFinishedFailed : strings.ToastItemMarkedAsNotFinishedFailed)
+    })
+    if (!serverError) {
+      markFinishedSucceeded = true
+    }
+  }
+  if (markFinishedSucceeded && props.playlist?.id === 'unfinished' && !userIsFinished.value) {
+    emit('removed-from-auto-playlist', { refresh: true })
+  }
+  emit('update:processing', false)
+}
 
-      const { value } = await Dialog.confirm({
-        title: this.$strings.HeaderConfirm,
-        message: this.$getString('MessageConfirmDeleteLocalEpisode', [localFile.basePath])
-      })
-      if (value) {
-        const res = await AbsFileSystem.deleteTrackFromItem({ id: this.localLibraryItemId, trackLocalFileId: localFile.id, trackContentUrl: localEpisodeAudioTrack.contentUrl })
-        if (res?.id) {
-          if (this.isLocal) {
-            // If this is local episode then redirect to server episode when available
-            if (this.serverEpisodeId) {
-              this.$router.replace(`/item/${this.serverLibraryItemId}/${this.serverEpisodeId}`)
-            } else {
-              this.$router.replace(`/item/${this.localLibraryItemId}`)
-            }
-          } else {
-            // Update local library item and local episode
-            this.libraryItem.localLibraryItem = res
-            this.$delete(this.episode, 'localEpisode')
-          }
-        } else this.$toast.error('Failed to delete')
+async function toggleEpisodeFinished() {
+  await impact()
+
+  emit('update:processing', true)
+  const _serverLibraryItemId = serverLibraryItemId.value
+  const _serverEpisodeId = serverEpisodeId.value
+  let markFinishedSucceeded = false
+
+  if (isLocal.value || localEpisode.value) {
+    const isFinished = !userIsFinished.value
+    const _localLibraryItemId = localLibraryItemId.value
+    const _localEpisodeId = localEpisodeId.value
+    const payload = await db.updateLocalMediaProgressFinished({ localLibraryItemId: _localLibraryItemId, localEpisodeId: _localEpisodeId, isFinished }) as Record<string, unknown>
+    console.log('toggleFinished payload', JSON.stringify(payload))
+
+    if (payload?.error) {
+      toast.error((payload?.error || 'Unknown error') as string)
+    } else {
+      const localMediaProgress = payload.localMediaProgress as Record<string, unknown>
+      console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
+      if (localMediaProgress) {
+        globalsStore.updateLocalMediaProgress(localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+        markFinishedSucceeded = true
       }
-    },
-    async deleteLocalItem() {
-      await this.$hapticsImpact()
-
-      const { value } = await Dialog.confirm({
-        title: this.$strings.HeaderConfirm,
-        message: this.$strings.MessageConfirmDeleteLocalFiles
-      })
-      if (value) {
-        const res = await AbsFileSystem.deleteItem(this.localLibraryItem)
-        if (res?.success) {
-          if (this.isLocal) {
-            // If local then redirect to server version when available
-            if (this.serverLibraryItemId) {
-              this.$router.replace(`/item/${this.serverLibraryItemId}`)
-            } else {
-              this.$router.replace('/bookshelf')
-            }
-          } else {
-            // Remove localLibraryItem
-            this.$delete(this.libraryItem, 'localLibraryItem')
-          }
-        } else this.$toast.error('Failed to delete')
-      }
-    },
-    clickRSSFeed() {
-      this.$store.commit('globals/setRSSFeedOpenCloseModal', {
-        id: this.serverLibraryItemId,
-        name: this.title,
-        type: 'item',
-        feed: this.rssFeed,
-        hasEpisodesWithoutPubDate: this.episodes.some((ep) => !ep.pubDate)
-      })
-    },
-    sendEbookToDeviceAction(deviceName) {
-      this.showSendEbookDevicesModal = false
-
-      const payload = {
-        libraryItemId: this.serverLibraryItemId,
-        deviceName
-      }
-      this.$emit('update:processing', true)
-      this.$nativeHttp
-        .post(`/api/emails/send-ebook-to-device`, payload)
-        .then(() => {
-          this.$toast.success('Ebook sent successfully')
-        })
-        .catch((error) => {
-          console.error('Failed to send ebook to device', error)
-          this.$toast.error('Failed to send ebook to device')
-        })
-        .finally(() => {
-          this.$emit('update:processing', false)
-        })
-    },
-    async removeFromPlaylistClick() {
-      if (!this.playlist) {
-        this.$toast.error('Invalid: No Playlist')
-        return
-      }
-
-      // Unfinished auto playlist items are removed by marking them finished locally/server-side
-      if (this.playlist.id === 'unfinished') {
-        AbsLogger.info({
-          tag: 'ItemMoreMenuModal',
-          message: `removeFromPlaylistClick (auto): ${JSON.stringify({
-            serverLibraryItemId: this.serverLibraryItemId,
-            serverEpisodeId: this.serverEpisodeId,
-            localLibraryItemId: this.localLibraryItemId,
-            localEpisodeId: this.localEpisodeId,
-            isLocal: this.isLocal,
-            hasLocalEpisode: !!this.localEpisode,
-            userIsFinished: this.userIsFinished
-          })}`
-        })
-        if (this.userItemProgress?.isFinished) {
-          this.$toast.success('Item removed from playlist')
-          this.$emit('removed-from-auto-playlist')
-          return
-        }
-
-        await this.forceMarkFinished()
-        this.$emit('removed-from-auto-playlist')
-        return
-      }
-
-      this.$emit('update:processing', true)
-      let url = `/api/playlists/${this.playlist.id}/item/${this.serverLibraryItemId}`
-      if (this.serverEpisodeId) url += `/${this.serverEpisodeId}`
-      this.$nativeHttp
-        .delete(url)
-        .then(() => {
-          this.$toast.success('Item removed from playlist')
-        })
-        .catch((error) => {
-          const errorMsg = error.response?.data || 'Unknown error'
-          console.error('Failed to remove item from playlist', error)
-          this.$toast.error('Failed to remove from playlist: ' + errorMsg)
-        })
-        .finally(() => {
-          this.$emit('update:processing', false)
-        })
-    },
-    async forceMarkFinished() {
+    }
+  } else {
+    if (!_serverLibraryItemId || !_serverEpisodeId) {
       AbsLogger.info({
         tag: 'ItemMoreMenuModal',
-        message: `forceMarkFinished: ${JSON.stringify({
-          serverLibraryItemId: this.serverLibraryItemId,
-          serverEpisodeId: this.serverEpisodeId,
-          localLibraryItemId: this.localLibraryItemId,
-          localEpisodeId: this.localEpisodeId,
-          isLocal: this.isLocal,
-          hasLocalEpisode: !!this.localEpisode
+        message: `toggleEpisodeFinished missing server ids, fallback: ${JSON.stringify({
+          _serverLibraryItemId,
+          _serverEpisodeId,
+          localLibraryItemId: localLibraryItemId.value,
+          localEpisodeId: localEpisodeId.value
         })}`
       })
-      let markFinishedSucceeded = false
+      if (localLibraryItemId.value && localEpisodeId.value) {
+        const localSucceeded = await setLocalProgressFinished({ isEpisode: true, isFinished: !userIsFinished.value })
+        markFinishedSucceeded = localSucceeded
+      } else {
+        toast.error(strings.ToastItemMarkedAsFinishedFailed)
+      }
+      emit('update:processing', false)
+      return
+    }
 
-      if (this.episode) {
-        if (this.userItemProgress?.isFinished) return
-        if (this.isLocal || this.localEpisode) {
-          const payload = await this.$db.updateLocalMediaProgressFinished({
-            localLibraryItemId: this.localLibraryItemId,
-            localEpisodeId: this.localEpisodeId,
-            isFinished: true
-          })
+    const updatePayload = { isFinished: !userIsFinished.value }
+    AbsLogger.info({ tag: 'ItemMoreMenuModal', message: `toggleEpisodeFinished server request: ${JSON.stringify({ _serverLibraryItemId, _serverEpisodeId, payload: updatePayload })}` })
+    let serverError = null
+    await nativeHttp.patch(`/api/me/progress/${_serverLibraryItemId}/${_serverEpisodeId}`, updatePayload).catch(async (error) => {
+      serverError = error
+      const status = (error?.response?.status as number)
+      const data = error?.response?.data
+      AbsLogger.info({ tag: 'ItemMoreMenuModal', message: `toggleEpisodeFinished server error: ${JSON.stringify({ status, data })}` })
+      console.error('Failed', error)
+      const serverNotFound = status === 404
+      if (serverNotFound && localLibraryItemId.value) {
+        const localSucceeded = await setLocalProgressFinished({ isEpisode: true, isFinished: updatePayload.isFinished })
+        if (localSucceeded) markFinishedSucceeded = true
+        return
+      }
+      toast.error(updatePayload.isFinished ? strings.ToastItemMarkedAsFinishedFailed : strings.ToastItemMarkedAsNotFinishedFailed)
+    })
+    if (!serverError) {
+      markFinishedSucceeded = true
+    }
+  }
+  if (markFinishedSucceeded && props.playlist?.id === 'unfinished' && !userIsFinished.value) {
+    emit('removed-from-auto-playlist', { refresh: true })
+  }
+  emit('update:processing', false)
+}
 
-          if (payload?.error) {
-            this.$toast.error(payload?.error || 'Unknown error')
-            return
-          }
+async function clearProgressClick() {
+  await impact()
 
-          if (payload?.localMediaProgress) {
-            this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
-            markFinishedSucceeded = true
-          }
-        } else if (this.serverLibraryItemId && this.serverEpisodeId) {
-          let serverError = null
-          await this.$nativeHttp
-            .patch(`/api/me/progress/${this.serverLibraryItemId}/${this.serverEpisodeId}`, { isFinished: true })
-            .catch((error) => {
-              serverError = error
-              console.error('Failed to mark finished', error)
-              this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
-            })
-          if (!serverError) {
-            markFinishedSucceeded = true
-          }
+  const { value } = await Dialog.confirm({
+    title: strings.HeaderConfirm,
+    message: strings.MessageConfirmDiscardProgress
+  })
+  if (value) {
+    emit('update:processing', true)
+    const serverMediaProgressId = (serverItemProgress.value as Record<string, unknown>)?.id as string
+    if (localItemProgress.value) {
+      await db.removeLocalMediaProgress((localItemProgress.value as Record<string, unknown>).id as string)
+      globalsStore.removeLocalMediaProgressForItem((localItemProgress.value as Record<string, unknown>).id as string)
+    }
+
+    if (serverMediaProgressId) {
+      await nativeHttp
+        .delete(`/api/me/progress/${serverMediaProgressId}`)
+        .then(() => {
+          console.log('Progress reset complete')
+          toast.success(`Your progress was reset`)
+          userStore.removeMediaProgress(serverMediaProgressId)
+        })
+        .catch((error) => {
+          console.error('Progress reset failed', error)
+        })
+    }
+
+    emit('update:processing', false)
+  }
+}
+
+async function deleteLocalEpisode() {
+  await impact()
+
+  const localEp = localEpisode.value as Record<string, unknown>
+  const localEpisodeAudioTrack = localEp.audioTrack as Record<string, unknown>
+  const localFile = (localLibraryItem.value?.localFiles as Record<string, unknown>[])?.find((lf) => lf.id === localEpisodeAudioTrack.localFileId)
+  if (!localFile) {
+    toast.error('Audio track does not have matching local file..')
+    return
+  }
+
+  const { value } = await Dialog.confirm({
+    title: strings.HeaderConfirm,
+    message: strings.getString?.('MessageConfirmDeleteLocalEpisode', [localFile.basePath as string]) || strings.MessageConfirmDeleteLocalFiles
+  })
+  if (value) {
+    const res = await AbsFileSystem.deleteTrackFromItem({ id: localLibraryItemId.value, trackLocalFileId: localFile.id, trackContentUrl: localEpisodeAudioTrack.contentUrl }) as Record<string, unknown>
+    if (res?.id) {
+      if (isLocal.value) {
+        if (serverEpisodeId.value) {
+          router.replace(`/item/${serverLibraryItemId.value}/${serverEpisodeId.value}`)
+        } else {
+          router.replace(`/item/${localLibraryItemId.value}`)
         }
       } else {
-        if (this.userItemProgress?.isFinished) return
-        if (this.isLocal) {
-          const payload = await this.$db.updateLocalMediaProgressFinished({
-            localLibraryItemId: this.localLibraryItemId,
-            isFinished: true
-          })
+        ;(props.libraryItem as Record<string, unknown>).localLibraryItem = res
+        if (props.episode) delete (props.episode as Record<string, unknown>).localEpisode
+      }
+    } else toast.error('Failed to delete')
+  }
+}
 
-          if (payload?.error) {
-            this.$toast.error(payload?.error || 'Unknown error')
-            return
-          }
+async function deleteLocalItem() {
+  await impact()
 
-          if (payload?.localMediaProgress) {
-            this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
-            markFinishedSucceeded = true
-          }
-        } else if (this.serverLibraryItemId) {
-          let serverError = null
-          await this.$nativeHttp
-            .patch(`/api/me/progress/${this.serverLibraryItemId}`, { isFinished: true })
-            .catch((error) => {
-              serverError = error
-              console.error('Failed to mark finished', error)
-              this.$toast.error(this.$strings.ToastItemMarkedAsFinishedFailed)
-            })
-          if (!serverError) {
-            markFinishedSucceeded = true
-          }
+  const { value } = await Dialog.confirm({
+    title: strings.HeaderConfirm,
+    message: strings.MessageConfirmDeleteLocalFiles
+  })
+  if (value) {
+    const res = await AbsFileSystem.deleteItem(localLibraryItem.value) as Record<string, unknown>
+    if (res?.success) {
+      if (isLocal.value) {
+        if (serverLibraryItemId.value) {
+          router.replace(`/item/${serverLibraryItemId.value}`)
+        } else {
+          router.replace('/bookshelf')
         }
+      } else {
+        delete (props.libraryItem as Record<string, unknown>).localLibraryItem
       }
+    } else toast.error('Failed to delete')
+  }
+}
 
-      if (markFinishedSucceeded && this.playlist?.id === 'unfinished' && !this.userItemProgress?.isFinished) {
-        this.$emit('removed-from-auto-playlist', { refresh: true })
-      }
-    },
-    async setLocalProgressFinished({ isEpisode, isFinished }) {
-      if (!this.localLibraryItemId) return false
+function clickRSSFeed() {
+  globalsStore.setRSSFeedOpenCloseModal({
+    id: serverLibraryItemId.value,
+    name: title.value,
+    type: 'item',
+    feed: props.rssFeed,
+    hasEpisodesWithoutPubDate: (episodes.value as Record<string, unknown>[]).some((ep) => !ep.pubDate)
+  })
+}
 
-      const payload = await this.$db.updateLocalMediaProgressFinished({
-        localLibraryItemId: this.localLibraryItemId,
-        localEpisodeId: isEpisode ? this.localEpisodeId : null,
-        isFinished
-      })
+function sendEbookToDeviceAction(deviceName: string) {
+  showSendEbookDevicesModal.value = false
+
+  const payload = {
+    libraryItemId: serverLibraryItemId.value,
+    deviceName
+  }
+  emit('update:processing', true)
+  nativeHttp
+    .post(`/api/emails/send-ebook-to-device`, payload)
+    .then(() => {
+      toast.success('Ebook sent successfully')
+    })
+    .catch((error) => {
+      console.error('Failed to send ebook to device', error)
+      toast.error('Failed to send ebook to device')
+    })
+    .finally(() => {
+      emit('update:processing', false)
+    })
+}
+
+async function removeFromPlaylistClick() {
+  if (!props.playlist) {
+    toast.error('Invalid: No Playlist')
+    return
+  }
+
+  if (props.playlist.id === 'unfinished') {
+    AbsLogger.info({
+      tag: 'ItemMoreMenuModal',
+      message: `removeFromPlaylistClick (auto): ${JSON.stringify({
+        serverLibraryItemId: serverLibraryItemId.value,
+        serverEpisodeId: serverEpisodeId.value,
+        localLibraryItemId: localLibraryItemId.value,
+        localEpisodeId: localEpisodeId.value,
+        isLocal: isLocal.value,
+        hasLocalEpisode: !!localEpisode.value,
+        userIsFinished: userIsFinished.value
+      })}`
+    })
+    if ((userItemProgress.value as Record<string, unknown>)?.isFinished) {
+      toast.success('Item removed from playlist')
+      emit('removed-from-auto-playlist')
+      return
+    }
+
+    await forceMarkFinished()
+    emit('removed-from-auto-playlist')
+    return
+  }
+
+  emit('update:processing', true)
+  let url = `/api/playlists/${props.playlist.id}/item/${serverLibraryItemId.value}`
+  if (serverEpisodeId.value) url += `/${serverEpisodeId.value}`
+  nativeHttp
+    .delete(url)
+    .then(() => {
+      toast.success('Item removed from playlist')
+    })
+    .catch((error) => {
+      const errorMsg = (error as Record<string, Record<string, string>>).response?.data || 'Unknown error'
+      console.error('Failed to remove item from playlist', error)
+      toast.error('Failed to remove from playlist: ' + errorMsg)
+    })
+    .finally(() => {
+      emit('update:processing', false)
+    })
+}
+
+async function forceMarkFinished() {
+  AbsLogger.info({
+    tag: 'ItemMoreMenuModal',
+    message: `forceMarkFinished: ${JSON.stringify({
+      serverLibraryItemId: serverLibraryItemId.value,
+      serverEpisodeId: serverEpisodeId.value,
+      localLibraryItemId: localLibraryItemId.value,
+      localEpisodeId: localEpisodeId.value,
+      isLocal: isLocal.value,
+      hasLocalEpisode: !!localEpisode.value
+    })}`
+  })
+  let markFinishedSucceeded = false
+
+  if (props.episode) {
+    if ((userItemProgress.value as Record<string, unknown>)?.isFinished) return
+    if (isLocal.value || localEpisode.value) {
+      const payload = await db.updateLocalMediaProgressFinished({
+        localLibraryItemId: localLibraryItemId.value,
+        localEpisodeId: localEpisodeId.value,
+        isFinished: true
+      }) as Record<string, unknown>
 
       if (payload?.error) {
-        this.$toast.error(payload?.error || 'Unknown error')
-        return false
+        toast.error((payload?.error || 'Unknown error') as string)
+        return
       }
 
       if (payload?.localMediaProgress) {
-        this.$store.commit('globals/updateLocalMediaProgress', payload.localMediaProgress)
-        const message = isFinished ? this.$strings.ToastItemMarkedAsFinished : this.$strings.ToastItemMarkedAsNotFinished
-        this.$toast.success(message)
-        return true
+        globalsStore.updateLocalMediaProgress(payload.localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+        markFinishedSucceeded = true
+      }
+    } else if (serverLibraryItemId.value && serverEpisodeId.value) {
+      let serverError = null
+      await nativeHttp
+        .patch(`/api/me/progress/${serverLibraryItemId.value}/${serverEpisodeId.value}`, { isFinished: true })
+        .catch((error) => {
+          serverError = error
+          console.error('Failed to mark finished', error)
+          toast.error(strings.ToastItemMarkedAsFinishedFailed)
+        })
+      if (!serverError) {
+        markFinishedSucceeded = true
+      }
+    }
+  } else {
+    if ((userItemProgress.value as Record<string, unknown>)?.isFinished) return
+    if (isLocal.value) {
+      const payload = await db.updateLocalMediaProgressFinished({
+        localLibraryItemId: localLibraryItemId.value,
+        isFinished: true
+      }) as Record<string, unknown>
+
+      if (payload?.error) {
+        toast.error((payload?.error || 'Unknown error') as string)
+        return
       }
 
-      return false
+      if (payload?.localMediaProgress) {
+        globalsStore.updateLocalMediaProgress(payload.localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+        markFinishedSucceeded = true
+      }
+    } else if (serverLibraryItemId.value) {
+      let serverError = null
+      await nativeHttp
+        .patch(`/api/me/progress/${serverLibraryItemId.value}`, { isFinished: true })
+        .catch((error) => {
+          serverError = error
+          console.error('Failed to mark finished', error)
+          toast.error(strings.ToastItemMarkedAsFinishedFailed)
+        })
+      if (!serverError) {
+        markFinishedSucceeded = true
+      }
     }
-  },
-  mounted() {}
+  }
+
+  if (markFinishedSucceeded && props.playlist?.id === 'unfinished' && !(userItemProgress.value as Record<string, unknown>)?.isFinished) {
+    emit('removed-from-auto-playlist', { refresh: true })
+  }
+}
+
+async function setLocalProgressFinished({ isEpisode, isFinished }: { isEpisode: boolean; isFinished: boolean }): Promise<boolean> {
+  if (!localLibraryItemId.value) return false
+
+  const payload = await db.updateLocalMediaProgressFinished({
+    localLibraryItemId: localLibraryItemId.value,
+    localEpisodeId: isEpisode ? localEpisodeId.value : null,
+    isFinished
+  }) as Record<string, unknown>
+
+  if (payload?.error) {
+    toast.error((payload?.error || 'Unknown error') as string)
+    return false
+  }
+
+  if (payload?.localMediaProgress) {
+    globalsStore.updateLocalMediaProgress(payload.localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+    const message = isFinished ? strings.ToastItemMarkedAsFinished : strings.ToastItemMarkedAsNotFinished
+    toast.success(message)
+    return true
+  }
+
+  return false
 }
 </script>

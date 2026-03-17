@@ -2,7 +2,7 @@
   <modals-modal v-model="show" :width="400" height="100%">
     <template #outer>
       <div class="absolute top-11 left-4 z-40">
-        <p class="text-white text-2xl truncate">{{ $strings.LabelYourBookmarks }}</p>
+        <p class="text-white text-2xl truncate">{{ strings.LabelYourBookmarks }}</p>
       </div>
     </template>
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
@@ -14,7 +14,7 @@
             </div>
             <p class="text-xl pl-2">{{ selectedBookmark ? 'Edit Bookmark' : 'New Bookmark' }}</p>
             <div class="flex-grow" />
-            <p class="text-xl font-mono">{{ this.$secondsToTimestamp(currentTime / _playbackRate) }}</p>
+            <p class="text-xl font-mono">{{ utils.secondsToTimestamp(currentTime / _playbackRate) }}</p>
           </div>
 
           <ui-text-input-with-label v-model="newBookmarkTitle" :placeholder="bookmarkPlaceholder()" :autofocus="false" ref="noteInput" label="Note" />
@@ -27,156 +27,158 @@
             <modals-bookmarks-bookmark-item :key="bookmark.id" :highlight="currentTime === bookmark.time" :bookmark="bookmark" :playback-rate="_playbackRate" @click="clickBookmark" @edit="editBookmark" @delete="deleteBookmark" />
           </template>
           <div v-if="!bookmarks.length" class="flex h-32 items-center justify-center">
-            <p class="text-xl">{{ $strings.MessageNoBookmarks }}</p>
+            <p class="text-xl">{{ strings.MessageNoBookmarks }}</p>
           </div>
         </div>
         <div v-if="canCreateBookmark && !showBookmarkTitleInput" class="flex px-4 py-2 items-center text-center justify-between border-b border-fg/10 bg-md-primary cursor-pointer text-white text-opacity-80 sticky bottom-0 left-0 w-full" @click.stop="createBookmark">
           <span class="material-symbols">add</span>
-          <p class="text-base pl-2">{{ $strings.ButtonCreateBookmark }}</p>
-          <p class="text-sm font-mono">{{ this.$secondsToTimestamp(currentTime / _playbackRate) }}</p>
+          <p class="text-base pl-2">{{ strings.ButtonCreateBookmark }}</p>
+          <p class="text-sm font-mono">{{ utils.secondsToTimestamp(currentTime / _playbackRate) }}</p>
         </div>
       </div>
     </div>
   </modals-modal>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, watch, nextTick } from 'vue'
 import { Dialog } from '@capacitor/dialog'
+import { useStrings } from '~/composables/useStrings'
+import { useHaptics } from '~/composables/useHaptics'
+import { useNativeHttp } from '~/composables/useNativeHttp'
+import { useToast } from '~/composables/useToast'
+import { useUtils } from '~/composables/useUtils'
+import { useUserStore } from '~/stores/user'
 
-export default {
-  props: {
-    value: Boolean,
-    bookmarks: {
-      type: Array,
-      default: () => []
-    },
-    currentTime: {
-      type: Number,
-      default: 0
-    },
-    playbackRate: {
-      type: Number,
-      default: 1
-    },
-    libraryItemId: String
-  },
-  data() {
-    return {
-      selectedBookmark: null,
-      showBookmarkTitleInput: false,
-      newBookmarkTitle: ''
-    }
-  },
-  watch: {
-    show(newVal) {
-      if (newVal) {
-        this.showBookmarkTitleInput = false
-        this.newBookmarkTitle = ''
-      }
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    canCreateBookmark() {
-      return !this.bookmarks.find((bm) => bm.time === this.currentTime)
-    },
-    _playbackRate() {
-      if (!this.playbackRate || isNaN(this.playbackRate)) return 1
-      return this.playbackRate
-    }
-  },
-  methods: {
-    bookmarkPlaceholder() {
-      // using a method prevents caching the date
-      return this.$formatDate(Date.now(), 'MMM dd, yyyy HH:mm')
-    },
-    editBookmark(bm) {
-      this.selectedBookmark = bm
-      this.newBookmarkTitle = bm.title
-      this.showBookmarkTitleInput = true
-    },
-    async deleteBookmark(bm) {
-      await this.$hapticsImpact()
-      const { value } = await Dialog.confirm({
-        title: 'Remove Bookmark',
-        message: this.$strings.MessageConfirmRemoveBookmark
-      })
-      if (!value) return
+const props = defineProps<{
+  modelValue: boolean
+  bookmarks: Record<string, unknown>[]
+  currentTime: number
+  playbackRate: number
+  libraryItemId: string
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  select: [bookmark: Record<string, unknown>]
+}>()
 
-      this.$nativeHttp
-        .delete(`/api/me/item/${this.libraryItemId}/bookmark/${bm.time}`)
-        .then(() => {
-          this.$store.commit('user/deleteBookmark', { libraryItemId: this.libraryItemId, time: bm.time })
-        })
-        .catch((error) => {
-          this.$toast.error(this.$strings.ToastBookmarkRemoveFailed)
-          console.error(error)
-        })
-    },
-    async clickBookmark(bm) {
-      await this.$hapticsImpact()
-      this.$emit('select', bm)
-    },
-    submitUpdateBookmark(updatedBookmark) {
-      this.$nativeHttp
-        .patch(`/api/me/item/${this.libraryItemId}/bookmark`, updatedBookmark)
-        .then((bookmark) => {
-          this.$store.commit('user/updateBookmark', bookmark)
-          this.showBookmarkTitleInput = false
-        })
-        .catch((error) => {
-          this.$toast.error(this.$strings.ToastBookmarkUpdateFailed)
-          console.error(error)
-        })
-    },
-    submitCreateBookmark() {
-      if (!this.newBookmarkTitle) {
-        this.newBookmarkTitle = this.$formatDate(Date.now(), 'MMM dd, yyyy HH:mm')
-      }
-      const bookmark = {
-        title: this.newBookmarkTitle,
-        time: Math.floor(this.currentTime)
-      }
-      this.$nativeHttp
-        .post(`/api/me/item/${this.libraryItemId}/bookmark`, bookmark)
-        .then(() => {
-          this.$toast.success('Bookmark added')
-        })
-        .catch((error) => {
-          this.$toast.error(this.$strings.ToastBookmarkCreateFailed)
-          console.error(error)
-        })
+const strings = useStrings()
+const { impact } = useHaptics()
+const nativeHttp = useNativeHttp()
+const toast = useToast()
+const utils = useUtils()
+const userStore = useUserStore()
 
-      this.newBookmarkTitle = ''
-      this.showBookmarkTitleInput = false
+const selectedBookmark = ref<Record<string, unknown> | null>(null)
+const showBookmarkTitleInput = ref(false)
+const newBookmarkTitle = ref('')
 
-      this.show = false
-    },
-    createBookmark() {
-      this.selectedBookmark = null
-      this.newBookmarkTitle = ''
-      this.showBookmarkTitleInput = true
-    },
-    async submitBookmark() {
-      await this.$hapticsImpact()
-      if (this.selectedBookmark) {
-        var updatePayload = {
-          ...this.selectedBookmark,
-          title: this.newBookmarkTitle
-        }
-        this.submitUpdateBookmark(updatePayload)
-      } else {
-        this.submitCreateBookmark()
-      }
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const canCreateBookmark = computed(() => !props.bookmarks.find((bm) => bm.time === props.currentTime))
+
+const _playbackRate = computed(() => {
+  if (!props.playbackRate || isNaN(props.playbackRate)) return 1
+  return props.playbackRate
+})
+
+watch(show, (newVal) => {
+  if (newVal) {
+    showBookmarkTitleInput.value = false
+    newBookmarkTitle.value = ''
+  }
+})
+
+function bookmarkPlaceholder() {
+  return utils.formatDate(Date.now(), 'MMM dd, yyyy HH:mm')
+}
+
+function editBookmark(bm: Record<string, unknown>) {
+  selectedBookmark.value = bm
+  newBookmarkTitle.value = bm.title as string
+  showBookmarkTitleInput.value = true
+}
+
+async function deleteBookmark(bm: Record<string, unknown>) {
+  await impact()
+  const { value } = await Dialog.confirm({
+    title: 'Remove Bookmark',
+    message: strings.MessageConfirmRemoveBookmark
+  })
+  if (!value) return
+
+  nativeHttp
+    .delete(`/api/me/item/${props.libraryItemId}/bookmark/${bm.time}`)
+    .then(() => {
+      userStore.deleteBookmark({ libraryItemId: props.libraryItemId, time: bm.time as number })
+    })
+    .catch((error) => {
+      toast.error(strings.ToastBookmarkRemoveFailed)
+      console.error(error)
+    })
+}
+
+async function clickBookmark(bm: Record<string, unknown>) {
+  await impact()
+  emit('select', bm)
+}
+
+function submitUpdateBookmark(updatedBookmark: Record<string, unknown>) {
+  nativeHttp
+    .patch(`/api/me/item/${props.libraryItemId}/bookmark`, updatedBookmark)
+    .then((bookmark) => {
+      userStore.updateBookmark(bookmark as Record<string, unknown>)
+      showBookmarkTitleInput.value = false
+    })
+    .catch((error) => {
+      toast.error(strings.ToastBookmarkUpdateFailed)
+      console.error(error)
+    })
+}
+
+function submitCreateBookmark() {
+  if (!newBookmarkTitle.value) {
+    newBookmarkTitle.value = utils.formatDate(Date.now(), 'MMM dd, yyyy HH:mm')
+  }
+  const bookmark = {
+    title: newBookmarkTitle.value,
+    time: Math.floor(props.currentTime)
+  }
+  nativeHttp
+    .post(`/api/me/item/${props.libraryItemId}/bookmark`, bookmark)
+    .then(() => {
+      toast.success('Bookmark added')
+    })
+    .catch((error) => {
+      toast.error(strings.ToastBookmarkCreateFailed)
+      console.error(error)
+    })
+
+  newBookmarkTitle.value = ''
+  showBookmarkTitleInput.value = false
+
+  show.value = false
+}
+
+function createBookmark() {
+  selectedBookmark.value = null
+  newBookmarkTitle.value = ''
+  showBookmarkTitleInput.value = true
+}
+
+async function submitBookmark() {
+  await impact()
+  if (selectedBookmark.value) {
+    const updatePayload = {
+      ...selectedBookmark.value,
+      title: newBookmarkTitle.value
     }
-  },
-  mounted() {}
+    submitUpdateBookmark(updatePayload)
+  } else {
+    submitCreateBookmark()
+  }
 }
 </script>

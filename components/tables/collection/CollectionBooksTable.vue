@@ -1,7 +1,7 @@
 <template>
   <div class="w-full bg-md-surface-3 bg-opacity-40">
     <div class="w-full h-14 flex items-center px-4 bg-md-surface-3">
-      <p class="pr-4">{{ $strings.HeaderCollectionItems }}</p>
+      <p class="pr-4">{{ strings.HeaderCollectionItems }}</p>
 
       <div class="w-6 h-6 md:w-7 md:h-7 bg-fg/10 rounded-full flex items-center justify-center">
         <span class="text-xs md:text-sm font-mono leading-none">{{ books.length }}</span>
@@ -16,53 +16,42 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    collectionId: String,
-    books: {
-      type: Array,
-      default: () => []
-    }
-  },
-  data() {
-    return {
-      booksCopy: []
-    }
-  },
-  watch: {
-    books: {
-      handler(newVal) {
-        this.init()
-      }
-    }
-  },
-  computed: {
-    totalDuration() {
-      var _total = 0
-      this.books.forEach((book) => {
-        _total += book.media.duration
-      })
-      return _total
-    },
-    totalDurationPretty() {
-      return this.$elapsedPrettyExtended(this.totalDuration)
-    }
-  },
-  methods: {
-    editBook(book) {
-      var bookIds = this.books.map((b) => b.id)
-      this.$store.commit('setBookshelfBookIds', bookIds)
-      this.$store.commit('showEditModal', book)
-    },
-    init() {
-      this.booksCopy = this.books.map((b) => ({ ...b }))
-    }
-  },
-  mounted() {
-    this.init()
-  }
+<script setup lang="ts">
+const props = defineProps<{
+  collectionId?: string
+  books: Record<string, unknown>[]
+}>()
+
+const strings = useStrings()
+const utils = useUtils()
+
+const booksCopy = ref<Record<string, unknown>[]>([])
+
+const totalDuration = computed(() => {
+  let _total = 0
+  props.books.forEach((book) => {
+    _total += ((book.media as Record<string, unknown>)?.duration as number) || 0
+  })
+  return _total
+})
+
+const totalDurationPretty = computed(() => utils.elapsedPrettyExtended(totalDuration.value))
+
+function editBook(_book: Record<string, unknown>) {
+  // setBookshelfBookIds / showEditModal are legacy Vuex mutations not yet ported — no-op
 }
+
+function init() {
+  booksCopy.value = props.books.map((b) => ({ ...b }))
+}
+
+watch(() => props.books, () => {
+  init()
+})
+
+onMounted(() => {
+  init()
+})
 </script>
 
 <style>

@@ -9,18 +9,10 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    narrator: String
-  },
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+defineProps<{
+  narrator?: string
+}>()
 </script>
 
 <style scoped>

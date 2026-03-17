@@ -10,439 +10,408 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import ePub from 'epubjs'
 
-export default {
-  props: {
-    url: String,
-    libraryItem: {
-      type: Object,
-      default: () => {}
+const props = defineProps<{
+  url: string
+  libraryItem: Record<string, unknown>
+  isLocal: boolean
+  keepProgress: boolean
+}>()
+
+const emit = defineEmits<{
+  touchstart: [event: TouchEvent]
+  touchend: [event: TouchEvent]
+}>()
+
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const userStore = useUserStore()
+const nativeHttp = useNativeHttp()
+const db = useDb()
+
+/** @type {ePub.Book | null} */
+const book = ref<InstanceType<typeof ePub> | null>(null)
+/** @type {ePub.Rendition | null} */
+const rendition = ref<ReturnType<InstanceType<typeof ePub>['renderTo']> | null>(null)
+const progress = ref(0)
+const totalLocations = ref(0)
+const currentLocationNum = ref(0)
+const currentLocationCfi = ref<string | null>(null)
+const inittingDisplay = ref(true)
+const isRefreshingUI = ref(false)
+const ereaderSettings = ref({
+  theme: 'dark',
+  font: 'serif',
+  fontScale: 100,
+  lineSpacing: 115,
+  textStroke: 0
+})
+
+const libraryItemId = computed(() => props.libraryItem?.id as string)
+const localLibraryItem = computed(() => {
+  if (props.isLocal) return props.libraryItem
+  return (props.libraryItem.localLibraryItem as Record<string, unknown>) || null
+})
+const localLibraryItemId = computed(() => localLibraryItem.value?.id as string)
+const serverLibraryItemId = computed(() => {
+  if (!props.isLocal) return props.libraryItem.id as string
+  if (!props.libraryItem.serverAddress || !props.libraryItem.libraryItemId) return null
+  if (userStore.getServerAddress === props.libraryItem.serverAddress) {
+    return props.libraryItem.libraryItemId as string
+  }
+  return null
+})
+const isPlayerOpen = computed(() => appStore.getIsPlayerOpen)
+const readerHeightOffset = computed(() => isPlayerOpen.value ? 204 : 104)
+const chapters = computed(() => (book.value as unknown as { navigation?: { toc?: unknown[] } })?.navigation?.toc || [])
+const userItemProgress = computed(() => props.isLocal ? localItemProgress.value : serverItemProgress.value)
+const localItemProgress = computed(() => globalsStore.getLocalMediaProgressById(localLibraryItemId.value))
+const serverItemProgress = computed(() => userStore.getUserMediaProgress(serverLibraryItemId.value))
+const localStorageLocationsKey = computed(() => `ebookLocations-${libraryItemId.value}`)
+const savedEbookLocation = computed(() => {
+  if (!props.keepProgress) return null
+  if (!userItemProgress.value?.ebookLocation) return null
+  if (!String(userItemProgress.value.ebookLocation).startsWith('epubcfi')) return null
+  return userItemProgress.value.ebookLocation
+})
+const isLightTheme = computed(() => ereaderSettings.value.theme === 'light')
+const isDarkTheme = computed(() => ereaderSettings.value.theme === 'dark')
+const themeRules = computed(() => {
+  const isDark = ereaderSettings.value.theme === 'dark'
+  const isBlack = ereaderSettings.value.theme === 'black'
+  const fontColor = isDark ? '#fff' : isBlack ? '#fff' : '#000'
+  const backgroundColor = isDark ? 'rgb(35 35 35)' : isBlack ? 'rgb(0 0 0)' : 'rgb(255, 255, 255)'
+
+  return {
+    '*': {
+      color: `${fontColor}!important`,
+      'background-color': `${backgroundColor}!important`,
+      'line-height': ereaderSettings.value.lineSpacing + '%!important',
+      '-webkit-text-stroke': ereaderSettings.value.textStroke / 100 + 'px ' + fontColor + '!important'
     },
-    isLocal: Boolean,
-    keepProgress: Boolean
-  },
-  data() {
-    return {
-      /** @type {ePub.Book} */
-      book: null,
-      /** @type {ePub.Rendition} */
-      rendition: null,
-      progress: 0,
-      totalLocations: 0,
-      currentLocationNum: 0,
-      currentLocationCfi: null,
-      inittingDisplay: true,
-      isRefreshingUI: false,
-      ereaderSettings: {
-        theme: 'dark',
-        font: 'serif',
-        fontScale: 100,
-        lineSpacing: 115,
-        textStroke: 0
-      }
+    a: {
+      color: `${fontColor}!important`
     }
-  },
-  watch: {
-    isPlayerOpen() {
-      this.refreshUI()
-    }
-  },
-  computed: {
-    /** @returns {string} */
-    libraryItemId() {
-      return this.libraryItem?.id
-    },
-    localLibraryItem() {
-      if (this.isLocal) return this.libraryItem
-      return this.libraryItem.localLibraryItem || null
-    },
-    localLibraryItemId() {
-      return this.localLibraryItem?.id
-    },
-    serverLibraryItemId() {
-      if (!this.isLocal) return this.libraryItem.id
-      // Check if local library item is connected to the current server
-      if (!this.libraryItem.serverAddress || !this.libraryItem.libraryItemId) return null
-      if (this.$store.getters['user/getServerAddress'] === this.libraryItem.serverAddress) {
-        return this.libraryItem.libraryItemId
-      }
-      return null
-    },
-    isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
-    },
-    readerHeightOffset() {
-      return this.isPlayerOpen ? 204 : 104
-    },
-    /** @returns {Array<ePub.NavItem>} */
-    chapters() {
-      return this.book?.navigation?.toc || []
-    },
-    userItemProgress() {
-      if (this.isLocal) return this.localItemProgress
-      return this.serverItemProgress
-    },
-    localItemProgress() {
-      return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId)
-    },
-    serverItemProgress() {
-      return this.$store.getters['user/getUserMediaProgress'](this.serverLibraryItemId)
-    },
-    localStorageLocationsKey() {
-      return `ebookLocations-${this.libraryItemId}`
-    },
-    savedEbookLocation() {
-      if (!this.keepProgress) return null
-      if (!this.userItemProgress?.ebookLocation) return null
-      // Validate ebookLocation is an epubcfi
-      if (!String(this.userItemProgress.ebookLocation).startsWith('epubcfi')) return null
-      return this.userItemProgress.ebookLocation
-    },
-    isLightTheme() {
-      return this.ereaderSettings.theme === 'light'
-    },
-    isDarkTheme() {
-      return this.ereaderSettings.theme === 'dark'
-    },
-    themeRules() {
-      const isDark = this.ereaderSettings.theme === 'dark'
-      const isBlack = this.ereaderSettings.theme === 'black'
-      const fontColor = isDark ? '#fff' : isBlack ? '#fff' : '#000'
-      const backgroundColor = isDark ? 'rgb(35 35 35)' : isBlack ? 'rgb(0 0 0)' : 'rgb(255, 255, 255)'
+  }
+})
 
-      return {
-        '*': {
-          color: `${fontColor}!important`,
-          'background-color': `${backgroundColor}!important`,
-          'line-height': this.ereaderSettings.lineSpacing + '%!important',
-          '-webkit-text-stroke': this.ereaderSettings.textStroke / 100 + 'px ' + fontColor + '!important'
-        },
-        a: {
-          color: `${fontColor}!important`
-        }
-      }
-    }
-  },
-  methods: {
-    updateSettings(settings) {
-      this.ereaderSettings = settings
+watch(isPlayerOpen, () => {
+  refreshUI()
+})
 
-      if (!this.rendition) return
+function updateSettings(settings: typeof ereaderSettings.value) {
+  ereaderSettings.value = settings
 
-      this.applyTheme()
+  if (!rendition.value) return
 
-      const fontScale = settings.fontScale || 100
-      this.rendition.themes.fontSize(`${fontScale}%`)
-      this.rendition.themes.font(settings.font)
-      this.rendition.spread(settings.spread || 'auto')
-    },
-    goToChapter(href) {
-      return this.rendition?.display(href)
-    },
-    prev() {
-      if (this.rendition) {
-        this.rendition.prev()
-      }
-    },
-    next() {
-      if (this.rendition) {
-        this.rendition.next()
-      }
-    },
-    /**
-     * @param {object} payload
-     * @param {string} payload.ebookLocation - CFI of the current location
-     * @param {string} payload.ebookProgress - eBook Progress Percentage
-     */
-    async updateProgress(payload) {
-      if (!this.keepProgress) return
+  applyTheme()
 
-      // Update local item
-      if (this.localLibraryItemId) {
-        const localPayload = {
-          localLibraryItemId: this.localLibraryItemId,
-          ...payload
-        }
-        const localResponse = await this.$db.updateLocalEbookProgress(localPayload)
-        if (localResponse.localMediaProgress) {
-          this.$store.commit('globals/updateLocalMediaProgress', localResponse.localMediaProgress)
-        }
-      }
+  const fontScale = settings.fontScale || 100
+  ;(rendition.value as unknown as Record<string, unknown>).themes?.fontSize(`${fontScale}%`)
+  ;(rendition.value as unknown as Record<string, unknown>).themes?.font(settings.font)
+  ;(rendition.value as unknown as Record<string, unknown>).spread?.(settings.spread || 'auto')
+}
 
-      // Update server item
-      if (this.serverLibraryItemId) {
-        this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, payload).catch((error) => {
-          console.error('EpubReader.updateProgress failed:', error)
-        })
-      }
-    },
-    getAllEbookLocationData() {
-      const locations = []
-      let totalSize = 0 // Total in bytes
+function goToChapter(href: string) {
+  return (rendition.value as unknown as Record<string, unknown>)?.display?.(href)
+}
 
-      for (const key in localStorage) {
-        if (!localStorage.hasOwnProperty(key) || !key.startsWith('ebookLocations-')) {
-          continue
-        }
-
-        try {
-          const ebookLocations = JSON.parse(localStorage[key])
-          if (!ebookLocations.locations) throw new Error('Invalid locations object')
-
-          ebookLocations.key = key
-          ebookLocations.size = (localStorage[key].length + key.length) * 2
-          locations.push(ebookLocations)
-          totalSize += ebookLocations.size
-        } catch (error) {
-          console.error('Failed to parse ebook locations', key, error)
-          localStorage.removeItem(key)
-        }
-      }
-
-      // Sort by oldest lastAccessed first
-      locations.sort((a, b) => a.lastAccessed - b.lastAccessed)
-
-      return {
-        locations,
-        totalSize
-      }
-    },
-    /** @param {string} locationString */
-    checkSaveLocations(locationString) {
-      const maxSizeInBytes = 3000000 // Allow epub locations to take up to 3MB of space
-      const newLocationsSize = JSON.stringify({ lastAccessed: Date.now(), locations: locationString }).length * 2
-
-      // Too large overall
-      if (newLocationsSize > maxSizeInBytes) {
-        console.error('Epub locations are too large to store. Size =', newLocationsSize)
-        return
-      }
-
-      const ebookLocationsData = this.getAllEbookLocationData()
-
-      let availableSpace = maxSizeInBytes - ebookLocationsData.totalSize
-
-      // Remove epub locations until there is room for locations
-      while (availableSpace < newLocationsSize && ebookLocationsData.locations.length) {
-        const oldestLocation = ebookLocationsData.locations.shift()
-        console.log(`Removing cached locations for epub "${oldestLocation.key}" taking up ${oldestLocation.size} bytes`)
-        availableSpace += oldestLocation.size
-        localStorage.removeItem(oldestLocation.key)
-      }
-
-      console.log(`Cacheing epub locations with key "${this.localStorageLocationsKey}" taking up ${newLocationsSize} bytes`)
-      this.saveLocations(locationString)
-    },
-    /** @param {string} locationString */
-    saveLocations(locationString) {
-      localStorage.setItem(
-        this.localStorageLocationsKey,
-        JSON.stringify({
-          lastAccessed: Date.now(),
-          locations: locationString
-        })
-      )
-    },
-    loadLocations() {
-      const locationsObjString = localStorage.getItem(this.localStorageLocationsKey)
-      if (!locationsObjString) return null
-
-      const locationsObject = JSON.parse(locationsObjString)
-
-      // Remove invalid location objects
-      if (!locationsObject.locations) {
-        console.error('Invalid epub locations stored', this.localStorageLocationsKey)
-        localStorage.removeItem(this.localStorageLocationsKey)
-        return null
-      }
-
-      // Update lastAccessed
-      this.saveLocations(locationsObject.locations)
-
-      return locationsObject.locations
-    },
-    /** @param {string} location - CFI of the new location */
-    relocated(location) {
-      console.log(`[EpubReader] relocated ${location.start.cfi}`)
-      if (this.inittingDisplay) {
-        console.log(`[EpubReader] relocated but initting display ${location.start.cfi}`)
-        return
-      }
-      this.currentLocationNum = location.start.location
-
-      if (this.currentLocationCfi === location.start.cfi) {
-        console.log(`[EpubReader] location already saved`, location.start.cfi)
-        return
-      }
-
-      console.log(`[EpubReader] Saving new location ${location.start.cfi}`)
-      this.currentLocationCfi = location.start.cfi
-
-      if (location.end.percentage) {
-        this.updateProgress({
-          ebookLocation: location.start.cfi,
-          ebookProgress: location.end.percentage
-        })
-        this.progress = Math.round(location.end.percentage * 100)
-      } else {
-        this.updateProgress({
-          ebookLocation: location.start.cfi
-        })
-      }
-    },
-    initEpub() {
-      this.progress = Math.round((this.userItemProgress?.ebookProgress || 0) * 100)
-
-      /** @type {EpubReader} */
-      const reader = this
-
-      // Use axios to make request because we have token refresh logic in interceptor
-      const customRequest = async (url) => {
-        try {
-          return this.$axios.$get(url, {
-            responseType: 'arraybuffer'
-          })
-        } catch (error) {
-          console.error('EpubReader.initEpub customRequest failed:', error)
-          throw error
-        }
-      }
-
-      console.log('[EpubReader] initEpub', reader.url)
-      /** @type {ePub.Book} */
-      reader.book = new ePub(reader.url, {
-        width: window.innerWidth,
-        height: window.innerHeight - this.readerHeightOffset,
-        openAs: 'epub',
-        requestMethod: this.isLocal ? null : customRequest
-      })
-
-      /** @type {ePub.Rendition} */
-      reader.rendition = reader.book.renderTo('viewer', {
-        width: window.innerWidth,
-        height: window.innerHeight - this.readerHeightOffset,
-        snap: true,
-        manager: 'continuous',
-        flow: 'paginated'
-      })
-
-      reader.book.ready.then(() => {
-        console.log('%c [EpubReader] Book ready', 'color:cyan;')
-
-        let displayCfi = reader.book.locations.start
-        if (this.savedEbookLocation && reader.book.spine.get(this.savedEbookLocation)) {
-          displayCfi = this.savedEbookLocation
-        }
-
-        reader.rendition.on('displayed', async () => {
-          console.log('%c [EpubReader] Rendition displayed', 'color:blue;')
-
-          // Overriding the needsSnap function in epubjs `snap.js` to fix a bug with scrollLeft being a decimal
-          reader.rendition.manager.snapper.needsSnap = function () {
-            let left = Math.round(this.scrollLeft)
-            let snapWidth = this.layout.pageWidth * this.layout.divisor
-            return left % snapWidth !== 0
-          }
-        })
-
-        reader.rendition.on('rendered', (section, view) => {
-          this.applyTheme()
-          console.log('%c [EpubReader] Rendition rendered', 'color:red;', section, view)
-        })
-
-        // set up event listeners
-        reader.rendition.on('relocated', reader.relocated)
-
-        reader.rendition.on('displayError', (err) => {
-          console.log('[EpubReader] Display error', err)
-        })
-
-        reader.rendition.on('touchstart', (event) => {
-          this.$emit('touchstart', event)
-        })
-        reader.rendition.on('touchend', (event) => {
-          this.$emit('touchend', event)
-        })
-
-        // load ebook cfi locations
-        const savedLocations = this.loadLocations()
-        if (savedLocations) {
-          reader.book.locations.load(savedLocations)
-          this.totalLocations = reader.book.locations.length()
-        } else {
-          reader.book.locations.generate(100).then(() => {
-            this.totalLocations = reader.book.locations.length()
-            this.currentLocationNum = reader.rendition.currentLocation()?.start.location || 0
-            this.checkSaveLocations(reader.book.locations.save())
-          })
-        }
-
-        // TODO: To get the correct page need to render twice. On book ready and after first display. Figure out why
-        console.log(`[EpubReader] Displaying cfi ${displayCfi}`)
-        this.currentLocationCfi = displayCfi
-        reader.rendition.display(displayCfi).then(() => {
-          reader.rendition.display(displayCfi).then(() => {
-            this.inittingDisplay = false
-          })
-        })
-      })
-    },
-    applyTheme() {
-      if (!this.rendition) return
-      this.rendition.getContents().forEach((c) => {
-        c.addStylesheetRules(this.themeRules)
-      })
-    },
-    async screenOrientationChange() {
-      if (this.isRefreshingUI) return
-      this.isRefreshingUI = true
-      const windowWidth = window.innerWidth
-      this.refreshUI()
-
-      // Window width does not always change right away. Wait up to 250ms for a change.
-      // iPhone 10 on iOS 16 took between 100 - 200ms to update when going from portrait to landscape
-      //   but landscape to portrait was immediate
-      for (let i = 0; i < 5; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        if (window.innerWidth !== windowWidth) {
-          this.refreshUI()
-          break
-        }
-      }
-
-      this.isRefreshingUI = false
-    },
-    refreshUI() {
-      if (this.rendition?.resize) {
-        this.rendition.resize(window.innerWidth, window.innerHeight - this.readerHeightOffset)
-      }
-    }
-  },
-  mounted() {
-    this.initEpub()
-
-    if (screen.orientation) {
-      // Not available on ios
-      screen.orientation.addEventListener('change', this.screenOrientationChange)
-    } else {
-      document.addEventListener('orientationchange', this.screenOrientationChange)
-    }
-    window.addEventListener('resize', this.screenOrientationChange)
-  },
-  beforeDestroy() {
-    this.book?.destroy()
-
-    if (screen.orientation) {
-      // Not available on ios
-      screen.orientation.removeEventListener('change', this.screenOrientationChange)
-    } else {
-      document.removeEventListener('orientationchange', this.screenOrientationChange)
-    }
-    window.removeEventListener('resize', this.screenOrientationChange)
+function prev() {
+  if (rendition.value) {
+    ;(rendition.value as unknown as Record<string, unknown>).prev()
   }
 }
+
+function next() {
+  if (rendition.value) {
+    ;(rendition.value as unknown as Record<string, unknown>).next()
+  }
+}
+
+async function updateProgress(payload: { ebookLocation: string; ebookProgress?: number }) {
+  if (!props.keepProgress) return
+
+  // Update local item
+  if (localLibraryItemId.value) {
+    const localPayload = {
+      localLibraryItemId: localLibraryItemId.value,
+      ...payload
+    }
+    const localResponse = await db.updateLocalEbookProgress(localPayload)
+    if ((localResponse as Record<string, unknown>)?.localMediaProgress) {
+      globalsStore.updateLocalMediaProgress((localResponse as Record<string, unknown>).localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+    }
+  }
+
+  // Update server item
+  if (serverLibraryItemId.value) {
+    nativeHttp.patch(`/api/me/progress/${serverLibraryItemId.value}`, payload).catch((error: Error) => {
+      console.error('EpubReader.updateProgress failed:', error)
+    })
+  }
+}
+
+function getAllEbookLocationData() {
+  const locations: Array<{ key: string; lastAccessed: number; locations: string; size: number }> = []
+  let totalSize = 0
+
+  for (const key in localStorage) {
+    if (!Object.prototype.hasOwnProperty.call(localStorage, key) || !key.startsWith('ebookLocations-')) {
+      continue
+    }
+
+    try {
+      const ebookLocations = JSON.parse(localStorage[key])
+      if (!ebookLocations.locations) throw new Error('Invalid locations object')
+
+      ebookLocations.key = key
+      ebookLocations.size = (localStorage[key].length + key.length) * 2
+      locations.push(ebookLocations)
+      totalSize += ebookLocations.size
+    } catch (error) {
+      console.error('Failed to parse ebook locations', key, error)
+      localStorage.removeItem(key)
+    }
+  }
+
+  locations.sort((a, b) => a.lastAccessed - b.lastAccessed)
+
+  return {
+    locations,
+    totalSize
+  }
+}
+
+function checkSaveLocations(locationString: string) {
+  const maxSizeInBytes = 3000000
+  const newLocationsSize = JSON.stringify({ lastAccessed: Date.now(), locations: locationString }).length * 2
+
+  if (newLocationsSize > maxSizeInBytes) {
+    console.error('Epub locations are too large to store. Size =', newLocationsSize)
+    return
+  }
+
+  const ebookLocationsData = getAllEbookLocationData()
+
+  let availableSpace = maxSizeInBytes - ebookLocationsData.totalSize
+
+  while (availableSpace < newLocationsSize && ebookLocationsData.locations.length) {
+    const oldestLocation = ebookLocationsData.locations.shift()!
+    console.log(`Removing cached locations for epub "${oldestLocation.key}" taking up ${oldestLocation.size} bytes`)
+    availableSpace += oldestLocation.size
+    localStorage.removeItem(oldestLocation.key)
+  }
+
+  console.log(`Cacheing epub locations with key "${localStorageLocationsKey.value}" taking up ${newLocationsSize} bytes`)
+  saveLocations(locationString)
+}
+
+function saveLocations(locationString: string) {
+  localStorage.setItem(
+    localStorageLocationsKey.value,
+    JSON.stringify({
+      lastAccessed: Date.now(),
+      locations: locationString
+    })
+  )
+}
+
+function loadLocations() {
+  const locationsObjString = localStorage.getItem(localStorageLocationsKey.value)
+  if (!locationsObjString) return null
+
+  const locationsObject = JSON.parse(locationsObjString)
+
+  if (!locationsObject.locations) {
+    console.error('Invalid epub locations stored', localStorageLocationsKey.value)
+    localStorage.removeItem(localStorageLocationsKey.value)
+    return null
+  }
+
+  saveLocations(locationsObject.locations)
+
+  return locationsObject.locations
+}
+
+function relocated(location: { start: { cfi: string; location: number }; end: { percentage: number } }) {
+  console.log(`[EpubReader] relocated ${location.start.cfi}`)
+  if (inittingDisplay.value) {
+    console.log(`[EpubReader] relocated but initting display ${location.start.cfi}`)
+    return
+  }
+  currentLocationNum.value = location.start.location
+
+  if (currentLocationCfi.value === location.start.cfi) {
+    console.log(`[EpubReader] location already saved`, location.start.cfi)
+    return
+  }
+
+  console.log(`[EpubReader] Saving new location ${location.start.cfi}`)
+  currentLocationCfi.value = location.start.cfi
+
+  if (location.end.percentage) {
+    updateProgress({
+      ebookLocation: location.start.cfi,
+      ebookProgress: location.end.percentage
+    })
+    progress.value = Math.round(location.end.percentage * 100)
+  } else {
+    updateProgress({
+      ebookLocation: location.start.cfi
+    })
+  }
+}
+
+function initEpub() {
+  progress.value = Math.round(((userItemProgress.value as Record<string, unknown>)?.ebookProgress as number || 0) * 100)
+
+  const customRequest = async (url: string) => {
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${userStore.getToken}` }
+      })
+      return response.arrayBuffer()
+    } catch (error) {
+      console.error('EpubReader.initEpub customRequest failed:', error)
+      throw error
+    }
+  }
+
+  console.log('[EpubReader] initEpub', props.url)
+  const b = new ePub(props.url, {
+    width: window.innerWidth,
+    height: window.innerHeight - readerHeightOffset.value,
+    openAs: 'epub',
+    requestMethod: props.isLocal ? null : customRequest
+  })
+  book.value = b
+
+  const rend = b.renderTo('viewer', {
+    width: window.innerWidth,
+    height: window.innerHeight - readerHeightOffset.value,
+    snap: true,
+    manager: 'continuous',
+    flow: 'paginated'
+  })
+  rendition.value = rend
+
+  b.ready.then(() => {
+    console.log('%c [EpubReader] Book ready', 'color:cyan;')
+
+    let displayCfi = (b as unknown as Record<string, unknown>).locations?.start
+    if (savedEbookLocation.value && (b as unknown as Record<string, unknown>).spine?.get(savedEbookLocation.value)) {
+      displayCfi = savedEbookLocation.value
+    }
+
+    rend.on('displayed', async () => {
+      console.log('%c [EpubReader] Rendition displayed', 'color:blue;')
+
+      const snapper = (rend as unknown as Record<string, unknown>).manager?.snapper
+      if (snapper) {
+        snapper.needsSnap = function () {
+          const left = Math.round(this.scrollLeft)
+          const snapWidth = this.layout.pageWidth * this.layout.divisor
+          return left % snapWidth !== 0
+        }
+      }
+    })
+
+    rend.on('rendered', (section: unknown, view: unknown) => {
+      applyTheme()
+      console.log('%c [EpubReader] Rendition rendered', 'color:red;', section, view)
+    })
+
+    rend.on('relocated', relocated)
+
+    rend.on('displayError', (err: unknown) => {
+      console.log('[EpubReader] Display error', err)
+    })
+
+    rend.on('touchstart', (event: TouchEvent) => {
+      emit('touchstart', event)
+    })
+    rend.on('touchend', (event: TouchEvent) => {
+      emit('touchend', event)
+    })
+
+    const savedLocations = loadLocations()
+    if (savedLocations) {
+      ;(b as unknown as Record<string, unknown>).locations?.load(savedLocations)
+      totalLocations.value = (b as unknown as Record<string, unknown>).locations?.length() || 0
+    } else {
+      ;(b as unknown as Record<string, unknown>).locations?.generate(100).then(() => {
+        totalLocations.value = (b as unknown as Record<string, unknown>).locations?.length() || 0
+        currentLocationNum.value = (rend as unknown as Record<string, unknown>).currentLocation?.()?.start.location || 0
+        checkSaveLocations((b as unknown as Record<string, unknown>).locations?.save())
+      })
+    }
+
+    console.log(`[EpubReader] Displaying cfi ${displayCfi}`)
+    currentLocationCfi.value = displayCfi
+    rend.display(displayCfi).then(() => {
+      rend.display(displayCfi).then(() => {
+        inittingDisplay.value = false
+      })
+    })
+  })
+}
+
+function applyTheme() {
+  if (!rendition.value) return
+  ;(rendition.value as unknown as Record<string, unknown>).getContents().forEach((c: Record<string, unknown>) => {
+    ;(c.addStylesheetRules as (rules: unknown) => void)(themeRules.value)
+  })
+}
+
+async function screenOrientationChange() {
+  if (isRefreshingUI.value) return
+  isRefreshingUI.value = true
+  const windowWidth = window.innerWidth
+  refreshUI()
+
+  for (let i = 0; i < 5; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    if (window.innerWidth !== windowWidth) {
+      refreshUI()
+      break
+    }
+  }
+
+  isRefreshingUI.value = false
+}
+
+function refreshUI() {
+  if ((rendition.value as unknown as Record<string, unknown>)?.resize) {
+    ;(rendition.value as unknown as Record<string, unknown>).resize(window.innerWidth, window.innerHeight - readerHeightOffset.value)
+  }
+}
+
+defineExpose({ updateSettings, goToChapter, prev, next, chapters })
+
+onMounted(() => {
+  initEpub()
+
+  if (screen.orientation) {
+    screen.orientation.addEventListener('change', screenOrientationChange)
+  } else {
+    document.addEventListener('orientationchange', screenOrientationChange)
+  }
+  window.addEventListener('resize', screenOrientationChange)
+})
+
+onBeforeUnmount(() => {
+  ;(book.value as unknown as Record<string, unknown>)?.destroy?.()
+
+  if (screen.orientation) {
+    screen.orientation.removeEventListener('change', screenOrientationChange)
+  } else {
+    document.removeEventListener('orientationchange', screenOrientationChange)
+  }
+  window.removeEventListener('resize', screenOrientationChange)
+})
 </script>
 
 <style>

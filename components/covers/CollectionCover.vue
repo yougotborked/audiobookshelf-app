@@ -9,8 +9,8 @@
     <div v-else-if="books.length" class="flex justify-center h-full relative bg-md-surface-3 bg-opacity-95 rounded-sm">
       <div class="absolute top-0 left-0 w-full h-full bg-gray-400 bg-opacity-5" />
 
-      <covers-book-cover :library-item="books[0]" :width="width / 2" :book-cover-aspect-ratio="bookCoverAspectRatio" />
-      <covers-book-cover v-if="books.length > 1" :library-item="books[1]" :width="width / 2" :book-cover-aspect-ratio="bookCoverAspectRatio" />
+      <covers-book-cover :library-item="books[0]" :width="(width || 0) / 2" :book-cover-aspect-ratio="bookCoverAspectRatio" />
+      <covers-book-cover v-if="books.length > 1" :library-item="books[1]" :width="(width || 0) / 2" :book-cover-aspect-ratio="bookCoverAspectRatio" />
     </div>
     <div v-else class="relative w-full h-full flex items-center justify-center p-2 bg-md-surface-3 rounded-sm">
       <div class="absolute top-0 left-0 w-full h-full bg-gray-400 bg-opacity-5" />
@@ -20,42 +20,32 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    bookItems: {
-      type: Array,
-      default: () => []
-    },
-    width: Number,
-    height: Number,
-    bookCoverAspectRatio: Number
-  },
-  data() {
-    return {
-      imageFailed: false,
-      showCoverBg: false
-    }
-  },
-  computed: {
-    sizeMultiplier() {
-      if (this.bookCoverAspectRatio === 1) return this.width / (120 * 1.6 * 2)
-      return this.width / 240
-    },
-    hasOwnCover() {
-      return false
-    },
-    fullCoverUrl() {
-      return null
-    },
-    books() {
-      return this.bookItems || []
-    }
-  },
-  methods: {
-    imageError() {},
-    imageLoaded() {}
-  },
-  mounted() {}
-}
+<script setup lang="ts">
+const props = defineProps<{
+  bookItems?: unknown[]
+  width?: number
+  height?: number
+  bookCoverAspectRatio?: number
+}>()
+
+// State
+const imageFailed = ref(false)
+const showCoverBg = ref(false)
+
+// Refs
+const cover = ref<HTMLImageElement | null>(null)
+const coverBg = ref<HTMLElement | null>(null)
+
+// Computed
+const sizeMultiplier = computed(() => {
+  if (props.bookCoverAspectRatio === 1) return (props.width || 0) / (120 * 1.6 * 2)
+  return (props.width || 0) / 240
+})
+const hasOwnCover = computed(() => false)
+const fullCoverUrl = computed(() => null as string | null)
+const books = computed(() => props.bookItems || [])
+
+// Methods
+function imageError() {}
+function imageLoaded() {}
 </script>

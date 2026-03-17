@@ -2,13 +2,11 @@
   <bookshelf-lazy-bookshelf page="books" />
 </template>
 
-<script>
-export default {
-  async asyncData({ store, params, query }) {
-    // Set filter by
-    if (query.filter) {
-      await store.dispatch('user/updateUserSettings', { mobileFilterBy: query.filter })
-    }
-  }
+<script setup lang="ts">
+const route = useRoute()
+const userStore = useUserStore()
+
+if (route.query.filter) {
+  await userStore.updateUserSettings({ mobileFilterBy: route.query.filter as string })
 }
 </script>

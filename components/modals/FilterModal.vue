@@ -2,7 +2,7 @@
   <modals-modal v-model="show" width="90%" height="100%">
     <template #outer>
       <div v-show="selected !== 'all'" class="absolute top-12 left-4 z-40">
-        <ui-btn class="text-lg border-yellow-400 border-opacity-40 h-10" :padding-y="0" @click="clearSelected">{{ $strings.ButtonClearFilter }}</ui-btn>
+        <ui-btn class="text-lg border-yellow-400 border-opacity-40 h-10" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
       </div>
     </template>
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
@@ -25,7 +25,7 @@
               <span class="material-symbols text-2xl">arrow_left</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="font-normal ml-3 block truncate text-lg">{{ $strings.ButtonBack }}</span>
+              <span class="font-normal ml-3 block truncate text-lg">{{ strings.ButtonBack }}</span>
             </div>
           </li>
           <li v-if="!sublistItems.length" class="text-gray-400 select-none relative px-2" role="option">
@@ -46,260 +46,186 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    filterBy: String
-  },
-  data() {
-    return {
-      sublist: null
+<script setup lang="ts">
+import { ref, computed, watch, nextTick } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+import { useHaptics } from '~/composables/useHaptics'
+import { useUtils } from '~/composables/useUtils'
+import { useUserStore } from '~/stores/user'
+import { useLibrariesStore } from '~/stores/libraries'
+
+const props = defineProps<{
+  modelValue: boolean
+  filterBy: string
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  'update:filterBy': [val: string]
+  change: [val: string]
+}>()
+
+const strings = useStrings()
+const { impact } = useHaptics()
+const utils = useUtils()
+const userStore = useUserStore()
+const librariesStore = useLibrariesStore()
+
+const sublist = ref<string | null>(null)
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const selected = computed({
+  get() { return props.filterBy },
+  set(val: string) { emit('update:filterBy', val) }
+})
+
+const userCanAccessExplicitContent = computed(() => userStore.getUserCanAccessExplicitContent)
+
+const bookItems = computed(() => {
+  const items: { text: string; value: string; sublist?: boolean }[] = [
+    { text: strings.LabelAll, value: 'all' },
+    { text: strings.LabelGenre, value: 'genres', sublist: true },
+    { text: strings.LabelTag, value: 'tags', sublist: true },
+    { text: strings.LabelSeries, value: 'series', sublist: true },
+    { text: strings.LabelAuthor, value: 'authors', sublist: true },
+    { text: strings.LabelNarrator, value: 'narrators', sublist: true },
+    { text: strings.LabelLanguage, value: 'languages', sublist: true },
+    { text: strings.LabelProgress, value: 'progress', sublist: true },
+    { text: strings.LabelEbooks, value: 'ebooks', sublist: true },
+    { text: strings.ButtonIssues, value: 'issues', sublist: false },
+    { text: strings.LabelRSSFeedOpen, value: 'feed-open', sublist: false }
+  ]
+
+  if (userCanAccessExplicitContent.value) {
+    items.push({ text: strings.LabelExplicit, value: 'explicit', sublist: false })
+  }
+
+  return items
+})
+
+const podcastItems = computed(() => {
+  const items: { text: string; value: string; sublist?: boolean }[] = [
+    { text: strings.LabelAll, value: 'all' },
+    { text: strings.LabelGenre, value: 'genres', sublist: true },
+    { text: strings.LabelTag, value: 'tags', sublist: true },
+    { text: strings.LabelRSSFeedOpen, value: 'feed-open', sublist: false }
+  ]
+
+  if (userCanAccessExplicitContent.value) {
+    items.push({ text: strings.LabelExplicit, value: 'explicit', sublist: false })
+  }
+
+  return items
+})
+
+const isPodcast = computed(() => librariesStore.getCurrentLibraryMediaType === 'podcast')
+
+const items = computed(() => {
+  if (isPodcast.value) return podcastItems.value
+  return bookItems.value
+})
+
+const selectedItemSublist = computed(() => {
+  return selected.value && selected.value.includes('.') ? selected.value.split('.')[0] : false
+})
+
+const filterData = computed(() => librariesStore.filterData || {})
+
+const genres = computed(() => (filterData.value as Record<string, unknown[]>).genres || [])
+const tags = computed(() => (filterData.value as Record<string, unknown[]>).tags || [])
+const series = computed(() => (filterData.value as Record<string, unknown[]>).series || [])
+const authors = computed(() => (filterData.value as Record<string, unknown[]>).authors || [])
+const narrators = computed(() => (filterData.value as Record<string, unknown[]>).narrators || [])
+const languages = computed(() => (filterData.value as Record<string, unknown[]>).languages || [])
+
+const progress = computed(() => [
+  { id: 'finished', name: strings.LabelFinished },
+  { id: 'in-progress', name: strings.LabelInProgress },
+  { id: 'not-started', name: strings.LabelNotStarted },
+  { id: 'not-finished', name: strings.LabelNotFinished }
+])
+
+const ebooks = computed(() => [
+  { id: 'ebook', name: strings.LabelHasEbook },
+  { id: 'supplementary', name: strings.LabelHasSupplementaryEbook }
+])
+
+const sublistData: Record<string, unknown[]> = {
+  genres: [],
+  tags: [],
+  series: [],
+  authors: [],
+  narrators: [],
+  languages: [],
+  progress: [],
+  ebooks: []
+}
+
+const sublistItems = computed(() => {
+  if (!sublist.value) return []
+  const dataMap: Record<string, unknown[]> = {
+    genres: genres.value,
+    tags: tags.value,
+    series: series.value,
+    authors: authors.value,
+    narrators: narrators.value,
+    languages: languages.value,
+    progress: progress.value,
+    ebooks: ebooks.value
+  }
+  const data = dataMap[sublist.value] || []
+  const items = data.map((item) => {
+    if (typeof item === 'string') {
+      return { text: item, value: utils.encode(item) }
+    } else {
+      const obj = item as Record<string, string>
+      return { text: obj.name, value: utils.encode(obj.id) }
     }
-  },
-  watch: {
-    show(newVal) {
-      if (!newVal) {
-        if (this.sublist && !this.selectedItemSublist) this.sublist = null
-        if (!this.sublist && this.selectedItemSublist) this.sublist = this.selectedItemSublist
-      }
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    selected: {
-      get() {
-        return this.filterBy
-      },
-      set(val) {
-        this.$emit('update:filterBy', val)
-      }
-    },
-    userCanAccessExplicitContent() {
-      return this.$store.getters['user/getUserCanAccessExplicitContent']
-    },
-    bookItems() {
-      const items = [
-        {
-          text: this.$strings.LabelAll,
-          value: 'all'
-        },
-        {
-          text: this.$strings.LabelGenre,
-          value: 'genres',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelTag,
-          value: 'tags',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelSeries,
-          value: 'series',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelAuthor,
-          value: 'authors',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelNarrator,
-          value: 'narrators',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelLanguage,
-          value: 'languages',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelProgress,
-          value: 'progress',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelEbooks,
-          value: 'ebooks',
-          sublist: true
-        },
-        {
-          text: this.$strings.ButtonIssues,
-          value: 'issues',
-          sublist: false
-        },
-        {
-          text: this.$strings.LabelRSSFeedOpen,
-          value: 'feed-open',
-          sublist: false
-        }
-      ]
+  })
+  if (sublist.value === 'series') {
+    items.unshift({ text: strings.MessageNoSeries, value: utils.encode('no-series') })
+  }
+  return items
+})
 
-      if (this.userCanAccessExplicitContent) {
-        items.push({
-          text: this.$strings.LabelExplicit,
-          value: 'explicit',
-          sublist: false
-        })
-      }
+watch(show, (newVal) => {
+  if (!newVal) {
+    if (sublist.value && !selectedItemSublist.value) sublist.value = null
+    if (!sublist.value && selectedItemSublist.value) sublist.value = selectedItemSublist.value as string
+  }
+})
 
-      return items
-    },
-    podcastItems() {
-      const items = [
-        {
-          text: this.$strings.LabelAll,
-          value: 'all'
-        },
-        {
-          text: this.$strings.LabelGenre,
-          value: 'genres',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelTag,
-          value: 'tags',
-          sublist: true
-        },
-        {
-          text: this.$strings.LabelRSSFeedOpen,
-          value: 'feed-open',
-          sublist: false
-        }
-      ]
+async function clearSelected() {
+  await impact()
+  selected.value = 'all'
+  show.value = false
+  await nextTick()
+  emit('change', 'all')
+}
 
-      if (this.userCanAccessExplicitContent) {
-        items.push({
-          text: this.$strings.LabelExplicit,
-          value: 'explicit',
-          sublist: false
-        })
-      }
+function clickedSublistOption(item: string) {
+  clickedOption({ value: `${sublist.value}.${item}` })
+}
 
-      return items
-    },
-    isPodcast() {
-      return this.$store.getters['libraries/getCurrentLibraryMediaType'] === 'podcast'
-    },
-    items() {
-      if (this.isPodcast) return this.podcastItems
-      return this.bookItems
-    },
-    selectedItemSublist() {
-      return this.selected && this.selected.includes('.') ? this.selected.split('.')[0] : false
-    },
-    genres() {
-      return this.filterData.genres || []
-    },
-    tags() {
-      return this.filterData.tags || []
-    },
-    series() {
-      return this.filterData.series || []
-    },
-    authors() {
-      return this.filterData.authors || []
-    },
-    narrators() {
-      return this.filterData.narrators || []
-    },
-    languages() {
-      return this.filterData.languages || []
-    },
-    progress() {
-      return [
-        {
-          id: 'finished',
-          name: this.$strings.LabelFinished
-        },
-        {
-          id: 'in-progress',
-          name: this.$strings.LabelInProgress
-        },
-        {
-          id: 'not-started',
-          name: this.$strings.LabelNotStarted
-        },
-        {
-          id: 'not-finished',
-          name: this.$strings.LabelNotFinished
-        }
-      ]
-    },
-    ebooks() {
-      return [
-        {
-          id: 'ebook',
-          name: this.$strings.LabelHasEbook
-        },
-        {
-          id: 'supplementary',
-          name: this.$strings.LabelHasSupplementaryEbook
-        }
-      ]
-    },
-    sublistItems() {
-      const sublistItems = (this[this.sublist] || []).map((item) => {
-        if (typeof item === 'string') {
-          return {
-            text: item,
-            value: this.$encode(item)
-          }
-        } else {
-          return {
-            text: item.name,
-            value: this.$encode(item.id)
-          }
-        }
-      })
-      if (this.sublist === 'series') {
-        sublistItems.unshift({
-          text: this.$strings.MessageNoSeries,
-          value: this.$encode('no-series')
-        })
-      }
-      return sublistItems
-    },
-    filterData() {
-      return this.$store.state.libraries.filterData || {}
-    }
-  },
-  methods: {
-    async clearSelected() {
-      await this.$hapticsImpact()
-      this.selected = 'all'
-      this.show = false
-      this.$nextTick(() => this.$emit('change', 'all'))
-    },
-    clickedSublistOption(item) {
-      this.clickedOption({ value: `${this.sublist}.${item}` })
-    },
-    async clickedOption(option) {
-      if (option.sublist) {
-        this.sublist = option.value
-        return
-      }
+async function clickedOption(option: { value: string; sublist?: boolean }) {
+  if (option.sublist) {
+    sublist.value = option.value
+    return
+  }
 
-      var val = option.value
-      if (this.selected === val) {
-        this.show = false
-        return
-      }
-      await this.$hapticsImpact()
-      this.selected = val
-      this.show = false
-      this.$nextTick(() => this.$emit('change', val))
-    }
-  },
-  mounted() {}
+  const val = option.value
+  if (selected.value === val) {
+    show.value = false
+    return
+  }
+  await impact()
+  selected.value = val
+  show.value = false
+  await nextTick()
+  emit('change', val)
 }
 </script>
 

@@ -27,57 +27,62 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
 
-export default {
-  data() {
-    return {
-      localLibraryItems: []
-    }
-  },
-  methods: {
-    getSize(item) {
-      if (!item || !item.localFiles) return 0
-      let size = 0
-      for (let i = 0; i < item.localFiles.length; i++) {
-        size += item.localFiles[i].size
-      }
-      return size
-    },
-    newLocalLibraryItem(item) {
-      if (!item) return
-      const itemIndex = this.localLibraryItems.findIndex((li) => li.id === item.id)
-      const newItemObj = {
-        ...item,
-        size: this.getSize(item),
-        coverPathSrc: item.coverContentUrl ? Capacitor.convertFileSrc(item.coverContentUrl) : null
-      }
-      if (itemIndex >= 0) {
-        this.localLibraryItems.splice(itemIndex, 1, newItemObj)
-      } else {
-        this.localLibraryItems.push(newItemObj)
-      }
-    },
-    async init() {
-      var items = (await this.$db.getLocalLibraryItems()) || []
-      this.localLibraryItems = items.map((lmi) => {
-        console.log('Local library item', JSON.stringify(lmi))
-        return {
-          ...lmi,
-          size: this.getSize(lmi),
-          coverPathSrc: lmi.coverContentUrl ? Capacitor.convertFileSrc(lmi.coverContentUrl) : null
-        }
-      })
-    }
-  },
-  mounted() {
-    this.$eventBus.$on('new-local-library-item', this.newLocalLibraryItem)
-    this.init()
-  },
-  beforeDestroy() {
-    this.$eventBus.$off('new-local-library-item', this.newLocalLibraryItem)
+const eventBus = useEventBus()
+
+type LocalMediaItem = Record<string, unknown> & { id: string; size: number; coverPathSrc: string | null }
+
+const localLibraryItems = ref<LocalMediaItem[]>([])
+
+function getSize(item: Record<string, unknown>): number {
+  if (!item || !item.localFiles) return 0
+  const files = item.localFiles as { size: number }[]
+  let size = 0
+  for (let i = 0; i < files.length; i++) {
+    size += files[i].size
+  }
+  return size
+}
+
+function newLocalLibraryItem(item: Record<string, unknown>) {
+  if (!item) return
+  const itemIndex = localLibraryItems.value.findIndex((li) => li.id === item.id)
+  const newItemObj: LocalMediaItem = {
+    ...item,
+    id: item.id as string,
+    size: getSize(item),
+    coverPathSrc: item.coverContentUrl ? Capacitor.convertFileSrc(item.coverContentUrl as string) : null
+  }
+  if (itemIndex >= 0) {
+    localLibraryItems.value.splice(itemIndex, 1, newItemObj)
+  } else {
+    localLibraryItems.value.push(newItemObj)
   }
 }
+
+async function init() {
+  const db = useDb()
+  const items = ((await db.getLocalLibraryItems()) as Record<string, unknown>[]) || []
+  localLibraryItems.value = items.map((lmi) => {
+    console.log('Local library item', JSON.stringify(lmi))
+    return {
+      ...lmi,
+      id: lmi.id as string,
+      size: getSize(lmi),
+      coverPathSrc: lmi.coverContentUrl ? Capacitor.convertFileSrc(lmi.coverContentUrl as string) : null
+    }
+  })
+}
+
+onMounted(() => {
+  eventBus.on('new-local-library-item', newLocalLibraryItem)
+  init()
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('new-local-library-item', newLocalLibraryItem)
+})
 </script>
 

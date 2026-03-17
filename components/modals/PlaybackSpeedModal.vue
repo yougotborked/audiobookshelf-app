@@ -1,7 +1,7 @@
 <template>
-  <modals-modal v-model="show" @input="modalInput" :width="200">
+  <modals-modal v-model="show" @update:modelValue="modalInput" :width="200">
     <div class="px-4 pt-2 pb-2">
-      <p class="text-md-title-m text-md-on-surface mb-3">{{ $strings.LabelPlaybackSpeed }}</p>
+      <p class="text-md-title-m text-md-on-surface mb-3">{{ strings.LabelPlaybackSpeed }}</p>
       <div class="w-full overflow-x-hidden overflow-y-auto" style="max-height: 60vh">
         <ul class="w-full" role="listbox" aria-labelledby="listbox-label">
           <template v-for="rate in rates">
@@ -28,78 +28,71 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    playbackRate: Number
-  },
-  data() {
-    return {
-      currentPlaybackRate: 0,
-      MIN_SPEED: 0.5,
-      MAX_SPEED: 10
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+
+const props = defineProps<{
+  modelValue: boolean
+  playbackRate: number
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  'update:playbackRate': [val: number]
+  change: [val: number]
+}>()
+
+const strings = useStrings()
+
+const MIN_SPEED = 0.5
+const MAX_SPEED = 10
+const currentPlaybackRate = ref(0)
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const selected = computed({
+  get() { return props.playbackRate },
+  set(val: number) { emit('update:playbackRate', val) }
+})
+
+const rates = computed(() => [0.5, 1, 1.2, 1.5, 1.7, 2, 3])
+
+const canIncrement = computed(() => props.playbackRate + 0.1 <= MAX_SPEED)
+const canDecrement = computed(() => props.playbackRate - 0.1 >= MIN_SPEED)
+
+watch(show, (newVal) => {
+  if (newVal) {
+    currentPlaybackRate.value = selected.value
+  }
+})
+
+function increment() {
+  if (selected.value + 0.1 > MAX_SPEED) return
+  const newPlaybackRate = selected.value + 0.1
+  selected.value = Number(newPlaybackRate.toFixed(1))
+}
+
+function decrement() {
+  if (selected.value - 0.1 < MIN_SPEED) return
+  const newPlaybackRate = selected.value - 0.1
+  selected.value = Number(newPlaybackRate.toFixed(1))
+}
+
+function modalInput(val: boolean) {
+  if (!val) {
+    if (currentPlaybackRate.value !== selected.value) {
+      emit('change', selected.value)
     }
-  },
-  watch: {
-    show(newVal) {
-      if (newVal) {
-        this.currentPlaybackRate = this.selected
-      }
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    selected: {
-      get() {
-        return this.playbackRate
-      },
-      set(val) {
-        this.$emit('update:playbackRate', val)
-      }
-    },
-    rates() {
-      return [0.5, 1, 1.2, 1.5, 1.7, 2, 3]
-    },
-    canIncrement() {
-      return this.playbackRate + 0.1 <= this.MAX_SPEED
-    },
-    canDecrement() {
-      return this.playbackRate - 0.1 >= this.MIN_SPEED
-    }
-  },
-  methods: {
-    increment() {
-      if (this.selected + 0.1 > this.MAX_SPEED) return
-      var newPlaybackRate = this.selected + 0.1
-      this.selected = Number(newPlaybackRate.toFixed(1))
-    },
-    decrement() {
-      if (this.selected - 0.1 < this.MIN_SPEED) return
-      var newPlaybackRate = this.selected - 0.1
-      this.selected = Number(newPlaybackRate.toFixed(1))
-    },
-    modalInput(val) {
-      if (!val) {
-        if (this.currentPlaybackRate !== this.selected) {
-          this.$emit('change', this.selected)
-        }
-      }
-    },
-    clickedOption(rate) {
-      this.selected = Number(rate)
-      this.show = false
-      this.$emit('change', Number(rate))
-    }
-  },
-  mounted() {}
+  }
+}
+
+function clickedOption(rate: number) {
+  selected.value = Number(rate)
+  show.value = false
+  emit('change', Number(rate))
 }
 </script>
 

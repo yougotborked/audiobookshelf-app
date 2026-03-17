@@ -32,29 +32,30 @@
   </div>
 </template>
 
-<script>
-export default {
-  layout: 'blank',
-  data() {
-    return {
-      deviceData: null
-    }
-  },
-  computed: {},
-  methods: {
-    async init() {
-      await this.$store.dispatch('setupNetworkListener')
-      this.deviceData = await this.$db.getDeviceData()
-      this.$store.commit('setDeviceData', this.deviceData)
-      await this.$store.dispatch('init')
-      await this.$store.dispatch('setupNetworkListener')
-    }
-  },
-  mounted() {
-    // Reset data on logouts
-    this.$store.commit('libraries/reset')
-    this.$store.commit('setIsFirstLoad', true)
-    this.init()
-  }
+<script setup lang="ts">
+import { useAppStore } from '~/stores/app'
+import { useLibrariesStore } from '~/stores/libraries'
+
+definePageMeta({ layout: 'blank' })
+
+const appStore = useAppStore()
+const librariesStore = useLibrariesStore()
+
+const deviceData = ref<unknown>(null)
+
+async function init() {
+  await appStore.setupNetworkListener()
+  const db = useDb()
+  deviceData.value = await db.getDeviceData()
+  appStore.setDeviceData(deviceData.value as Parameters<typeof appStore.setDeviceData>[0])
+  await appStore.init()
+  await appStore.setupNetworkListener()
 }
+
+onMounted(() => {
+  // Reset data on logouts
+  librariesStore.reset()
+  appStore.isFirstLoad = true
+  init()
+})
 </script>

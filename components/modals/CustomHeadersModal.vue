@@ -40,57 +40,50 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    customHeaders: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {
-      newHeaderKey: '',
-      newHeaderValue: '',
-      headersCopy: {},
-      showAddHeader: false
-    }
-  },
-  watch: {
-    show(val) {
-      if (val) this.init()
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    }
-  },
-  methods: {
-    removeHeader(key) {
-      this.$delete(this.headersCopy, key)
-      this.$emit('update:customHeaders', { ...this.headersCopy })
-    },
-    submitForm() {
-      console.log('Submit form', this.newHeaderKey, this.newHeaderValue)
-      this.headersCopy[this.newHeaderKey] = this.newHeaderValue
-      this.newHeaderKey = ''
-      this.newHeaderValue = ''
-      this.showAddHeader = false
-      this.$emit('update:customHeaders', { ...this.headersCopy })
-    },
-    init() {
-      this.newHeaderKey = ''
-      this.newHeaderValue = ''
-      this.headersCopy = this.customHeaders ? { ...this.customHeaders } : {}
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+
+const props = defineProps<{
+  modelValue: boolean
+  customHeaders: Record<string, string>
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  'update:customHeaders': [headers: Record<string, string>]
+}>()
+
+const newHeaderKey = ref('')
+const newHeaderValue = ref('')
+const headersCopy = ref<Record<string, string>>({})
+const showAddHeader = ref(false)
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+watch(show, (val) => {
+  if (val) init()
+})
+
+function removeHeader(key: string) {
+  delete headersCopy.value[key]
+  headersCopy.value = { ...headersCopy.value }
+  emit('update:customHeaders', { ...headersCopy.value })
+}
+
+function submitForm() {
+  console.log('Submit form', newHeaderKey.value, newHeaderValue.value)
+  headersCopy.value[newHeaderKey.value] = newHeaderValue.value
+  newHeaderKey.value = ''
+  newHeaderValue.value = ''
+  showAddHeader.value = false
+  emit('update:customHeaders', { ...headersCopy.value })
+}
+
+function init() {
+  newHeaderKey.value = ''
+  newHeaderValue.value = ''
+  headersCopy.value = props.customHeaders ? { ...props.customHeaders } : {}
 }
 </script>
