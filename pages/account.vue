@@ -23,43 +23,32 @@
   </div>
 </template>
 
-<script>
-export default {
-  asyncData({ redirect, store }) {
-    if (!store.state.socketConnected) {
-      return redirect('/connect')
-    }
-    return {}
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    username() {
-      if (!this.user) return ''
-      return this.user.username
-    },
-    user() {
-      return this.$store.state.user.user
-    },
-    serverConnectionConfig() {
-      return this.$store.state.user.serverConnectionConfig || {}
-    },
-    serverAddress() {
-      return this.serverConnectionConfig.address
-    },
-    serverVersion() {
-      // Saved in server connection config after 0.9.81
-      return this.serverConnectionConfig.version
-    }
-  },
-  methods: {
-    async logout() {
-      await this.$hapticsImpact()
-      await this.$store.dispatch('user/logout')
-      this.$router.push('/connect')
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { useAppStore } from '~/stores/app'
+import { useUserStore } from '~/stores/user'
+
+const appStore = useAppStore()
+const userStore = useUserStore()
+const router = useRouter()
+
+const user = computed(() => userStore.user)
+const serverConnectionConfig = computed(() => userStore.serverConnectionConfig || {})
+const username = computed(() => (user.value ? (user.value.username as string) : ''))
+const serverAddress = computed(() => (serverConnectionConfig.value as Record<string, unknown>).address as string | undefined)
+const serverVersion = computed(() => {
+  // Saved in server connection config after 0.9.81
+  return (serverConnectionConfig.value as Record<string, unknown>).version as string | undefined
+})
+
+onMounted(() => {
+  if (!appStore.socketConnected) {
+    router.push('/connect')
+  }
+})
+
+async function logout() {
+  await useHaptics().impact()
+  await userStore.logout()
+  router.push('/connect')
 }
 </script>

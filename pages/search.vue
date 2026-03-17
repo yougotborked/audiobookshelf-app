@@ -67,92 +67,91 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      search: null,
-      searchTimeout: null,
-      lastSearch: null,
-      isFetching: false,
-      bookResults: [],
-      podcastResults: [],
-      seriesResults: [],
-      authorResults: [],
-      narratorResults: [],
-      tagResults: []
-    }
-  },
-  computed: {
-    currentLibraryId() {
-      return this.$store.state.libraries.currentLibraryId
-    },
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    },
-    totalResults() {
-      return this.bookResults.length + this.seriesResults.length + this.authorResults.length + this.podcastResults.length + this.narratorResults.length + this.tagResults.length
-    }
-  },
-  methods: {
-    async runSearch(value) {
-      if (this.isFetching && this.lastSearch === value) return
+<script setup lang="ts">
+import { useLibrariesStore } from '~/stores/libraries'
+import { useGlobalsStore } from '~/stores/globals'
 
-      this.lastSearch = value
-      this.$store.commit('globals/setLastSearch', value)
+const librariesStore = useLibrariesStore()
+const globalsStore = useGlobalsStore()
+const nativeHttp = useNativeHttp()
 
-      if (!this.lastSearch) {
-        this.bookResults = []
-        this.podcastResults = []
-        this.seriesResults = []
-        this.authorResults = []
-        this.narratorResults = []
-        this.tagResults = []
-        return
-      }
-      this.isFetching = true
-      const results = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/search?q=${value}&limit=5`).catch((error) => {
-        console.error('Search error', error)
-        return null
-      })
-      if (value !== this.lastSearch) {
-        console.log(`runSearch: New search was made for ${this.lastSearch} - results are from ${value}`)
-        return
-      }
-      console.log('RESULTS', results)
+const search = ref<string | null>(null)
+const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+const lastSearch = ref<string | null>(null)
+const isFetching = ref(false)
+const bookResults = ref<unknown[]>([])
+const podcastResults = ref<unknown[]>([])
+const seriesResults = ref<unknown[]>([])
+const authorResults = ref<unknown[]>([])
+const narratorResults = ref<unknown[]>([])
+const tagResults = ref<unknown[]>([])
 
-      this.isFetching = false
+const inputRef = ref<{ focus: () => void } | null>(null)
 
-      this.bookResults = results?.book || []
-      this.podcastResults = results?.podcast || []
-      this.seriesResults = results?.series || []
-      this.authorResults = results?.authors || []
-      this.narratorResults = results?.narrators || []
-      this.tagResults = results?.tags || []
-    },
-    updateSearch(val) {
-      clearTimeout(this.searchTimeout)
-      this.searchTimeout = setTimeout(() => {
-        this.runSearch(val)
-      }, 500)
-    },
-    setFocus() {
-      setTimeout(() => {
-        if (this.$refs.input) {
-          this.$refs.input.focus()
-        }
-      }, 100)
-    }
-  },
-  mounted() {
-    if (this.$store.state.globals.lastSearch) {
-      this.search = this.$store.state.globals.lastSearch
-      this.runSearch(this.search)
-    } else {
-      this.$nextTick(this.setFocus())
-    }
+const currentLibraryId = computed(() => librariesStore.currentLibraryId)
+const totalResults = computed(
+  () => bookResults.value.length + seriesResults.value.length + authorResults.value.length + podcastResults.value.length + narratorResults.value.length + tagResults.value.length
+)
+
+async function runSearch(value: string | null) {
+  if (isFetching.value && lastSearch.value === value) return
+
+  lastSearch.value = value
+  globalsStore.lastSearch = value
+
+  if (!lastSearch.value) {
+    bookResults.value = []
+    podcastResults.value = []
+    seriesResults.value = []
+    authorResults.value = []
+    narratorResults.value = []
+    tagResults.value = []
+    return
   }
+  isFetching.value = true
+  const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}&limit=5`).catch((error: Error) => {
+    console.error('Search error', error)
+    return null
+  })) as Record<string, unknown[]> | null
+  if (value !== lastSearch.value) {
+    console.log(`runSearch: New search was made for ${lastSearch.value} - results are from ${value}`)
+    return
+  }
+  console.log('RESULTS', results)
+
+  isFetching.value = false
+
+  bookResults.value = results?.book || []
+  podcastResults.value = results?.podcast || []
+  seriesResults.value = results?.series || []
+  authorResults.value = results?.authors || []
+  narratorResults.value = results?.narrators || []
+  tagResults.value = results?.tags || []
 }
+
+function updateSearch(val: string) {
+  if (searchTimeout.value) clearTimeout(searchTimeout.value)
+  searchTimeout.value = setTimeout(() => {
+    runSearch(val)
+  }, 500)
+}
+
+function setFocus() {
+  setTimeout(() => {
+    if (inputRef.value) {
+      inputRef.value.focus()
+    }
+  }, 100)
+}
+
+onMounted(() => {
+  if (globalsStore.lastSearch) {
+    search.value = globalsStore.lastSearch
+    runSearch(search.value)
+  } else {
+    nextTick(setFocus)
+  }
+})
 </script>
 
 <style>
