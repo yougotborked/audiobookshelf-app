@@ -3,15 +3,15 @@
     <template v-if="!showSelectedFeed">
       <div class="w-full mx-auto h-20 flex items-center px-2">
         <form class="w-full" @submit.prevent="submit">
-          <ui-text-input v-model="searchInput" :disabled="processing || !socketConnected" :placeholder="$strings.MessagePodcastSearchField" text-size="sm" />
+          <ui-text-input v-model="searchInput" :disabled="processing || !socketConnected" :placeholder="strings.MessagePodcastSearchField" text-size="sm" />
         </form>
       </div>
 
       <div v-if="!socketConnected" class="w-full text-center py-6">
-        <p class="text-lg text-error">{{ $strings.MessageNoNetworkConnection }}</p>
+        <p class="text-lg text-error">{{ strings.MessageNoNetworkConnection }}</p>
       </div>
       <div v-else class="w-full mx-auto pb-2 overflow-y-auto overflow-x-hidden h-[calc(100%-85px)]">
-        <p v-if="termSearched && !results.length && !processing" class="text-center text-xl">{{ $strings.MessageNoPodcastsFound }}</p>
+        <p v-if="termSearched && !results.length && !processing" class="text-center text-xl">{{ strings.MessageNoPodcastsFound }}</p>
         <template v-for="podcast in results">
           <div :key="podcast.id" class="p-2 border-b border-fg border-opacity-10" @click="selectPodcast(podcast)">
             <div class="flex">
@@ -22,7 +22,7 @@
               </div>
               <div class="flex-grow pl-2">
                 <p class="text-xs text-md-on-surface whitespace-nowrap truncate">{{ podcast.artistName }}</p>
-                <p class="text-xxs text-md-on-surface leading-5">{{ podcast.trackCount }} {{ $strings.HeaderEpisodes }}</p>
+                <p class="text-xxs text-md-on-surface leading-5">{{ podcast.trackCount }} {{ strings.HeaderEpisodes }}</p>
               </div>
             </div>
 
@@ -36,7 +36,7 @@
       <div class="flex items-center px-2 h-16">
         <div class="flex items-center" @click="clearSelected">
           <span class="material-symbols text-2xl text-md-on-surface-variant">arrow_back</span>
-          <p class="pl-2 uppercase text-sm font-semibold text-md-on-surface-variant leading-4 pb-px">{{ $strings.ButtonBack }}</p>
+          <p class="pl-2 uppercase text-sm font-semibold text-md-on-surface-variant leading-4 pb-px">{{ strings.ButtonBack }}</p>
         </div>
       </div>
 
@@ -51,99 +51,105 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      searchInput: '',
-      termSearched: false,
-      processing: false,
-      results: [],
-      selectedPodcastFeed: null,
-      selectedPodcast: null,
-      showSelectedFeed: false
-    }
-  },
-  computed: {
-    socketConnected() {
-      return this.$store.state.socketConnected
-    }
-  },
-  methods: {
-    clearSelected() {
-      this.selectedPodcastFeed = null
-      this.selectedPodcast = null
-      this.showSelectedFeed = false
-    },
-    submit() {
-      if (!this.searchInput) return
+<script setup lang="ts">
+const strings = useStrings()
+const eventBus = useEventBus()
+const nativeHttp = useNativeHttp()
+const toast = useToast()
+const router = useRouter()
 
-      if (this.searchInput.startsWith('http:') || this.searchInput.startsWith('https:')) {
-        this.termSearched = ''
-        this.results = []
-        this.checkRSSFeed(this.searchInput)
-      } else {
-        this.submitSearch(this.searchInput)
-      }
-    },
-    async checkRSSFeed(rssFeed) {
-      this.processing = true
-      var payload = await this.$nativeHttp.post(`/api/podcasts/feed`, { rssFeed }).catch((error) => {
-        console.error('Failed to get feed', error)
-        this.$toast.error('Failed to get podcast feed')
-        return null
-      })
-      this.processing = false
-      if (!payload) return
+const librariesStore = useLibrariesStore()
+const appStore = useAppStore()
 
-      this.selectedPodcastFeed = payload.podcast
-      this.selectedPodcast = null
-      this.showSelectedFeed = true
-    },
-    async submitSearch(term) {
-      this.processing = true
-      this.termSearched = ''
-      const results = await this.$nativeHttp.get(`/api/search/podcast?term=${encodeURIComponent(term)}`).catch((error) => {
-        console.error('Search request failed', error)
-        return []
-      })
-      console.log('Got results', results)
-      this.results = results
-      this.termSearched = term
-      this.processing = false
-    },
-    async selectPodcast(podcast) {
-      console.log('Selected podcast', podcast)
-      if (!podcast.feedUrl) {
-        this.$toast.error('Invalid podcast - no feed')
-        return
-      }
-      this.processing = true
-      const payload = await this.$nativeHttp.post(`/api/podcasts/feed`, { rssFeed: podcast.feedUrl }).catch((error) => {
-        console.error('Failed to get feed', error)
-        this.$toast.error('Failed to get podcast feed')
-        return null
-      })
-      this.processing = false
-      if (!payload) return
+const searchInput = ref('')
+const termSearched = ref<string | false>(false)
+const processing = ref(false)
+const results = ref<any[]>([])
+const selectedPodcastFeed = ref<any>(null)
+const selectedPodcast = ref<any>(null)
+const showSelectedFeed = ref(false)
 
-      this.selectedPodcastFeed = payload.podcast
-      this.selectedPodcast = podcast
-      this.showSelectedFeed = true
-      console.log('Got podcast feed', payload.podcast)
-    },
-    libraryChanged() {
-      const libraryMediaType = this.$store.getters['libraries/getCurrentLibraryMediaType']
-      if (libraryMediaType !== 'podcast') {
-        this.$router.replace('/bookshelf')
-      }
-    }
-  },
-  mounted() {
-    this.$eventBus.$on('library-changed', this.libraryChanged)
-  },
-  beforeDestroy() {
-    this.$eventBus.$off('library-changed', this.libraryChanged)
+const socketConnected = computed(() => appStore.socketConnected)
+
+function clearSelected() {
+  selectedPodcastFeed.value = null
+  selectedPodcast.value = null
+  showSelectedFeed.value = false
+}
+
+function submit() {
+  if (!searchInput.value) return
+
+  if (searchInput.value.startsWith('http:') || searchInput.value.startsWith('https:')) {
+    termSearched.value = ''
+    results.value = []
+    checkRSSFeed(searchInput.value)
+  } else {
+    submitSearch(searchInput.value)
   }
 }
+
+async function checkRSSFeed(rssFeed: string) {
+  processing.value = true
+  const payload = await nativeHttp.post(`/api/podcasts/feed`, { rssFeed }).catch((error: any) => {
+    console.error('Failed to get feed', error)
+    toast.error('Failed to get podcast feed')
+    return null
+  })
+  processing.value = false
+  if (!payload) return
+
+  selectedPodcastFeed.value = payload.podcast
+  selectedPodcast.value = null
+  showSelectedFeed.value = true
+}
+
+async function submitSearch(term: string) {
+  processing.value = true
+  termSearched.value = ''
+  const res = await nativeHttp.get(`/api/search/podcast?term=${encodeURIComponent(term)}`).catch((error: any) => {
+    console.error('Search request failed', error)
+    return []
+  })
+  console.log('Got results', res)
+  results.value = res
+  termSearched.value = term
+  processing.value = false
+}
+
+async function selectPodcast(podcast: any) {
+  console.log('Selected podcast', podcast)
+  if (!podcast.feedUrl) {
+    toast.error('Invalid podcast - no feed')
+    return
+  }
+  processing.value = true
+  const payload = await nativeHttp.post(`/api/podcasts/feed`, { rssFeed: podcast.feedUrl }).catch((error: any) => {
+    console.error('Failed to get feed', error)
+    toast.error('Failed to get podcast feed')
+    return null
+  })
+  processing.value = false
+  if (!payload) return
+
+  selectedPodcastFeed.value = payload.podcast
+  selectedPodcast.value = podcast
+  showSelectedFeed.value = true
+  console.log('Got podcast feed', payload.podcast)
+}
+
+function libraryChanged() {
+  const libraryMediaType = librariesStore.getCurrentLibraryMediaType
+  if (libraryMediaType !== 'podcast') {
+    router.replace('/bookshelf')
+  }
+}
+
+onMounted(() => {
+  eventBus.on('library-changed', libraryChanged)
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('library-changed', libraryChanged)
+})
 </script>
