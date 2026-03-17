@@ -67,7 +67,10 @@ export default {
     const userStore = useUserStore()
     const globalsStore = useGlobalsStore()
     const eventBus = useEventBus()
-    return { checkCellularPermission, appStore, userStore, globalsStore, eventBus }
+    const toast = useToast()
+    const nativeHttp = useNativeHttp()
+    const platform = usePlatform()
+    return { checkCellularPermission, appStore, userStore, globalsStore, eventBus, toast, nativeHttp, platform }
   },
   computed: {
     bookmarks() {
@@ -75,7 +78,7 @@ export default {
       return this.userStore.getUserBookmarksForItem(this.serverLibraryItemId)
     },
     isIos() {
-      return this.$platform === 'ios'
+      return this.platform === 'ios'
     },
     playQueue() {
       return this.appStore.playQueue
@@ -318,7 +321,7 @@ export default {
       })
       var res = await AbsAudioPlayer.setSleepTimer({ time: String(time), isChapterTime })
       if (!res.success) {
-        return this.$toast.error('Sleep timer did not set, invalid time')
+        return this.toast.error('Sleep timer did not set, invalid time')
       }
     },
     increaseSleepTimer() {
@@ -418,7 +421,7 @@ export default {
         }
       }
       if (!libraryItemId) {
-        this.$toast.error(`Cannot cast locally downloaded media`)
+        this.toast.error(`Cannot cast locally downloaded media`)
         return
       }
       // Change to server library item
@@ -442,7 +445,7 @@ export default {
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
-            this.$toast.error(errorMsg)
+            this.toast.error(errorMsg)
           } else {
             AbsLogger.info({
               tag: 'AudioPlayerContainer',
@@ -455,7 +458,7 @@ export default {
         })
         .catch((error) => {
           console.error('Failed', error)
-          this.$toast.error('Failed to play')
+          this.toast.error('Failed to play')
         })
     },
     async playLibraryItem(payload) {
@@ -495,12 +498,12 @@ export default {
       let episodeId = playbackTarget.episodeId
       if (!libraryItemId) {
         this.appStore.playerIsStartingPlayback = false
-        this.$toast.error('Unable to determine item to play')
+        this.toast.error('Unable to determine item to play')
         return
       }
       if (playbackTarget.blockedByOffline) {
         this.appStore.playerIsStartingPlayback = false
-        this.$toast.error('No offline copy available. Reconnect to stream this item.')
+        this.toast.error('No offline copy available. Reconnect to stream this item.')
         return
       }
       if (payload.forceLocal && !effectiveForceLocal) {
@@ -663,7 +666,7 @@ export default {
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
-            this.$toast.error(errorMsg)
+            this.toast.error(errorMsg)
           } else {
             AbsLogger.info({
               tag: 'AudioPlayerContainer',
@@ -693,7 +696,7 @@ export default {
             tag: 'AudioPlayerContainer',
             message: `[AudioPlayerContainer] prepareLibraryItem failed: ${formatForLog({ error: String(error) })}`
           })
-          this.$toast.error('Failed to play')
+          this.toast.error('Failed to play')
         })
         .finally(() => {
           this.appStore.playerIsStartingPlayback = false
@@ -782,7 +785,7 @@ export default {
             const libraryItemId = playbackSession.libraryItemId
             const episodeId = playbackSession.episodeId
             const url = episodeId ? `/api/me/progress/${libraryItemId}/${episodeId}` : `/api/me/progress/${libraryItemId}`
-            this.$nativeHttp
+            this.nativeHttp
               .get(url)
               .then((data) => {
                 if (!this.$refs.audioPlayer?.isPlaying && data.libraryItemId === libraryItemId) {
@@ -916,7 +919,7 @@ export default {
       })
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.onLocalMediaProgressUpdateListener?.remove()
     this.onSleepTimerEndedListener?.remove()
     this.onSleepTimerSetListener?.remove()

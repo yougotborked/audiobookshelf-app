@@ -91,7 +91,7 @@
     </div>
 
     <!-- Podcast Num Episodes -->
-    <div v-else-if="numEpisodes && !numEpisodesIncomplete && !isSelectionMode" class="absolute rounded-full bg-black bg-opacity-90 box-shadow-md z-10 flex items-center justify-center" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', width: 1.25 * sizeMultiplier + 'rem', height: 1.25 * sizeMultiplier + 'rem' }">
+    <div v-else-if="numEpisodes && !numEpisodesIncomplete && !isSelectionMode" class="absolute rounded-full bg-black/90 box-shadow-md z-10 flex items-center justify-center" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', width: 1.25 * sizeMultiplier + 'rem', height: 1.25 * sizeMultiplier + 'rem' }">
       <p class="text-white" :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }">{{ numEpisodes }}</p>
     </div>
 
@@ -270,8 +270,8 @@ const isInvalid = computed(() => _libraryItem.value.isInvalid as boolean)
 const isExplicit = computed(() => !!( mediaMetadata.value.explicit))
 const overlayWrapperClasslist = computed(() => {
   const classes: string[] = []
-  if (isSelectionMode.value) classes.push('bg-opacity-60')
-  else classes.push('bg-opacity-40')
+  if (isSelectionMode.value) classes.push('opacity-60')
+  else classes.push('opacity-40')
   if (selected.value) {
     classes.push('border-2 border-yellow-400')
   }

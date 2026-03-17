@@ -545,7 +545,7 @@ async function download(selectedLocalFolder: any = null) {
     } else if (foldersWithMediaType.length === 1 && internalStorageFolder) {
       localFolder = internalStorageFolder
     } else {
-      store.commit('globals/showSelectLocalFolderModal', {
+      globalsStore.showSelectLocalFolderModalAction({
         mediaType: mediaType.value,
         callback: (folder: any) => {
           download(folder)
@@ -647,9 +647,9 @@ function init() {
   window.addEventListener('resize', windowResized)
   eventBus.on('library-changed', libraryChanged)
   eventBus.on('new-local-library-item', newLocalLibraryItem)
-  socket.on('item_updated', itemUpdated)
-  socket.on('rss_feed_open', rssFeedOpen)
-  socket.on('rss_feed_closed', rssFeedClosed)
+  socket.$on('item_updated', itemUpdated)
+  socket.$on('rss_feed_open', rssFeedOpen)
+  socket.$on('rss_feed_closed', rssFeedClosed)
   checkDescriptionClamped()
 
   const itemPageBgGradientHeight = window.outerHeight - 64 - coverHeight.value
@@ -782,9 +782,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', windowResized)
   eventBus.off('library-changed', libraryChanged)
   eventBus.off('new-local-library-item', newLocalLibraryItem)
-  socket.off('item_updated', itemUpdated)
-  socket.off('rss_feed_open', rssFeedOpen)
-  socket.off('rss_feed_closed', rssFeedClosed)
+  socket.$off('item_updated', itemUpdated)
+  socket.$off('rss_feed_open', rssFeedOpen)
+  socket.$off('rss_feed_closed', rssFeedClosed)
 
   if ((window as any)['item-page']) {
     appStore.setLastItemScrollData({ scrollTop: (window as any)['item-page'].scrollTop || 0, id: libraryItemId })

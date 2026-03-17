@@ -5,7 +5,7 @@
         <span class="material-symbols text-3xl text-md-on-surface">arrow_back</span>
       </a>
       <div v-if="user && currentLibrary">
-        <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-md-surface-1 bg-opacity-30 rounded-md flex items-center" @click="clickShowLibraryModal">
+        <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-md-surface-1/30 rounded-md flex items-center" @click="clickShowLibraryModal">
           <ui-library-icon :icon="currentLibraryIcon" :size="4" font-size="base" />
           <p class="text-md-body-m leading-4 ml-2 mt-0.5 max-w-24 truncate text-md-on-surface landscape:hidden">{{ currentLibraryName }}</p>
         </button>

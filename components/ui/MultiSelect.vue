@@ -5,7 +5,7 @@
       <form @submit.prevent="submitForm">
         <div ref="inputWrapper" style="min-height: 36px" class="flex-wrap relative w-full shadow-sm flex items-center border border-gray-600 rounded px-2 py-1" :class="wrapperClass" @click.stop.prevent="clickWrapper" @mouseup.stop.prevent @mousedown.prevent>
           <div v-for="item in selected" :key="item" class="rounded-full px-2 py-1 mx-0.5 my-0.5 text-xs bg-md-surface-1 flex flex-nowrap break-all items-center relative">
-            <div v-if="!disabled" class="w-full h-full rounded-full absolute top-0 left-0 px-1 bg-md-surface-1 bg-opacity-75 flex items-center justify-end opacity-0 hover:opacity-100">
+            <div v-if="!disabled" class="w-full h-full rounded-full absolute top-0 left-0 px-1 bg-md-surface-1/75 flex items-center justify-end opacity-0 hover:opacity-100">
               <span v-if="showEdit" class="material-symbols text-white hover:text-warning cursor-pointer" style="font-size: 1.1rem" @click.stop="editItem(item)">edit</span>
               <span class="material-symbols text-white hover:text-error cursor-pointer" style="font-size: 1.1rem" @click.stop="removeItem(item)">close</span>
             </div>
@@ -15,7 +15,7 @@
         </div>
       </form>
 
-      <ul ref="menu" v-show="showMenu" class="absolute z-50 mt-1 w-full bg-md-surface-1 border border-gray-600 shadow-lg max-h-56 rounded-md py-1 ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none text-sm" role="listbox" aria-labelledby="listbox-label">
+      <ul ref="menu" v-show="showMenu" class="absolute z-50 mt-1 w-full bg-md-surface-1 border border-gray-600 shadow-lg max-h-56 rounded-md py-1 ring-1 ring-black/5 overflow-auto focus:outline-none text-sm" role="listbox" aria-labelledby="listbox-label">
         <template v-for="item in itemsToShow" :key="item">
           <li class="text-gray-50 select-none relative py-2 pr-9 cursor-pointer" role="option" @click="clickedOption($event, item)" @mouseup.stop.prevent @mousedown.prevent>
             <div class="flex items-center">

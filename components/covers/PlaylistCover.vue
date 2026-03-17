@@ -1,11 +1,11 @@
 <template>
   <div class="relative rounded-sm overflow-hidden" :style="{ width: width + 'px', height: height + 'px' }">
-    <div v-if="items?.length" class="flex flex-wrap justify-center h-full relative bg-md-surface-3 bg-opacity-95 rounded-sm">
-      <div class="absolute top-0 left-0 w-full h-full bg-gray-400 bg-opacity-5" />
+    <div v-if="items?.length" class="flex flex-wrap justify-center h-full relative bg-md-surface-3/95 rounded-sm">
+      <div class="absolute top-0 left-0 w-full h-full bg-gray-400/5" />
       <covers-book-cover v-for="(li, index) in libraryItemCovers" :key="index" :library-item="li" :width="itemCoverWidth" :book-cover-aspect-ratio="1" />
     </div>
     <div v-else class="relative w-full h-full flex items-center justify-center p-2 bg-md-surface-3 rounded-sm">
-      <div class="absolute top-0 left-0 w-full h-full bg-gray-400 bg-opacity-5" />
+      <div class="absolute top-0 left-0 w-full h-full bg-gray-400/5" />
     </div>
   </div>
 </template>

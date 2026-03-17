@@ -1,10 +1,10 @@
 <template>
   <div class="w-full py-2 text-sm">
     <div class="flex -mb-px">
-      <div class="w-1/2 h-6 rounded-tl-md relative border border-fg/10 flex items-center justify-center cursor-pointer" :class="!showAdvancedView ? 'text-md-on-surface bg-md-surface-1 border-b-md-surface-1' : 'text-md-on-surface-variant bg-md-surface-3 bg-opacity-70'" @click="showAdvancedView = false">
+      <div class="w-1/2 h-6 rounded-tl-md relative border border-fg/10 flex items-center justify-center cursor-pointer" :class="!showAdvancedView ? 'text-md-on-surface bg-md-surface-1 border-b-md-surface-1' : 'text-md-on-surface-variant bg-md-surface-3/70'" @click="showAdvancedView = false">
         <p class="text-sm">{{ strings.HeaderRSSFeedGeneral }}</p>
       </div>
-      <div class="w-1/2 h-6 rounded-tr-md relative border border-fg/10 flex items-center justify-center -ml-px cursor-pointer" :class="showAdvancedView ? 'text-md-on-surface bg-md-surface-1 border-b-md-surface-1' : 'text-md-on-surface-variant bg-md-surface-3 bg-opacity-70'" @click="showAdvancedView = true">
+      <div class="w-1/2 h-6 rounded-tr-md relative border border-fg/10 flex items-center justify-center -ml-px cursor-pointer" :class="showAdvancedView ? 'text-md-on-surface bg-md-surface-1 border-b-md-surface-1' : 'text-md-on-surface-variant bg-md-surface-3/70'" @click="showAdvancedView = true">
         <p class="text-sm">{{ strings.HeaderAdvanced }}</p>
       </div>
     </div>

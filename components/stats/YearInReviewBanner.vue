@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-md-surface-1 rounded-md shadow-lg border border-white border-opacity-5 p-2 sm:p-4 mb-4">
+  <div class="bg-md-surface-1 rounded-md shadow-lg border border-white/5 p-2 sm:p-4 mb-4">
     <!-- hack to get icon fonts loaded on init -->
     <div class="h-0 w-0 overflow-hidden opacity-0">
       <span class="material-symbols">close</span>

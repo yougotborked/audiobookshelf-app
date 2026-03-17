@@ -4,7 +4,7 @@
       <slot />
     </div>
     <transition name="menu">
-      <ul ref="menu" v-show="showMenu" class="absolute z-50 -mt-px bg-md-surface-3 border border-md-outline-variant shadow-lg max-h-56 rounded-md py-1 text-base ring-1 ring-bg ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" role="listbox" style="width: 160px">
+      <ul ref="menu" v-show="showMenu" class="absolute z-50 -mt-px bg-md-surface-3 border border-md-outline-variant shadow-lg max-h-56 rounded-md py-1 text-base ring-1 ring-bg/5 overflow-auto focus:outline-none sm:text-sm" role="listbox" style="width: 160px">
         <template v-for="item in items" :key="item.value">
           <nuxt-link v-if="item.to" :to="item.to">
             <li class="text-md-on-surface select-none relative py-2" id="listbox-option-0" role="option" @click="clickedOption(item.value)">

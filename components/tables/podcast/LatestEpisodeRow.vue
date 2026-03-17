@@ -28,7 +28,7 @@
 
       <div class="flex items-center pt-2">
         <!-- Play/Pause Button -->
-        <div class="h-9 px-4 border border-md-outline-variant hover:bg-white hover:bg-opacity-10 rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-md-on-surface text-opacity-40' : ''" @click.stop="playClick">
+        <div class="h-9 px-4 border border-md-outline-variant hover:bg-white/10 rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-md-on-surface/40' : ''" @click.stop="playClick">
           <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-md-primary'">
             {{ streamIsPlaying ? 'pause' : 'play_arrow' }}
           </span>
@@ -49,7 +49,7 @@
         <!-- Download Section -->
         <div v-if="userCanDownload" class="flex items-center">
           <span v-if="isLocal" class="material-symbols px-2 text-md-primary text-2xl leading-none">audio_file</span>
-          <span v-else-if="!localEpisode" class="material-symbols mx-1.5 text-2xl leading-none" :class="downloadItem || pendingDownload ? 'animate-bounce text-warning text-opacity-75' : ''" @click.stop="downloadClick">
+          <span v-else-if="!localEpisode" class="material-symbols mx-1.5 text-2xl leading-none" :class="downloadItem || pendingDownload ? 'animate-bounce text-warning/75' : ''" @click.stop="downloadClick">
             {{ downloadItem || pendingDownload ? 'downloading' : 'download' }}
           </span>
           <span v-else class="material-symbols px-2 text-md-primary text-2xl leading-none">download_done</span>
@@ -60,7 +60,7 @@
       </div>
     </div>
 
-    <div v-if="processing" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-30 flex items-center justify-center">
+    <div v-if="processing" class="absolute top-0 left-0 w-full h-full bg-black/30 flex items-center justify-center">
       <widgets-loading-spinner size="la-lg" />
     </div>
 

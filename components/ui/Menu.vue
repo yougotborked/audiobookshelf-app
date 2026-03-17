@@ -10,7 +10,7 @@
     </button>
 
     <transition name="menu">
-      <ul v-show="showMenu" class="absolute z-10 -mt-px w-full bg-md-surface-3 border bordesr-border shadow-lg max-h-56 rounded-b-md py-1 text-base ring-1 ring-bg ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" tabindex="-1" role="listbox" aria-activedescendant="listbox-option-3">
+      <ul v-show="showMenu" class="absolute z-10 -mt-px w-full bg-md-surface-3 border bordesr-border shadow-lg max-h-56 rounded-b-md py-1 text-base ring-1 ring-bg/5 overflow-auto focus:outline-none sm:text-sm" tabindex="-1" role="listbox" aria-activedescendant="listbox-option-3">
         <template v-for="item in items" :key="item.value">
           <nuxt-link v-if="item.to" :to="item.to">
             <li class="text-md-on-surface select-none relative py-2" id="listbox-option-0" role="option" @click="clickedOption(item.value)">

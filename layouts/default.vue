@@ -361,7 +361,7 @@ onMounted(async () => {
     await AbsLogger.info({ tag: 'default', message: `mounted: initializing first load (${usePlatform()} v${config.public.version})` })
     appStore.isFirstLoad = false
 
-    loadSavedSettings()
+    await loadSavedSettings()
 
     const deviceData = await useDb().getDeviceData() as Record<string, unknown> | null
     appStore.setDeviceData(deviceData)

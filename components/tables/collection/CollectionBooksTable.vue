@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full bg-md-surface-3 bg-opacity-40">
+  <div class="w-full bg-md-surface-3/40">
     <div class="w-full h-14 flex items-center px-4 bg-md-surface-3">
       <p class="pr-4">{{ strings.HeaderCollectionItems }}</p>
 

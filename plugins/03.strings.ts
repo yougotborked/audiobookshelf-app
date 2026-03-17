@@ -17,6 +17,7 @@ export default defineNuxtPlugin(async () => {
       dateDistanceFromNow: utils.dateDistanceFromNow,
       elapsedPretty: utils.elapsedPretty,
       secondsToTimestampFull: utils.secondsToTimestampFull,
+      secondsToTimestamp: utils.secondsToTimestamp,
     }
   }
 })

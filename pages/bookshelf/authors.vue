@@ -127,16 +127,16 @@ function libraryChanged(libraryId: string) {
 
 onMounted(() => {
   init()
-  socket.on('author_added', authorAdded)
-  socket.on('author_updated', authorUpdated)
-  socket.on('author_removed', authorRemoved)
+  socket.$on('author_added', authorAdded)
+  socket.$on('author_updated', authorUpdated)
+  socket.$on('author_removed', authorRemoved)
   eventBus.on('library-changed', libraryChanged)
 })
 
 onBeforeUnmount(() => {
-  socket.off('author_added', authorAdded)
-  socket.off('author_updated', authorUpdated)
-  socket.off('author_removed', authorRemoved)
+  socket.$off('author_added', authorAdded)
+  socket.$off('author_updated', authorUpdated)
+  socket.$off('author_removed', authorRemoved)
   eventBus.off('library-changed', libraryChanged)
 })
 </script>

@@ -3,7 +3,7 @@
     <template v-for="shelf in totalShelves" :key="shelf">
       <div class="w-full px-2 relative" :class="showBookshelfListView || altViewEnabled ? '' : 'bookshelfRow'" :id="`shelf-${shelf - 1}`" :style="{ height: shelfHeight + 'px' }">
         <div v-if="!showBookshelfListView && !altViewEnabled" class="w-full absolute bottom-0 left-0 z-30 bookshelfDivider" style="min-height: 16px" :class="`h-${shelfDividerHeightIndex}`" />
-        <div v-else-if="showBookshelfListView" class="flex border-t border-white border-opacity-10" />
+        <div v-else-if="showBookshelfListView" class="flex border-t border-white/10" />
       </div>
     </template>
 
@@ -560,11 +560,11 @@ function initListeners() {
   eventBus.on('library-changed', libraryChanged)
   eventBus.on('user-settings', settingsUpdated)
 
-  socket.on('item_updated', libraryItemUpdated)
-  socket.on('item_added', libraryItemAdded)
-  socket.on('item_removed', libraryItemRemoved)
-  socket.on('items_updated', libraryItemsUpdated)
-  socket.on('items_added', libraryItemsAdded)
+  socket.$on('item_updated', libraryItemUpdated)
+  socket.$on('item_added', libraryItemAdded)
+  socket.$on('item_removed', libraryItemRemoved)
+  socket.$on('items_updated', libraryItemsUpdated)
+  socket.$on('items_added', libraryItemsAdded)
 
   if (screen.orientation) {
     // Not available on ios
@@ -583,11 +583,11 @@ function removeListeners() {
   eventBus.off('library-changed', libraryChanged)
   eventBus.off('user-settings', settingsUpdated)
 
-  socket.off('item_updated', libraryItemUpdated)
-  socket.off('item_added', libraryItemAdded)
-  socket.off('item_removed', libraryItemRemoved)
-  socket.off('items_updated', libraryItemsUpdated)
-  socket.off('items_added', libraryItemsAdded)
+  socket.$off('item_updated', libraryItemUpdated)
+  socket.$off('item_added', libraryItemAdded)
+  socket.$off('item_removed', libraryItemRemoved)
+  socket.$off('items_updated', libraryItemsUpdated)
+  socket.$off('items_added', libraryItemsAdded)
 
   if (screen.orientation) {
     // Not available on ios

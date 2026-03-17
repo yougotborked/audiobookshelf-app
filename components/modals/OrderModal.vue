@@ -3,7 +3,7 @@
     <div class="w-full h-full bg-md-surface-3 rounded-lg border border-fg/20">
       <ul class="w-full rounded-lg text-base max-h-[70vh] overflow-y-auto overscroll-contain" role="listbox" aria-labelledby="listbox-label">
         <template v-for="item in items" :key="item.value">
-          <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedOption(item.value)">
+          <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1/50' : ''" role="option" @click="clickedOption(item.value)">
             <div class="flex items-center">
               <span class="font-normal ml-3 block truncate text-lg">{{ item.text }}</span>
             </div>

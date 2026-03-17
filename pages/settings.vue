@@ -130,11 +130,11 @@
     <!-- Auto Sleep timer settings -->
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelStartTime }}</p>
-      <ui-text-input type="time" v-model="settings.autoSleepTimerStartTime" style="width: 145px; max-width: 145px" @input="autoSleepTimerTimeUpdated" />
+      <ui-text-input type="time" v-model="settings.autoSleepTimerStartTime" style="width: 145px; max-width: 145px" @update:modelValue="autoSleepTimerTimeUpdated" />
     </div>
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelEndTime }}</p>
-      <ui-text-input type="time" v-model="settings.autoSleepTimerEndTime" style="width: 145px; max-width: 145px" @input="autoSleepTimerTimeUpdated" />
+      <ui-text-input type="time" v-model="settings.autoSleepTimerEndTime" style="width: 145px; max-width: 145px" @update:modelValue="autoSleepTimerTimeUpdated" />
     </div>
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelSleepTimer }}</p>
@@ -176,7 +176,7 @@
       <p class="text-md-label-m text-md-primary mb-3 mt-8 uppercase tracking-widest">{{ $strings.HeaderAndroidAutoSettings }}</p>
       <div class="py-3 flex items-center">
         <p class="pr-4 w-36">{{ $strings.LabelAndroidAutoBrowseLimitForGrouping }}</p>
-        <ui-text-input type="number" v-model="settings.androidAutoBrowseLimitForGrouping" style="width: 145px; max-width: 145px" @input="androidAutoBrowseLimitForGroupingUpdated" />
+        <ui-text-input type="number" v-model="settings.androidAutoBrowseLimitForGrouping" style="width: 145px; max-width: 145px" @update:modelValue="androidAutoBrowseLimitForGroupingUpdated" />
         <span class="material-symbols text-xl ml-2" @click.stop="showInfo('androidAutoBrowseLimitForGrouping')">info</span>
       </div>
       <div class="py-3 flex items-center">

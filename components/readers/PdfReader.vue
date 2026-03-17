@@ -2,19 +2,19 @@
   <div class="w-full h-full relative">
     <div v-show="canGoPrev" class="absolute top-0 left-0 h-full w-1/2 hover:opacity-100 opacity-0 z-10 cursor-pointer" @click.stop.prevent="prev" @mousedown.prevent>
       <div class="flex items-center justify-center h-full w-1/2">
-        <span class="material-symbols text-5xl text-white cursor-pointer text-opacity-30 hover:text-opacity-90">arrow_back_ios</span>
+        <span class="material-symbols text-5xl text-white/30 hover:text-white/90 cursor-pointer">arrow_back_ios</span>
       </div>
     </div>
     <div v-show="canGoNext" class="absolute top-0 right-0 h-full w-1/2 hover:opacity-100 opacity-0 z-10 cursor-pointer" @click.stop.prevent="next" @mousedown.prevent>
       <div class="flex items-center justify-center h-full w-1/2 ml-auto">
-        <span class="material-symbols text-5xl text-white cursor-pointer text-opacity-30 hover:text-opacity-90">arrow_forward_ios</span>
+        <span class="material-symbols text-5xl text-white/30 hover:text-white/90 cursor-pointer">arrow_forward_ios</span>
       </div>
     </div>
 
     <div class="h-full flex items-center justify-center">
       <div :style="{ width: pdfWidth + 'px', height: pdfHeight + 'px' }" class="w-full h-full overflow-auto">
         <div v-if="loadedRatio > 0 && loadedRatio < 1" style="background-color: green; color: white; text-align: center" :style="{ width: loadedRatio * 100 + '%' }">{{ Math.floor(loadedRatio * 100) }}%</div>
-        <pdf v-if="pdfDocInitParams" ref="pdf" class="m-auto z-10 border border-black border-opacity-20 shadow-md bg-white" :src="pdfDocInitParams" :page="page" :rotate="rotate" @progress="loadedRatio = $event" @error="error" @num-pages="numPagesLoaded" @link-clicked="page = $event" @loaded="loadedEvt"></pdf>
+        <pdf v-if="pdfDocInitParams" ref="pdf" class="m-auto z-10 border border-black/20 shadow-md bg-white" :src="pdfDocInitParams" :page="page" :rotate="rotate" @progress="loadedRatio = $event" @error="error" @num-pages="numPagesLoaded" @link-clicked="page = $event" @loaded="loadedEvt"></pdf>
       </div>
     </div>
 
@@ -45,7 +45,9 @@ export default {
     const appStore = useAppStore()
     const globalsStore = useGlobalsStore()
     const userStore = useUserStore()
-    return { appStore, globalsStore, userStore }
+    const db = useDb()
+    const nativeHttp = useNativeHttp()
+    return { appStore, globalsStore, userStore, db, nativeHttp }
   },
   data() {
     return {
@@ -142,7 +144,7 @@ export default {
           localLibraryItemId: this.localLibraryItemId,
           ...payload
         }
-        const localResponse = await this.$db.updateLocalEbookProgress(localPayload)
+        const localResponse = await this.db.updateLocalEbookProgress(localPayload)
         if (localResponse.localMediaProgress) {
           this.globalsStore.updateLocalMediaProgress(localResponse.localMediaProgress)
         }
@@ -150,7 +152,7 @@ export default {
 
       // Update server item
       if (this.serverLibraryItemId) {
-        this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, payload).catch((error) => {
+        this.nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, payload).catch((error) => {
           console.error('PdfReader.updateProgress failed:', error)
         })
       }
@@ -186,7 +188,7 @@ export default {
 
         if (serverConnectionConfigId) {
           // Clear refresh token for server connection config
-          await this.$db.clearRefreshToken(serverConnectionConfigId)
+          await this.db.clearRefreshToken(serverConnectionConfigId)
         }
 
         if (window.location.pathname !== '/connect') {

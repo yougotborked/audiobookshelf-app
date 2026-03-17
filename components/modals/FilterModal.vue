@@ -2,14 +2,14 @@
   <modals-modal v-model="show" width="90%">
     <template #outer>
       <div v-show="selected !== 'all'" class="absolute top-12 left-4 z-40">
-        <ui-btn class="text-lg border-yellow-400 border-opacity-40 h-10" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
+        <ui-btn class="text-lg border-yellow-400/40 h-10" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
       </div>
     </template>
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
       <div class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-3 rounded-lg border border-fg/20 mt-8" style="max-height: 75%" @click.stop>
         <ul v-show="!sublist" class="h-full w-full" role="listbox" aria-labelledby="listbox-label">
           <template v-for="item in items" :key="item.value">
-            <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedOption(item)">
+            <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1/50' : ''" role="option" @click="clickedOption(item)">
               <div class="flex items-center justify-between">
                 <span class="font-normal ml-3 block truncate text-lg">{{ item.text }}</span>
               </div>
@@ -34,7 +34,7 @@
             </div>
           </li>
           <template v-for="item in sublistItems" :key="item.value">
-            <li class="text-md-on-surface select-none relative px-4 cursor-pointer" :class="`${sublist}.${item.value}` === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedSublistOption(item.value)">
+            <li class="text-md-on-surface select-none relative px-4 cursor-pointer" :class="`${sublist}.${item.value}` === selected ? 'bg-md-surface-1/50' : ''" role="option" @click="clickedSublistOption(item.value)">
               <div class="flex items-center">
                 <span class="font-normal truncate py-3 text-base">{{ item.text }}</span>
               </div>

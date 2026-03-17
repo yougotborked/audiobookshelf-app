@@ -1,5 +1,5 @@
 <template>
-  <div :key="bookmark.time" :id="`bookmark-row-${bookmark.time}`" class="flex items-center px-1 py-4 justify-start relative" :class="highlight ? 'bg-md-surface-1 bg-opacity-60' : ' bg-opacity-20'" @click="click">
+  <div :key="bookmark.time" :id="`bookmark-row-${bookmark.time}`" class="flex items-center px-1 py-4 justify-start relative" :class="highlight ? 'bg-md-surface-1/60' : 'opacity-20'" @click="click">
     <div class="flex-grow overflow-hidden px-2">
       <div class="flex items-center mb-0.5">
         <i class="material-symbols text-lg pr-1 -mb-1" :class="{ 'text-md-primary fill': highlight, 'text-md-on-surface-variant': !highlight }">bookmark</i>

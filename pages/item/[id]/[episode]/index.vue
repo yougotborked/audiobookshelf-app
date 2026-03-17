@@ -15,9 +15,9 @@
     <p class="text-lg font-semibold">{{ title }}</p>
 
     <div v-if="episodeNumber || season || episodeType" class="flex py-2 items-center -mx-0.5">
-      <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-60 rounded-full text-xs font-light text-fg">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
-      <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-60 rounded-full text-xs font-light text-fg">{{ $strings.LabelSeason }} #{{ season }}</div>
-      <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary bg-opacity-60 rounded-full text-xs font-light text-fg capitalize">{{ episodeType }}</div>
+      <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary/60 rounded-full text-xs font-light text-fg">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
+      <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary/60 rounded-full text-xs font-light text-fg">{{ $strings.LabelSeason }} #{{ season }}</div>
+      <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary/60 rounded-full text-xs font-light text-fg capitalize">{{ episodeType }}</div>
     </div>
 
     <!-- user progress card -->
@@ -44,7 +44,7 @@
     <p class="text-sm text-fg mt-1.5 mb-0.5 default-style description-container" v-html="transformedDescription"></p>
 
     <!-- loading overlay -->
-    <div v-if="processing" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-30 flex items-center justify-center">
+    <div v-if="processing" class="absolute top-0 left-0 w-full h-full bg-black/30 flex items-center justify-center">
       <widgets-loading-spinner size="la-lg" />
     </div>
 
@@ -76,7 +76,6 @@ const libraryItemIdParam = route.params.id as string
 const episodeIdParam = route.params.episode as string
 
 const userStore = useUserStore()
-const store = useNuxtApp().$store as any
 
 // State
 const libraryItem = ref<any>(null)
@@ -389,7 +388,7 @@ async function download(selectedLocalFolder: any = null) {
     } else if (foldersWithMediaType.length === 1 && internalStorageFolder) {
       localFolder = internalStorageFolder
     } else {
-      store.commit('globals/showSelectLocalFolderModal', {
+      globalsStore.showSelectLocalFolderModalAction({
         mediaType,
         callback: (folder: any) => {
           download(folder)
@@ -434,8 +433,8 @@ function moreMenuAction(action: string) {
   } else if (action === 'discardProgress') {
     discardProgress()
   } else if (action === 'playlist' && !isLocal.value) {
-    store.commit('globals/setSelectedPlaylistItems', [{ libraryItem: libraryItem.value, episode: episode.value }])
-    store.commit('globals/setShowPlaylistsAddCreateModal', true)
+    globalsStore.selectedPlaylistItems = [{ libraryItem: libraryItem.value, episode: episode.value }]
+    globalsStore.showPlaylistsAddCreateModal = true
   } else if (action === 'remove_from_server' && serverEpisodeId.value && isAdminOrUp.value) {
     deleteEpisodeFromServerClick()
   } else if (action === 'deleteLocal') {

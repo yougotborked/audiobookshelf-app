@@ -792,15 +792,15 @@ onMounted(async () => {
     }
   }
 
-  socket.on('playlist_updated', playlistUpdated)
-  socket.on('playlist_removed', playlistRemoved)
+  socket.$on('playlist_updated', playlistUpdated)
+  socket.$on('playlist_removed', playlistRemoved)
   eventBus.on('playback-ended', onPlaybackEnded)
   fetchPlaylist()
 })
 
 onBeforeUnmount(() => {
-  socket.off('playlist_updated', playlistUpdated)
-  socket.off('playlist_removed', playlistRemoved)
+  socket.$off('playlist_updated', playlistUpdated)
+  socket.$off('playlist_removed', playlistRemoved)
   eventBus.off('playback-ended', onPlaybackEnded)
 })
 </script>
