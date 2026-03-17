@@ -55,7 +55,8 @@ export default {
   setup() {
     const appStore = useAppStore()
     const userStore = useUserStore()
-    return { appStore, userStore }
+    const eventBus = useEventBus()
+    return { appStore, userStore, eventBus }
   },
   data() {
     return {
@@ -247,7 +248,7 @@ export default {
       }
       if (startTime) playPayload.startTime = startTime
 
-      this.$eventBus.$emit('play-item', playPayload)
+      this.eventBus.emit('play-item', playPayload)
     },
     async addEpisodeToPlaylist(episode) {
       const libraryItem = await this.$nativeHttp.get(`/api/items/${episode.libraryItemId}`).catch((error) => {

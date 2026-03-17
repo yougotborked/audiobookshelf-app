@@ -133,7 +133,8 @@ import { KeepAwake } from '@capacitor-community/keep-awake'
 export default {
   setup() {
     const appStore = useAppStore()
-    return { appStore }
+    const eventBus = useEventBus()
+    return { appStore, eventBus }
   },
   data() {
     return {
@@ -513,14 +514,14 @@ export default {
       }
     },
     registerListeners() {
-      this.$eventBus.$on('close-ebook', this.closeEvt)
+      this.eventBus.on('close-ebook', this.closeEvt)
       document.body.addEventListener('touchstart', this.touchstart)
       document.body.addEventListener('touchend', this.touchend)
       this.initWatchVolume()
       this.initKeepScreenAwake()
     },
     unregisterListeners() {
-      this.$eventBus.$on('close-ebook', this.closeEvt)
+      this.eventBus.off('close-ebook', this.closeEvt)
       document.body.removeEventListener('touchstart', this.touchstart)
       document.body.removeEventListener('touchend', this.touchend)
       VolumeButtons.clearWatch().catch((error) => {

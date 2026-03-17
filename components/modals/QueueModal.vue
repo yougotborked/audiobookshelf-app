@@ -2,15 +2,15 @@
   <modals-modal v-model="show" :width="400">
     <p class="text-md-title-m text-md-on-surface px-4 pt-2 pb-1">{{ strings.LabelQueue }}</p>
     <div class="max-h-[70vh] overflow-y-auto">
-      <draggable v-model="localQueue" handle=".drag" tag="div" @end="dragEnd">
-        <transition-group type="transition" name="list">
-          <div v-for="(item, idx) in localQueue" :key="idx" class="flex items-center px-4 py-2 border-b border-fg/10 cursor-pointer" :class="{ 'bg-md-secondary-container': idx === currentIndex }" @click="select(idx)">
+      <draggable v-model="localQueue" handle=".drag" tag="div" item-key="libraryItemId" @end="dragEnd">
+        <template #item="{ element: item, index: idx }">
+          <div class="flex items-center px-4 py-2 border-b border-fg/10 cursor-pointer" :class="{ 'bg-md-secondary-container': idx === currentIndex }" @click="select(idx)">
             <span class="material-symbols drag mr-2 text-md-on-surface-variant cursor-move">drag_handle</span>
             <p class="flex-grow truncate">{{ itemTitle(item) }}</p>
             <span v-if="idx === currentIndex" class="material-symbols text-md-primary">play_arrow</span>
             <span class="material-symbols text-error ml-2" @click.stop="remove(idx)">close</span>
           </div>
-        </transition-group>
+        </template>
       </draggable>
       <div v-if="!queue.length" class="flex items-center justify-center p-4">
         <p class="text-base text-md-on-surface-variant">{{ strings.MessageNoItems }}</p>
@@ -28,7 +28,7 @@ import { useAppStore } from '~/stores/app'
 const props = defineProps<{
   modelValue: boolean
   queue: Record<string, unknown>[]
-  currentIndex: number
+  currentIndex: number | null
 }>()
 const emit = defineEmits<{
   'update:modelValue': [val: boolean]

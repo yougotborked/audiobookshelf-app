@@ -66,7 +66,8 @@ export default {
     const appStore = useAppStore()
     const userStore = useUserStore()
     const globalsStore = useGlobalsStore()
-    return { checkCellularPermission, appStore, userStore, globalsStore }
+    const eventBus = useEventBus()
+    return { checkCellularPermission, appStore, userStore, globalsStore, eventBus }
   },
   computed: {
     bookmarks() {
@@ -890,15 +891,15 @@ export default {
       message: `[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`
     })
 
-    this.$eventBus.$on('abs-ui-ready', this.onReady)
-    this.$eventBus.$on('play-item', this.playLibraryItem)
-    this.$eventBus.$on('pause-item', this.pauseItem)
-    this.$eventBus.$on('close-stream', this.closeStreamOnly)
-    this.$eventBus.$on('cast-local-item', this.castLocalItem)
-    this.$eventBus.$on('user-settings', this.settingsUpdated)
-    this.$eventBus.$on('playback-time-update', this.playbackTimeUpdate)
-    this.$eventBus.$on('device-focus-update', this.deviceFocused)
-    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+    this.eventBus.on('abs-ui-ready', this.onReady)
+    this.eventBus.on('play-item', this.playLibraryItem)
+    this.eventBus.on('pause-item', this.pauseItem)
+    this.eventBus.on('close-stream', this.closeStreamOnly)
+    this.eventBus.on('cast-local-item', this.castLocalItem)
+    this.eventBus.on('user-settings', this.settingsUpdated)
+    this.eventBus.on('playback-time-update', this.playbackTimeUpdate)
+    this.eventBus.on('device-focus-update', this.deviceFocused)
+    this.eventBus.on('playback-ended', this.onPlaybackEnded)
 
     if (
       this.appStore.currentPlaybackSession &&
@@ -925,15 +926,15 @@ export default {
     this.onSkipPreviousRequestListener?.remove()
     this.onQueueIndexUpdateListener?.remove()
 
-    this.$eventBus.$off('abs-ui-ready', this.onReady)
-    this.$eventBus.$off('play-item', this.playLibraryItem)
-    this.$eventBus.$off('pause-item', this.pauseItem)
-    this.$eventBus.$off('close-stream', this.closeStreamOnly)
-    this.$eventBus.$off('cast-local-item', this.castLocalItem)
-    this.$eventBus.$off('user-settings', this.settingsUpdated)
-    this.$eventBus.$off('playback-time-update', this.playbackTimeUpdate)
-    this.$eventBus.$off('device-focus-update', this.deviceFocused)
-    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
+    this.eventBus.off('abs-ui-ready', this.onReady)
+    this.eventBus.off('play-item', this.playLibraryItem)
+    this.eventBus.off('pause-item', this.pauseItem)
+    this.eventBus.off('close-stream', this.closeStreamOnly)
+    this.eventBus.off('cast-local-item', this.castLocalItem)
+    this.eventBus.off('user-settings', this.settingsUpdated)
+    this.eventBus.off('playback-time-update', this.playbackTimeUpdate)
+    this.eventBus.off('device-focus-update', this.deviceFocused)
+    this.eventBus.off('playback-ended', this.onPlaybackEnded)
   }
 }
 </script>

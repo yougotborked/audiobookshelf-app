@@ -22,29 +22,27 @@
             <p class="text-xs text-fg-muted px-2">{{ $strings.LabelTotalSize }}: {{ $bytesPretty(totalAudioSize) }}</p>
           </div>
 
-          <draggable v-model="audioTracksCopy" v-bind="dragOptions" handle=".drag-handle" draggable=".item" tag="div" @start="drag = true" @end="drag = false" @update="draggableUpdate" :disabled="isIos">
-            <transition-group type="transition" :name="!drag ? 'dragtrack' : undefined">
-              <template v-for="track in audioTracksCopy" :key="track.localFileId">
-                <div class="flex items-center my-1 item">
-                  <div v-if="!isIos" class="w-8 h-12 flex items-center justify-center" style="min-width: 32px">
-                    <span class="material-symbols drag-handle text-lg text-fg-muted">menu</span>
-                  </div>
-                  <div class="w-8 h-12 flex items-center justify-center" style="min-width: 32px">
-                    <p class="font-mono font-bold text-xl">{{ track.index }}</p>
-                  </div>
-                  <div class="flex-grow px-2">
-                    <p class="text-xs">{{ track.title }}</p>
-                  </div>
-                  <div class="w-20 text-center text-fg-muted" style="min-width: 80px">
-                    <p class="text-xs">{{ track.mimeType }}</p>
-                    <p class="text-sm">{{ $elapsedPretty(track.duration) }}</p>
-                  </div>
-                  <div v-if="!isIos" class="w-12 h-12 flex items-center justify-center" style="min-width: 48px">
-                    <span class="material-symbols text-2xl" @click="showTrackDialog(track)">more_vert</span>
-                  </div>
+          <draggable v-model="audioTracksCopy" v-bind="dragOptions" handle=".drag-handle" tag="div" item-key="localFileId" @start="drag = true" @end="drag = false" @update="draggableUpdate" :disabled="isIos">
+            <template #item="{ element: track }">
+              <div class="flex items-center my-1">
+                <div v-if="!isIos" class="w-8 h-12 flex items-center justify-center" style="min-width: 32px">
+                  <span class="material-symbols drag-handle text-lg text-fg-muted">menu</span>
                 </div>
-              </template>
-            </transition-group>
+                <div class="w-8 h-12 flex items-center justify-center" style="min-width: 32px">
+                  <p class="font-mono font-bold text-xl">{{ track.index }}</p>
+                </div>
+                <div class="flex-grow px-2">
+                  <p class="text-xs">{{ track.title }}</p>
+                </div>
+                <div class="w-20 text-center text-fg-muted" style="min-width: 80px">
+                  <p class="text-xs">{{ track.mimeType }}</p>
+                  <p class="text-sm">{{ $elapsedPretty(track.duration) }}</p>
+                </div>
+                <div v-if="!isIos" class="w-12 h-12 flex items-center justify-center" style="min-width: 48px">
+                  <span class="material-symbols text-2xl" @click="showTrackDialog(track)">more_vert</span>
+                </div>
+              </div>
+            </template>
           </draggable>
         </div>
 

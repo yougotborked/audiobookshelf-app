@@ -25,8 +25,8 @@ import { useLibrariesStore } from '~/stores/libraries'
 
 const props = defineProps<{
   modelValue: boolean
-  orderBy: string
-  descending: boolean
+  orderBy: string | undefined
+  descending: boolean | undefined
   episodes?: boolean
 }>()
 const emit = defineEmits<{

@@ -56,7 +56,7 @@ import { useLibrariesStore } from '~/stores/libraries'
 
 const props = defineProps<{
   modelValue: boolean
-  filterBy: string
+  filterBy: string | undefined
 }>()
 const emit = defineEmits<{
   'update:modelValue': [val: boolean]

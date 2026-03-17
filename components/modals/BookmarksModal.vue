@@ -55,7 +55,7 @@ const props = defineProps<{
   bookmarks: Record<string, unknown>[]
   currentTime: number
   playbackRate: number
-  libraryItemId: string
+  libraryItemId: string | null
 }>()
 const emit = defineEmits<{
   'update:modelValue': [val: boolean]
