@@ -33,150 +33,119 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
 
-export default {
-  props: {
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    },
-    width: {
-      type: Number,
-      default: 120
-    },
-    bookCoverAspectRatio: Number,
-    downloadCover: String,
-    raw: Boolean,
-    noBg: Boolean
-  },
-  data() {
-    return {
-      loading: true,
-      imageFailed: false,
-      showCoverBg: false,
-      imageReady: false
-    }
-  },
-  watch: {
-    cover() {
-      this.imageFailed = false
-    }
-  },
-  computed: {
-    isLocal() {
-      if (!this.libraryItem) return false
-      return this.libraryItem.isLocal
-    },
-    localCover() {
-      return this.libraryItem?.coverContentUrl || null
-    },
-    squareAspectRatio() {
-      return this.bookCoverAspectRatio === 1
-    },
-    height() {
-      return this.width * this.bookCoverAspectRatio
-    },
-    media() {
-      if (!this.libraryItem) return {}
-      return this.libraryItem.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    title() {
-      return this.mediaMetadata.title || 'No Title'
-    },
-    titleCleaned() {
-      if (this.title.length > 60) {
-        return this.title.slice(0, 57) + '...'
-      }
-      return this.title
-    },
-    authors() {
-      return this.mediaMetadata.authors || []
-    },
-    author() {
-      return this.authors.map((au) => au.name).join(', ')
-    },
-    authorCleaned() {
-      if (this.author.length > 30) {
-        return this.author.slice(0, 27) + '...'
-      }
-      return this.author
-    },
-    placeholderUrl() {
-      return '/book_placeholder.jpg'
-    },
-    fullCoverUrl() {
-      if (this.isLocal) {
-        if (this.localCover) return Capacitor.convertFileSrc(this.localCover)
-        return this.placeholderUrl
-      }
-      if (this.downloadCover) return this.downloadCover
-      if (!this.libraryItem) return null
-      var store = this.$store || this.$nuxt.$store
-      return store.getters['globals/getLibraryItemCoverSrc'](this.libraryItem, this.placeholderUrl, this.raw)
-    },
-    cover() {
-      return this.media.coverPath || this.placeholderUrl
-    },
-    hasCover() {
-      return (!!this.media.coverPath && !this.isLocal) || this.localCover || this.downloadCover
-    },
-    sizeMultiplier() {
-      var baseSize = this.squareAspectRatio ? 128 : 96
-      return this.width / baseSize
-    },
-    titleFontSize() {
-      return 0.75 * this.sizeMultiplier
-    },
-    authorFontSize() {
-      return 0.6 * this.sizeMultiplier
-    },
-    placeholderCoverPadding() {
-      if (this.sizeMultiplier < 0.5) return 0
-      return this.sizeMultiplier
-    },
-    authorBottom() {
-      return 0.75 * this.sizeMultiplier
-    }
-  },
-  methods: {
-    setCoverBg() {
-      if (this.$refs.coverBg) {
-        this.$refs.coverBg.style.backgroundImage = `url("${this.fullCoverUrl}")`
-      }
-    },
-    imageLoaded() {
-      this.loading = false
-      this.$nextTick(() => {
-        this.imageReady = true
-      })
-      if (!this.noBg && this.$refs.cover && this.cover !== this.placeholderUrl) {
-        var { naturalWidth, naturalHeight } = this.$refs.cover
-        var aspectRatio = naturalHeight / naturalWidth
-        var arDiff = Math.abs(aspectRatio - this.bookCoverAspectRatio)
+const props = defineProps<{
+  libraryItem?: Record<string, unknown>
+  width?: number
+  bookCoverAspectRatio?: number
+  downloadCover?: string
+  raw?: boolean
+  noBg?: boolean
+}>()
 
-        // If image aspect ratio is <= 1.45 or >= 1.75 then use cover bg, otherwise stretch to fit
-        if (arDiff > 0.15) {
-          this.showCoverBg = true
-          this.$nextTick(this.setCoverBg)
-        } else {
-          this.showCoverBg = false
-        }
-      }
+const emit = defineEmits<{
+  imageLoaded: [src: string]
+}>()
 
-      this.$emit('imageLoaded', this.fullCoverUrl)
-    },
-    imageError(err) {
-      this.loading = false
-      console.error('ImgError', err)
-      this.imageFailed = true
+const globalsStore = useGlobalsStore()
+
+// State
+const loading = ref(true)
+const imageFailed = ref(false)
+const showCoverBg = ref(false)
+const imageReady = ref(false)
+
+// Refs
+const cover = ref<HTMLImageElement | null>(null)
+const coverBg = ref<HTMLElement | null>(null)
+
+// Watch
+watch(cover, () => {
+  imageFailed.value = false
+})
+
+// Computed
+const isLocal = computed(() => {
+  if (!props.libraryItem) return false
+  return props.libraryItem.isLocal as boolean
+})
+const localCover = computed(() => (props.libraryItem?.coverContentUrl as string) || null)
+const squareAspectRatio = computed(() => (props.bookCoverAspectRatio || 0) === 1)
+const height = computed(() => (props.width || 120) * (props.bookCoverAspectRatio || 1.6))
+const media = computed(() => props.libraryItem?.media as Record<string, unknown> || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+const title = computed(() => (mediaMetadata.value.title as string) || 'No Title')
+const titleCleaned = computed(() => {
+  if (title.value.length > 60) {
+    return title.value.slice(0, 57) + '...'
+  }
+  return title.value
+})
+const authors = computed(() => (mediaMetadata.value.authors as Record<string, unknown>[]) || [])
+const author = computed(() => authors.value.map((au) => au.name).join(', '))
+const authorCleaned = computed(() => {
+  if (author.value.length > 30) {
+    return author.value.slice(0, 27) + '...'
+  }
+  return author.value
+})
+const placeholderUrl = computed(() => '/book_placeholder.jpg')
+const fullCoverUrl = computed(() => {
+  if (isLocal.value) {
+    if (localCover.value) return Capacitor.convertFileSrc(localCover.value)
+    return placeholderUrl.value
+  }
+  if (props.downloadCover) return props.downloadCover
+  if (!props.libraryItem) return null
+  return globalsStore.getLibraryItemCoverSrc(props.libraryItem, placeholderUrl.value, props.raw)
+})
+const coverPath = computed(() => (media.value.coverPath as string) || placeholderUrl.value)
+const hasCover = computed(() => (!!media.value.coverPath && !isLocal.value) || !!localCover.value || !!props.downloadCover)
+const sizeMultiplier = computed(() => {
+  const baseSize = squareAspectRatio.value ? 128 : 96
+  return (props.width || 120) / baseSize
+})
+const titleFontSize = computed(() => 0.75 * sizeMultiplier.value)
+const authorFontSize = computed(() => 0.6 * sizeMultiplier.value)
+const placeholderCoverPadding = computed(() => {
+  if (sizeMultiplier.value < 0.5) return 0
+  return sizeMultiplier.value
+})
+const authorBottom = computed(() => 0.75 * sizeMultiplier.value)
+
+// Methods
+function setCoverBg() {
+  if (coverBg.value) {
+    coverBg.value.style.backgroundImage = `url("${fullCoverUrl.value}")`
+  }
+}
+
+function imageLoaded() {
+  loading.value = false
+  nextTick(() => {
+    imageReady.value = true
+  })
+  if (!props.noBg && cover.value && coverPath.value !== placeholderUrl.value) {
+    const { naturalWidth, naturalHeight } = cover.value
+    const aspectRatio = naturalHeight / naturalWidth
+    const arDiff = Math.abs(aspectRatio - (props.bookCoverAspectRatio || 1.6))
+
+    if (arDiff > 0.15) {
+      showCoverBg.value = true
+      nextTick(setCoverBg)
+    } else {
+      showCoverBg.value = false
     }
-  },
-  mounted() {}
+  }
+
+  emit('imageLoaded', fullCoverUrl.value || '')
+}
+
+function imageError(err: Event) {
+  loading.value = false
+  console.error('ImgError', err)
+  imageFailed.value = true
 }
 </script>
-
