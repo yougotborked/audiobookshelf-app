@@ -389,8 +389,9 @@ onMounted(async () => {
       await AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempting connection (${userStore.getServerConfigName})` })
       await attemptConnection()
     } else {
-      await AbsLogger.info({ tag: 'default', message: 'mounted: Server not connected, attempt connection' })
-      await attemptConnection()
+      await AbsLogger.info({ tag: 'default', message: 'mounted: No server config, redirecting to connect' })
+      router.push('/connect')
+      return
     }
 
     await syncLocalSessions(true)

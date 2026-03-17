@@ -7,10 +7,10 @@
     "node": "^20"
   },
   "scripts": {
-    "dev": "nuxt --hostname 0.0.0.0 --port 1337",
-    "build": "nuxt build",
-    "start": "nuxt --hostname 0.0.0.0 --port 1337",
-    "generate": "nuxt generate",
+    "dev": "nuxi dev --host 0.0.0.0 --port 1337",
+    "build": "nuxi build",
+    "start": "nuxi preview --host 0.0.0.0 --port 1337",
+    "generate": "nuxi generate",
     "lint": "eslint --ext .js,.vue .",
     "lint:fix": "npm run lint -- --fix",
     "sync": "nuxt generate && npx cap sync",

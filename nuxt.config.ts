@@ -47,7 +47,7 @@ export default defineNuxtConfig({
   },
 
   components: {
-    dirs: [{ path: '~/components', pathPrefix: false }]
+    dirs: ['~/components']
   },
 
   imports: {
