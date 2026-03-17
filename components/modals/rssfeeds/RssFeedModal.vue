@@ -41,7 +41,7 @@
       <div v-else class="w-full">
         <div class="w-full relative mb-2">
           <ui-text-input-with-label v-model="newFeedSlug" :label="strings.LabelRSSFeedSlug" />
-          <p class="text-xs text-md-on-surface-variant py-0.5 px-1">{{ strings.getString?.('MessageFeedURLWillBe', [demoFeedUrl]) }}</p>
+          <p class="text-xs text-md-on-surface-variant py-0.5 px-1">{{ getString('MessageFeedURLWillBe', [demoFeedUrl]) }}</p>
         </div>
         <modals-rssfeeds-rss-feed-metadata-builder v-model="metadataDetails" />
 
@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useStrings } from '~/composables/useStrings'
+import { useStrings, getString } from '~/composables/useStrings'
 import { useNativeHttp } from '~/composables/useNativeHttp'
 import { useToast } from '~/composables/useToast'
 import { useUtils } from '~/composables/useUtils'
@@ -111,15 +111,12 @@ const fullFeedUrl = computed(() => {
 
 const isHttp = computed(() => !!serverAddress.value?.startsWith('http://'))
 
-watch(show, {
-  immediate: true,
-  handler(newVal) {
-    if (newVal) {
-      linkCopied.value = false
-      init()
-    }
+watch(show, (newVal: boolean) => {
+  if (newVal) {
+    linkCopied.value = false
+    init()
   }
-})
+}, { immediate: true })
 
 function openFeed() {
   if (!newFeedSlug.value) {

@@ -17,9 +17,9 @@ const props = defineProps<{
   search?: string
 }>()
 
-const librariesStore = useLibrariesStore()
+const globalsStore = useGlobalsStore()
 
-const bookCoverAspectRatio = computed(() => librariesStore.getBookCoverAspectRatio as number)
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
 const coverWidth = computed(() => {
   if (bookCoverAspectRatio.value === 1) return 50 * 1.2
   return 50

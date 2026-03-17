@@ -19,7 +19,7 @@ export type AppEvents = {
   'change-lang': string
   'new-local-library-item': Record<string, unknown>
   'bookshelf-total-entities': number
-  'download-series-click': Record<string, unknown>
+  'download-series-click': void
 }
 
 const _emitter = mitt<AppEvents>()

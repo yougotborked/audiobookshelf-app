@@ -11,7 +11,7 @@
 
     <!-- Podcast episodes currently downloading -->
     <div v-if="episodesDownloading.length" class="px-4 py-2 my-2 bg-md-primary bg-opacity-20 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
-      <div v-for="episode in episodesDownloading" :key="episode.id" class="flex items-center">
+      <div v-for="episode in episodesDownloading" :key="(episode.id as string)" class="flex items-center">
         <widgets-loading-spinner />
         <p class="text-sm py-1 pl-4">{{ strings.MessageDownloadingEpisode }} "{{ (episode as any).episodeDisplayTitle }}"</p>
       </div>
@@ -39,7 +39,7 @@
     </div>
 
     <template v-for="episode in episodesSorted">
-      <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" :key="episode.id" @addToPlaylist="addEpisodeToPlaylist" />
+      <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id as string]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" :key="(episode.id as string)" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
 
     <!-- Huhhh?

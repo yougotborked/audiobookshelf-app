@@ -19,7 +19,7 @@
 
       <p v-if="sortKey === 'audioFile.metadata.filename'" class="text-xs text-fg-muted truncate mt-2 mb-0.5">
         <span class="font-semibold">{{ getString('LabelFilename') }}</span
-        >: <span class="font-light">{{ episode.audioFile.metadata.filename }}</span>
+        >: <span class="font-light">{{ (episode.audioFile as any).metadata.filename }}</span>
       </p>
 
       <div v-if="episodeNumber || season || episodeType" class="flex py-2 items-center -mx-0.5">
@@ -240,14 +240,14 @@ async function playClick() {
       console.log('Play local episode', props.localEpisode.id, props.localLibraryItemId)
       eventBus.emit('play-item', {
         libraryItemId: props.localLibraryItemId,
-        episodeId: props.localEpisode.id,
+        episodeId: props.localEpisode.id as string,
         serverLibraryItemId: props.libraryItemId,
-        serverEpisodeId: props.episode.id
+        serverEpisodeId: props.episode.id as string
       })
     } else {
       eventBus.emit('play-item', {
-        libraryItemId: props.libraryItemId,
-        episodeId: props.episode.id
+        libraryItemId: props.libraryItemId || '',
+        episodeId: props.episode.id as string
       })
     }
   }

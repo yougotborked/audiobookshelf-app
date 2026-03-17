@@ -10,7 +10,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { Dialog } from '@capacitor/dialog'
 import { AbsFileSystem, AbsLogger } from '@/plugins/capacitor'
-import { useStrings } from '~/composables/useStrings'
+import { useStrings, getString } from '~/composables/useStrings'
 import { useHaptics } from '~/composables/useHaptics'
 import { useNativeHttp } from '~/composables/useNativeHttp'
 import { useToast } from '~/composables/useToast'
@@ -450,7 +450,7 @@ async function deleteLocalEpisode() {
 
   const { value } = await Dialog.confirm({
     title: strings.HeaderConfirm,
-    message: strings.getString?.('MessageConfirmDeleteLocalEpisode', [localFile.basePath as string]) || strings.MessageConfirmDeleteLocalFiles
+    message: getString('MessageConfirmDeleteLocalEpisode', [localFile.basePath as string]) || strings.MessageConfirmDeleteLocalFiles
   })
   if (value) {
     const res = await AbsFileSystem.deleteTrackFromItem({ id: localLibraryItemId.value, trackLocalFileId: localFile.id, trackContentUrl: localEpisodeAudioTrack.contentUrl }) as Record<string, unknown>

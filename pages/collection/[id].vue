@@ -140,13 +140,13 @@ onMounted(async () => {
     }
   } else {
     const isNetworkAvailable = networkConnected && !!user
-    let fetchedCollection = null
+    let fetchedCollection: Record<string, unknown> | null = null
 
     if (isNetworkAvailable) {
       fetchedCollection = await nativeHttp.get(`/api/collections/${id}`).catch((error: any) => {
         console.error('Failed to fetch collection', error)
         return null
-      })
+      }) as Record<string, unknown> | null
 
       if (fetchedCollection) {
         await localStore.setCachedCollection(fetchedCollection)
@@ -164,8 +164,8 @@ onMounted(async () => {
     }
 
     // Lookup matching local items and attach to collection items
-    if (fetchedCollection.books.length) {
-      const localLibraryItems = (await db.getLocalLibraryItems('book')) || []
+    if ((fetchedCollection.books as unknown[]).length) {
+      const localLibraryItems: any[] = (await db.getLocalLibraryItems('book') as any) || []
       if (localLibraryItems.length) {
         const localLibraryItemMap = new Map()
         localLibraryItems.forEach((item: any) => {
@@ -174,7 +174,7 @@ onMounted(async () => {
           }
         })
 
-        fetchedCollection.books.forEach((collectionItem: any) => {
+        ;(fetchedCollection.books as any[]).forEach((collectionItem: any) => {
           const matchingLocalLibraryItem = localLibraryItemMap.get(collectionItem.id)
           if (!matchingLocalLibraryItem) return
           collectionItem.localLibraryItem = matchingLocalLibraryItem

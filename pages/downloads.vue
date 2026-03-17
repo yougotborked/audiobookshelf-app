@@ -10,9 +10,9 @@
               <img v-if="mediaItem.coverPathSrc" :src="mediaItem.coverPathSrc" class="w-full h-full object-contain" />
             </div>
             <div class="px-2 flex-grow">
-              <p class="text-sm">{{ mediaItem.media.metadata.title }}</p>
-              <p v-if="mediaItem.mediaType == 'book'" class="text-xs text-md-on-surface-variant">{{ mediaItem.media.tracks.length }} {{ $strings.LabelTracks }}</p>
-              <p v-else-if="mediaItem.mediaType == 'podcast'" class="text-xs text-md-on-surface-variant">{{ mediaItem.media.episodes.length }} {{ $strings.HeaderEpisodes }}</p>
+              <p class="text-sm">{{ mediaItem.media.metadata?.title }}</p>
+              <p v-if="mediaItem.mediaType == 'book'" class="text-xs text-md-on-surface-variant">{{ mediaItem.media.tracks?.length }} {{ $strings.LabelTracks }}</p>
+              <p v-else-if="mediaItem.mediaType == 'podcast'" class="text-xs text-md-on-surface-variant">{{ mediaItem.media.episodes?.length }} {{ $strings.HeaderEpisodes }}</p>
               <p v-if="mediaItem.size" class="text-xs text-md-on-surface-variant">{{ $bytesPretty(mediaItem.size) }}</p>
             </div>
             <div class="w-12 h-12 flex items-center justify-center">
@@ -32,7 +32,7 @@ import { Capacitor } from '@capacitor/core'
 
 const eventBus = useEventBus()
 
-type LocalMediaItem = Record<string, unknown> & { id: string; size: number; coverPathSrc: string | null }
+type LocalMediaItem = { id: string; size: number; coverPathSrc: string | null; media: { metadata?: { title?: string }; tracks?: unknown[]; episodes?: unknown[] }; mediaType?: string; [key: string]: unknown }
 
 const localLibraryItems = ref<LocalMediaItem[]>([])
 
@@ -53,7 +53,8 @@ function newLocalLibraryItem(item: Record<string, unknown>) {
     ...item,
     id: item.id as string,
     size: getSize(item),
-    coverPathSrc: item.coverContentUrl ? Capacitor.convertFileSrc(item.coverContentUrl as string) : null
+    coverPathSrc: item.coverContentUrl ? Capacitor.convertFileSrc(item.coverContentUrl as string) : null,
+    media: (item.media as LocalMediaItem['media']) || {}
   }
   if (itemIndex >= 0) {
     localLibraryItems.value.splice(itemIndex, 1, newItemObj)
@@ -71,7 +72,8 @@ async function init() {
       ...lmi,
       id: lmi.id as string,
       size: getSize(lmi),
-      coverPathSrc: lmi.coverContentUrl ? Capacitor.convertFileSrc(lmi.coverContentUrl as string) : null
+      coverPathSrc: lmi.coverContentUrl ? Capacitor.convertFileSrc(lmi.coverContentUrl as string) : null,
+      media: (lmi.media as LocalMediaItem['media']) || {}
     }
   })
 }

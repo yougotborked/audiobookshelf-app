@@ -166,7 +166,7 @@ function showOldUserIdWarningDialog() {
   Dialog.alert({
     title: 'Old Server Connection Warning',
     message: strings.MessageOldServerConnectionWarningHelp,
-    cancelText: strings.ButtonOk
+    buttonTitle: strings.ButtonOk
   })
 }
 
@@ -429,18 +429,19 @@ async function oauthExchangeCodeForToken(code: string, state: string) {
       throw new Error('Authentication failed with the provided token.')
     }
 
-    const duplicateConfig = serverConnectionConfigs.value.find((scc: Record<string, any>) => scc.address === serverConfig.value.address && scc.username === payload.user.username && scc.id !== serverConfig.value.id)
+    const _payload = payload as { user: Record<string, any>; userDefaultLibraryId?: string; serverSettings: Record<string, any>; ereaderDevices?: unknown[] }
+    const duplicateConfig = serverConnectionConfigs.value.find((scc: Record<string, any>) => scc.address === serverConfig.value.address && scc.username === _payload.user.username && scc.id !== serverConfig.value.id)
     if (duplicateConfig) {
       throw new Error('Config already exists for this address and username.')
     }
 
     // For v2.26.0+ re-attach accessToken and refreshToken to user object because /authorize does not return them
     if (user.accessToken) {
-      payload.user.accessToken = user.accessToken
-      payload.user.refreshToken = user.refreshToken
+      _payload.user.accessToken = user.accessToken
+      _payload.user.refreshToken = user.refreshToken
     }
 
-    setUserAndConnection(payload)
+    setUserAndConnection(_payload)
   } catch (err: any) {
     console.error('[SSO] Error in exchangeCodeForToken: ', err)
     toast.error(`SSO error: ${err.message || err}`)
@@ -489,7 +490,7 @@ async function connectToServer(config: Record<string, any>) {
 
   if (payload) {
     // Will NOT include access token and refresh token
-    setUserAndConnection(payload)
+    setUserAndConnection(payload as { user: Record<string, any>; userDefaultLibraryId?: string; serverSettings: Record<string, any>; ereaderDevices?: unknown[] })
   } else {
     let savedError = error.value
     if (await submit(true)) {
@@ -956,7 +957,7 @@ async function authenticateToken() {
     headers: {
       Authorization: `Bearer ${serverConfig.value.token}`
     },
-    serverConnectionConfig: serverConfig.value
+    serverConnectionConfig: serverConfig.value as { id: string; address: string; token?: string; refreshToken?: string }
   }
   const authRes = await nativeHttp.post(`${serverConfig.value.address}/api/authorize`, null, nativeHttpOptions).catch((err: any) => {
     console.error('[ServerConnectForm] Server auth failed', err)

@@ -152,10 +152,11 @@ export const useUserStore = defineStore('user', {
       localStore.removeLastLibraryId()
       this.user = null
       this.accessToken = null
+      const serverName = this.serverConnectionConfig?.name || 'Not connected'
       this.serverConnectionConfig = null
       const librariesStore = useLibrariesStore()
       librariesStore.currentLibraryId = ''
-      await AbsLogger.info({ tag: 'user', message: `Logged out from server ${this.serverConnectionConfig?.name || 'Not connected'}` })
+      await AbsLogger.info({ tag: 'user', message: `Logged out from server ${serverName}` })
     },
 
     async refreshToken() {
@@ -192,7 +193,7 @@ export const useUserStore = defineStore('user', {
       const savedConfig = await db.setServerConnectionConfig(updatedConfig)
       this.accessToken = userObj.accessToken as string
       const socket = useSocket()
-      if (socket?.connected && !(socket as Record<string, unknown>).isAuthenticated) {
+      if (socket?.connected && !socket.isAuthenticated) {
         socket.sendAuthenticate()
       } else if (!socket) {
         console.warn('[user] Socket not available, cannot re-authenticate')

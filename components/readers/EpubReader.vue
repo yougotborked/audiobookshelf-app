@@ -33,9 +33,9 @@ const nativeHttp = useNativeHttp()
 const db = useDb()
 
 /** @type {ePub.Book | null} */
-const book = ref<InstanceType<typeof ePub> | null>(null)
+const book = ref<any>(null)
 /** @type {ePub.Rendition | null} */
-const rendition = ref<ReturnType<InstanceType<typeof ePub>['renderTo']> | null>(null)
+const rendition = ref<any>(null)
 const progress = ref(0)
 const totalLocations = ref(0)
 const currentLocationNum = ref(0)
@@ -47,7 +47,8 @@ const ereaderSettings = ref({
   font: 'serif',
   fontScale: 100,
   lineSpacing: 115,
-  textStroke: 0
+  textStroke: 0,
+  spread: undefined as string | undefined
 })
 
 const libraryItemId = computed(() => props.libraryItem?.id as string)
@@ -69,7 +70,7 @@ const readerHeightOffset = computed(() => isPlayerOpen.value ? 204 : 104)
 const chapters = computed(() => (book.value as unknown as { navigation?: { toc?: unknown[] } })?.navigation?.toc || [])
 const userItemProgress = computed(() => props.isLocal ? localItemProgress.value : serverItemProgress.value)
 const localItemProgress = computed(() => globalsStore.getLocalMediaProgressById(localLibraryItemId.value))
-const serverItemProgress = computed(() => userStore.getUserMediaProgress(serverLibraryItemId.value))
+const serverItemProgress = computed(() => userStore.getUserMediaProgress(serverLibraryItemId.value || ''))
 const localStorageLocationsKey = computed(() => `ebookLocations-${libraryItemId.value}`)
 const savedEbookLocation = computed(() => {
   if (!props.keepProgress) return null
@@ -110,24 +111,24 @@ function updateSettings(settings: typeof ereaderSettings.value) {
   applyTheme()
 
   const fontScale = settings.fontScale || 100
-  ;(rendition.value as unknown as Record<string, unknown>).themes?.fontSize(`${fontScale}%`)
-  ;(rendition.value as unknown as Record<string, unknown>).themes?.font(settings.font)
-  ;(rendition.value as unknown as Record<string, unknown>).spread?.(settings.spread || 'auto')
+  ;(rendition.value as any).themes?.fontSize(`${fontScale}%`)
+  ;(rendition.value as any).themes?.font(settings.font)
+  ;(rendition.value as any).spread?.(settings.spread || 'auto')
 }
 
 function goToChapter(href: string) {
-  return (rendition.value as unknown as Record<string, unknown>)?.display?.(href)
+  return (rendition.value as any)?.display?.(href)
 }
 
 function prev() {
   if (rendition.value) {
-    ;(rendition.value as unknown as Record<string, unknown>).prev()
+    ;(rendition.value as any).prev()
   }
 }
 
 function next() {
   if (rendition.value) {
-    ;(rendition.value as unknown as Record<string, unknown>).next()
+    ;(rendition.value as any).next()
   }
 }
 
@@ -281,11 +282,11 @@ function initEpub() {
   }
 
   console.log('[EpubReader] initEpub', props.url)
-  const b = new ePub(props.url, {
+  const b = (ePub as any)(props.url, {
     width: window.innerWidth,
     height: window.innerHeight - readerHeightOffset.value,
     openAs: 'epub',
-    requestMethod: props.isLocal ? null : customRequest
+    requestMethod: props.isLocal ? null : (customRequest as any)
   })
   book.value = b
 
@@ -301,15 +302,15 @@ function initEpub() {
   b.ready.then(() => {
     console.log('%c [EpubReader] Book ready', 'color:cyan;')
 
-    let displayCfi = (b as unknown as Record<string, unknown>).locations?.start
-    if (savedEbookLocation.value && (b as unknown as Record<string, unknown>).spine?.get(savedEbookLocation.value)) {
+    let displayCfi = (b as any).locations?.start
+    if (savedEbookLocation.value && (b as any).spine?.get(savedEbookLocation.value)) {
       displayCfi = savedEbookLocation.value
     }
 
     rend.on('displayed', async () => {
       console.log('%c [EpubReader] Rendition displayed', 'color:blue;')
 
-      const snapper = (rend as unknown as Record<string, unknown>).manager?.snapper
+      const snapper = (rend as any).manager?.snapper
       if (snapper) {
         snapper.needsSnap = function () {
           const left = Math.round(this.scrollLeft)
@@ -339,13 +340,13 @@ function initEpub() {
 
     const savedLocations = loadLocations()
     if (savedLocations) {
-      ;(b as unknown as Record<string, unknown>).locations?.load(savedLocations)
-      totalLocations.value = (b as unknown as Record<string, unknown>).locations?.length() || 0
+      ;(b as any).locations?.load(savedLocations)
+      totalLocations.value = (b as any).locations?.length() || 0
     } else {
-      ;(b as unknown as Record<string, unknown>).locations?.generate(100).then(() => {
-        totalLocations.value = (b as unknown as Record<string, unknown>).locations?.length() || 0
-        currentLocationNum.value = (rend as unknown as Record<string, unknown>).currentLocation?.()?.start.location || 0
-        checkSaveLocations((b as unknown as Record<string, unknown>).locations?.save())
+      ;(b as any).locations?.generate(100).then(() => {
+        totalLocations.value = (b as any).locations?.length() || 0
+        currentLocationNum.value = (rend as any).currentLocation?.()?.start.location || 0
+        checkSaveLocations((b as any).locations?.save())
       })
     }
 
@@ -361,8 +362,8 @@ function initEpub() {
 
 function applyTheme() {
   if (!rendition.value) return
-  ;(rendition.value as unknown as Record<string, unknown>).getContents().forEach((c: Record<string, unknown>) => {
-    ;(c.addStylesheetRules as (rules: unknown) => void)(themeRules.value)
+  ;(rendition.value as any).getContents().forEach((c: any) => {
+    c.addStylesheetRules(themeRules.value)
   })
 }
 
@@ -384,8 +385,8 @@ async function screenOrientationChange() {
 }
 
 function refreshUI() {
-  if ((rendition.value as unknown as Record<string, unknown>)?.resize) {
-    ;(rendition.value as unknown as Record<string, unknown>).resize(window.innerWidth, window.innerHeight - readerHeightOffset.value)
+  if ((rendition.value as any)?.resize) {
+    ;(rendition.value as any).resize(window.innerWidth, window.innerHeight - readerHeightOffset.value)
   }
 }
 
@@ -403,7 +404,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  ;(book.value as unknown as Record<string, unknown>)?.destroy?.()
+  ;(book.value as any)?.destroy?.()
 
   if (screen.orientation) {
     screen.orientation.removeEventListener('change', screenOrientationChange)

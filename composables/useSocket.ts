@@ -1,11 +1,31 @@
 // Module-level singleton so Pinia stores can access socket without useNuxtApp()
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyCallback = (...args: any[]) => void
+
 export interface ServerSocketInterface {
   connected: boolean
   isAuthenticated?: boolean
   logout(): void
   sendAuthenticate(): void
-  [key: string]: unknown
+  on(event: string, callback: AnyCallback): this
+  off(event: string, callback: AnyCallback): this
+  $on(event: string, callback: AnyCallback): void
+  $off(event: string, callback: AnyCallback): void
+  connect(serverAddress: string, token: string): void
+}
+
+const noOp = () => { console.warn('[useSocket] Socket not initialized') }
+
+const _noOpSocket: ServerSocketInterface = {
+  connected: false,
+  logout: noOp,
+  sendAuthenticate: noOp,
+  on(_event: string, _callback: AnyCallback) { noOp(); return this },
+  off(_event: string, _callback: AnyCallback) { noOp(); return this },
+  $on: noOp,
+  $off: noOp,
+  connect: noOp,
 }
 
 let _socket: ServerSocketInterface | null = null
@@ -15,13 +35,5 @@ export function setSocket(socket: ServerSocketInterface): void {
 }
 
 export function useSocket(): ServerSocketInterface {
-  if (!_socket) {
-    // Return a no-op proxy if socket not yet initialized (e.g. during SSR stub)
-    return {
-      connected: false,
-      logout() { console.warn('[useSocket] Socket not initialized') },
-      sendAuthenticate() { console.warn('[useSocket] Socket not initialized') }
-    }
-  }
-  return _socket
+  return _socket ?? _noOpSocket
 }

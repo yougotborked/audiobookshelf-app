@@ -47,7 +47,7 @@ const imagePath = computed(() => _author.value.imagePath as string | undefined)
 const updatedAt = computed(() => _author.value.updatedAt as number)
 const serverAddress = computed(() => userStore.getServerAddress)
 const imgSrc = computed(() => {
-  if (!imagePath.value || !serverAddress.value) return null
+  if (!imagePath.value || !serverAddress.value) return undefined
   const urlQuery = new URLSearchParams({ ts: String(updatedAt.value) })
   if (appStore.getDoesServerImagesRequireToken) {
     urlQuery.append('token', userStore.getToken || '')

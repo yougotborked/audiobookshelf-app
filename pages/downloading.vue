@@ -28,8 +28,9 @@ const globalsStore = useGlobalsStore()
 
 const downloadItems = computed(() => globalsStore.itemDownloads)
 const downloadItemParts = computed(() => {
-  const parts: unknown[] = []
-  downloadItems.value.forEach((di) => parts.push(...di.downloadItemParts))
+  type Part = { id: string; completed: boolean; progress: number; filename: string; [key: string]: unknown }
+  const parts: Part[] = []
+  downloadItems.value.forEach((di) => parts.push(...(di.downloadItemParts as unknown as Part[])))
   return parts
 })
 </script>

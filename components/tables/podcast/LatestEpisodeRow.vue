@@ -8,9 +8,9 @@
         <div class="flex-grow px-2">
           <div class="flex items-center">
             <div class="-mt-0.5 mb-0.5" @click.stop>
-              <nuxt-link :to="`/item/${libraryItemId}`" class="text-sm text-md-on-surface underline">{{ podcast.metadata.title }}</nuxt-link>
+              <nuxt-link :to="`/item/${libraryItemId}`" class="text-sm text-md-on-surface underline">{{ (podcast.metadata as any).title }}</nuxt-link>
             </div>
-            <widgets-explicit-indicator v-if="podcast.metadata.explicit" />
+            <widgets-explicit-indicator v-if="(podcast.metadata as any).explicit" />
           </div>
           <p v-if="publishedAt" class="text-xs text-md-on-surface-variant">{{ utils.dateDistanceFromNow(publishedAt) }}</p>
         </div>
@@ -241,14 +241,14 @@ async function playClick() {
       console.log('Play local episode', props.localEpisode.id, props.localLibraryItemId)
       eventBus.emit('play-item', {
         libraryItemId: props.localLibraryItemId,
-        episodeId: props.localEpisode.id,
+        episodeId: props.localEpisode.id as string,
         serverLibraryItemId: props.libraryItemId,
-        serverEpisodeId: props.episode.id
+        serverEpisodeId: props.episode.id as string
       })
     } else {
       eventBus.emit('play-item', {
-        libraryItemId: props.libraryItemId,
-        episodeId: props.episode.id
+        libraryItemId: props.libraryItemId || '',
+        episodeId: props.episode.id as string
       })
     }
   }

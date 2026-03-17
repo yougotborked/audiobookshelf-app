@@ -43,10 +43,10 @@
               <p class="text-sm text-fg-muted w-8 min-w-8">{{ index + 1 }}.&nbsp;</p>
               <div class="w-56">
                 <p class="text-sm text-fg truncate">{{ item.mediaMetadata ? item.mediaMetadata.title : '' }}</p>
-                <p class="text-xs text-fg-muted">{{ $dateDistanceFromNow(item.updatedAt) }}</p>
+                <p class="text-xs text-fg-muted">{{ $dateDistanceFromNow(item.updatedAt ?? null) }}</p>
               </div>
               <div class="w-16 min-w-16 text-right">
-                <p class="text-xs font-bold">{{ $elapsedPretty(item.timeListening) }}</p>
+                <p class="text-xs font-bold">{{ $elapsedPretty(item.timeListening ?? 0) }}</p>
               </div>
             </div>
           </div>
@@ -67,7 +67,8 @@ const userStore = useUserStore()
 const librariesStore = useLibrariesStore()
 const nativeHttp = useNativeHttp()
 
-type ListeningStats = { recentSessions?: unknown[]; totalTime?: number; days?: Record<string, unknown> }
+type ListeningSession = { id: string; mediaMetadata?: { title?: string }; updatedAt?: number; timeListening?: number; [key: string]: unknown }
+type ListeningStats = { recentSessions?: ListeningSession[]; totalTime?: number; days?: Record<string, unknown> }
 
 const listeningStats = ref<ListeningStats | null>(null)
 const showYearInReviewBanner = ref(false)

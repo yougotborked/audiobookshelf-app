@@ -43,6 +43,7 @@ export function useHaptics() {
 
   return {
     impact,
+    hapticsImpact: impact,
     hapticsImpactHeavy, hapticsImpactMedium, hapticsImpactLight,
     hapticsVibrate,
     hapticsNotificationSuccess, hapticsNotificationWarning, hapticsNotificationError,

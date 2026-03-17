@@ -23,7 +23,7 @@
           </div>
 
           <draggable v-model="audioTracksCopy" v-bind="dragOptions" handle=".drag-handle" draggable=".item" tag="div" @start="drag = true" @end="drag = false" @update="draggableUpdate" :disabled="isIos">
-            <transition-group type="transition" :name="!drag ? 'dragtrack' : null">
+            <transition-group type="transition" :name="!drag ? 'dragtrack' : undefined">
               <template v-for="track in audioTracksCopy">
                 <div :key="track.localFileId" class="flex items-center my-1 item">
                   <div v-if="!isIos" class="w-8 h-12 flex items-center justify-center" style="min-width: 32px">
@@ -409,8 +409,8 @@ async function init() {
 
   audioTracksCopy.value = audioTracks.value.map((at: any) => ({ ...at }))
 
-  folderId.value = localLibraryItem.value.folderId
-  folder.value = await db.getLocalFolder(folderId.value)
+  folderId.value = localLibraryItem.value.folderId as string | null
+  folder.value = await db.getLocalFolder(folderId.value || '')
 }
 
 onMounted(() => {

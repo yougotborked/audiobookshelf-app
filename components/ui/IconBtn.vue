@@ -14,7 +14,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   icon?: string
-  type?: string
+  type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
   bgColor?: string
   outlined?: boolean

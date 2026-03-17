@@ -480,13 +480,13 @@ async function toggleFinished() {
     const isFinished = !userIsFinished.value
     const lliId = localLibraryItemId.value
     const leId = localEpisodeId.value
-    const payload = await db.updateLocalMediaProgressFinished({ localLibraryItemId: lliId, localEpisodeId: leId, isFinished })
+    const payload = await db.updateLocalMediaProgressFinished({ localLibraryItemId: lliId, localEpisodeId: leId, isFinished }) as Record<string, unknown> | null
     console.log('toggleFinished payload', JSON.stringify(payload))
 
     if (payload?.error) {
-      toast.error(payload?.error || 'Unknown error')
+      toast.error((payload?.error as string) || 'Unknown error')
     } else {
-      const localMediaProgress = payload.localMediaProgress
+      const localMediaProgress = payload?.localMediaProgress
       console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
       if (localMediaProgress) {
         store.commit('globals/updateLocalMediaProgress', localMediaProgress)
@@ -545,9 +545,9 @@ onMounted(async () => {
   const libItemId = libraryItemIdParam
   const epId = episodeIdParam
 
-  let fetchedLibraryItem = null
-  let fetchedEpisode = null
-  let fetchedLocalEpisode = null
+  let fetchedLibraryItem: any = null
+  let fetchedEpisode: any = null
+  let fetchedLocalEpisode: any = null
 
   if (libItemId.startsWith('local')) {
     fetchedLibraryItem = await db.getLocalLibraryItem(libItemId)
@@ -577,7 +577,7 @@ onMounted(async () => {
     }
 
     if (fetchedLibraryItem) {
-      const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libItemId)
+      const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libItemId) as any
       if (localLibraryItemCheck) {
         console.log('Library item has local library item also', localLibraryItemCheck.id)
         fetchedLibraryItem.localLibraryItem = localLibraryItemCheck

@@ -22,13 +22,13 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   author?: Record<string, unknown>
   width?: number
   height?: number
   sizeMultiplier?: number
   nameBelow?: boolean
-}>()
+}>(), { sizeMultiplier: 1 })
 
 const strings = useStrings()
 

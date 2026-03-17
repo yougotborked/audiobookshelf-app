@@ -20,7 +20,7 @@ import { useStrings } from '~/composables/useStrings'
 import { useRouter } from 'vue-router'
 
 const props = defineProps<{
-  playlist: Record<string, unknown>
+  playlist: { id: string; name?: string; items?: unknown[]; [key: string]: unknown }
   inPlaylist: boolean
 }>()
 const emit = defineEmits<{

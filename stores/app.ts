@@ -166,7 +166,7 @@ export const useAppStore = defineStore('app', {
   actions: {
     async init() {
       const localStore = useLocalStore()
-      const queue = sanitizeQueue(await localStore.getPlayQueue())
+      const queue = sanitizeQueue((await localStore.getPlayQueue()) as QueueItem[])
       let index = await localStore.getQueueIndex()
       let session = await localStore.getPlaybackSession()
 
@@ -198,7 +198,7 @@ export const useAppStore = defineStore('app', {
 
       this.playQueue = sanitizeQueue(queue)
       this.queueIndex = index
-      this.currentPlaybackSession = session
+      this.currentPlaybackSession = session as PlaybackSession | null
 
       const librariesStore = useLibrariesStore()
       const autoUnfinished = this.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
@@ -232,9 +232,9 @@ export const useAppStore = defineStore('app', {
       const userStore = useUserStore()
       if (!userStore.user) return
 
-      const userMediaProgress = userStore.user?.mediaProgress || []
+      const userMediaProgress = (userStore.user?.mediaProgress as Record<string, unknown>[]) || []
       const globalsStore = useGlobalsStore()
-      const localMediaProgress = globalsStore.localMediaProgress || []
+      const localMediaProgress = (globalsStore.localMediaProgress as Record<string, unknown>[]) || []
 
       const progressMap: Record<string, unknown> = {}
       userMediaProgress.forEach((mp: Record<string, unknown>) => {
@@ -249,7 +249,7 @@ export const useAppStore = defineStore('app', {
       const db = useDb()
       const localLibraries = await db.getLocalLibraryItems('podcast')
       const downloadedMap: Record<string, boolean> = {}
-      for (const li of localLibraries) {
+      for (const li of localLibraries as Record<string, unknown>[]) {
         for (const ep of (li.media as Record<string, unknown>)?.episodes as Record<string, unknown>[] || []) {
           const sid = (ep.serverEpisodeId || ep.id) as string
           if (sid) downloadedMap[`${li.libraryItemId}_${sid}`] = true

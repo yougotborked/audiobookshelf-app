@@ -18,7 +18,7 @@ const props = defineProps<{
   to?: string
   variant?: string // filled | filled-tonal | outlined | text | elevated
   color?: string   // backward-compat
-  type?: string
+  type?: 'button' | 'submit' | 'reset'
   paddingX?: number
   paddingY?: number
   small?: boolean

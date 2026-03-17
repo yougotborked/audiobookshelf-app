@@ -68,7 +68,7 @@ async function playClick() {
   appStore.playerStartingPlaybackMediaId = libraryItemId.value
   if (localLibraryItem.value) {
     eventBus.emit('play-item', {
-      libraryItemId: localLibraryItem.value.id,
+      libraryItemId: localLibraryItem.value.id as string,
       serverLibraryItemId: libraryItemId.value
     })
   } else {

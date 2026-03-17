@@ -79,12 +79,12 @@ const search = ref<string | null>(null)
 const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const lastSearch = ref<string | null>(null)
 const isFetching = ref(false)
-const bookResults = ref<unknown[]>([])
-const podcastResults = ref<unknown[]>([])
-const seriesResults = ref<unknown[]>([])
-const authorResults = ref<unknown[]>([])
-const narratorResults = ref<unknown[]>([])
-const tagResults = ref<unknown[]>([])
+const bookResults = ref<Array<{ libraryItem: { id: string; [key: string]: unknown }; [key: string]: unknown }>>([])
+const podcastResults = ref<Array<{ libraryItem: { id: string; [key: string]: unknown }; [key: string]: unknown }>>([])
+const seriesResults = ref<Array<{ series: { id: string; [key: string]: unknown }; books?: unknown[]; [key: string]: unknown }>>([])
+const authorResults = ref<Array<{ id: string; name?: string; [key: string]: unknown }>>([])
+const narratorResults = ref<Array<{ name: string; [key: string]: unknown }>>([])
+const tagResults = ref<Array<{ name: string; [key: string]: unknown }>>([])
 
 const inputRef = ref<{ focus: () => void } | null>(null)
 
@@ -112,7 +112,7 @@ async function runSearch(value: string | null) {
   const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}&limit=5`).catch((error: Error) => {
     console.error('Search error', error)
     return null
-  })) as Record<string, unknown[]> | null
+  })) as Record<string, Record<string, unknown>[]> | null
   if (value !== lastSearch.value) {
     console.log(`runSearch: New search was made for ${lastSearch.value} - results are from ${value}`)
     return
@@ -121,12 +121,12 @@ async function runSearch(value: string | null) {
 
   isFetching.value = false
 
-  bookResults.value = results?.book || []
-  podcastResults.value = results?.podcast || []
-  seriesResults.value = results?.series || []
-  authorResults.value = results?.authors || []
-  narratorResults.value = results?.narrators || []
-  tagResults.value = results?.tags || []
+  bookResults.value = (results?.book || []) as typeof bookResults.value
+  podcastResults.value = (results?.podcast || []) as typeof podcastResults.value
+  seriesResults.value = (results?.series || []) as typeof seriesResults.value
+  authorResults.value = (results?.authors || []) as typeof authorResults.value
+  narratorResults.value = (results?.narrators || []) as typeof narratorResults.value
+  tagResults.value = (results?.tags || []) as typeof tagResults.value
 }
 
 function updateSearch(val: string) {

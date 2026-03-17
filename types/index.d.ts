@@ -6,6 +6,7 @@ export interface PlayItemPayload {
   serverEpisodeId?: string | null
   queue?: QueueItem[]
   queueIndex?: number
+  startTime?: number
 }
 
 export interface QueueItem {
@@ -15,6 +16,8 @@ export interface QueueItem {
   serverEpisodeId?: string | null
   episode?: Record<string, unknown>
   localEpisode?: Record<string, unknown> | null
+  localLibraryItem?: Record<string, unknown>
+  [key: string]: unknown
 }
 
 export interface PlaybackSession {

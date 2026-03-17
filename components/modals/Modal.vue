@@ -6,7 +6,7 @@
       <span class="material-symbols text-2xl">close</span>
     </div>
     <slot name="outer" />
-    <div ref="content" class="relative text-md-on-surface bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle)" v-click-outside="clickBg">
+    <div ref="content" class="relative text-md-on-surface bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="(Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle) as any)" v-click-outside="clickBg">
       <!-- Drag handle -->
       <div class="w-8 h-1 rounded-md-full bg-md-on-surface-variant/40 mx-auto mt-3 mb-1" />
       <slot />
@@ -128,7 +128,7 @@ onMounted(() => {
   content.value!.style.transform = 'translateY(100%)'
   content.value!.style.opacity = '0'
   content.value!.style.transition = 'transform 250ms cubic-bezier(0, 0, 0, 1), opacity 200ms ease'
-  ;(el.value!.style as Record<string, unknown>).opacity = 1
+  el.value!.style.opacity = '1'
   el.value!.remove()
 })
 

@@ -94,8 +94,8 @@ class ServerSocket extends EventEmitter {
     useAppStore().serverReachable = false
   }
 
-  onReconnectFailed(error: Error): void {
-    console.log('[SOCKET] Reconnect failed', error)
+  onReconnectFailed(): void {
+    console.log('[SOCKET] Reconnect failed')
     useAppStore().serverReachable = false
   }
 

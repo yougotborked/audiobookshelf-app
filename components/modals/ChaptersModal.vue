@@ -44,15 +44,23 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useStrings } from '~/composables/useStrings'
 import { useUtils } from '~/composables/useUtils'
 
+interface ChapterItem {
+  id: string | number
+  title?: string
+  start: number
+  end: number
+  [key: string]: unknown
+}
+
 const props = defineProps<{
   modelValue: boolean
-  chapters: Record<string, unknown>[]
-  currentChapter: Record<string, unknown> | null
+  chapters: ChapterItem[]
+  currentChapter: ChapterItem | null
   playbackRate: number
 }>()
 const emit = defineEmits<{
   'update:modelValue': [val: boolean]
-  select: [chapter: Record<string, unknown>]
+  select: [chapter: ChapterItem]
 }>()
 
 const strings = useStrings()
@@ -79,7 +87,7 @@ watch(() => props.modelValue, (newVal) => {
   }
 })
 
-function clickedOption(chapter: Record<string, unknown>) {
+function clickedOption(chapter: ChapterItem) {
   emit('select', chapter)
 }
 

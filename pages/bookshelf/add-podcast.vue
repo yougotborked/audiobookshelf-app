@@ -99,7 +99,8 @@ async function checkRSSFeed(rssFeed: string) {
   processing.value = false
   if (!payload) return
 
-  selectedPodcastFeed.value = payload.podcast
+  const typedPayload = payload as Record<string, unknown>
+  selectedPodcastFeed.value = typedPayload.podcast
   selectedPodcast.value = null
   showSelectedFeed.value = true
 }
@@ -112,7 +113,7 @@ async function submitSearch(term: string) {
     return []
   })
   console.log('Got results', res)
-  results.value = res
+  results.value = res as any[]
   termSearched.value = term
   processing.value = false
 }
@@ -132,10 +133,11 @@ async function selectPodcast(podcast: any) {
   processing.value = false
   if (!payload) return
 
-  selectedPodcastFeed.value = payload.podcast
+  const typedPayload2 = payload as Record<string, unknown>
+  selectedPodcastFeed.value = typedPayload2.podcast
   selectedPodcast.value = podcast
   showSelectedFeed.value = true
-  console.log('Got podcast feed', payload.podcast)
+  console.log('Got podcast feed', typedPayload2.podcast)
 }
 
 function libraryChanged() {

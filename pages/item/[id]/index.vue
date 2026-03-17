@@ -21,7 +21,7 @@
     <div class="relative">
       <!-- background gradient -->
       <div id="item-page-bg-gradient" class="absolute top-0 left-0 w-full pointer-events-none z-0" :style="{ opacity: coverRgb ? 1 : 0 }">
-        <div class="w-full h-full" :style="{ backgroundColor: coverRgb }" />
+        <div class="w-full h-full" :style="({ backgroundColor: coverRgb } as any)" />
         <div class="w-full h-full absolute top-0 left-0" style="background: var(--gradient-item-page)" />
       </div>
 
@@ -44,7 +44,7 @@
             <p class="text-sm">{{ $strings.MessageMediaLinkedToADifferentUser }}</p>
           </div>
           <div v-else-if="currentServerConnectionConfigId && !isLocalMatchingConnectionConfig" class="w-full rounded-md bg-warning/10 border border-warning p-4">
-            <p class="text-sm">Media is linked to a different server connection config. Downloaded User Id: {{ localLibraryItem.serverUserId }}. Downloaded Server Address: {{ localLibraryItem.serverAddress }}. Currently connected User Id: {{ user.id }}. Currently connected server address: {{ currentServerAddress }}.</p>
+            <p class="text-sm">Media is linked to a different server connection config. Downloaded User Id: {{ localLibraryItem.serverUserId }}. Downloaded Server Address: {{ localLibraryItem.serverAddress }}. Currently connected User Id: {{ user?.id }}. Currently connected server address: {{ currentServerAddress }}.</p>
           </div>
         </div>
 
@@ -90,7 +90,7 @@
           <div v-else-if="bookAuthors?.length" class="text-sm">
             <template v-for="(author, index) in bookAuthors">
               <nuxt-link :key="author.id" :to="`/bookshelf/library?filter=authors.${encode(author.id)}`" class="underline whitespace-nowrap">{{ author.name }}</nuxt-link
-              ><span :key="`${author.id}-comma`" v-if="index < bookAuthors.length - 1">, </span>
+              ><span :key="`${author.id}-comma`" v-if="(index as number) < bookAuthors.length - 1">, </span>
             </template>
           </div>
 
@@ -101,7 +101,7 @@
           <div v-if="series?.length" class="text-sm">
             <template v-for="(series, index) in seriesList">
               <nuxt-link :key="series.id" :to="`/bookshelf/series/${series.id}`" class="underline whitespace-nowrap">{{ series.text }}</nuxt-link
-              ><span :key="`${series.id}-comma`" v-if="index < seriesList.length - 1">, </span>
+              ><span :key="`${series.id}-comma`" v-if="(index as number) < seriesList.length - 1">, </span>
             </template>
           </div>
 
@@ -112,7 +112,7 @@
           <div v-if="narrators?.length" class="text-sm">
             <template v-for="(narrator, index) in narrators">
               <nuxt-link :key="narrator" :to="`/bookshelf/library?filter=narrators.${encode(narrator)}`" class="underline whitespace-nowrap">{{ narrator }}</nuxt-link
-              ><span :key="index" v-if="index < narrators.length - 1">, </span>
+              ><span :key="index" v-if="(index as number) < narrators.length - 1">, </span>
             </template>
           </div>
 
@@ -120,7 +120,7 @@
           <div v-if="genres.length" class="text-sm">
             <template v-for="(genre, index) in genres">
               <nuxt-link :key="genre" :to="`/bookshelf/library?filter=genres.${encode(genre)}`" class="underline whitespace-nowrap">{{ genre }}</nuxt-link
-              ><span :key="index" v-if="index < genres.length - 1">, </span>
+              ><span :key="index" v-if="(index as number) < genres.length - 1">, </span>
             </template>
           </div>
 
@@ -128,7 +128,7 @@
           <div v-if="tags.length" class="text-sm">
             <template v-for="(tag, index) in tags">
               <nuxt-link :key="tag" :to="`/bookshelf/library?filter=tags.${encode(tag)}`" class="underline whitespace-nowrap">{{ tag }}</nuxt-link
-              ><span :key="index" v-if="index < tags.length - 1">, </span>
+              ><span :key="index" v-if="(index as number) < tags.length - 1">, </span>
             </template>
           </div>
 
@@ -372,7 +372,7 @@ function clickMissingButton() {
   Dialog.alert({
     title: (useNuxtApp() as any).$strings.LabelMissing,
     message: (useNuxtApp() as any).$strings.MessageItemMissing,
-    cancelText: (useNuxtApp() as any).$strings.ButtonOk
+    buttonTitle: (useNuxtApp() as any).$strings.ButtonOk
   })
 }
 
@@ -476,7 +476,7 @@ async function play(startTime: number | null = null) {
     }
 
     store.commit('setPlayerIsStartingPlayback', playLibraryItemId)
-    eventBus.emit('play-item', { libraryItemId: playLibraryItemId, serverLibraryItemId: serverLibraryItemId.value, startTime })
+    eventBus.emit('play-item', { libraryItemId: playLibraryItemId, serverLibraryItemId: serverLibraryItemId.value, startTime: startTime ?? undefined })
   }
 }
 
@@ -666,7 +666,7 @@ async function loadServerLibraryItem() {
     })
 
     if (fetchedItem) {
-      await localStore.setCachedLibraryItem(fetchedItem)
+      await localStore.setCachedLibraryItem(fetchedItem as Record<string, unknown>)
     }
   }
 
@@ -678,11 +678,11 @@ async function loadServerLibraryItem() {
   }
 
   if (!fetchedItem && route.query.localLibraryItemId) {
-    return router.replace(`/item/${route.query.localLibraryItemId}?noredirect=1`)
+    return router.replace(`/item/${route.query.localLibraryItemId as string}?noredirect=1`)
   }
 
   if (!fetchedItem) {
-    const fallbackLocal = await db.getLocalLibraryItemByLId(libraryItemId)
+    const fallbackLocal = await db.getLocalLibraryItemByLId(libraryItemId) as any
     if (fallbackLocal) {
       fetchedItem = fallbackLocal
       loadedFromCache.value = true
@@ -694,7 +694,7 @@ async function loadServerLibraryItem() {
     return router.replace('/bookshelf')
   }
 
-  const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libraryItemId)
+  const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libraryItemId) as any
   if (localLibraryItemCheck) {
     console.log('Library item has local library item also', localLibraryItemCheck.id)
     fetchedItem.localLibraryItem = localLibraryItemCheck
@@ -709,7 +709,7 @@ onMounted(async () => {
   const libItemId = libraryItemId
 
   if (libItemId.startsWith('local')) {
-    const localItem = await db.getLocalLibraryItem(libItemId)
+    const localItem = await db.getLocalLibraryItem(libItemId) as any
     if (!localItem) {
       await navigateTo('/?error=Failed to get downloaded library item')
       return
@@ -728,7 +728,7 @@ onMounted(async () => {
     }
 
     if (localItem && !localItem.isLocal) {
-      const localLi = await db.getLocalLibraryItemByLId(localItem.id || libItemId)
+      const localLi = await db.getLocalLibraryItemByLId(localItem.id || libItemId) as any
       if (localLi) {
         localItem.localLibraryItem = localLi
       }
@@ -736,11 +736,11 @@ onMounted(async () => {
 
     libraryItem.value = localItem
   } else if (!store.state.user.serverConnectionConfig) {
-    let cachedItem = await localStore.getCachedLibraryItem(libItemId)
+    let cachedItem = await localStore.getCachedLibraryItem(libItemId) as any
     if (cachedItem) {
       loadedFromCache.value = true
     } else {
-      const fallbackLocal = await db.getLocalLibraryItemByLId(libItemId)
+      const fallbackLocal = await db.getLocalLibraryItemByLId(libItemId) as any
       if (fallbackLocal) {
         cachedItem = fallbackLocal
         loadedFromCache.value = true
@@ -751,7 +751,7 @@ onMounted(async () => {
     }
 
     if (cachedItem && !cachedItem.isLocal) {
-      const localLi = await db.getLocalLibraryItemByLId(cachedItem.id || libItemId)
+      const localLi = await db.getLocalLibraryItemByLId(cachedItem.id || libItemId) as any
       if (localLi) {
         cachedItem.localLibraryItem = localLi
       }

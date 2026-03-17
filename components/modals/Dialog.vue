@@ -59,12 +59,9 @@ const itemsToShow = computed((): DialogItem[] => {
   })
 })
 
-watch(show, {
-  immediate: true,
-  handler(newVal) {
-    if (newVal) nextTick(init)
-  }
-})
+watch(show, (newVal: boolean) => {
+  if (newVal) nextTick(init)
+}, { immediate: true })
 
 function clickedOption(action: string) {
   emit('action', action)

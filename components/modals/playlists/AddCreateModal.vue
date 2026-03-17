@@ -84,12 +84,12 @@ const selectedPlaylistItems = computed(() => globalsStore.selectedPlaylistItems 
 const networkConnected = computed(() => appStore.networkConnected)
 
 const sortedPlaylists = computed(() => {
-  return playlists.value
+  return (playlists.value
     .map((playlist) => {
       const includesItem = !(selectedPlaylistItems.value as Record<string, unknown>[]).some((item) => !checkIsItemInPlaylist(playlist, item))
       return { isItemIncluded: includesItem, ...playlist }
     })
-    .sort((a, b) => (a.isItemIncluded ? -1 : 1))
+    .sort((a, b) => (a.isItemIncluded ? -1 : 1))) as Array<{ id: string; isItemIncluded: boolean; [key: string]: unknown }>
 })
 
 watch(show, (newVal) => {

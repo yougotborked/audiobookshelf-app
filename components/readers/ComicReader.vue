@@ -6,7 +6,7 @@
           <div v-for="key in comicMetadataKeys" :key="key" class="w-full px-2 py-1">
             <p class="text-xs">
               <strong>{{ key }}</strong>
-              : {{ comicMetadata[key] }}
+              : {{ comicMetadata?.[key] }}
             </p>
           </div>
         </div>
@@ -35,7 +35,9 @@
 <script setup lang="ts">
 import Path from 'path'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+// @ts-ignore
 import { Archive } from 'libarchive.js/main.js'
+// @ts-ignore
 import { CompressedFile } from 'libarchive.js/src/compressed-file'
 
 Archive.init({
@@ -94,7 +96,7 @@ const canGoNext = computed(() => page.value < numPages.value)
 const canGoPrev = computed(() => page.value > 1)
 const userItemProgress = computed(() => props.isLocal ? localItemProgress.value : serverItemProgress.value)
 const localItemProgress = computed(() => globalsStore.getLocalMediaProgressById(localLibraryItemId.value))
-const serverItemProgress = computed(() => userStore.getUserMediaProgress(serverLibraryItemId.value))
+const serverItemProgress = computed(() => userStore.getUserMediaProgress(serverLibraryItemId.value || ''))
 const savedPage = computed(() => {
   if (!props.keepProgress) return 0
   if (!userItemProgress.value?.ebookLocation || isNaN(userItemProgress.value.ebookLocation as number)) return 0
@@ -121,12 +123,9 @@ const pageItems = computed(() => {
 })
 const isPlayerOpen = computed(() => appStore.getIsPlayerOpen)
 
-watch(() => props.url, {
-  immediate: true,
-  handler() {
-    extract()
-  }
-})
+watch(() => props.url, () => {
+  extract()
+}, { immediate: true })
 
 async function updateProgress() {
   if (!props.keepProgress) return
@@ -228,7 +227,7 @@ async function extract() {
   loading.value = true
 
   // TODO: Handle JWT auth refresh
-  const buff = await (window as Record<string, unknown>).$axios ? (window as Record<string, unknown>).$axios : null
+  const buff = await (window as unknown as Record<string, unknown>).$axios ? (window as unknown as Record<string, unknown>).$axios : null
   // Use fetch directly as $axios is not available in script setup
   const response = await fetch(props.url, {
     headers: {

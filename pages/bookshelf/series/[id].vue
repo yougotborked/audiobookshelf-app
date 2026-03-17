@@ -122,15 +122,17 @@ async function fetchSeriesEntities(page: number) {
     return null
   })
 
-  if (payload && payload.results) {
-    console.log('Received payload', payload)
-    books.value = payload.total
+  const typedPayload = payload as Record<string, unknown> | null
+  if (typedPayload && typedPayload.results) {
+    console.log('Received payload', typedPayload)
+    books.value = typedPayload.total as number
 
-    for (let i = 0; i < payload.results.length; i++) {
-      if (!(await db.getLocalLibraryItem(`local_${payload.results[i].id}`))) {
-        missingFiles.value += payload.results[i].numFiles
-        missingFilesSize.value += payload.results[i].size
-        libraryIds.value.push(payload.results[i].id)
+    const results = typedPayload.results as Record<string, unknown>[]
+    for (let i = 0; i < results.length; i++) {
+      if (!(await db.getLocalLibraryItem(`local_${results[i].id}`))) {
+        missingFiles.value += results[i].numFiles as number
+        missingFilesSize.value += results[i].size as number
+        libraryIds.value.push(results[i].id as string)
       }
     }
   }
@@ -162,7 +164,7 @@ async function download(selectedLocalFolder: any = null) {
     } else if (foldersWithMediaType.length === 1 && internalStorageFolder) {
       localFolder = internalStorageFolder
     } else {
-      globalsStore.showSelectLocalFolderModal({
+      globalsStore.showSelectLocalFolderModalAction({
         mediaType: mediaType.value,
         callback: (folder: any) => {
           download(folder)

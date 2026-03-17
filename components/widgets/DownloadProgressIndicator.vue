@@ -87,9 +87,12 @@ function onDownloadItemPartUpdate(itemPart: Record<string, unknown>) {
 }
 
 onMounted(async () => {
-  downloadItemListener = await AbsDownloader.addListener('onDownloadItem', (data) => onDownloadItem(data as Record<string, unknown>))
-  itemPartUpdateListener = await AbsDownloader.addListener('onDownloadItemPartUpdate', (data) => onDownloadItemPartUpdate(data as Record<string, unknown>))
-  completeListener = await AbsDownloader.addListener('onItemDownloadComplete', (data) => onItemDownloadComplete(data as Record<string, unknown>))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  downloadItemListener = await AbsDownloader.addListener('onDownloadItem', (data: any) => onDownloadItem(data as Record<string, unknown>))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  itemPartUpdateListener = await AbsDownloader.addListener('onDownloadItemPartUpdate', (data: any) => onDownloadItemPartUpdate(data as Record<string, unknown>))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  completeListener = await AbsDownloader.addListener('onItemDownloadComplete', (data: any) => onItemDownloadComplete(data as Record<string, unknown>))
 })
 
 onBeforeUnmount(() => {

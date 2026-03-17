@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 const props = defineProps<{
-  tracks: Record<string, unknown>[]
+  tracks: Array<{ index?: string | number; [key: string]: unknown }>
   libraryItemId?: string
 }>()
 

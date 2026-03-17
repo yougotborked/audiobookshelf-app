@@ -175,12 +175,14 @@ export function useUtils() {
 
   const setOrientationLock = (orientationLockSetting: string | undefined): void => {
     if (!window.screen?.orientation) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orientation = window.screen.orientation as any
     if (orientationLockSetting === 'PORTRAIT') {
-      window.screen.orientation.lock?.('portrait').catch(console.error)
+      orientation.lock?.('portrait')?.catch(console.error)
     } else if (orientationLockSetting === 'LANDSCAPE') {
-      window.screen.orientation.lock?.('landscape').catch(console.error)
+      orientation.lock?.('landscape')?.catch(console.error)
     } else {
-      window.screen.orientation.unlock?.()
+      orientation.unlock?.()
     }
   }
 

@@ -25,22 +25,22 @@ async function getComponentClass(entityName: string, showBookshelfListView: bool
 }
 
 export interface BookshelfCardsOptions {
-  entityName: Ref<string>
-  entitiesPerShelf: Ref<number>
-  entityWidth: Ref<number>
-  entityHeight: Ref<number>
-  totalEntityCardWidth: Ref<number>
-  bookshelfMarginLeft: Ref<number>
-  bookCoverAspectRatio: Ref<number>
-  altViewEnabled: Ref<boolean>
-  showBookshelfListView: Ref<boolean>
-  isBookEntity: Ref<boolean>
-  entities: Ref<Record<string, unknown>[]>
-  localLibraryItems: Ref<Record<string, unknown>[]>
-  localLibraryItemMap: Ref<Map<string, Record<string, unknown>> | null>
-  filterBy: Ref<string>
-  orderBy: Ref<string>
-  sortingIgnorePrefix: Ref<boolean>
+  entityName: { value: string }
+  entitiesPerShelf: { value: number }
+  entityWidth: { value: number }
+  entityHeight: { value: number }
+  totalEntityCardWidth: { value: number }
+  bookshelfMarginLeft: { value: number }
+  bookCoverAspectRatio: { value: number }
+  altViewEnabled: { value: boolean | undefined }
+  showBookshelfListView: { value: boolean }
+  isBookEntity: { value: boolean }
+  entities: { value: Record<string, unknown>[] }
+  localLibraryItems: { value: Record<string, unknown>[] }
+  localLibraryItemMap: { value: Map<string, Record<string, unknown>> | null }
+  filterBy: { value: string | null | unknown }
+  orderBy: { value: string | null | unknown }
+  sortingIgnorePrefix: { value: boolean | null | unknown }
 }
 
 export function useBookshelfCards(options: BookshelfCardsOptions) {

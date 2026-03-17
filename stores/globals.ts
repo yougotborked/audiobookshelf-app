@@ -134,7 +134,7 @@ export const useGlobalsStore = defineStore('globals', {
     async loadLocalMediaProgress() {
       const db = useDb()
       const mediaProgress = await db.getAllLocalMediaProgress()
-      this.localMediaProgress = mediaProgress
+      this.localMediaProgress = mediaProgress as LocalMediaProgress[]
     },
 
     addUpdateItemDownload(downloadItem: DownloadItem) {

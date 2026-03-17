@@ -19,15 +19,21 @@
 <script setup lang="ts">
 import { useUtils } from '~/composables/useUtils'
 
+interface Bookmark {
+  time: number
+  title?: string
+  [key: string]: unknown
+}
+
 const props = defineProps<{
-  bookmark: Record<string, unknown>
+  bookmark: Bookmark
   highlight: boolean
   playbackRate: number
 }>()
 const emit = defineEmits<{
-  click: [bookmark: Record<string, unknown>]
-  delete: [bookmark: Record<string, unknown>]
-  edit: [bookmark: Record<string, unknown>]
+  click: [bookmark: Bookmark]
+  delete: [bookmark: Bookmark]
+  edit: [bookmark: Bookmark]
 }>()
 
 const utils = useUtils()

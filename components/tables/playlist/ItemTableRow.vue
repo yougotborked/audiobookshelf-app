@@ -141,8 +141,8 @@ async function playClick() {
     appStore.playerIsStartingPlayback = true
     appStore.playerStartingPlaybackMediaId = mediaId
     eventBus.emit('play-item', {
-      libraryItemId: localLibraryItem.value.id,
-      episodeId: localEpisode.value?.id,
+      libraryItemId: localLibraryItem.value.id as string,
+      episodeId: (localEpisode.value?.id as string | undefined) ?? null,
       serverLibraryItemId: libraryItemId.value,
       serverEpisodeId: episodeId.value
     })

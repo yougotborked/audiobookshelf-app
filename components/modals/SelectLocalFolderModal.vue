@@ -33,7 +33,7 @@ const strings = useStrings()
 const db = useDb()
 const globalsStore = useGlobalsStore()
 
-const localFolders = ref<Record<string, unknown>[]>([])
+const localFolders = ref<{ id: string; name?: string; [key: string]: unknown }[]>([])
 
 const show = computed({
   get() { return globalsStore.showSelectLocalFolderModal },
@@ -69,6 +69,6 @@ async function init() {
       mediaType: mediaType.value
     })
   }
-  localFolders.value = (folders as Record<string, unknown>[]).filter((lf) => lf.mediaType == mediaType.value)
+  localFolders.value = (folders as { id: string; name?: string; [key: string]: unknown }[]).filter((lf) => lf.mediaType == mediaType.value)
 }
 </script>

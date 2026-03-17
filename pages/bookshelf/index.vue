@@ -65,7 +65,7 @@ const networkConnected = computed(() => appStore.networkConnected)
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const currentLibraryMediaType = computed(() => librariesStore.getCurrentLibraryMediaType)
 const currentLibraryIsPodcast = computed(() => currentLibraryMediaType.value === 'podcast')
-const altViewEnabled = computed(() => librariesStore.getAltViewEnabled)
+const altViewEnabled = computed(() => appStore.getAltViewEnabled)
 const attemptingConnection = computed(() => appStore.attemptingConnection)
 
 watch(networkConnected, (newVal) => {
@@ -226,7 +226,7 @@ async function fetchCategories() {
   })
 
   const types = [...new Set(localLibraryItems.value.map((li: any) => li.mediaType))]
-  librariesStore.setOfflineMediaTypes(types)
+  librariesStore.offlineMediaTypes = types
   const localCategories = getLocalMediaItemCategories()
   shelves.value = localCategories
   console.log('[categories] Local shelves set', shelves.value.length, lastLocalFetch.value)
@@ -235,7 +235,7 @@ async function fetchCategories() {
     const categories = await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/personalized?minified=1&include=rssfeed,numEpisodesIncomplete`, { connectTimeout: 10000 }).catch((error: any) => {
       console.error('[categories] Failed to fetch categories', error)
       return []
-    })
+    }) as any[]
     if (!categories.length) {
       console.warn(`[categories] Failed to get server categories so using local categories`)
       lastServerFetch.value = 0

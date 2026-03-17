@@ -21,7 +21,7 @@ import {
   buildUnfinishedAutoPlaylist,
   collectDownloadedEpisodeKeys,
   toCacheablePlaylist
-} from '~/mixins/autoPlaylistHelpers'
+} from '~/composables/useAutoPlaylist'
 
 const strings = useStrings()
 const db = useDb()
@@ -44,8 +44,8 @@ if (enabled) {
   const cached = await localStore.getCachedPlaylist('unfinished')
   if (cached) {
     autoPlaylist.value = {
-      ...cached,
-      totalItems: cached.totalItems || (cached.items ? cached.items.length : 0)
+      ...(cached as any),
+      totalItems: (cached.totalItems as number) || ((cached.items as any[])?.length ?? 0)
     }
   }
 }
@@ -70,12 +70,7 @@ watch(autoCacheUnplayedEpisodes, (newVal) => {
 
 async function fetchAutoPlaylist() {
   try {
-    const { items, downloadedEpisodeKeys: keys, totalItems } = await buildUnfinishedAutoPlaylist({
-      db,
-      localStore,
-      nativeHttp,
-      networkConnected: networkConnected.value
-    })
+    const { items, downloadedEpisodeKeys: keys, totalItems } = await buildUnfinishedAutoPlaylist(networkConnected.value)
 
     downloadedEpisodeKeys.value = keys
 
@@ -99,8 +94,8 @@ async function ensureDownloadedKeySet(): Promise<Set<string>> {
   }
 
   const localLibraries = await db.getLocalLibraryItems('podcast')
-  downloadedEpisodeKeys.value = collectDownloadedEpisodeKeys(localLibraries)
-  return downloadedEpisodeKeys.value
+  downloadedEpisodeKeys.value = collectDownloadedEpisodeKeys(localLibraries as Record<string, unknown>[])
+  return downloadedEpisodeKeys.value!
 }
 
 async function checkAutoDownload() {

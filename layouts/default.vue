@@ -125,7 +125,7 @@ async function attemptConnection() {
   const nativeHttpOptions = {
     headers: { Authorization: `Bearer ${serverConfig.token}` },
     connectTimeout: 6000,
-    serverConnectionConfig: serverConfig
+    serverConnectionConfig: serverConfig as { id: string; address: string; token?: string; refreshToken?: string }
   }
   const authRes = await useNativeHttp().post(`${serverConfig.address}/api/authorize`, null, nativeHttpOptions).catch(() => false) as Record<string, unknown> | false
 
@@ -324,8 +324,8 @@ async function retryConnectionIfNeeded() {
   }
 
   const socket = useSocket()
-  const socketIsConnected = (socket as Record<string, unknown>)?.socket
-    ? ((socket as Record<string, unknown>).socket as Record<string, unknown>)?.connected
+  const socketIsConnected = (socket as unknown as Record<string, unknown>)?.socket
+    ? ((socket as unknown as Record<string, unknown>).socket as Record<string, unknown>)?.connected
     : false
 
   if (!socketIsConnected) {

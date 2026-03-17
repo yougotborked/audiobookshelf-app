@@ -17,7 +17,7 @@
               <p v-if="(episode as any).episode" class="font-semibold text-gray-200 text-xs">#{{ (episode as any).episode }}</p>
               <p class="break-words mb-1 text-sm">{{ (episode as any).title }}</p>
               <p v-if="(episode as any).subtitle" class="break-words mb-1 text-xs text-gray-300 episode-subtitle">{{ (episode as any).subtitle }}</p>
-              <p class="text-xxs text-gray-300">{{ utils.dateDistanceFromNow((episode as any).publishedAt) ? strings.getString?.('LabelPublishedDate', [(episode as any).publishedAt ? utils.dateDistanceFromNow((episode as any).publishedAt) : strings.LabelUnknown]) : '' }}</p>
+              <p class="text-xxs text-gray-300">{{ utils.dateDistanceFromNow((episode as any).publishedAt) ? getString('LabelPublishedDate', [(episode as any).publishedAt ? utils.dateDistanceFromNow((episode as any).publishedAt) : strings.LabelUnknown]) : '' }}</p>
             </div>
           </div>
         </template>
@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useStrings } from '~/composables/useStrings'
+import { useStrings, getString } from '~/composables/useStrings'
 import { useNativeHttp } from '~/composables/useNativeHttp'
 import { useToast } from '~/composables/useToast'
 import { useUtils } from '~/composables/useUtils'
@@ -74,12 +74,9 @@ const itemEpisodeMap = computed(() => {
   return map
 })
 
-watch(show, {
-  immediate: true,
-  handler(newVal) {
-    if (newVal) init()
-  }
-})
+watch(show, (newVal: boolean) => {
+  if (newVal) init()
+}, { immediate: true })
 
 function downloadEpisodes() {
   const episodesToDownload = episodesSelected.value.map((episodeIndex) => props.episodes[Number(episodeIndex)])

@@ -42,7 +42,7 @@ const sizeMultiplier = computed(() => {
   return (props.width || 0) / 240
 })
 const hasOwnCover = computed(() => false)
-const fullCoverUrl = computed(() => null as string | null)
+const fullCoverUrl = computed(() => undefined as string | undefined)
 const books = computed(() => props.bookItems || [])
 
 // Methods

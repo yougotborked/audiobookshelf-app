@@ -1,7 +1,7 @@
 <template>
   <button
     role="switch"
-    :aria-checked="String(toggleValue)"
+    :aria-checked="toggleValue"
     :disabled="disabled"
     :class="[
       'relative inline-flex shrink-0 cursor-pointer rounded-md-full transition-md-standard',

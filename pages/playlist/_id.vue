@@ -58,7 +58,7 @@ import {
   buildUnfinishedAutoPlaylist,
   collectDownloadedEpisodeKeys,
   toCacheablePlaylist
-} from '@/mixins/autoPlaylistHelpers'
+} from '@/composables/useAutoPlaylist'
 const MAX_QUEUE_ITEMS = 400
 const MAX_LOG_LENGTH = 2000
 
@@ -420,13 +420,7 @@ export default {
             totalItems: 0
           }
         } else {
-          const { items, downloadedEpisodeKeys, totalItems } = await buildUnfinishedAutoPlaylist({
-            store: this.$store,
-            db: this.$db,
-            localStore: this.$localStore,
-            nativeHttp: this.$nativeHttp,
-            networkConnected: this.networkConnected
-          })
+          const { items, downloadedEpisodeKeys, totalItems } = await buildUnfinishedAutoPlaylist(this.networkConnected)
 
           playlist = {
             id: 'unfinished',

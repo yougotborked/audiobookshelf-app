@@ -94,17 +94,18 @@ async function loadRecentEpisodes(page = 0) {
       return
     }
 
-    const episodePayload = await nativeHttp.get(
+    const episodePayloadRaw = await nativeHttp.get(
       `/api/libraries/${currentLibraryId.value}/recent-episodes?limit=200&page=${page}`
     )
 
-    if (!episodePayload) {
+    if (!episodePayloadRaw) {
       throw new Error('Empty response payload')
     }
 
+    const episodePayload = episodePayloadRaw as Record<string, unknown>
     console.log('Episodes', episodePayload)
-    recentEpisodes.value = episodePayload.episodes || []
-    totalEpisodes.value = episodePayload.total ?? recentEpisodes.value.length
+    recentEpisodes.value = (episodePayload.episodes as any[]) || []
+    totalEpisodes.value = (episodePayload.total as number) ?? recentEpisodes.value.length
     currentPage.value = page
     offlineToastShown.value = false
     localStore.setCachedLatestEpisodes(currentLibraryId.value, recentEpisodes.value)
