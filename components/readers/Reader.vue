@@ -68,55 +68,55 @@
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelTheme }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.theme" name="theme" :items="themeItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.theme" name="theme" :items="themeItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelFontFamily }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.font" name="font" :items="fontItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.font" name="font" :items="fontItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelFontScale }}</p>
               </div>
-              <ui-range-input v-model="ereaderSettings.fontScale" :min="5" :max="300" :step="5" input-width="180px" @input="settingsUpdated" />
+              <ui-range-input v-model="ereaderSettings.fontScale" :min="5" :max="300" :step="5" input-width="180px" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelLineSpacing }}</p>
               </div>
-              <ui-range-input v-model="ereaderSettings.lineSpacing" :min="100" :max="300" :step="5" input-width="180px" @input="settingsUpdated" />
+              <ui-range-input v-model="ereaderSettings.lineSpacing" :min="100" :max="300" :step="5" input-width="180px" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelFontBoldness }}</p>
               </div>
-              <ui-range-input v-model="ereaderSettings.textStroke" :min="0" :max="300" :step="5" input-width="180px" @input="settingsUpdated" />
+              <ui-range-input v-model="ereaderSettings.textStroke" :min="0" :max="300" :step="5" input-width="180px" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelLayout }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.spread" name="spread" :items="spreadItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.spread" name="spread" :items="spreadItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelNavigateWithVolume }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolume" name="navigate-volume" :items="navigateWithVolumeItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolume" name="navigate-volume" :items="navigateWithVolumeItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelNavigateWithVolumeWhilePlaying }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolumeWhilePlaying" name="navigate-volume-playing" :items="onOffToggleButtonItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolumeWhilePlaying" name="navigate-volume-playing" :items="onOffToggleButtonItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelKeepScreenAwake }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.keepScreenAwake" name="keep-awake" :items="onOffToggleButtonItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.keepScreenAwake" name="keep-awake" :items="onOffToggleButtonItems" @update:modelValue="settingsUpdated" />
             </div>
           </div>
         </div>

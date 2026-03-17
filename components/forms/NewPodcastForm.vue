@@ -2,7 +2,7 @@
   <div class="w-full px-2">
     <img v-if="podcast.imageUrl" :src="podcast.imageUrl" class="h-36 w-36 object-contain mx-auto mb-2" />
 
-    <ui-text-input-with-label v-model="podcast.title" :label="strings.LabelTitle" class="mb-2 text-sm" @input="titleUpdated" />
+    <ui-text-input-with-label v-model="podcast.title" :label="strings.LabelTitle" class="mb-2 text-sm" @update:modelValue="titleUpdated" />
 
     <ui-text-input-with-label v-model="podcast.author" :label="strings.LabelAuthor" class="mb-2 text-sm" />
 
@@ -12,7 +12,7 @@
 
     <ui-textarea-with-label v-model="podcast.description" :label="strings.LabelDescription" :rows="3" class="mb-2 text-sm" />
 
-    <ui-dropdown v-model="selectedFolderId" :items="folderItems" :disabled="processing" :label="strings.LabelFolder" class="mb-2 text-sm" @input="folderUpdated" />
+    <ui-dropdown v-model="selectedFolderId" :items="folderItems" :disabled="processing" :label="strings.LabelFolder" class="mb-2 text-sm" @update:modelValue="folderUpdated" />
 
     <ui-text-input-with-label v-model="fullPath" :label="strings.LabelPath" input-class="h-10" readonly class="mb-2 text-sm" />
 
