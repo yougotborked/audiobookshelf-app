@@ -7,7 +7,7 @@
           {{ bookmark.title }}
         </p>
       </div>
-      <p class="text-sm font-mono text-md-on-surface-variant flex items-center"><span class="material-symbols text-base pl-px pr-1">schedule</span>{{ $secondsToTimestamp(bookmark.time / playbackRate) }}</p>
+      <p class="text-sm font-mono text-md-on-surface-variant flex items-center"><span class="material-symbols text-base pl-px pr-1">schedule</span>{{ utils.secondsToTimestamp(bookmark.time / playbackRate) }}</p>
     </div>
     <div class="h-full flex items-center justify-end transform w-16 pr-2" @click.stop>
       <span class="material-symbols text-2xl mr-2 text-md-on-surface hover:text-yellow-400" @click.stop="editClick">edit</span>
@@ -16,30 +16,31 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    bookmark: {
-      type: Object,
-      default: () => {}
-    },
-    highlight: Boolean,
-    playbackRate: Number
-  },
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {
-    click() {
-      this.$emit('click', this.bookmark)
-    },
-    deleteClick() {
-      this.$emit('delete', this.bookmark)
-    },
-    editClick() {
-      this.$emit('edit', this.bookmark)
-    }
-  }
+<script setup lang="ts">
+import { useUtils } from '~/composables/useUtils'
+
+const props = defineProps<{
+  bookmark: Record<string, unknown>
+  highlight: boolean
+  playbackRate: number
+}>()
+const emit = defineEmits<{
+  click: [bookmark: Record<string, unknown>]
+  delete: [bookmark: Record<string, unknown>]
+  edit: [bookmark: Record<string, unknown>]
+}>()
+
+const utils = useUtils()
+
+function click() {
+  emit('click', props.bookmark)
+}
+
+function deleteClick() {
+  emit('delete', props.bookmark)
+}
+
+function editClick() {
+  emit('edit', props.bookmark)
 }
 </script>

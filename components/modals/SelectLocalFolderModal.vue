@@ -2,7 +2,7 @@
   <modals-modal v-model="show" :width="300" height="100%">
     <template #outer>
       <div class="absolute top-10 left-4 z-40" style="max-width: 80%">
-        <p class="text-white text-lg truncate">{{ $strings.HeaderSelectDownloadLocation }}</p>
+        <p class="text-white text-lg truncate">{{ strings.HeaderSelectDownloadLocation }}</p>
       </div>
     </template>
 
@@ -23,61 +23,52 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      localFolders: []
-    }
-  },
-  watch: {
-    show(newVal) {
-      if (newVal) {
-        this.$nextTick(this.init)
-      }
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.$store.state.globals.showSelectLocalFolderModal
-      },
-      set(val) {
-        this.$store.commit('globals/setShowSelectLocalFolderModal', val)
-      }
-    },
-    modalData() {
-      return this.$store.state.globals.localFolderSelectData || {}
-    },
-    callback() {
-      return this.modalData.callback
-    },
-    mediaType() {
-      return this.modalData.mediaType
-    }
-  },
-  methods: {
-    clickedOption(folder) {
-      this.show = false
-      if (!this.callback) {
-        console.error('Callback not set')
-        return
-      }
-      this.callback(folder)
-    },
-    async init() {
-      const localFolders = (await this.$db.getLocalFolders()) || []
+<script setup lang="ts">
+import { ref, computed, watch, nextTick } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+import { useDb } from '~/composables/useDb'
+import { useGlobalsStore } from '~/stores/globals'
 
-      if (!localFolders.some((lf) => lf.id === `internal-${this.mediaType}`)) {
-        localFolders.push({
-          id: `internal-${this.mediaType}`,
-          name: this.$strings.LabelInternalAppStorage,
-          mediaType: this.mediaType
-        })
-      }
-      this.localFolders = localFolders.filter((lf) => lf.mediaType == this.mediaType)
-    }
-  },
-  mounted() {}
+const strings = useStrings()
+const db = useDb()
+const globalsStore = useGlobalsStore()
+
+const localFolders = ref<Record<string, unknown>[]>([])
+
+const show = computed({
+  get() { return globalsStore.showSelectLocalFolderModal },
+  set(val: boolean) { globalsStore.showSelectLocalFolderModal = val }
+})
+
+const modalData = computed(() => (globalsStore.localFolderSelectData as Record<string, unknown>) || {})
+const callback = computed(() => modalData.value.callback as ((folder: Record<string, unknown>) => void) | undefined)
+const mediaType = computed(() => modalData.value.mediaType as string)
+
+watch(show, (newVal) => {
+  if (newVal) {
+    nextTick(init)
+  }
+})
+
+function clickedOption(folder: Record<string, unknown>) {
+  show.value = false
+  if (!callback.value) {
+    console.error('Callback not set')
+    return
+  }
+  callback.value(folder)
+}
+
+async function init() {
+  const folders = (await db.getLocalFolders()) || []
+
+  if (!folders.some((lf) => (lf as Record<string, unknown>).id === `internal-${mediaType.value}`)) {
+    folders.push({
+      id: `internal-${mediaType.value}`,
+      name: strings.LabelInternalAppStorage,
+      mediaType: mediaType.value
+    })
+  }
+  localFolders.value = (folders as Record<string, unknown>[]).filter((lf) => lf.mediaType == mediaType.value)
 }
 </script>

@@ -17,175 +17,97 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    orderBy: String,
-    descending: Boolean,
-    episodes: Boolean
-  },
-  data() {
-    return {
-      bookItems: [
-        {
-          text: this.$strings.LabelTitle,
-          value: 'media.metadata.title'
-        },
-        {
-          text: this.$strings.LabelAuthorFirstLast,
-          value: 'media.metadata.authorName'
-        },
-        {
-          text: this.$strings.LabelAuthorLastFirst,
-          value: 'media.metadata.authorNameLF'
-        },
-        {
-          text: this.$strings.LabelPublishYear,
-          value: 'media.metadata.publishedYear'
-        },
-        {
-          text: this.$strings.LabelAddedAt,
-          value: 'addedAt'
-        },
-        {
-          text: this.$strings.LabelSize,
-          value: 'size'
-        },
-        {
-          text: this.$strings.LabelDuration,
-          value: 'media.duration'
-        },
-        {
-          text: this.$strings.LabelFileBirthtime,
-          value: 'birthtimeMs'
-        },
-        {
-          text: this.$strings.LabelFileModified,
-          value: 'mtimeMs'
-        },
-        {
-          text: this.$strings.LabelLibrarySortByProgress,
-          value: 'progress'
-        },
-        {
-          text: this.$strings.LabelLibrarySortByProgressStarted,
-          value: 'progress.createdAt'
-        },
-        {
-          text: this.$strings.LabelLibrarySortByProgressFinished,
-          value: 'progress.finishedAt'
-        },
-        {
-          text: this.$strings.LabelRandomly,
-          value: 'random'
-        }
-      ],
-      podcastItems: [
-        {
-          text: this.$strings.LabelTitle,
-          value: 'media.metadata.title'
-        },
-        {
-          text: this.$strings.LabelAuthor,
-          value: 'media.metadata.author'
-        },
-        {
-          text: this.$strings.LabelAddedAt,
-          value: 'addedAt'
-        },
-        {
-          text: this.$strings.LabelSize,
-          value: 'size'
-        },
-        {
-          text: this.$strings.LabelNumberOfEpisodes,
-          value: 'media.numTracks'
-        },
-        {
-          text: this.$strings.LabelFileBirthtime,
-          value: 'birthtimeMs'
-        },
-        {
-          text: this.$strings.LabelFileModified,
-          value: 'mtimeMs'
-        },
-        {
-          text: this.$strings.LabelRandomly,
-          value: 'random'
-        }
-      ],
-      episodeItems: [
-        {
-          text: this.$strings.LabelPubDate,
-          value: 'publishedAt'
-        },
-        {
-          text: this.$strings.LabelTitle,
-          value: 'title'
-        },
-        {
-          text: this.$strings.LabelSeason,
-          value: 'season'
-        },
-        {
-          text: this.$strings.LabelEpisode,
-          value: 'episode'
-        },
-        {
-          text: this.$strings.LabelFilename,
-          value: 'audioFile.metadata.filename'
-        }
-      ]
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    selected: {
-      get() {
-        return this.orderBy
-      },
-      set(val) {
-        this.$emit('update:orderBy', val)
-      }
-    },
-    selectedDesc: {
-      get() {
-        return this.descending
-      },
-      set(val) {
-        this.$emit('update:descending', val)
-      }
-    },
-    isPodcast() {
-      return this.$store.getters['libraries/getCurrentLibraryMediaType'] === 'podcast'
-    },
-    items() {
-      if (this.episodes) return this.episodeItems
-      if (this.isPodcast) return this.podcastItems
-      return this.bookItems
-    }
-  },
-  methods: {
-    async clickedOption(val) {
-      await this.$hapticsImpact()
-      if (this.selected === val) {
-        this.selectedDesc = !this.selectedDesc
-      } else {
-        if (val === 'recent' || val === 'addedAt') this.selectedDesc = true // Progress defaults to descending
-        this.selected = val
-      }
-      this.show = false
-      this.$nextTick(() => this.$emit('change', val))
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { computed, nextTick } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+import { useHaptics } from '~/composables/useHaptics'
+import { useLibrariesStore } from '~/stores/libraries'
+
+const props = defineProps<{
+  modelValue: boolean
+  orderBy: string
+  descending: boolean
+  episodes?: boolean
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+  'update:orderBy': [val: string]
+  'update:descending': [val: boolean]
+  change: [val: string]
+}>()
+
+const strings = useStrings()
+const { impact } = useHaptics()
+const librariesStore = useLibrariesStore()
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const selected = computed({
+  get() { return props.orderBy },
+  set(val: string) { emit('update:orderBy', val) }
+})
+
+const selectedDesc = computed({
+  get() { return props.descending },
+  set(val: boolean) { emit('update:descending', val) }
+})
+
+const bookItems = computed(() => [
+  { text: strings.LabelTitle, value: 'media.metadata.title' },
+  { text: strings.LabelAuthorFirstLast, value: 'media.metadata.authorName' },
+  { text: strings.LabelAuthorLastFirst, value: 'media.metadata.authorNameLF' },
+  { text: strings.LabelPublishYear, value: 'media.metadata.publishedYear' },
+  { text: strings.LabelAddedAt, value: 'addedAt' },
+  { text: strings.LabelSize, value: 'size' },
+  { text: strings.LabelDuration, value: 'media.duration' },
+  { text: strings.LabelFileBirthtime, value: 'birthtimeMs' },
+  { text: strings.LabelFileModified, value: 'mtimeMs' },
+  { text: strings.LabelLibrarySortByProgress, value: 'progress' },
+  { text: strings.LabelLibrarySortByProgressStarted, value: 'progress.createdAt' },
+  { text: strings.LabelLibrarySortByProgressFinished, value: 'progress.finishedAt' },
+  { text: strings.LabelRandomly, value: 'random' }
+])
+
+const podcastItems = computed(() => [
+  { text: strings.LabelTitle, value: 'media.metadata.title' },
+  { text: strings.LabelAuthor, value: 'media.metadata.author' },
+  { text: strings.LabelAddedAt, value: 'addedAt' },
+  { text: strings.LabelSize, value: 'size' },
+  { text: strings.LabelNumberOfEpisodes, value: 'media.numTracks' },
+  { text: strings.LabelFileBirthtime, value: 'birthtimeMs' },
+  { text: strings.LabelFileModified, value: 'mtimeMs' },
+  { text: strings.LabelRandomly, value: 'random' }
+])
+
+const episodeItems = computed(() => [
+  { text: strings.LabelPubDate, value: 'publishedAt' },
+  { text: strings.LabelTitle, value: 'title' },
+  { text: strings.LabelSeason, value: 'season' },
+  { text: strings.LabelEpisode, value: 'episode' },
+  { text: strings.LabelFilename, value: 'audioFile.metadata.filename' }
+])
+
+const isPodcast = computed(() => librariesStore.getCurrentLibraryMediaType === 'podcast')
+
+const items = computed(() => {
+  if (props.episodes) return episodeItems.value
+  if (isPodcast.value) return podcastItems.value
+  return bookItems.value
+})
+
+async function clickedOption(val: string) {
+  await impact()
+  if (selected.value === val) {
+    selectedDesc.value = !selectedDesc.value
+  } else {
+    if (val === 'recent' || val === 'addedAt') selectedDesc.value = true
+    selected.value = val
+  }
+  show.value = false
+  await nextTick()
+  emit('change', val)
 }
 </script>
