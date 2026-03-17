@@ -12,7 +12,7 @@
 <script>
 import { AbsAudioPlayer, AbsLogger } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
-import CellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
+import { useCellularPermission } from '@/composables/useCellularPermission'
 
 const MAX_LOG_LENGTH = 2000
 
@@ -61,7 +61,10 @@ export default {
       serverEpisodeId: null
     }
   },
-  mixins: [CellularPermissionHelpers],
+  setup() {
+    const { checkCellularPermission } = useCellularPermission()
+    return { checkCellularPermission }
+  },
   computed: {
     bookmarks() {
       if (!this.serverLibraryItemId) return []
