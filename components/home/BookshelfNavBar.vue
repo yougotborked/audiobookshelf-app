@@ -42,55 +42,49 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {}
-  },
-  computed: {
-    currentLibrary() {
-      return this.$store.getters['libraries/getCurrentLibrary']
-    },
-    currentLibraryIcon() {
-      return this.currentLibrary?.icon || 'database'
-    },
-    userHasPlaylists() {
-      const autoUnfinished = this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
-      return this.$store.state.libraries.numUserPlaylists || autoUnfinished
-    },
-    userIsAdminOrUp() {
-      return this.$store.getters['user/getIsAdminOrUp']
-    },
-    items() {
-      let items = []
-      if (this.isPodcast) {
-        items = [
-          { to: '/bookshelf', routeName: 'bookshelf', iconPack: 'abs-icons', icon: 'home', text: this.$strings.ButtonHome },
-          { to: '/bookshelf/latest', routeName: 'bookshelf-latest', iconPack: 'abs-icons', icon: 'list', text: this.$strings.ButtonLatest },
-          { to: '/bookshelf/library', routeName: 'bookshelf-library', iconPack: 'abs-icons', icon: this.currentLibraryIcon, text: this.$strings.ButtonLibrary }
-        ]
-        if (this.userIsAdminOrUp) {
-          items.push({ to: '/bookshelf/add-podcast', routeName: 'bookshelf-add-podcast', iconPack: 'material-symbols', icon: 'podcasts', text: this.$strings.ButtonAdd })
-        }
-      } else {
-        items = [
-          { to: '/bookshelf', routeName: 'bookshelf', iconPack: 'abs-icons', icon: 'home', text: this.$strings.ButtonHome },
-          { to: '/bookshelf/library', routeName: 'bookshelf-library', iconPack: 'abs-icons', icon: this.currentLibraryIcon, text: this.$strings.ButtonLibrary },
-          { to: '/bookshelf/series', routeName: 'bookshelf-series', iconPack: 'abs-icons', icon: 'columns', text: this.$strings.ButtonSeries },
-          { to: '/bookshelf/collections', routeName: 'bookshelf-collections', iconPack: 'material-symbols', icon: 'collections_bookmark', text: this.$strings.ButtonCollections },
-          { to: '/bookshelf/authors', routeName: 'bookshelf-authors', iconPack: 'abs-icons', icon: 'authors', text: this.$strings.ButtonAuthors }
-        ]
-      }
-      if (this.userHasPlaylists) {
-        items.push({ to: '/bookshelf/playlists', routeName: 'bookshelf-playlists', iconPack: 'material-symbols', icon: 'queue_music', text: this.$strings.ButtonPlaylists })
-      }
-      return items
-    },
-    routeName() { return this.$route.name },
-    isPodcast() { return this.libraryMediaType === 'podcast' },
-    libraryMediaType() { return this.$store.getters['libraries/getCurrentLibraryMediaType'] }
+<script setup lang="ts">
+const strings = useStrings()
+const appStore = useAppStore()
+const librariesStore = useLibrariesStore()
+const userStore = useUserStore()
+const route = useRoute()
+
+const currentLibrary = computed(() => librariesStore.getCurrentLibrary)
+const currentLibraryIcon = computed(() => (currentLibrary.value as Record<string, unknown>)?.icon as string || 'database')
+const userHasPlaylists = computed(() => {
+  const autoUnfinished = (appStore.deviceData as Record<string, unknown>)?.deviceSettings && ((appStore.deviceData as Record<string, unknown>).deviceSettings as Record<string, unknown>)?.autoCacheUnplayedEpisodes
+  return librariesStore.numUserPlaylists || autoUnfinished
+})
+const userIsAdminOrUp = computed(() => userStore.getIsAdminOrUp)
+const routeName = computed(() => route.name)
+const libraryMediaType = computed(() => librariesStore.getCurrentLibraryMediaType)
+const isPodcast = computed(() => libraryMediaType.value === 'podcast')
+
+const items = computed(() => {
+  let navItems: { to: string; routeName: string; iconPack: string; icon: string; text: string }[] = []
+  if (isPodcast.value) {
+    navItems = [
+      { to: '/bookshelf', routeName: 'bookshelf', iconPack: 'abs-icons', icon: 'home', text: strings.ButtonHome },
+      { to: '/bookshelf/latest', routeName: 'bookshelf-latest', iconPack: 'abs-icons', icon: 'list', text: strings.ButtonLatest },
+      { to: '/bookshelf/library', routeName: 'bookshelf-library', iconPack: 'abs-icons', icon: currentLibraryIcon.value, text: strings.ButtonLibrary }
+    ]
+    if (userIsAdminOrUp.value) {
+      navItems.push({ to: '/bookshelf/add-podcast', routeName: 'bookshelf-add-podcast', iconPack: 'material-symbols', icon: 'podcasts', text: strings.ButtonAdd })
+    }
+  } else {
+    navItems = [
+      { to: '/bookshelf', routeName: 'bookshelf', iconPack: 'abs-icons', icon: 'home', text: strings.ButtonHome },
+      { to: '/bookshelf/library', routeName: 'bookshelf-library', iconPack: 'abs-icons', icon: currentLibraryIcon.value, text: strings.ButtonLibrary },
+      { to: '/bookshelf/series', routeName: 'bookshelf-series', iconPack: 'abs-icons', icon: 'columns', text: strings.ButtonSeries },
+      { to: '/bookshelf/collections', routeName: 'bookshelf-collections', iconPack: 'material-symbols', icon: 'collections_bookmark', text: strings.ButtonCollections },
+      { to: '/bookshelf/authors', routeName: 'bookshelf-authors', iconPack: 'abs-icons', icon: 'authors', text: strings.ButtonAuthors }
+    ]
   }
-}
+  if (userHasPlaylists.value) {
+    navItems.push({ to: '/bookshelf/playlists', routeName: 'bookshelf-playlists', iconPack: 'material-symbols', icon: 'queue_music', text: strings.ButtonPlaylists })
+  }
+  return navItems
+})
 </script>
 
 <style scoped>

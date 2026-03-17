@@ -3,7 +3,7 @@
     <div v-if="episode" class="w-full px-1">
       <div class="flex mb-2">
         <div class="w-10 min-w-10">
-          <covers-preview-cover :src="$store.getters['globals/getLibraryItemCoverSrcById'](libraryItemId)" :width="40" :book-cover-aspect-ratio="bookCoverAspectRatio" :show-resolution="false" class="md:hidden" />
+          <covers-preview-cover :src="globalsStore.getLibraryItemCoverSrcById(libraryItemId || '')" :width="40" :book-cover-aspect-ratio="bookCoverAspectRatio" :show-resolution="false" class="md:hidden" />
         </div>
         <div class="flex-grow px-2">
           <div class="flex items-center">
@@ -12,7 +12,7 @@
             </div>
             <widgets-explicit-indicator v-if="podcast.metadata.explicit" />
           </div>
-          <p v-if="publishedAt" class="text-xs text-md-on-surface-variant">{{ $dateDistanceFromNow(publishedAt) }}</p>
+          <p v-if="publishedAt" class="text-xs text-md-on-surface-variant">{{ utils.dateDistanceFromNow(publishedAt) }}</p>
         </div>
       </div>
 
@@ -21,8 +21,8 @@
       <p class="text-sm text-md-on-surface episode-subtitle mt-1.5 mb-0.5" v-html="subtitle" />
 
       <div v-if="episodeNumber || season || episodeType" class="flex pt-2 items-center -mx-0.5">
-        <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
-        <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ $strings.LabelSeason }} #{{ season }}</div>
+        <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ strings.LabelEpisode }} #{{ episodeNumber }}</div>
+        <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ strings.LabelSeason }} #{{ season }}</div>
         <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface capitalize">{{ episodeType }}</div>
       </div>
 
@@ -68,268 +68,229 @@
   </div>
 </template>
 
-<script>
-import { AbsFileSystem, AbsDownloader } from '@/plugins/capacitor'
-import CellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
+<script setup lang="ts">
+import { AbsDownloader } from '@/plugins/capacitor'
 
-export default {
-  props: {
-    libraryItemId: String,
-    episode: {
-      type: Object,
-      default: () => {}
-    },
-    localLibraryItemId: String,
-    localEpisode: {
-      type: Object,
-      default: () => {}
-    },
-    isLocal: Boolean
-  },
-  data() {
-    return {
-      isProcessingReadUpdate: false,
-      pendingDownload: false,
-      processing: false
+const props = defineProps<{
+  libraryItemId?: string
+  episode: Record<string, unknown>
+  localLibraryItemId?: string
+  localEpisode?: Record<string, unknown>
+  isLocal?: boolean
+}>()
+
+const emit = defineEmits<{
+  addToPlaylist: [episode: Record<string, unknown>]
+}>()
+
+const strings = useStrings()
+const utils = useUtils()
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const userStore = useUserStore()
+const platform = usePlatform()
+const { impact } = useHaptics()
+const eventBus = useEventBus()
+const db = useDb()
+const nativeHttp = useNativeHttp()
+const toast = useToast()
+const router = useRouter()
+const { checkCellularPermission } = useCellularPermission()
+
+const isProcessingReadUpdate = ref(false)
+const pendingDownload = ref(false)
+const processing = ref(false)
+
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
+const isIos = computed(() => platform === 'ios')
+const mediaType = 'podcast'
+const userCanDownload = computed(() => userStore.getUserCanDownload)
+const title = computed(() => (props.episode.title as string) || '')
+const subtitle = computed(() => (props.episode.subtitle as string) || (props.episode.description as string) || '')
+const episodeNumber = computed(() => props.episode.episode)
+const season = computed(() => props.episode.season)
+const episodeType = computed(() => {
+  if (props.episode.episodeType === 'full') return null // only show Trailer/Bonus
+  return props.episode.episodeType as string | null
+})
+const isStreaming = computed(() => appStore.getIsMediaStreaming(props.libraryItemId || '', props.episode.id as string))
+const streamIsPlaying = computed(() => appStore.playerIsPlaying && isStreaming.value)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
+const playerIsStartingForThisMedia = computed(() => {
+  if (!props.episode?.id) return false
+  const mediaId = appStore.playerStartingPlaybackMediaId
+  return mediaId === props.episode.id
+})
+const itemProgress = computed(() => {
+  if (props.isLocal) return globalsStore.getLocalMediaProgressById(props.libraryItemId || '', props.episode.id as string)
+  return userStore.getUserMediaProgress(props.libraryItemId || '', props.episode.id as string)
+})
+const localMediaProgress = computed(() => {
+  if (props.isLocal) return globalsStore.getLocalMediaProgressById(props.libraryItemId || '', props.episode.id as string)
+  else if (props.localLibraryItemId && props.localEpisode) {
+    return globalsStore.getLocalMediaProgressById(props.localLibraryItemId, props.localEpisode.id as string)
+  }
+  return null
+})
+const itemProgressPercent = computed(() => (itemProgress.value as Record<string, unknown>)?.progress as number || 0)
+const userIsFinished = computed(() => !!(itemProgress.value as Record<string, unknown>)?.isFinished)
+const timeRemaining = computed(() => {
+  if (streamIsPlaying.value) return 'Playing'
+  if (!itemProgressPercent.value) return utils.elapsedPretty(props.episode.duration as number)
+  if (userIsFinished.value) return 'Finished'
+  const prog = itemProgress.value as Record<string, unknown>
+  const remaining = Math.floor((prog.duration as number) - (prog.currentTime as number))
+  return `${utils.elapsedPretty(remaining)} left`
+})
+const publishedAt = computed(() => props.episode.publishedAt as number | null)
+const downloadItem = computed(() => globalsStore.getDownloadItem(props.libraryItemId || '', props.episode.id as string))
+const localEpisodeId = computed(() => props.localEpisode?.id as string || null)
+const podcast = computed(() => (props.episode.podcast as Record<string, unknown>) || {})
+
+function goToEpisodePage() {
+  router.push(`/item/${props.libraryItemId}/${props.episode.id}`)
+}
+
+function addToPlaylist() {
+  emit('addToPlaylist', props.episode)
+}
+
+async function downloadClick() {
+  if (downloadItem.value || pendingDownload.value) return
+
+  const hasPermission = await checkCellularPermission('download')
+  if (!hasPermission) return
+
+  pendingDownload.value = true
+  await impact()
+  if (isIos.value) {
+    // no local folders on iOS
+    await startDownload(null)
+  } else {
+    await download(null)
+  }
+
+  setTimeout(() => {
+    pendingDownload.value = false
+  }, 1000)
+}
+
+async function download(selectedLocalFolder: Record<string, unknown> | null = null) {
+  let localFolder = selectedLocalFolder
+  if (!localFolder) {
+    const localFolders = ((await db.getLocalFolders()) as Record<string, unknown>[]) || []
+    console.log('Local folders loaded', localFolders.length)
+    const foldersWithMediaType = localFolders.filter((lf) => {
+      console.log('Checking local folder', lf.mediaType)
+      return lf.mediaType == mediaType
+    })
+    console.log('Folders with media type', mediaType, foldersWithMediaType.length)
+    const internalStorageFolder = foldersWithMediaType.find((f) => f.id === `internal-${mediaType}`)
+    if (!foldersWithMediaType.length) {
+      localFolder = {
+        id: `internal-${mediaType}`,
+        name: 'Internal App Storage',
+        mediaType
+      }
+    } else if (foldersWithMediaType.length === 1 && internalStorageFolder) {
+      localFolder = internalStorageFolder
+    } else {
+      globalsStore.showSelectLocalFolderModalAction({
+        mediaType,
+        callback: (folder: Record<string, unknown>) => {
+          download(folder)
+        }
+      })
+      return
     }
-  },
-  mixins: [CellularPermissionHelpers],
-  computed: {
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    },
-    isIos() {
-      return this.$platform === 'ios'
-    },
-    mediaType() {
-      return 'podcast'
-    },
-    userCanDownload() {
-      return this.$store.getters['user/getUserCanDownload']
-    },
-    audioFile() {
-      return this.episode.audioFile
-    },
-    title() {
-      return this.episode.title || ''
-    },
-    subtitle() {
-      return this.episode.subtitle || this.episode.description || ''
-    },
-    episodeNumber() {
-      return this.episode.episode
-    },
-    season() {
-      return this.episode.season
-    },
-    episodeType() {
-      if (this.episode.episodeType === 'full') return null // only show Trailer/Bonus
-      return this.episode.episodeType
-    },
-    duration() {
-      return this.$secondsToTimestamp(this.episode.duration)
-    },
-    isStreaming() {
-      return this.$store.getters['getIsMediaStreaming'](this.libraryItemId, this.episode.id)
-    },
-    streamIsPlaying() {
-      return this.$store.state.playerIsPlaying && this.isStreaming
-    },
-    playerIsStartingPlayback() {
-      // Play has been pressed and waiting for native play response
-      return this.$store.state.playerIsStartingPlayback
-    },
-    playerIsStartingForThisMedia() {
-      if (!this.episode?.id) return false
-      const mediaId = this.$store.state.playerStartingPlaybackMediaId
-      return mediaId === this.episode.id
-    },
-    itemProgress() {
-      if (this.isLocal) return this.$store.getters['globals/getLocalMediaProgressById'](this.libraryItemId, this.episode.id)
-      return this.$store.getters['user/getUserMediaProgress'](this.libraryItemId, this.episode.id)
-    },
-    localMediaProgress() {
-      if (this.isLocal) return this.$store.getters['globals/getLocalMediaProgressById'](this.libraryItemId, this.episode.id)
-      else if (this.localLibraryItemId && this.localEpisode) {
-        return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId, this.localEpisode.id)
-      } else {
-        return null
-      }
-    },
-    itemProgressPercent() {
-      return this.itemProgress?.progress || 0
-    },
-    userIsFinished() {
-      return !!this.itemProgress?.isFinished
-    },
-    timeRemaining() {
-      if (this.streamIsPlaying) return 'Playing'
-      if (!this.itemProgressPercent) return this.$elapsedPretty(this.episode.duration)
-      if (this.userIsFinished) return 'Finished'
-      var remaining = Math.floor(this.itemProgress.duration - this.itemProgress.currentTime)
-      return `${this.$elapsedPretty(remaining)} left`
-    },
-    publishedAt() {
-      return this.episode.publishedAt
-    },
-    downloadItem() {
-      return this.$store.getters['globals/getDownloadItem'](this.libraryItemId, this.episode.id)
-    },
-    localEpisodeId() {
-      return this.localEpisode?.id || null
-    },
-    podcast() {
-      return this.episode.podcast || {}
+  }
+
+  console.log('Local folder', JSON.stringify(localFolder))
+  return startDownload(localFolder)
+}
+
+async function startDownload(localFolder: Record<string, unknown> | null) {
+  const payload: Record<string, unknown> = {
+    libraryItemId: props.libraryItemId,
+    episodeId: props.episode.id
+  }
+  if (localFolder) {
+    payload.localFolderId = localFolder.id
+  }
+  const downloadRes = await AbsDownloader.downloadLibraryItem(payload as Parameters<typeof AbsDownloader.downloadLibraryItem>[0])
+  if (downloadRes && (downloadRes as Record<string, unknown>).error) {
+    const errorMsg = (downloadRes as Record<string, unknown>).error as string || 'Unknown error'
+    console.error('Download error', errorMsg)
+    toast.error(errorMsg)
+  } else {
+    console.log('Download completed', JSON.stringify(downloadRes))
+  }
+}
+
+async function playClick() {
+  if (playerIsStartingPlayback.value) return
+
+  await impact()
+  if (streamIsPlaying.value) {
+    eventBus.emit('pause-item')
+  } else {
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = props.episode.id as string
+
+    if (props.localEpisode && props.localLibraryItemId) {
+      console.log('Play local episode', props.localEpisode.id, props.localLibraryItemId)
+      eventBus.emit('play-item', {
+        libraryItemId: props.localLibraryItemId,
+        episodeId: props.localEpisode.id,
+        serverLibraryItemId: props.libraryItemId,
+        serverEpisodeId: props.episode.id
+      })
+    } else {
+      eventBus.emit('play-item', {
+        libraryItemId: props.libraryItemId,
+        episodeId: props.episode.id
+      })
     }
-  },
-  methods: {
-    goToEpisodePage() {
-      this.$router.push(`/item/${this.libraryItemId}/${this.episode.id}`)
-    },
-    addToPlaylist() {
-      this.$emit('addToPlaylist', this.episode)
-    },
-    async selectFolder() {
-      var folderObj = await AbsFileSystem.selectFolder({ mediaType: this.mediaType })
-      if (folderObj.error) {
-        return this.$toast.error(`Error: ${folderObj.error || 'Unknown Error'}`)
-      }
-      return folderObj
-    },
-    async downloadClick() {
-      if (this.downloadItem || this.pendingDownload) return
+  }
+}
 
-      const hasPermission = await this.checkCellularPermission('download')
-      if (!hasPermission) return
+async function toggleFinished() {
+  await impact()
 
-      this.pendingDownload = true
-      await this.$hapticsImpact()
-      if (this.isIos) {
-        // no local folders on iOS
-        await this.startDownload()
-      } else {
-        await this.download()
-      }
-
-      setTimeout(() => {
-        this.pendingDownload = false
-      }, 1000)
-    },
-    async download(selectedLocalFolder = null) {
-      let localFolder = selectedLocalFolder
-      if (!localFolder) {
-        const localFolders = (await this.$db.getLocalFolders()) || []
-        console.log('Local folders loaded', localFolders.length)
-        const foldersWithMediaType = localFolders.filter((lf) => {
-          console.log('Checking local folder', lf.mediaType)
-          return lf.mediaType == this.mediaType
-        })
-        console.log('Folders with media type', this.mediaType, foldersWithMediaType.length)
-        const internalStorageFolder = foldersWithMediaType.find((f) => f.id === `internal-${this.mediaType}`)
-        if (!foldersWithMediaType.length) {
-          localFolder = {
-            id: `internal-${this.mediaType}`,
-            name: 'Internal App Storage',
-            mediaType: this.mediaType
-          }
-        } else if (foldersWithMediaType.length === 1 && internalStorageFolder) {
-          localFolder = internalStorageFolder
-        } else {
-          this.$store.commit('globals/showSelectLocalFolderModal', {
-            mediaType: this.mediaType,
-            callback: (folder) => {
-              this.download(folder)
-            }
-          })
-          return
-        }
-      }
-
-      console.log('Local folder', JSON.stringify(localFolder))
-
-      return this.startDownload(localFolder)
-    },
-    async startDownload(localFolder) {
-      var payload = {
-        libraryItemId: this.libraryItemId,
-        episodeId: this.episode.id
-      }
-      if (localFolder) {
-        payload.localFolderId = localFolder.id
-      }
-      var downloadRes = await AbsDownloader.downloadLibraryItem(payload)
-      if (downloadRes && downloadRes.error) {
-        var errorMsg = downloadRes.error || 'Unknown error'
-        console.error('Download error', errorMsg)
-        this.$toast.error(errorMsg)
-      } else {
-        console.log('Download completed', JSON.stringify(downloadRes))
-      }
-    },
-    async playClick() {
-      if (this.playerIsStartingPlayback) return
-
-      await this.$hapticsImpact()
-      if (this.streamIsPlaying) {
-        this.$eventBus.$emit('pause-item')
-      } else {
-        this.$store.commit('setPlayerIsStartingPlayback', this.episode.id)
-
-        if (this.localEpisode && this.localLibraryItemId) {
-          console.log('Play local episode', this.localEpisode.id, this.localLibraryItemId)
-          this.$eventBus.$emit('play-item', {
-            libraryItemId: this.localLibraryItemId,
-            episodeId: this.localEpisode.id,
-            serverLibraryItemId: this.libraryItemId,
-            serverEpisodeId: this.episode.id
-          })
-        } else {
-          this.$eventBus.$emit('play-item', {
-            libraryItemId: this.libraryItemId,
-            episodeId: this.episode.id
-          })
-        }
-      }
-    },
-    async toggleFinished() {
-      await this.$hapticsImpact()
-
-      this.isProcessingReadUpdate = true
-      if (this.isLocal || this.localEpisode) {
-        const isFinished = !this.userIsFinished
-        const localLibraryItemId = this.isLocal ? this.libraryItemId : this.localLibraryItemId
-        const localEpisodeId = this.isLocal ? this.episode.id : this.localEpisode.id
-        const payload = await this.$db.updateLocalMediaProgressFinished({
-          localLibraryItemId,
-          localEpisodeId,
-          isFinished
-        })
-        console.log('toggleFinished payload', JSON.stringify(payload))
-        if (payload?.error) {
-          this.$toast.error(payload?.error || 'Unknown error')
-        } else {
-          const localMediaProgress = payload.localMediaProgress
-          console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
-          if (localMediaProgress) {
-            this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
-          }
-        }
-        this.isProcessingReadUpdate = false
-      } else {
-        const updatePayload = {
-          isFinished: !this.userIsFinished
-        }
-        this.$nativeHttp
-          .patch(`/api/me/progress/${this.libraryItemId}/${this.episode.id}`, updatePayload)
-          .catch((error) => {
-            console.error('Failed', error)
-            this.$toast.error(`Failed to mark as ${updatePayload.isFinished ? 'Finished' : 'Not Finished'}`)
-          })
-          .finally(() => {
-            this.isProcessingReadUpdate = false
-          })
+  isProcessingReadUpdate.value = true
+  if (props.isLocal || props.localEpisode) {
+    const isFinished = !userIsFinished.value
+    const localLibraryItemId = props.isLocal ? props.libraryItemId : props.localLibraryItemId
+    const localEpisodeId = props.isLocal ? props.episode.id as string : props.localEpisode?.id as string
+    const payload = await db.updateLocalMediaProgressFinished({
+      localLibraryItemId,
+      localEpisodeId,
+      isFinished
+    }) as Record<string, unknown>
+    console.log('toggleFinished payload', JSON.stringify(payload))
+    if (payload?.error) {
+      toast.error((payload?.error as string) || 'Unknown error')
+    } else {
+      const localMediaProg = payload.localMediaProgress
+      console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProg))
+      if (localMediaProg) {
+        globalsStore.updateLocalMediaProgress(localMediaProg as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
       }
     }
+    isProcessingReadUpdate.value = false
+  } else {
+    const updatePayload = {
+      isFinished: !userIsFinished.value
+    }
+    nativeHttp
+      .patch(`/api/me/progress/${props.libraryItemId}/${props.episode.id}`, updatePayload)
+      .catch((error: Error) => {
+        console.error('Failed', error)
+        toast.error(`Failed to mark as ${updatePayload.isFinished ? 'Finished' : 'Not Finished'}`)
+      })
+      .finally(() => {
+        isProcessingReadUpdate.value = false
+      })
   }
 }
 </script>
