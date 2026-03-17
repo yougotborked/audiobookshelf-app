@@ -86,12 +86,11 @@ const localStore = useLocalStore()
 const { hapticsImpact } = useHaptics()
 const toast = useToast()
 const strings = useStrings()
+const globalsStore = useGlobalsStore()
 const appStore = useAppStore()
 const userStore = useUserStore()
 
 const id = route.params.id as string
-
-const store = useNuxtApp().$store as any
 
 // State
 const playlist = ref<any>({ id, name: '', description: '', items: [], totalItems: 0 })
@@ -106,7 +105,7 @@ const downloadedEpisodeKeys = ref<Set<string> | null>(null)
 
 // Computed
 const networkConnected = computed(() => appStore.networkConnected)
-const bookCoverAspectRatio = computed(() => store.getters['libraries/getBookCoverAspectRatio'])
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
 const playlistItems = computed(() => playlist.value.items || [])
 const playlistTotalItems = computed(() => playlist.value.totalItems || playlistItems.value.length)
 const playlistName = computed(() => playlist.value.name || '')
@@ -125,22 +124,22 @@ const playableItems = computed(() => playlistItems.value.filter((item: any) => {
   const tracks = item.localLibraryItem?.media?.tracks || libraryItem.media?.tracks || []
   return tracks.length
 }))
-const playerIsPlaying = computed(() => store.state.playerIsPlaying && isOpenInPlayer.value)
+const playerIsPlaying = computed(() => appStore.playerIsPlaying && isOpenInPlayer.value)
 const isOpenInPlayer = computed(() => {
   return !!playableItems.value.find((i: any) => {
-    if (i.localLibraryItem && store.getters['getIsMediaStreaming'](i.localLibraryItem.id, i.localEpisode?.id)) return true
-    return store.getters['getIsMediaStreaming'](i.libraryItemId, i.episodeId)
+    if (i.localLibraryItem && appStore.getIsMediaStreaming(i.localLibraryItem.id, i.localEpisode?.id)) return true
+    return appStore.getIsMediaStreaming(i.libraryItemId, i.episodeId)
   })
 })
-const autoContinuePlaylists = computed(() => store.state.deviceData?.deviceSettings?.autoContinuePlaylists)
+const autoContinuePlaylists = computed(() => appStore.deviceData?.deviceSettings?.autoContinuePlaylists)
 const showPlayButton = computed(() => playableItems.value.length)
-const playerIsStartingPlayback = computed(() => store.state.playerIsStartingPlayback)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
   if (!mediaIdStartingPlayback.value) return false
-  const mediaId = store.state.playerStartingPlaybackMediaId
+  const mediaId = appStore.playerStartingPlaybackMediaId
   return mediaId === mediaIdStartingPlayback.value
 })
-const autoCacheUnplayedEpisodes = computed(() => store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes)
+const autoCacheUnplayedEpisodes = computed(() => appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes)
 
 // Watchers
 watch(networkConnected, (newVal) => {
@@ -415,7 +414,7 @@ async function fetchPlaylist() {
       downloadedEpisodeKeys.value = depKeys
     }
   } else {
-    if (!store.state.networkConnected) {
+    if (!appStore.networkConnected) {
       AbsLogger.info({
         tag: 'PlaylistPage',
         message: `Not connected, skip fetching remote playlist: ${formatForLog({ id: playlistId })}`
@@ -644,9 +643,10 @@ function playAll() {
     message: `Queue built for play: ${formatForLog(queueDetails)}`
   })
   mediaIdStartingPlayback.value = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
-  store.commit('setPlayerIsStartingPlayback', mediaIdStartingPlayback.value)
-  store.commit('setPlayQueue', queue)
-  store.commit('setQueueIndex', 0)
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = mediaIdStartingPlayback.value
+  appStore.setPlayQueue(queue)
+  appStore.setQueueIndex(0)
   const payload = {
     libraryItemId: nextItem.playbackLibraryItemId,
     episodeId: nextItem.playbackEpisodeId,
@@ -666,14 +666,14 @@ function playAll() {
 function playNextItem() {
   const normalizedQueue = buildQueueItems()
   const nowIndex = normalizedQueue.findIndex((i: any) => {
-    return store.getters['getIsMediaStreaming'](
+    return appStore.getIsMediaStreaming(
       i.playbackLibraryItemId,
       i.playbackEpisodeId
     )
   })
 
   const nextItem = normalizedQueue.slice(nowIndex + 1).find((i: any) => {
-    const prog = store.getters['user/getUserMediaProgress'](
+    const prog = userStore.getUserMediaProgress(
       i.serverLibraryItemId || i.playbackLibraryItemId,
       i.serverEpisodeId || i.playbackEpisodeId
     )
@@ -683,9 +683,10 @@ function playNextItem() {
   if (nextItem) {
     const nextIndex = normalizedQueue.findIndex((i: any) => i === nextItem)
     mediaIdStartingPlayback.value = nextItem.playbackEpisodeId || nextItem.playbackLibraryItemId
-    store.commit('setPlayerIsStartingPlayback', mediaIdStartingPlayback.value)
-    store.commit('setPlayQueue', normalizedQueue)
-    store.commit('setQueueIndex', nextIndex)
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = mediaIdStartingPlayback.value
+    appStore.setPlayQueue(normalizedQueue)
+    appStore.setQueueIndex(nextIndex)
     const payload = {
       libraryItemId: nextItem.playbackLibraryItemId,
       episodeId: nextItem.playbackEpisodeId,
@@ -755,7 +756,7 @@ async function ensureDownloadedKeySet(mediaType = 'podcast') {
 
 async function checkAutoDownload() {
   if (!networkConnected.value) return
-  if (!store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+  if (!appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
 
   const mediaType = playlist.value.items[0]?.libraryItem?.mediaType || 'podcast'
   const downloadedKeys = await ensureDownloadedKeySet(mediaType)
@@ -777,7 +778,7 @@ onMounted(async () => {
   // Load cached playlist initially
   const cached = await localStore.getCachedPlaylist(id)
   const user = userStore.user
-  const serverConfig = store.state.user.serverConnectionConfig
+  const serverConfig = userStore.serverConnectionConfig
 
   if (!user && !serverConfig && networkConnected.value && !cached) {
     await navigateTo(`/connect?redirect=${route.path}`)

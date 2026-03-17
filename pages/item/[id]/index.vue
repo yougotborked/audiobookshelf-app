@@ -215,8 +215,8 @@ const descriptionEl = ref<HTMLElement | null>(null)
 const isIos = computed(() => platform === 'ios')
 const store = useNuxtApp().$store as any
 
-const userCanDownload = computed(() => store.getters['user/getUserCanDownload'])
-const userIsAdminOrUp = computed(() => store.getters['user/getIsAdminOrUp'])
+const userCanDownload = computed(() => userStore.getUserCanDownload)
+const userIsAdminOrUp = computed(() => userStore.getIsAdminOrUp)
 const isLocal = computed(() => libraryItem.value?.isLocal)
 const hasLocal = computed(() => isLocal.value || libraryItem.value?.localLibraryItem)
 const localLibraryItem = computed(() => {
@@ -238,8 +238,8 @@ const serverLibraryItemId = computed(() => {
   return null
 })
 const localLibraryItemServerConnectionConfigId = computed(() => localLibraryItem.value?.serverConnectionConfigId)
-const currentServerAddress = computed(() => store.getters['user/getServerAddress'])
-const currentServerConnectionConfigId = computed(() => store.getters['user/getServerConnectionConfigId'])
+const currentServerAddress = computed(() => userStore.getServerAddress)
+const currentServerConnectionConfigId = computed(() => userStore.getServerConnectionConfigId)
 const isLocalMatchingServerAddress = computed(() => {
   if (!localLibraryItem.value || !currentServerAddress.value) return false
   return localLibraryItem.value.serverAddress === currentServerAddress.value
@@ -295,11 +295,11 @@ const userItemProgress = computed(() => {
 })
 const localItemProgress = computed(() => {
   if (isPodcast.value) return null
-  return store.getters['globals/getLocalMediaProgressById'](localLibraryItemId.value)
+  return globalsStore.getLocalMediaProgressById(localLibraryItemId.value)
 })
 const serverItemProgress = computed(() => {
   if (isPodcast.value) return null
-  return store.getters['user/getUserMediaProgress'](serverLibraryItemId.value)
+  return userStore.getUserMediaProgress(serverLibraryItemId.value)
 })
 const userIsFinished = computed(() => !!userItemProgress.value?.isFinished)
 const userTimeRemaining = computed(() => {
@@ -316,15 +316,15 @@ const progressPercent = computed(() => {
   return Math.max(Math.min(1, userItemProgress.value?.progress || 0), 0)
 })
 const userProgressFinishedAt = computed(() => userItemProgress.value?.finishedAt || 0)
-const isStreaming = computed(() => isPlaying.value && !store.getters['getIsCurrentSessionLocal'])
+const isStreaming = computed(() => isPlaying.value && !appStore.getIsCurrentSessionLocal)
 const isPlaying = computed(() => {
-  if (localLibraryItemId.value && store.getters['getIsMediaStreaming'](localLibraryItemId.value)) return true
-  return store.getters['getIsMediaStreaming'](libraryItemId)
+  if (localLibraryItemId.value && appStore.getIsMediaStreaming(localLibraryItemId.value)) return true
+  return appStore.getIsMediaStreaming(libraryItemId)
 })
-const playerIsPlaying = computed(() => store.state.playerIsPlaying && (isStreaming.value || isPlaying.value))
-const playerIsStartingPlayback = computed(() => store.state.playerIsStartingPlayback)
+const playerIsPlaying = computed(() => appStore.playerIsPlaying && (isStreaming.value || isPlaying.value))
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
-  const mediaId = store.state.playerStartingPlaybackMediaId
+  const mediaId = appStore.playerStartingPlaybackMediaId
   if (!mediaId) return false
   if (isPodcast.value) {
     return mediaId === episodeStartingPlayback.value
@@ -355,9 +355,9 @@ const ebookFormat = computed(() => {
   if (!ebookFile.value) return null
   return ebookFile.value.ebookFormat
 })
-const downloadItem = computed(() => store.getters['globals/getDownloadItem'](libraryItemId))
+const downloadItem = computed(() => globalsStore.getDownloadItem(libraryItemId))
 const episodes = computed(() => media.value.episodes || [])
-const isCasting = computed(() => store.state.isCasting)
+const isCasting = computed(() => appStore.isCasting)
 const coverWidth = computed(() => {
   let width = windowWidth.value - 94
   if (width > 325) return 325
@@ -395,9 +395,13 @@ function moreButtonPress() {
 
 function readBook() {
   if (localLibraryItem.value?.media?.ebookFile) {
-    store.commit('showReader', { libraryItem: localLibraryItem.value, keepProgress: true })
+    appStore.selectedLibraryItem = localLibraryItem.value
+    appStore.ereaderKeepProgress = true
+    appStore.showReader = true
   } else {
-    store.commit('showReader', { libraryItem: libraryItem.value, keepProgress: true })
+    appStore.selectedLibraryItem = libraryItem.value
+    appStore.ereaderKeepProgress = true
+    appStore.showReader = true
   }
 }
 
@@ -429,9 +433,9 @@ async function play(startTime: number | null = null) {
     let episode = episodes.value.find((ep: any) => {
       let podcastProgress = null
       if (!isLocal.value) {
-        podcastProgress = store.getters['user/getUserMediaProgress'](libraryItemId, ep.id)
+        podcastProgress = userStore.getUserMediaProgress(libraryItemId, ep.id)
       } else {
-        podcastProgress = store.getters['globals/getLocalMediaProgressById'](libraryItemId, ep.id)
+        podcastProgress = globalsStore.getLocalMediaProgressById(libraryItemId, ep.id)
       }
       return !podcastProgress?.isFinished
     })
@@ -449,7 +453,8 @@ async function play(startTime: number | null = null) {
     const serverEpisodeId = !isLocal.value ? episodeId : localEpisode?.serverEpisodeId || null
 
     episodeStartingPlayback.value = serverEpisodeId
-    store.commit('setPlayerIsStartingPlayback', serverEpisodeId)
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = serverEpisodeId
     if (serverEpisodeId && serverLibraryItemId.value && isCasting.value) {
       eventBus.emit('play-item', { libraryItemId: serverLibraryItemId.value, episodeId: serverEpisodeId })
     } else if (localEpisode) {
@@ -467,7 +472,7 @@ async function play(startTime: number | null = null) {
       playLibraryItemId = localLibraryItem.value.id
     }
 
-    if (startTime !== null && startTime !== undefined && !store.getters['getIsMediaStreaming'](playLibraryItemId, null)) {
+    if (startTime !== null && startTime !== undefined && !appStore.getIsMediaStreaming(playLibraryItemId, null)) {
       const { value } = await Dialog.confirm({
         title: (useNuxtApp() as any).$strings.HeaderConfirm,
         message: (useNuxtApp() as any).$getString('MessageConfirmPlaybackTime', [title.value, (useNuxtApp() as any).$secondsToTimestamp(startTime)])
@@ -475,7 +480,8 @@ async function play(startTime: number | null = null) {
       if (!value) return
     }
 
-    store.commit('setPlayerIsStartingPlayback', playLibraryItemId)
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = playLibraryItemId
     eventBus.emit('play-item', { libraryItemId: playLibraryItemId, serverLibraryItemId: serverLibraryItemId.value, startTime: startTime ?? undefined })
   }
 }
@@ -650,8 +656,8 @@ function init() {
   const itemPageBgGradientHeight = window.outerHeight - 64 - coverHeight.value
   document.documentElement.style.setProperty('--item-page-bg-gradient-height', itemPageBgGradientHeight + 'px')
 
-  if (store.state.lastItemScrollData.id === libraryItemId && (window as any)['item-page']) {
-    ;(window as any)['item-page'].scrollTop = store.state.lastItemScrollData.scrollTop || 0
+  if (appStore.lastItemScrollData.id === libraryItemId && (window as any)['item-page']) {
+    ;(window as any)['item-page'].scrollTop = appStore.lastItemScrollData.scrollTop || 0
   }
 }
 
@@ -659,7 +665,7 @@ async function loadServerLibraryItem() {
   console.log(`Fetching library item "${libraryItemId}" from server`)
   let fetchedItem = null
 
-  if (appStore.networkConnected && store.state.user.serverConnectionConfig) {
+  if (appStore.networkConnected && userStore.serverConnectionConfig) {
     fetchedItem = await nativeHttp.get(`/api/items/${libraryItemId}?expanded=1&include=rssfeed`, { connectTimeout: 5000 }).catch((error: any) => {
       console.error('Failed', error)
       return null
@@ -717,7 +723,7 @@ onMounted(async () => {
 
     if (localItem?.libraryItemId?.startsWith('li_')) {
       console.error('Local library item has old server library item id', localItem.libraryItemId)
-    } else if (query.noredirect !== '1' && localItem?.libraryItemId && localItem?.serverAddress === store.getters['user/getServerAddress'] && appStore.socketConnected) {
+    } else if (query.noredirect !== '1' && localItem?.libraryItemId && localItem?.serverAddress === userStore.getServerAddress && appStore.socketConnected) {
       const queryParams = new URLSearchParams()
       queryParams.set('localLibraryItemId', libItemId)
       if (localItem.mediaType === 'podcast') {
@@ -735,7 +741,7 @@ onMounted(async () => {
     }
 
     libraryItem.value = localItem
-  } else if (!store.state.user.serverConnectionConfig) {
+  } else if (!userStore.serverConnectionConfig) {
     let cachedItem = await localStore.getCachedLibraryItem(libItemId) as any
     if (cachedItem) {
       loadedFromCache.value = true
@@ -760,7 +766,7 @@ onMounted(async () => {
     libraryItem.value = cachedItem
   }
 
-  if (!libraryItemId.startsWith('local') && libraryItem.value && appStore.networkConnected && store.state.user.serverConnectionConfig) {
+  if (!libraryItemId.startsWith('local') && libraryItem.value && appStore.networkConnected && userStore.serverConnectionConfig) {
     await localStore.setCachedLibraryItem(libraryItem.value)
   }
 
@@ -782,7 +788,7 @@ onBeforeUnmount(() => {
   socket.off('rss_feed_closed', rssFeedClosed)
 
   if ((window as any)['item-page']) {
-    store.commit('setLastItemScrollData', { scrollTop: (window as any)['item-page'].scrollTop || 0, id: libraryItemId })
+    appStore.setLastItemScrollData({ scrollTop: (window as any)['item-page'].scrollTop || 0, id: libraryItemId })
   }
 })
 </script>

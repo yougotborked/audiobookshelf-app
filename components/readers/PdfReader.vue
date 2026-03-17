@@ -41,6 +41,12 @@ export default {
     isLocal: Boolean,
     keepProgress: Boolean
   },
+  setup() {
+    const appStore = useAppStore()
+    const globalsStore = useGlobalsStore()
+    const userStore = useUserStore()
+    return { appStore, globalsStore, userStore }
+  },
   data() {
     return {
       rotate: 0,
@@ -55,7 +61,7 @@ export default {
   },
   computed: {
     userToken() {
-      return this.$store.getters['user/getToken']
+      return this.userStore.getToken
     },
     localLibraryItem() {
       if (this.isLocal) return this.libraryItem
@@ -68,7 +74,7 @@ export default {
       if (!this.isLocal) return this.libraryItem.id
       // Check if local library item is connected to the current server
       if (!this.libraryItem.serverAddress || !this.libraryItem.libraryItemId) return null
-      if (this.$store.getters['user/getServerAddress'] === this.libraryItem.serverAddress) {
+      if (this.userStore.getServerAddress === this.libraryItem.serverAddress) {
         return this.libraryItem.libraryItemId
       }
       return null
@@ -96,10 +102,10 @@ export default {
       return this.serverItemProgress
     },
     localItemProgress() {
-      return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId)
+      return this.globalsStore.getLocalMediaProgressById(this.localLibraryItemId)
     },
     serverItemProgress() {
-      return this.$store.getters['user/getUserMediaProgress'](this.serverLibraryItemId)
+      return this.userStore.getUserMediaProgress(this.serverLibraryItemId)
     },
     savedPage() {
       if (!this.keepProgress) return 0
@@ -109,10 +115,10 @@ export default {
       return Number(this.userItemProgress.ebookLocation)
     },
     isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
+      return this.appStore.getIsPlayerOpen
     },
     ebookUrl() {
-      const serverAddress = this.$store.getters['user/getServerAddress']
+      const serverAddress = this.userStore.getServerAddress
       return this.isLocal ? this.url : `${serverAddress}${this.url}`
     }
   },
@@ -138,7 +144,7 @@ export default {
         }
         const localResponse = await this.$db.updateLocalEbookProgress(localPayload)
         if (localResponse.localMediaProgress) {
-          this.$store.commit('globals/updateLocalMediaProgress', localResponse.localMediaProgress)
+          this.globalsStore.updateLocalMediaProgress(localResponse.localMediaProgress)
         }
       }
 
@@ -173,10 +179,10 @@ export default {
       try {
         console.log('[PdfReader] Handling refresh failure - logging out user')
 
-        const serverConnectionConfigId = this.$store.getters['user/getServerConnectionConfigId']
+        const serverConnectionConfigId = this.userStore.getServerConnectionConfigId
 
         // Clear store
-        await this.$store.dispatch('user/logout')
+        await this.userStore.logout()
 
         if (serverConnectionConfigId) {
           // Clear refresh token for server connection config
@@ -195,7 +201,7 @@ export default {
       this.isRefreshing = true
       // Cannot use axios with this pdf reader so we need to handle the refresh separately
       // Should work on migrating to a different pdf reader in the future
-      const newAccessToken = await this.$store.dispatch('user/refreshToken').catch((error) => {
+      const newAccessToken = await this.userStore.refreshToken().catch((error) => {
         console.error('Failed to refresh token', error)
         return null
       })

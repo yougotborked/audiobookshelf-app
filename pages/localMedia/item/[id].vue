@@ -145,7 +145,7 @@ const strings = useStrings()
 
 const localLibraryItemId = route.params.id as string
 
-const store = useNuxtApp().$store as any
+const appStore = useAppStore()
 
 // State
 const drag = ref(false)
@@ -167,7 +167,7 @@ const selectedEpisode = ref<any>(null)
 const orderChanged = ref(false)
 
 // Computed
-const isPlayerOpen = computed(() => store.getters['getIsPlayerOpen'])
+const isPlayerOpen = computed(() => appStore.getIsPlayerOpen)
 const isIos = computed(() => platform === 'ios')
 const basePath = computed(() => localLibraryItem.value?.basePath)
 const localFiles = computed(() => localLibraryItem.value?.localFiles || [])
@@ -230,7 +230,7 @@ const dialogItems = computed(() => {
     ]
   }
 })
-const playerIsStartingPlayback = computed(() => store.state.playerIsStartingPlayback)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const totalAudioSize = computed(() => audioTracks.value.reduce((acc: number, item: any) => (item.metadata ? acc + item.metadata.size : acc), 0))
 const totalEpisodesSize = computed(() => episodes.value.reduce((acc: number, item: any) => acc + item.size, 0))
 const totalOtherFilesSize = computed(() => otherFiles.value.reduce((acc: number, item: any) => acc + item.size, 0))
@@ -287,7 +287,8 @@ function showTrackDialog(track: any) {
 async function play() {
   if (playerIsStartingPlayback.value) return
   await hapticsImpact()
-  store.commit('setPlayerIsStartingPlayback', localLibraryItemId)
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = localLibraryItemId
   eventBus.emit('play-item', { libraryItemId: localLibraryItemId, serverLibraryItemId: libraryItemId.value })
 }
 
@@ -299,7 +300,8 @@ async function playEpisode() {
   if (!selectedEpisode.value) return
   if (playerIsStartingPlayback.value) return
   await hapticsImpact()
-  store.commit('setPlayerIsStartingPlayback', selectedEpisode.value.serverEpisodeId)
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = selectedEpisode.value.serverEpisodeId
 
   eventBus.emit('play-item', {
     libraryItemId: localLibraryItemId,

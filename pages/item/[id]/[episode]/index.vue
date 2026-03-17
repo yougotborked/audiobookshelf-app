@@ -75,6 +75,7 @@ const { checkCellularPermission } = useCellularPermission()
 const libraryItemIdParam = route.params.id as string
 const episodeIdParam = route.params.episode as string
 
+const userStore = useUserStore()
 const store = useNuxtApp().$store as any
 
 // State
@@ -88,10 +89,10 @@ const startingDownload = ref(false)
 
 // Computed
 const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
-const isAdminOrUp = computed(() => store.getters['user/getIsAdminOrUp'])
+const isAdminOrUp = computed(() => userStore.getIsAdminOrUp)
 const isIos = computed(() => platform === 'ios')
 const mediaType = 'podcast'
-const userCanDownload = computed(() => store.getters['user/getUserCanDownload'])
+const userCanDownload = computed(() => userStore.getUserCanDownload)
 const isLocal = computed(() => libraryItem.value?.isLocal)
 const localLibraryItem = computed(() => {
   if (isLocal.value) return libraryItem.value
@@ -101,7 +102,7 @@ const libraryItemId = computed(() => libraryItem.value?.id)
 const isConnectedToServer = computed(() => {
   if (!isLocal.value) return true
   if (!libraryItem.value?.serverAddress) return false
-  return store.getters['user/getServerAddress'] === libraryItem.value.serverAddress
+  return userStore.getServerAddress === libraryItem.value.serverAddress
 })
 const serverLibraryItemId = computed(() => {
   if (!isLocal.value) return libraryItemId.value
@@ -143,13 +144,13 @@ const coverUrl = computed(() => {
     if (!libraryItem.value?.coverContentUrl) return '/book_placeholder.jpg'
     return Capacitor.convertFileSrc(libraryItem.value.coverContentUrl)
   }
-  return store.getters['globals/getLibraryItemCoverSrcById'](libraryItemId.value)
+  return globalsStore.getLibraryItemCoverSrcById(libraryItemId.value)
 })
-const isPlaying = computed(() => store.getters['getIsMediaStreaming'](libraryItemId.value, episode.value?.id))
-const playerIsPlaying = computed(() => store.state.playerIsPlaying && isPlaying.value)
-const playerIsStartingPlayback = computed(() => store.state.playerIsStartingPlayback)
+const isPlaying = computed(() => appStore.getIsMediaStreaming(libraryItemId.value, episode.value?.id))
+const playerIsPlaying = computed(() => appStore.playerIsPlaying && isPlaying.value)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
-  const mediaId = store.state.playerStartingPlaybackMediaId
+  const mediaId = appStore.playerStartingPlaybackMediaId
   if (!mediaId) return false
   return mediaId === localEpisodeId.value || mediaId === serverEpisodeId.value
 })
@@ -159,11 +160,11 @@ const userItemProgress = computed(() => {
 })
 const localItemProgress = computed(() => {
   if (!localLibraryItemId.value || !localEpisodeId.value) return null
-  return store.getters['globals/getLocalMediaProgressById'](localLibraryItemId.value, localEpisodeId.value)
+  return globalsStore.getLocalMediaProgressById(localLibraryItemId.value, localEpisodeId.value)
 })
 const serverItemProgress = computed(() => {
   if (!serverLibraryItemId.value || !serverEpisodeId.value) return null
-  return store.getters['user/getUserMediaProgress'](serverLibraryItemId.value, serverEpisodeId.value)
+  return userStore.getUserMediaProgress(serverLibraryItemId.value, serverEpisodeId.value)
 })
 const progressPercent = computed(() => userItemProgress.value?.progress || 0)
 const userIsFinished = computed(() => !!userItemProgress.value?.isFinished)
@@ -181,7 +182,7 @@ const timeRemaining = computed(() => {
   return `${(useNuxtApp() as any).$elapsedPretty(remaining)} left`
 })
 const publishedAt = computed(() => episode.value?.publishedAt)
-const downloadItem = computed(() => store.getters['globals/getDownloadItem'](libraryItemId.value, episode.value?.id))
+const downloadItem = computed(() => globalsStore.getDownloadItem(libraryItemId.value, episode.value?.id))
 const showDownload = computed(() => userCanDownload.value && !localEpisode.value)
 const transformedDescription = computed(() => parseDescription(description.value))
 
@@ -296,7 +297,8 @@ async function playClick() {
   if (playerIsPlaying.value) {
     eventBus.emit('pause-item')
   } else {
-    store.commit('setPlayerIsStartingPlayback', episode.value?.id)
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = episode.value?.id
 
     const playbackData = generatePlaybackData()
     emitPlayItemEvent(playbackData)
@@ -309,7 +311,8 @@ async function clickPlaybackTime(event: any) {
 
   await hapticsImpact()
 
-  store.commit('setPlayerIsStartingPlayback', episode.value?.id)
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = episode.value?.id
 
   const playbackData = generatePlaybackData(startTime)
   emitPlayItemEvent(playbackData)
@@ -453,7 +456,7 @@ async function discardProgress() {
     const serverItemProgressId = serverItemProgress.value?.id
     if (localItemProgress.value) {
       await db.removeLocalMediaProgress(localItemProgress.value.id)
-      store.commit('globals/removeLocalMediaProgress', localItemProgress.value.id)
+      globalsStore.removeLocalMediaProgress(localItemProgress.value.id)
     }
 
     if (serverItemProgressId) {
@@ -462,7 +465,7 @@ async function discardProgress() {
         .then(() => {
           console.log('Progress reset complete')
           toast.success(`Your progress was reset`)
-          store.commit('user/removeMediaProgress', serverItemProgressId)
+          userStore.removeMediaProgress(serverItemProgressId)
         })
         .catch((error: any) => {
           console.error('Progress reset failed', error)
@@ -489,7 +492,7 @@ async function toggleFinished() {
       const localMediaProgress = payload?.localMediaProgress
       console.log('toggleFinished localMediaProgress', JSON.stringify(localMediaProgress))
       if (localMediaProgress) {
-        store.commit('globals/updateLocalMediaProgress', localMediaProgress)
+        globalsStore.updateLocalMediaProgress(localMediaProgress)
       }
     }
   } else {
@@ -553,7 +556,7 @@ onMounted(async () => {
     fetchedLibraryItem = await db.getLocalLibraryItem(libItemId)
     console.log('Got lli', libItemId)
   } else {
-    const canRequest = appStore.networkConnected && store.state.user.serverConnectionConfig
+    const canRequest = appStore.networkConnected && userStore.serverConnectionConfig
 
     if (canRequest) {
       fetchedLibraryItem = await nativeHttp.get(`/api/items/${libItemId}?expanded=1`).catch((error: any) => {

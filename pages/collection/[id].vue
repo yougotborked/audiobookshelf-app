@@ -61,28 +61,23 @@ const playableItems = computed(() => bookItems.value.filter((book: any) => {
   return !book.isMissing && !book.isInvalid && book.media.tracks.length
 }))
 const playerIsPlaying = computed(() => {
-  const store = useNuxtApp().$store as any
-  return store.state.playerIsPlaying && isOpenInPlayer.value
+  return appStore.playerIsPlaying && isOpenInPlayer.value
 })
 const isOpenInPlayer = computed(() => {
-  const store = useNuxtApp().$store as any
   return !!playableItems.value.find((i: any) => {
-    if (i.localLibraryItem && store.getters['getIsMediaStreaming'](i.localLibraryItem.id)) return true
-    return store.getters['getIsMediaStreaming'](i.id)
+    if (i.localLibraryItem && appStore.getIsMediaStreaming(i.localLibraryItem.id)) return true
+    return appStore.getIsMediaStreaming(i.id)
   })
 })
 const autoContinuePlaylists = computed(() => {
-  const store = useNuxtApp().$store as any
-  return store.state.deviceData?.deviceSettings?.autoContinuePlaylists
+  return appStore.deviceData?.deviceSettings?.autoContinuePlaylists
 })
 const playerIsStartingPlayback = computed(() => {
-  const store = useNuxtApp().$store as any
-  return store.state.playerIsStartingPlayback
+  return appStore.playerIsStartingPlayback
 })
 const playerIsStartingForThisMedia = computed(() => {
   if (!mediaIdStartingPlayback.value) return false
-  const store = useNuxtApp().$store as any
-  const mediaId = store.state.playerStartingPlaybackMediaId
+  const mediaId = appStore.playerStartingPlaybackMediaId
   return mediaId === mediaIdStartingPlayback.value
 })
 const showPlayButton = computed(() => playableItems.value.length)
@@ -99,17 +94,17 @@ async function playClick() {
 }
 
 function playNextItem() {
-  const store = useNuxtApp().$store as any
   const nowIndex = playableItems.value.findIndex((i: any) => {
-    return store.getters['getIsMediaStreaming'](i.localLibraryItem?.id || i.id)
+    return appStore.getIsMediaStreaming(i.localLibraryItem?.id || i.id)
   })
   const nextBookNotRead = playableItems.value.slice(nowIndex + 1).find((pb: any) => {
-    const prog = store.getters['user/getUserMediaProgress'](pb.id)
+    const prog = userStore.getUserMediaProgress(pb.id)
     return !prog?.isFinished
   })
   if (nextBookNotRead) {
     mediaIdStartingPlayback.value = nextBookNotRead.id
-    store.commit('setPlayerIsStartingPlayback', nextBookNotRead.id)
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = nextBookNotRead.id
 
     if (nextBookNotRead.localLibraryItem) {
       eventBus.emit('play-item', { libraryItemId: nextBookNotRead.localLibraryItem.id, serverLibraryItemId: nextBookNotRead.id })

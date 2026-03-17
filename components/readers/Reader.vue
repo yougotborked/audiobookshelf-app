@@ -131,6 +131,10 @@ import { VolumeButtons } from '@capacitor-community/volume-buttons'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 
 export default {
+  setup() {
+    const appStore = useAppStore()
+    return { appStore }
+  },
   data() {
     return {
       touchstartX: 0,
@@ -181,10 +185,10 @@ export default {
   computed: {
     show: {
       get() {
-        return this.$store.state.showReader
+        return this.appStore.showReader
       },
       set(val) {
-        this.$store.commit('setShowReader', val)
+        this.appStore.showReader = val
       }
     },
     isIos() {
@@ -194,7 +198,7 @@ export default {
       return this.mediaMetadata.title || 'No Title'
     },
     selectedLibraryItem() {
-      return this.$store.state.selectedLibraryItem
+      return this.appStore.selectedLibraryItem
     },
     media() {
       return this.selectedLibraryItem?.media || null
@@ -334,13 +338,13 @@ export default {
       return `/api/items/${this.selectedLibraryItem.id}/ebook`
     },
     isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
+      return this.appStore.getIsPlayerOpen
     },
     keepProgress() {
-      return this.$store.state.ereaderKeepProgress
+      return this.appStore.ereaderKeepProgress
     },
     ebookFileId() {
-      return this.$store.state.ereaderFileId
+      return this.appStore.ereaderFileId
     }
   },
   methods: {

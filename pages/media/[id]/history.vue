@@ -34,10 +34,9 @@ const eventBus = useEventBus()
 const db = useDb()
 const { hapticsImpact } = useHaptics()
 const globalsStore = useGlobalsStore()
+const appStore = useAppStore()
 
 const id = route.params.id as string
-
-const store = useNuxtApp().$store as any
 
 // State
 const title = ref((route.query.title as string) || 'Unknown')
@@ -126,7 +125,7 @@ const groupedMediaEvents = computed(() => {
 
   return groups
 })
-const playerIsStartingPlayback = computed(() => store.state.playerIsStartingPlayback)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 
 // Methods
 async function clickPlaybackTime(time: number) {
@@ -137,8 +136,9 @@ async function clickPlaybackTime(time: number) {
 }
 
 function playAtTime(startTime: number) {
-  store.commit('setPlayerIsStartingPlayback', mediaItemEpisodeId.value || mediaItemLibraryItemId.value)
-  const localProg = store.getters['globals/getLocalMediaProgressByServerItemId'](mediaItemLibraryItemId.value, mediaItemEpisodeId.value)
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = mediaItemEpisodeId.value || mediaItemLibraryItemId.value
+  const localProg = globalsStore.getLocalMediaProgressByServerItemId(mediaItemLibraryItemId.value, mediaItemEpisodeId.value)
   if (localProg) {
     eventBus.emit('play-item', { libraryItemId: localProg.localLibraryItemId, episodeId: localProg.localEpisodeId, serverLibraryItemId: mediaItemLibraryItemId.value, serverEpisodeId: mediaItemEpisodeId.value, startTime })
   } else {

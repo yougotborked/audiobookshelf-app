@@ -52,6 +52,11 @@ export default {
       default: null
     }
   },
+  setup() {
+    const appStore = useAppStore()
+    const userStore = useUserStore()
+    return { appStore, userStore }
+  },
   data() {
     return {
       episodes: [],
@@ -69,13 +74,13 @@ export default {
   },
   computed: {
     networkConnected() {
-      return this.$store.state.networkConnected
+      return this.appStore.networkConnected
     },
     socketConnected() {
-      return this.$store.state.socketConnected
+      return this.appStore.socketConnected
     },
     serverReachable() {
-      return this.$store.state.serverReachable
+      return this.appStore.serverReachable
     },
     localEpisodes() {
       const episodes = []
@@ -117,7 +122,7 @@ export default {
         .filter((ep) => {
           if (ep.progress?.isFinished) return false
           if (ep.libraryItemId) {
-            const storeProgress = this.$store.getters['user/getUserMediaProgress'](ep.libraryItemId, ep.id)
+            const storeProgress = this.userStore.getUserMediaProgress(ep.libraryItemId, ep.id)
             if (storeProgress?.isFinished) return false
           }
           return true
@@ -223,13 +228,14 @@ export default {
       const first = queue[0]
 
       const firstProgress = first.serverLibraryItemId
-        ? this.$store.getters['user/getUserMediaProgress'](first.serverLibraryItemId, first.serverEpisodeId)
+        ? this.userStore.getUserMediaProgress(first.serverLibraryItemId, first.serverEpisodeId)
         : null
       const startTime = firstProgress?.currentTime || null
 
-      this.$store.commit('setPlayQueue', queue)
-      this.$store.commit('setQueueIndex', 0)
-      this.$store.commit('setPlayerIsStartingPlayback', first.episodeId)
+      this.appStore.setPlayQueue(queue)
+      this.appStore.setQueueIndex(0)
+      this.appStore.playerIsStartingPlayback = true
+      this.appStore.playerStartingPlaybackMediaId = first.episodeId
 
       const playPayload = {
         libraryItemId: first.libraryItemId,
