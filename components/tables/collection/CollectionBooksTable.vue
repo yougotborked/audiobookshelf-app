@@ -10,8 +10,8 @@
       <div class="flex-grow" />
       <p v-if="totalDuration" class="text-sm text-md-on-surface">{{ totalDurationPretty }}</p>
     </div>
-    <template v-for="book in booksCopy">
-      <tables-collection-book-table-row :key="book.id" :book="book" :collection-id="collectionId" class="item collection-book-item" @edit="editBook" />
+    <template v-for="book in booksCopy" :key="book.id">
+      <tables-collection-book-table-row :book="book" :collection-id="collectionId" class="item collection-book-item" @edit="editBook" />
     </template>
   </div>
 </template>

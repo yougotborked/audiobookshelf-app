@@ -19,8 +19,8 @@
           <ui-btn @click="clickedOption(manualTimeoutMin)" class="w-full">{{ strings.ButtonSetTimer }}</ui-btn>
         </div>
         <ul v-else class="w-full" role="listbox" aria-labelledby="listbox-label">
-          <template v-for="timeout in timeouts">
-            <li :key="timeout" class="text-md-on-surface select-none relative py-4 cursor-pointer rounded-md-sm hover:bg-md-on-surface/5" role="option" @click="clickedOption(timeout)">
+          <template v-for="timeout in timeouts" :key="timeout">
+            <li class="text-md-on-surface select-none relative py-4 cursor-pointer rounded-md-sm hover:bg-md-on-surface/5" role="option" @click="clickedOption(timeout)">
               <div class="flex items-center justify-center">
                 <span class="font-normal block truncate text-lg">{{ timeout }} min</span>
               </div>

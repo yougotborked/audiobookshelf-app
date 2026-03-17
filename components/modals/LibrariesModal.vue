@@ -3,9 +3,8 @@
     <div class="px-4 pt-2 pb-2">
       <p class="text-md-title-m text-md-on-surface mb-3">{{ strings.HeaderLibraries }}</p>
       <ul class="w-full" role="listbox">
-        <template v-for="library in libraries">
+        <template v-for="library in libraries" :key="library.id">
           <li
-            :key="library.id"
             class="select-none relative rounded-md-md cursor-pointer mb-1"
             :class="currentLibraryId === library.id ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'"
             role="option"

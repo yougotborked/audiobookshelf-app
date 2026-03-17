@@ -38,8 +38,8 @@
       </div>
     </div>
 
-    <template v-for="episode in episodesSorted">
-      <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id as string]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" :key="(episode.id as string)" @addToPlaylist="addEpisodeToPlaylist" />
+    <template v-for="episode in episodesSorted" :key="(episode.id as string)">
+      <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id as string]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
 
     <!-- Huhhh?

@@ -2,8 +2,8 @@
   <div class="w-full p-4">
     <h1 class="text-xl mb-2 font-semibold">{{ strings.HeaderLatestEpisodes }}</h1>
 
-    <template v-for="episode in recentEpisodes">
-      <tables-podcast-latest-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id]" :library-item-id="episode.libraryItemId" :local-library-item-id="localEpisodeMap[episode.id]?.localLibraryItemId" :key="episode.id" @addToPlaylist="addEpisodeToPlaylist" />
+    <template v-for="episode in recentEpisodes" :key="episode.id">
+      <tables-podcast-latest-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id]" :library-item-id="episode.libraryItemId" :local-library-item-id="localEpisodeMap[episode.id]?.localLibraryItemId" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
   </div>
 </template>

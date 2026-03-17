@@ -3,8 +3,8 @@
     <p class="mb-4 text-base text-md-on-surface">{{ $strings.HeaderDownloads }} ({{ downloadItemParts.length }})</p>
 
     <div v-if="!downloadItemParts.length" class="py-6 text-center text-lg">No download item parts</div>
-    <template v-for="(itemPart, num) in downloadItemParts">
-      <div :key="itemPart.id" class="w-full">
+    <template v-for="(itemPart, num) in downloadItemParts" :key="itemPart.id">
+      <div class="w-full">
         <div class="flex">
           <div class="w-14">
             <span v-if="itemPart.completed" class="material-symbols text-md-primary">check_circle</span>

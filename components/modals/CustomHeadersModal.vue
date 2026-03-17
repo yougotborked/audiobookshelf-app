@@ -19,8 +19,8 @@
           </form>
         </div>
         <div class="w-full h-full p-4" v-else>
-          <template v-for="[key, value] in Object.entries(headersCopy)">
-            <div :key="key" class="w-full rounded-lg bg-white bg-opacity-5 py-2 pl-4 pr-12 relative mb-2">
+          <template v-for="[key, value] in Object.entries(headersCopy)" :key="key">
+            <div class="w-full rounded-lg bg-white bg-opacity-5 py-2 pl-4 pr-12 relative mb-2">
               <p class="text-base font-semibold text-gray-200 leading-5">{{ key }}</p>
               <p class="text-sm text-gray-400">{{ value }}</p>
 

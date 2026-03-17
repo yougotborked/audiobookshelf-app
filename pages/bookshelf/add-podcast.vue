@@ -12,8 +12,8 @@
       </div>
       <div v-else class="w-full mx-auto pb-2 overflow-y-auto overflow-x-hidden h-[calc(100%-85px)]">
         <p v-if="termSearched && !results.length && !processing" class="text-center text-xl">{{ strings.MessageNoPodcastsFound }}</p>
-        <template v-for="podcast in results">
-          <div :key="podcast.id" class="p-2 border-b border-fg border-opacity-10" @click="selectPodcast(podcast)">
+        <template v-for="podcast in results" :key="podcast.id">
+          <div class="p-2 border-b border-fg border-opacity-10" @click="selectPodcast(podcast)">
             <div class="flex">
               <div class="w-8 min-w-8 py-1">
                 <div class="h-8 w-full bg-md-surface-3">

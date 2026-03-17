@@ -4,8 +4,8 @@
       <p class="text-md-title-m text-md-on-surface mb-3">{{ strings.LabelPlaybackSpeed }}</p>
       <div class="w-full overflow-x-hidden overflow-y-auto" style="max-height: 60vh">
         <ul class="w-full" role="listbox" aria-labelledby="listbox-label">
-          <template v-for="rate in rates">
-            <li :key="rate" class="text-md-on-surface select-none relative py-4 rounded-md-sm" :class="rate === selected ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'" role="option" @click="clickedOption(rate)">
+          <template v-for="rate in rates" :key="rate">
+            <li class="text-md-on-surface select-none relative py-4 rounded-md-sm" :class="rate === selected ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'" role="option" @click="clickedOption(rate)">
               <div class="flex items-center justify-center">
                 <span class="font-normal block truncate text-lg">{{ rate }}x</span>
               </div>

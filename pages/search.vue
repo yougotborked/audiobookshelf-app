@@ -11,8 +11,8 @@
         <p class="text-lg text-fg-muted">{{ $strings.MessageNoItemsFound }}</p>
       </div>
       <p v-if="bookResults.length" class="font-semibold text-sm mb-1">{{ $strings.LabelBooks }}</p>
-      <template v-for="item in bookResults">
-        <div :key="item.libraryItem.id" class="w-full h-16 py-1">
+      <template v-for="item in bookResults" :key="item.libraryItem.id">
+        <div class="w-full h-16 py-1">
           <nuxt-link :to="`/item/${item.libraryItem.id}`">
             <cards-item-search-card :library-item="item.libraryItem" :search="lastSearch" />
           </nuxt-link>
@@ -20,8 +20,8 @@
       </template>
 
       <p v-if="podcastResults.length" class="uppercase text-xs text-fg-muted my-1 px-1 font-semibold">{{ $strings.LabelPodcasts }}</p>
-      <template v-for="item in podcastResults">
-        <div :key="item.libraryItem.id" class="text-fg select-none relative py-1">
+      <template v-for="item in podcastResults" :key="item.libraryItem.id">
+        <div class="text-fg select-none relative py-1">
           <nuxt-link :to="`/item/${item.libraryItem.id}`">
             <cards-item-search-card :library-item="item.libraryItem" :search="lastSearch" />
           </nuxt-link>
@@ -29,8 +29,8 @@
       </template>
 
       <p v-if="seriesResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.LabelSeries }}</p>
-      <template v-for="seriesResult in seriesResults">
-        <div :key="seriesResult.series.id" class="w-full h-16 py-1">
+      <template v-for="seriesResult in seriesResults" :key="seriesResult.series.id">
+        <div class="w-full h-16 py-1">
           <nuxt-link :to="`/bookshelf/series/${seriesResult.series.id}`">
             <cards-series-search-card :series="seriesResult.series" :book-items="seriesResult.books" />
           </nuxt-link>
@@ -38,8 +38,8 @@
       </template>
 
       <p v-if="authorResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.LabelAuthors }}</p>
-      <template v-for="authorResult in authorResults">
-        <div :key="authorResult.id" class="w-full h-14 py-1">
+      <template v-for="authorResult in authorResults" :key="authorResult.id">
+        <div class="w-full h-14 py-1">
           <nuxt-link :to="`/bookshelf/library?filter=authors.${$encode(authorResult.id)}`">
             <cards-author-search-card :author="authorResult" />
           </nuxt-link>
@@ -47,8 +47,8 @@
       </template>
 
       <p v-if="narratorResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.LabelNarrators }}</p>
-      <template v-for="narrator in narratorResults">
-        <div :key="narrator.name" class="w-full h-14 py-1">
+      <template v-for="narrator in narratorResults" :key="narrator.name">
+        <div class="w-full h-14 py-1">
           <nuxt-link :to="`/bookshelf/library?filter=narrators.${$encode(narrator.name)}`">
             <cards-narrator-search-card :narrator="narrator.name" />
           </nuxt-link>
@@ -56,8 +56,8 @@
       </template>
 
       <p v-if="tagResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.LabelTags }}</p>
-      <template v-for="tag in tagResults">
-        <div :key="tag.name" class="w-full h-14 py-1">
+      <template v-for="tag in tagResults" :key="tag.name">
+        <div class="w-full h-14 py-1">
           <nuxt-link :to="`/bookshelf/library?filter=tags.${$encode(tag.name)}`">
             <cards-tag-search-card :tag="tag.name" />
           </nuxt-link>

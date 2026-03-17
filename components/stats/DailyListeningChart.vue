@@ -3,28 +3,28 @@
     <h1 class="text-2xl mb-4">{{ strings.HeaderStatsMinutesListeningChart }}</h1>
     <div class="relative w-96 h-72">
       <div class="absolute top-0 left-0">
-        <template v-for="lbl in yAxisLabels">
-          <div :key="lbl" :style="{ height: lineSpacing + 'px' }" class="flex items-center justify-end">
+        <template v-for="lbl in yAxisLabels" :key="lbl">
+          <div :style="{ height: lineSpacing + 'px' }" class="flex items-center justify-end">
             <p class="text-xs font-semibold">{{ lbl }}</p>
           </div>
         </template>
       </div>
 
-      <template v-for="n in 7">
-        <div :key="n" class="absolute pointer-events-none left-0 h-px bg-white bg-opacity-10" :style="{ top: n * lineSpacing - lineSpacing / 2 + 'px', width: '360px', marginLeft: '24px' }" />
+      <template v-for="n in 7" :key="n">
+        <div class="absolute pointer-events-none left-0 h-px bg-white bg-opacity-10" :style="{ top: n * lineSpacing - lineSpacing / 2 + 'px', width: '360px', marginLeft: '24px' }" />
 
-        <div :key="`dot-${n}`" class="absolute z-10" :style="{ left: points[n - 1].x + 'px', bottom: points[n - 1].y + 'px' }">
+        <div class="absolute z-10" :style="{ left: points[n - 1].x + 'px', bottom: points[n - 1].y + 'px' }">
           <div class="h-2 w-2 bg-yellow-400 hover:bg-yellow-300 rounded-full transform duration-150 transition-transform hover:scale-125" />
         </div>
       </template>
 
-      <template v-for="(line, index) in pointLines">
-        <div :key="`line-${index}`" class="absolute h-0.5 bg-yellow-400 origin-bottom-left pointer-events-none" :style="{ width: line.width + 'px', left: line.x + 'px', bottom: line.y + 'px', transform: `rotate(${line.angle}deg)` }" />
+      <template v-for="(line, index) in pointLines" :key="`line-${index}`">
+        <div class="absolute h-0.5 bg-yellow-400 origin-bottom-left pointer-events-none" :style="{ width: line.width + 'px', left: line.x + 'px', bottom: line.y + 'px', transform: `rotate(${line.angle}deg)` }" />
       </template>
 
       <div class="absolute -bottom-2 left-0 flex ml-6">
-        <template v-for="dayObj in last7Days">
-          <div :key="dayObj.date" :style="{ width: daySpacing + daySpacing / 14 + 'px' }">
+        <template v-for="dayObj in last7Days" :key="dayObj.date">
+          <div :style="{ width: daySpacing + daySpacing / 14 + 'px' }">
             <p class="text-sm">{{ dayObj.dayOfWeek.slice(0, 3) }}</p>
           </div>
         </template>

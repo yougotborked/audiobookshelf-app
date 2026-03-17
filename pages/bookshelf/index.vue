@@ -11,8 +11,8 @@
 
     <bookshelf-podcast-catch-up-feed v-if="currentLibraryIsPodcast" :current-library-id="currentLibraryId" />
     <div v-else class="w-full" :class="{ 'py-6': altViewEnabled }">
-      <template v-for="(shelf, index) in shelves">
-        <bookshelf-shelf :key="shelf.id" :label="getShelfLabel(shelf)" :entities="shelf.entities" :type="shelf.type" :style="{ zIndex: shelves.length - index }" />
+      <template v-for="(shelf, index) in shelves" :key="shelf.id">
+        <bookshelf-shelf :label="getShelfLabel(shelf)" :entities="shelf.entities" :type="shelf.type" :style="{ zIndex: shelves.length - index }" />
       </template>
     </div>
 

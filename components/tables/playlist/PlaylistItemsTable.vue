@@ -10,9 +10,8 @@
       <div class="flex-grow" />
       <p v-if="totalDuration" class="text-sm text-md-on-surface">{{ totalDurationPretty }}</p>
     </div>
-    <template v-for="item in items">
+    <template v-for="item in items" :key="itemKey(item)">
       <tables-playlist-item-table-row
-        :key="itemKey(item)"
         :item="item"
         :playlist-id="playlistId"
         @showMore="showMore"

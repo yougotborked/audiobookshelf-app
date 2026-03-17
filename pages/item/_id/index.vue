@@ -88,9 +88,9 @@
           <div v-if="podcastAuthor || bookAuthors?.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelAuthor }}</div>
           <div v-if="podcastAuthor" class="text-sm">{{ podcastAuthor }}</div>
           <div v-else-if="bookAuthors?.length" class="text-sm">
-            <template v-for="(author, index) in bookAuthors">
-              <nuxt-link :key="author.id" :to="`/bookshelf/library?filter=authors.${$encode(author.id)}`" class="underline whitespace-nowrap">{{ author.name }}</nuxt-link
-              ><span :key="`${author.id}-comma`" v-if="index < bookAuthors.length - 1">, </span>
+            <template v-for="(author, index) in bookAuthors" :key="author.id">
+              <nuxt-link :to="`/bookshelf/library?filter=authors.${$encode(author.id)}`" class="underline whitespace-nowrap">{{ author.name }}</nuxt-link
+              ><span v-if="index < bookAuthors.length - 1">, </span>
             </template>
           </div>
 
@@ -99,9 +99,9 @@
 
           <div v-if="series?.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelSeries }}</div>
           <div v-if="series?.length" class="text-sm">
-            <template v-for="(series, index) in seriesList">
-              <nuxt-link :key="series.id" :to="`/bookshelf/series/${series.id}`" class="underline whitespace-nowrap">{{ series.text }}</nuxt-link
-              ><span :key="`${series.id}-comma`" v-if="index < seriesList.length - 1">, </span>
+            <template v-for="(series, index) in seriesList" :key="series.id">
+              <nuxt-link :to="`/bookshelf/series/${series.id}`" class="underline whitespace-nowrap">{{ series.text }}</nuxt-link
+              ><span v-if="index < seriesList.length - 1">, </span>
             </template>
           </div>
 
@@ -110,25 +110,25 @@
 
           <div v-if="narrators?.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelNarrators }}</div>
           <div v-if="narrators?.length" class="text-sm">
-            <template v-for="(narrator, index) in narrators">
-              <nuxt-link :key="narrator" :to="`/bookshelf/library?filter=narrators.${$encode(narrator)}`" class="underline whitespace-nowrap">{{ narrator }}</nuxt-link
-              ><span :key="index" v-if="index < narrators.length - 1">, </span>
+            <template v-for="(narrator, index) in narrators" :key="narrator">
+              <nuxt-link :to="`/bookshelf/library?filter=narrators.${$encode(narrator)}`" class="underline whitespace-nowrap">{{ narrator }}</nuxt-link
+              ><span v-if="index < narrators.length - 1">, </span>
             </template>
           </div>
 
           <div v-if="genres.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelGenres }}</div>
           <div v-if="genres.length" class="text-sm">
-            <template v-for="(genre, index) in genres">
-              <nuxt-link :key="genre" :to="`/bookshelf/library?filter=genres.${$encode(genre)}`" class="underline whitespace-nowrap">{{ genre }}</nuxt-link
-              ><span :key="index" v-if="index < genres.length - 1">, </span>
+            <template v-for="(genre, index) in genres" :key="genre">
+              <nuxt-link :to="`/bookshelf/library?filter=genres.${$encode(genre)}`" class="underline whitespace-nowrap">{{ genre }}</nuxt-link
+              ><span v-if="index < genres.length - 1">, </span>
             </template>
           </div>
 
           <div v-if="tags.length" class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide">{{ $strings.LabelTags }}</div>
           <div v-if="tags.length" class="text-sm">
-            <template v-for="(tag, index) in tags">
-              <nuxt-link :key="tag" :to="`/bookshelf/library?filter=tags.${$encode(tag)}`" class="underline whitespace-nowrap">{{ tag }}</nuxt-link
-              ><span :key="index" v-if="index < tags.length - 1">, </span>
+            <template v-for="(tag, index) in tags" :key="tag">
+              <nuxt-link :to="`/bookshelf/library?filter=tags.${$encode(tag)}`" class="underline whitespace-nowrap">{{ tag }}</nuxt-link
+              ><span v-if="index < tags.length - 1">, </span>
             </template>
           </div>
 

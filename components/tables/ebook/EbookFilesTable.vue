@@ -18,8 +18,8 @@
             <th class="text-left px-4 w-16">{{ strings.LabelRead }}</th>
             <th v-if="userCanUpdate && !libraryIsAudiobooksOnly" class="text-center w-16"></th>
           </tr>
-          <template v-for="file in ebookFiles">
-            <tables-ebook-files-table-row :key="file.path" :libraryItemId="libraryItemId" :file="file" @read="readEbook" @more="showMore" />
+          <template v-for="file in ebookFiles" :key="file.path">
+            <tables-ebook-files-table-row :libraryItemId="libraryItemId" :file="file" @read="readEbook" @more="showMore" />
           </template>
         </table>
       </div>

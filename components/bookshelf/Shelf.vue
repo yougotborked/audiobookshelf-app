@@ -5,11 +5,11 @@
     </div>
 
     <div class="flex items-end px-3 max-w-full overflow-x-auto" :class="altViewEnabled ? '' : 'bookshelfRow'" :style="{ height: shelfHeight + 'px', paddingBottom: entityPaddingBottom + 'px' }">
-      <template v-for="(entity, index) in entities">
-        <cards-lazy-book-card v-if="type === 'book' || type === 'podcast'" :key="(entity as Record<string, unknown>).id as string" :index="index" :book-mount="entity" :width="bookWidth" :height="entityHeight" :book-cover-aspect-ratio="bookCoverAspectRatio" :is-alt-view-enabled="altViewEnabled" class="mx-2 relative" />
-        <cards-lazy-book-card v-if="type === 'episode'" :key="((entity as Record<string, unknown>).recentEpisode as Record<string, unknown>).id as string" :index="index" :book-mount="entity" :width="bookWidth" :height="entityHeight" :book-cover-aspect-ratio="bookCoverAspectRatio" :is-alt-view-enabled="altViewEnabled" class="mx-2 relative" />
-        <cards-lazy-series-card v-else-if="type === 'series'" :key="(entity as Record<string, unknown>).id as string" :index="index" :series-mount="entity" :width="bookWidth * 2" :height="entityHeight" :book-cover-aspect-ratio="bookCoverAspectRatio" :is-alt-view-enabled="altViewEnabled" is-categorized class="mx-2 relative" />
-        <cards-author-card v-else-if="type === 'authors'" :key="(entity as Record<string, unknown>).id as string" :width="bookWidth / 1.25" :height="bookWidth" :author="entity" :size-multiplier="1" class="mx-2" />
+      <template v-for="(entity, index) in entities" :key="(entity as Record<string, unknown>).id as string">
+        <cards-lazy-book-card v-if="type === 'book' || type === 'podcast'" :index="index" :book-mount="entity" :width="bookWidth" :height="entityHeight" :book-cover-aspect-ratio="bookCoverAspectRatio" :is-alt-view-enabled="altViewEnabled" class="mx-2 relative" />
+        <cards-lazy-book-card v-if="type === 'episode'" :index="index" :book-mount="entity" :width="bookWidth" :height="entityHeight" :book-cover-aspect-ratio="bookCoverAspectRatio" :is-alt-view-enabled="altViewEnabled" class="mx-2 relative" />
+        <cards-lazy-series-card v-else-if="type === 'series'" :index="index" :series-mount="entity" :width="bookWidth * 2" :height="entityHeight" :book-cover-aspect-ratio="bookCoverAspectRatio" :is-alt-view-enabled="altViewEnabled" is-categorized class="mx-2 relative" />
+        <cards-author-card v-else-if="type === 'authors'" :width="bookWidth / 1.25" :height="bookWidth" :author="entity" :size-multiplier="1" class="mx-2" />
       </template>
     </div>
 

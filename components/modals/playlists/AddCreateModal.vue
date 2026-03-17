@@ -28,8 +28,8 @@
     <!-- playlists list -->
     <div v-if="!showPlaylistNameInput" class="w-full overflow-y-auto overflow-x-hidden h-full max-h-[calc(100vh-176px)]">
       <div class="w-full h-full" v-show="!showPlaylistNameInput">
-        <template v-for="playlist in sortedPlaylists">
-          <modals-playlists-playlist-row :key="playlist.id" :in-playlist="playlist.isItemIncluded" :playlist="playlist" @click="clickPlaylist" @close="show = false" />
+        <template v-for="playlist in sortedPlaylists" :key="playlist.id">
+          <modals-playlists-playlist-row :in-playlist="playlist.isItemIncluded" :playlist="playlist" @click="clickPlaylist" @close="show = false" />
         </template>
         <div v-if="!playlists.length" class="flex h-full items-center justify-center">
           <p class="text-xl">{{ loading ? strings.MessageLoading : strings.MessageNoUserPlaylists }}</p>

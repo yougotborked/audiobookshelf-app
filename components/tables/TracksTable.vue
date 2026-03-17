@@ -17,8 +17,8 @@
             <th class="text-left">{{ strings.LabelFilename }}</th>
             <th class="text-center w-16">{{ strings.LabelDuration }}</th>
           </tr>
-          <template v-for="track in tracks">
-            <tr :key="track.index">
+          <template v-for="track in tracks" :key="track.index">
+            <tr>
               <td>{{ ((track as any).metadata && (track as any).metadata.filename) || (track as any).title || 'Unknown' }}</td>
               <td class="font-mono text-center w-16">
                 {{ utils.secondsToTimestamp((track as any).duration) }}

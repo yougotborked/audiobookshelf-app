@@ -8,8 +8,8 @@
     </div>
 
     <div v-if="!isIos" class="w-full max-w-full px-2 py-2">
-      <template v-for="folder in localFolders">
-        <nuxt-link :to="`/localMedia/folders/${folder.id}`" :key="folder.id" class="flex items-center px-2 py-4 bg-primary rounded-md border-bg mb-1">
+      <template v-for="folder in localFolders" :key="folder.id">
+        <nuxt-link :to="`/localMedia/folders/${folder.id}`" class="flex items-center px-2 py-4 bg-primary rounded-md border-bg mb-1">
           <span class="material-symbols fill text-xl text-yellow-400">folder</span>
           <p class="ml-2">{{ folder.name }}</p>
           <div class="flex-grow" />

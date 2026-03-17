@@ -7,8 +7,8 @@
     </template>
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
       <div class="feed-content w-full overflow-x-hidden overflow-y-auto bg-md-surface-1 rounded-lg border border-white border-opacity-20" @click.stop.prevent>
-        <template v-for="(episode, index) in episodes">
-          <div :key="index" class="relative" :class="itemEpisodeMap[(episode as any).enclosure.url] ? 'bg-md-surface-3 bg-opacity-40' : selectedEpisodes[String(index)] ? 'bg-md-primary bg-opacity-10' : index % 2 == 0 ? 'bg-md-surface-3 bg-opacity-25' : 'bg-md-surface-3 bg-opacity-5'" @click="selectEpisode(episode, index)">
+        <template v-for="(episode, index) in episodes" :key="index">
+          <div class="relative" :class="itemEpisodeMap[(episode as any).enclosure.url] ? 'bg-md-surface-3 bg-opacity-40' : selectedEpisodes[String(index)] ? 'bg-md-primary bg-opacity-10' : index % 2 == 0 ? 'bg-md-surface-3 bg-opacity-25' : 'bg-md-surface-3 bg-opacity-5'" @click="selectEpisode(episode, index)">
             <div class="absolute top-0 left-0 h-full flex items-center p-2">
               <span v-if="itemEpisodeMap[(episode as any).enclosure.url]" class="material-symbols text-md-primary text-xl">download_done</span>
               <ui-checkbox v-else v-model="selectedEpisodes[String(index)]" small checkbox-bg="md-surface-3" border-color="gray-600" />

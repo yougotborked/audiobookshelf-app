@@ -5,16 +5,16 @@
     </div>
     <transition name="menu">
       <ul ref="menu" v-show="showMenu" class="absolute z-50 -mt-px bg-md-surface-3 border border-md-outline-variant shadow-lg max-h-56 rounded-md py-1 text-base ring-1 ring-bg ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" role="listbox" style="width: 160px">
-        <template v-for="item in items">
-          <nuxt-link :key="item.value" v-if="item.to" :to="item.to">
-            <li :key="item.value" class="text-md-on-surface select-none relative py-2" id="listbox-option-0" role="option" @click="clickedOption(item.value)">
+        <template v-for="item in items" :key="item.value">
+          <nuxt-link v-if="item.to" :to="item.to">
+            <li class="text-md-on-surface select-none relative py-2" id="listbox-option-0" role="option" @click="clickedOption(item.value)">
               <div class="flex items-center px-2">
                 <span v-if="item.icon" class="material-symbols text-lg mr-2" :class="item.iconClass ? item.iconClass : ''">{{ item.icon }}</span>
                 <span class="font-normal block truncate font-sans text-center">{{ item.text }}</span>
               </div>
             </li>
           </nuxt-link>
-          <li v-else :key="item.value" class="text-md-on-surface select-none relative py-2" id="listbox-option-0" role="option" @click="clickedOption(item.value)">
+          <li v-else class="text-md-on-surface select-none relative py-2" id="listbox-option-0" role="option" @click="clickedOption(item.value)">
             <div class="flex items-center px-2">
               <span v-if="item.icon" class="material-symbols text-lg mr-2" :class="item.iconClass ? item.iconClass : ''">{{ item.icon }}</span>
               <span class="font-normal block truncate font-sans text-center">{{ item.text }}</span>

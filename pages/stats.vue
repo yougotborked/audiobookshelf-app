@@ -37,8 +37,8 @@
           <div class="flex-grow" />
         </div>
         <p v-if="!mostRecentListeningSessions.length">{{ $strings.MessageNoListeningSessions }}</p>
-        <template v-for="(item, index) in mostRecentListeningSessions">
-          <div :key="item.id" class="w-full py-0.5">
+        <template v-for="(item, index) in mostRecentListeningSessions" :key="item.id">
+          <div class="w-full py-0.5">
             <div class="flex items-center mb-1">
               <p class="text-sm text-fg-muted w-8 min-w-8">{{ index + 1 }}.&nbsp;</p>
               <div class="w-56">

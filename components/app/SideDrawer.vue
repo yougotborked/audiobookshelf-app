@@ -7,12 +7,12 @@
       </div>
 
       <div class="w-full overflow-y-auto" style="max-height: calc(100vh - 180px)">
-        <template v-for="item in navItems">
-          <button v-if="item.action" :key="item.text" :tabindex="show ? 0 : -1" class="w-full hover:bg-md-surface-1/60 flex items-center py-3 px-6 text-md-on-surface-variant" @click="clickAction(item.action)">
+        <template v-for="item in navItems" :key="item.text">
+          <button v-if="item.action" :tabindex="show ? 0 : -1" class="w-full hover:bg-md-surface-1/60 flex items-center py-3 px-6 text-md-on-surface-variant" @click="clickAction(item.action)">
             <span class="material-symbols fill text-lg">{{ item.icon }}</span>
             <p class="pl-4">{{ item.text }}</p>
           </button>
-          <nuxt-link v-else :to="item.to" :key="item.text" :tabindex="show ? 0 : -1" class="w-full hover:bg-md-surface-1/60 flex items-center py-3 px-6 text-md-on-surface" :class="item.to && currentRoutePath.startsWith(item.to) ? 'bg-md-on-surface/5' : 'text-md-on-surface-variant'">
+          <nuxt-link v-else :to="item.to" :tabindex="show ? 0 : -1" class="w-full hover:bg-md-surface-1/60 flex items-center py-3 px-6 text-md-on-surface" :class="item.to && currentRoutePath.startsWith(item.to) ? 'bg-md-on-surface/5' : 'text-md-on-surface-variant'">
             <span class="material-symbols fill text-lg">{{ item.icon }}</span>
             <p class="pl-4">{{ item.text }}</p>
           </nuxt-link>

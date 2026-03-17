@@ -8,8 +8,8 @@
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
       <div class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-3 rounded-lg border border-fg/20 mt-8" style="max-height: 75%" @click.stop>
         <ul v-show="!sublist" class="h-full w-full" role="listbox" aria-labelledby="listbox-label">
-          <template v-for="item in items">
-            <li :key="item.value" class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedOption(item)">
+          <template v-for="item in items" :key="item.value">
+            <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedOption(item)">
               <div class="flex items-center justify-between">
                 <span class="font-normal ml-3 block truncate text-lg">{{ item.text }}</span>
               </div>
@@ -33,8 +33,8 @@
               <span class="font-normal block truncate py-5 text-lg">No {{ sublist }} items</span>
             </div>
           </li>
-          <template v-for="item in sublistItems">
-            <li :key="item.value" class="text-md-on-surface select-none relative px-4 cursor-pointer" :class="`${sublist}.${item.value}` === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedSublistOption(item.value)">
+          <template v-for="item in sublistItems" :key="item.value">
+            <li class="text-md-on-surface select-none relative px-4 cursor-pointer" :class="`${sublist}.${item.value}` === selected ? 'bg-md-surface-1 bg-opacity-50' : ''" role="option" @click="clickedSublistOption(item.value)">
               <div class="flex items-center">
                 <span class="font-normal truncate py-3 text-base">{{ item.text }}</span>
               </div>

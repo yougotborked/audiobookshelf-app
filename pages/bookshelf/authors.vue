@@ -2,8 +2,8 @@
   <div>
     <div id="bookshelf" class="w-full h-full p-4 overflow-y-auto">
       <div class="flex flex-wrap justify-center">
-        <template v-for="author in authors">
-          <cards-author-card :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" class="p-2" />
+        <template v-for="author in authors" :key="author.id">
+          <cards-author-card :author="author" :width="cardWidth" :height="cardHeight" class="p-2" />
         </template>
       </div>
     </div>

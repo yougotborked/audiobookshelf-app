@@ -12,8 +12,8 @@
     <p class="mb-2 text-base text-fg">{{ $strings.HeaderLocalLibraryItems }} ({{ localLibraryItems.length }})</p>
 
     <div class="w-full media-item-container overflow-y-auto">
-      <template v-for="localLibraryItem in localLibraryItems">
-        <nuxt-link :to="`/localMedia/item/${localLibraryItem.id}`" :key="localLibraryItem.id" class="flex my-1">
+      <template v-for="localLibraryItem in localLibraryItems" :key="localLibraryItem.id">
+        <nuxt-link :to="`/localMedia/item/${localLibraryItem.id}`" class="flex my-1">
           <div class="w-12 h-12 min-w-12 min-h-12 bg-primary">
             <img v-if="localLibraryItem.coverPathSrc" :src="localLibraryItem.coverPathSrc" class="w-full h-full object-contain" />
           </div>

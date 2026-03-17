@@ -16,8 +16,8 @@
       </form>
 
       <ul ref="menu" v-show="showMenu" class="absolute z-50 mt-1 w-full bg-md-surface-1 border border-gray-600 shadow-lg max-h-56 rounded-md py-1 ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none text-sm" role="listbox" aria-labelledby="listbox-label">
-        <template v-for="item in itemsToShow">
-          <li :key="item" class="text-gray-50 select-none relative py-2 pr-9 cursor-pointer" role="option" @click="clickedOption($event, item)" @mouseup.stop.prevent @mousedown.prevent>
+        <template v-for="item in itemsToShow" :key="item">
+          <li class="text-gray-50 select-none relative py-2 pr-9 cursor-pointer" role="option" @click="clickedOption($event, item)" @mouseup.stop.prevent @mousedown.prevent>
             <div class="flex items-center">
               <span class="font-normal ml-3 block truncate">{{ item }}</span>
             </div>

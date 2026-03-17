@@ -24,8 +24,8 @@
 
           <draggable v-model="audioTracksCopy" v-bind="dragOptions" handle=".drag-handle" draggable=".item" tag="div" @start="drag = true" @end="drag = false" @update="draggableUpdate" :disabled="isIos">
             <transition-group type="transition" :name="!drag ? 'dragtrack' : null">
-              <template v-for="track in audioTracksCopy">
-                <div :key="track.localFileId" class="flex items-center my-1 item">
+              <template v-for="track in audioTracksCopy" :key="track.localFileId">
+                <div class="flex items-center my-1 item">
                   <div v-if="!isIos" class="w-8 h-12 flex items-center justify-center" style="min-width: 32px">
                     <span class="material-symbols drag-handle text-lg text-fg-muted">menu</span>
                   </div>
@@ -53,8 +53,8 @@
             <p class="text-base">Episodes ({{ episodes.length }})</p>
             <p class="text-xs text-fg-muted px-2">{{ $strings.LabelTotalSize }}: {{ $bytesPretty(totalEpisodesSize) }}</p>
           </div>
-          <template v-for="episode in episodes">
-            <div :key="episode.id" class="flex items-center my-1">
+          <template v-for="episode in episodes" :key="episode.id">
+            <div class="flex items-center my-1">
               <div class="w-10 h-12 flex items-center justify-center" style="min-width: 48px">
                 <p class="font-mono font-bold text-xl">{{ episode.index }}</p>
               </div>
@@ -94,8 +94,8 @@
             <p class="text-lg">Other Files</p>
             <p class="text-xs text-fg-muted px-2">{{ $strings.LabelTotalSize }}: {{ $bytesPretty(totalOtherFilesSize) }}</p>
           </div>
-          <template v-for="file in otherFiles">
-            <div :key="file.id" class="flex items-center my-1">
+          <template v-for="file in otherFiles" :key="file.id">
+            <div class="flex items-center my-1">
               <div class="w-12 h-12 flex items-center justify-center">
                 <img v-if="(file.mimeType || '').startsWith('image')" :src="getCapImageSrc(file.contentUrl)" class="w-full h-full object-contain" />
                 <span v-else class="material-symbols">music_note</span>

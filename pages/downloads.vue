@@ -3,8 +3,8 @@
     <p class="mb-2 text-base text-md-on-surface">{{ $strings.HeaderDownloads }} ({{ localLibraryItems.length }})</p>
 
     <div class="w-full">
-      <template v-for="(mediaItem, num) in localLibraryItems">
-        <div :key="mediaItem.id" class="w-full">
+      <template v-for="(mediaItem, num) in localLibraryItems" :key="mediaItem.id">
+        <div class="w-full">
           <nuxt-link :to="`/localMedia/item/${mediaItem.id}`" class="flex items-center">
             <div class="w-16 h-16 min-w-16 min-h-16 flex-none bg-md-surface-3 relative">
               <img v-if="mediaItem.coverPathSrc" :src="mediaItem.coverPathSrc" class="w-full h-full object-contain" />
