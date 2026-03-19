@@ -9,14 +9,16 @@
       <p class="pl-4">{{ strings.MessageLoadingServerData }}</p>
     </div>
 
-    <bookshelf-podcast-catch-up-feed v-if="currentLibraryIsPodcast" :current-library-id="currentLibraryId" />
-    <div v-else class="w-full" :class="{ 'py-6': altViewEnabled }">
+    <div v-if="currentLibraryIsPodcast" class="w-full shrink-0" style="height: 45vh; min-height: 280px">
+      <bookshelf-podcast-catch-up-feed :current-library-id="currentLibraryId" />
+    </div>
+    <div class="w-full" :class="{ 'py-6': altViewEnabled }">
       <template v-for="(shelf, index) in shelves" :key="shelf.id">
         <bookshelf-shelf :label="getShelfLabel(shelf)" :entities="shelf.entities" :type="shelf.type" :style="{ zIndex: shelves.length - index }" />
       </template>
     </div>
 
-    <div v-if="!shelves.length && !isLoading" class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+    <div v-if="!shelves.length && !isLoading && !currentLibraryIsPodcast" class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
       <div>
         <p class="mb-4 text-center text-xl">
           {{ strings.MessageBookshelfEmpty }}
@@ -32,7 +34,7 @@
         </div>
       </div>
     </div>
-    <div v-else-if="!shelves.length && isLoading && !attemptingConnection" class="absolute top-0 left-0 z-50 w-full h-full flex items-center justify-center">
+    <div v-else-if="!shelves.length && isLoading && !attemptingConnection && !currentLibraryIsPodcast" class="absolute top-0 left-0 z-50 w-full h-full flex items-center justify-center">
       <ui-loading-indicator :text="strings.MessageLoading" />
     </div>
   </div>
@@ -188,8 +190,6 @@ function getLocalMediaItemCategories() {
 }
 
 async function fetchCategories() {
-  if (currentLibraryIsPodcast.value) return
-
   console.log(`[categories] fetchCategories networkConnected=${networkConnected.value}, lastServerFetch=${lastServerFetch.value}, lastLocalFetch=${lastLocalFetch.value}`)
 
   const isConnectedToServerWithInternet = user.value && currentLibraryId.value && networkConnected.value

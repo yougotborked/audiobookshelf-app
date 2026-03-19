@@ -1,15 +1,14 @@
 <template>
-  <modals-modal v-model="show" width="90%">
-    <template #outer>
-      <div v-show="selected !== 'all'" class="absolute top-12 left-4 z-40">
-        <ui-btn class="text-lg border-yellow-400/40 h-10" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
+  <modals-modal v-model="show">
+    <div class="px-4 pt-2 pb-2">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-md-title-m text-md-on-surface">Filter</p>
+        <ui-btn v-show="selected !== 'all'" class="text-sm border-yellow-400/40 h-8" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
       </div>
-    </template>
-    <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
-      <div class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-3 rounded-lg border border-fg/20 mt-8" style="max-height: 75%" @click.stop>
-        <ul v-show="!sublist" class="h-full w-full" role="listbox" aria-labelledby="listbox-label">
+      <div class="w-full overflow-x-hidden overflow-y-auto" style="max-height: 70vh">
+        <ul v-show="!sublist" class="w-full" role="listbox" aria-labelledby="listbox-label">
           <template v-for="item in items" :key="item.value">
-            <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer" :class="item.value === selected ? 'bg-md-surface-1/50' : ''" role="option" @click="clickedOption(item)">
+            <li class="text-md-on-surface select-none relative py-4 pr-9 cursor-pointer rounded-md-sm" :class="item.value === selected ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'" role="option" @click="clickedOption(item)">
               <div class="flex items-center justify-between">
                 <span class="font-normal ml-3 block truncate text-lg">{{ item.text }}</span>
               </div>
@@ -19,8 +18,8 @@
             </li>
           </template>
         </ul>
-        <ul v-show="sublist" class="h-full w-full rounded-lg" role="listbox" aria-labelledby="listbox-label">
-          <li class="text-md-on-surface select-none relative py-3 pl-9 cursor-pointer" role="option" @click="sublist = null">
+        <ul v-show="sublist" class="w-full" role="listbox" aria-labelledby="listbox-label">
+          <li class="text-md-on-surface select-none relative py-3 pl-9 cursor-pointer hover:bg-md-on-surface/5 rounded-md-sm" role="option" @click="sublist = null">
             <div class="absolute left-1 top-0 bottom-0 h-full flex items-center">
               <span class="material-symbols text-2xl">arrow_left</span>
             </div>
@@ -28,13 +27,13 @@
               <span class="font-normal ml-3 block truncate text-lg">{{ strings.ButtonBack }}</span>
             </div>
           </li>
-          <li v-if="!sublistItems.length" class="text-gray-400 select-none relative px-2" role="option">
+          <li v-if="!sublistItems.length" class="text-md-on-surface-variant select-none relative px-2" role="option">
             <div class="flex items-center justify-center">
               <span class="font-normal block truncate py-5 text-lg">No {{ sublist }} items</span>
             </div>
           </li>
           <template v-for="item in sublistItems" :key="item.value">
-            <li class="text-md-on-surface select-none relative px-4 cursor-pointer" :class="`${sublist}.${item.value}` === selected ? 'bg-md-surface-1/50' : ''" role="option" @click="clickedSublistOption(item.value)">
+            <li class="text-md-on-surface select-none relative px-4 cursor-pointer rounded-md-sm" :class="`${sublist}.${item.value}` === selected ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'" role="option" @click="clickedSublistOption(item.value)">
               <div class="flex items-center">
                 <span class="font-normal truncate py-3 text-base">{{ item.text }}</span>
               </div>
@@ -229,8 +228,3 @@ async function clickedOption(option: { value: string; sublist?: boolean }) {
 }
 </script>
 
-<style>
-.filter-modal-wrapper {
-  max-height: calc(100% - 320px);
-}
-</style>

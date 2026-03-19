@@ -40,6 +40,7 @@ const eventBus = useEventBus()
 const wrapper = ref<HTMLElement | null>(null)
 const content = ref<HTMLElement | null>(null)
 const el = ref<HTMLElement | null>(null)
+const justOpened = ref(false)
 
 const persistent = computed(() => props.persistent !== false)
 
@@ -87,6 +88,7 @@ watch(show, (newVal) => {
 })
 
 function clickBg(ev: MouseEvent) {
+  if (justOpened.value) return
   if (props.processing && persistent.value) return
   const target = ev?.target as HTMLElement
   if (target && target.classList && target.classList.contains('modal-bg')) {
@@ -96,6 +98,8 @@ function clickBg(ev: MouseEvent) {
 
 function setShow() {
   globalsStore.isModalOpen = true
+  justOpened.value = true
+  setTimeout(() => { justOpened.value = false }, 350)
   document.body.appendChild(el.value!)
   const isPopover = !!props.anchorSelector && typeof window !== 'undefined' && window.innerWidth > window.innerHeight
   if (isPopover) {
@@ -134,5 +138,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   eventBus.off('close-modal', closeModalEvt)
+  // If the component unmounts while the modal is still open in the DOM
+  // (e.g. parent navigates away), remove the element to prevent stuck backdrop
+  if (el.value && el.value.parentNode) {
+    el.value.remove()
+    globalsStore.isModalOpen = false
+    document.documentElement.classList.remove('modal-open')
+  }
 })
 </script>

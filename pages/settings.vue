@@ -18,19 +18,19 @@
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelHapticFeedback }}</p>
       <div @click.stop="showHapticFeedbackOptions">
-        <ui-text-input :value="hapticFeedbackOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="hapticFeedbackOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelLanguage }}</p>
       <div @click.stop="showLanguageOptions">
-        <ui-text-input :value="languageOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="languageOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelTheme }}</p>
       <div @click.stop="showThemeOptions">
-        <ui-text-input :value="themeOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="themeOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
 
@@ -39,13 +39,13 @@
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelJumpBackwardsTime }}</p>
       <div @click.stop="showJumpBackwardsOptions">
-        <ui-text-input :value="jumpBackwardsOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="jumpBackwardsOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelJumpForwardsTime }}</p>
       <div @click.stop="showJumpForwardOptions">
-        <ui-text-input :value="jumpForwardOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="jumpForwardOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
     <div class="flex items-center py-3">
@@ -93,7 +93,7 @@
       <div v-if="!settings.disableShakeToResetSleepTimer" class="py-3 flex items-center">
         <p class="pr-4 w-36">{{ $strings.LabelShakeSensitivity }}</p>
         <div @click.stop="showShakeSensitivityOptions">
-          <ui-text-input :value="shakeSensitivityOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+          <ui-text-input :model-value="shakeSensitivityOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
         </div>
       </div>
     </template>
@@ -139,7 +139,7 @@
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelSleepTimer }}</p>
       <div @click.stop="showSleepTimerOptions">
-        <ui-text-input :value="sleepTimerLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="sleepTimerLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
     <div v-if="settings.autoSleepTimer" class="flex items-center py-3">
@@ -152,7 +152,7 @@
     <div v-if="settings.autoSleepTimerAutoRewind" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelAutoRewindTime }}</p>
       <div @click.stop="showAutoSleepTimerRewindOptions">
-        <ui-text-input :value="autoSleepTimerRewindLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="autoSleepTimerRewindLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
 
@@ -161,13 +161,13 @@
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelDownloadUsingCellular }}</p>
       <div @click.stop="showDownloadUsingCellularOptions">
-        <ui-text-input :value="downloadUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="downloadUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelStreamingUsingCellular }}</p>
       <div @click.stop="showStreamingUsingCellularOptions">
-        <ui-text-input :value="streamingUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="streamingUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
 
@@ -182,7 +182,7 @@
       <div class="py-3 flex items-center">
         <p class="pr-4 w-36">{{ $strings.LabelAndroidAutoBrowseSeriesSequenceOrder }}</p>
         <div @click.stop="showAndroidAutoBrowseSeriesSequenceOrderOptions">
-          <ui-text-input :value="androidAutoBrowseSeriesSequenceOrderOption" readonly append-icon="expand_more" style="max-width: 200px" />
+          <ui-text-input :model-value="androidAutoBrowseSeriesSequenceOrderOption" readonly append-icon="expand_more" style="max-width: 200px" />
         </div>
       </div>
     </template>

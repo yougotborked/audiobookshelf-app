@@ -428,10 +428,7 @@ export default {
       this.playServerLibraryItemAndCast(libraryItemId, episodeId)
     },
     playServerLibraryItemAndCast(libraryItemId, episodeId) {
-      var playbackRate = 1
-      if (this.$refs.audioPlayer) {
-        playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
-      }
+      var playbackRate = this.playbackSpeed || 1
       const startTime = Math.floor(this.currentTime || 0)
       const queuePayload = this.getQueuePayload(this.appStore.playQueue, true)
       const payload = { libraryItemId, episodeId, playWhenReady: false, playbackRate }
@@ -602,10 +599,7 @@ export default {
       this.serverLibraryItemId = null
       this.serverEpisodeId = null
 
-      let playbackRate = 1
-      if (this.$refs.audioPlayer) {
-        playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
-      }
+      let playbackRate = this.playbackSpeed || 1
 
       if (payload.queue) {
         this.appStore.setPlayQueue(payload.queue)

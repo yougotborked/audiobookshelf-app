@@ -301,12 +301,10 @@ const fullscreenBookCoverWidth = computed(() => {
     }
     return width
   } else {
-    // Landscape
-    const heightScale = (windowHeight.value - 200) / 651
-    if (bookCoverAspectRatio.value === 1) {
-      return 260 * heightScale
-    }
-    return 190 * heightScale
+    // Landscape: cover becomes square (CSS uses --cover-image-height for both dimensions).
+    // Compute width so that coverHeight = width * aspectRatio fits in the left column.
+    const maxSquareSize = Math.min(windowHeight.value * 0.65, windowWidth.value * 0.38)
+    return maxSquareSize / bookCoverAspectRatio.value
   }
 })
 
@@ -1267,7 +1265,7 @@ onBeforeUnmount(() => {
 
 // ── Expose public interface ───────────────────────────────────────────────────
 const audioPlayerReady = computed(() => true)
-defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed, setStreamReady, setChunksReady })
+defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed, setStreamReady, setChunksReady, currentPlaybackRate })
 </script>
 
 <style>
@@ -1446,22 +1444,22 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
     padding-bottom: 0;
   }
 
-  /* Player controls to right column, near bottom — shifted up to make room for toolbar */
+  /* Player controls to right column, above seek track */
   .fullscreen #playerControls {
     left: 52%;
     width: 44%;
     padding-left: 0;
     padding-right: 0;
-    bottom: 50px !important;
+    bottom: 82px !important;
   }
 
-  /* Track bar to right column */
+  /* Track bar to right column, above toolbar */
   .fullscreen #playerTrack {
     left: 52%;
     width: 44%;
     padding-left: 0;
     padding-right: 0;
-    bottom: 22px !important;
+    bottom: 50px !important;
   }
 
   /* In landscape, the playerContent bar stays full-width but transparent
@@ -1557,6 +1555,42 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
   }
   #streamContainer:not(.fullscreen) .cover-wrapper {
     z-index: 1;
+  }
+
+  /* Landscape mini-player height matches app.css allocation (136px = 56px appbar + 80px player) */
+  #streamContainer:not(.fullscreen) .playerContainer {
+    height: 80px;
+  }
+}
+
+/* ── Portrait mini-player: thin progress bar at bottom ── */
+@media (orientation: portrait) {
+  #streamContainer:not(.fullscreen) #playerTrack {
+    bottom: 0 !important;
+    height: 5px !important;
+    padding: 0 !important;
+    z-index: 2;
+    pointer-events: none;
+  }
+  #streamContainer:not(.fullscreen) #playerTrack > div:first-child {
+    display: none;
+  }
+  #streamContainer:not(.fullscreen) #playerTrack > div:last-child {
+    height: 5px !important;
+    border-radius: 0 !important;
+    background: rgba(178, 204, 192, 0.35) !important;
+  }
+  #streamContainer:not(.fullscreen) #playerTrack .bg-track-cursor {
+    background-color: rgba(26, 214, 145, 0.9) !important;
+    border-radius: 0 !important;
+  }
+  #streamContainer:not(.fullscreen) #playerTrack .bg-track-buffered,
+  #streamContainer:not(.fullscreen) #playerTrack .bg-track {
+    background-color: rgba(26, 214, 145, 0.25) !important;
+    border-radius: 0 !important;
+  }
+  #streamContainer:not(.fullscreen) #playerTrack .h-7.w-7.rounded-full {
+    display: none !important;
   }
 }
 </style>
