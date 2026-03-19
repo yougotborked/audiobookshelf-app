@@ -6,7 +6,7 @@
         <ul class="w-full" role="listbox" aria-labelledby="listbox-label">
           <template v-for="item in itemsToShow" :key="item.value">
             <slot :name="item.value" :item="item" :selected="item.value === selected">
-              <li :ref="`item-${item.value}`" class="text-md-on-surface select-none relative cursor-pointer rounded-md-sm hover:bg-md-on-surface/5" :class="selected === item.value ? 'bg-md-secondary-container' : ''" :style="{ paddingTop: itemPaddingY, paddingBottom: itemPaddingY }" role="option" @click="clickedOption(item.value)">
+              <li :ref="`item-${item.value}`" class="text-md-on-surface select-none relative cursor-pointer rounded-md-sm hover:bg-md-on-surface/5" :class="selected === item.value ? 'bg-md-secondary-container' : ''" :style="{ paddingTop: itemPaddingY || '14px', paddingBottom: itemPaddingY || '14px' }" role="option" @click="clickedOption(item.value)">
                 <div class="relative flex items-center px-3">
                   <span v-if="item.icon" class="material-symbols text-xl mr-2 text-md-on-surface-variant">{{ item.icon }}</span>
                   <p class="font-normal block truncate text-base text-md-on-surface">{{ item.text }}</p>

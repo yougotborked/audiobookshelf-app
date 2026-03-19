@@ -12,6 +12,7 @@
     <div v-if="currentLibraryIsPodcast" class="w-full shrink-0" style="height: 45vh; min-height: 280px">
       <bookshelf-podcast-catch-up-feed :current-library-id="currentLibraryId" />
     </div>
+    <div v-if="currentLibraryIsPodcast && shelves.length" class="w-full h-px bg-md-outline-variant/30 my-1" />
     <div class="w-full" :class="{ 'py-6': altViewEnabled }">
       <template v-for="(shelf, index) in shelves" :key="shelf.id">
         <bookshelf-shelf :label="getShelfLabel(shelf)" :entities="shelf.entities" :type="shelf.type" :style="{ zIndex: shelves.length - index }" />

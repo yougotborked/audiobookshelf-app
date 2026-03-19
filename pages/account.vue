@@ -1,8 +1,8 @@
 <template>
   <div class="w-full h-full p-4">
-    <ui-text-input-with-label :value="serverAddress" :label="$strings.LabelHost" disabled class="my-2" />
+    <ui-text-input-with-label :model-value="serverAddress" :label="$strings.LabelHost" disabled class="my-2" />
 
-    <ui-text-input-with-label :value="username" :label="$strings.LabelUsername" disabled class="my-2" />
+    <ui-text-input-with-label :model-value="username" :label="$strings.LabelUsername" disabled class="my-2" />
 
     <div v-if="serverVersion" class="text-sm text-md-on-surface">
       <p>Server version: v{{ serverVersion }}</p>

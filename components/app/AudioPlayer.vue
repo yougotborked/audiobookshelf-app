@@ -1297,7 +1297,7 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
   bottom: 35px;
 }
 .fullscreen #playerTrack {
-  bottom: unset;
+  bottom: 22px;
 }
 
 .cover-wrapper {
