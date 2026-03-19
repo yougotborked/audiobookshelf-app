@@ -296,7 +296,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     builder.setNotificationListener(PlayerNotificationListener(this))
 
     playerNotificationManager = builder.build()
-    playerNotificationManager.setMediaSessionToken(mediaSession.sessionToken)
+    // media3 1.9.x setMediaSessionToken requires android.media.session.MediaSession.Token
+    // MediaSessionCompat.Token.getToken() returns Object; cast to the platform token type
+    playerNotificationManager.setMediaSessionToken(
+      mediaSession.sessionToken.token as android.media.session.MediaSession.Token
+    )
     playerNotificationManager.setUsePlayPauseActions(true)
     playerNotificationManager.setUseNextAction(true)
     playerNotificationManager.setUsePreviousAction(true)

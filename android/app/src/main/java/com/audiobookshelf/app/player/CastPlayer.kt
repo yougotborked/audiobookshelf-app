@@ -1025,6 +1025,10 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
 
   override fun setDeviceMuted(muted: Boolean, flags: Int) = setDeviceMuted(muted)
 
+  // media3 1.9.x: mute()/unmute() added as abstract methods in BasePlayer
+  override fun mute() = setDeviceMuted(true)
+  override fun unmute() = setDeviceMuted(false)
+
   inner class StatusListener() : RemoteMediaClient.Callback(), SessionManagerListener<CastSession>, RemoteMediaClient.ProgressListener {
     val TAG = "StatusListener"
 

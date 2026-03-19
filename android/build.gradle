@@ -2,18 +2,18 @@
 
 apply from: "variables.gradle"
 
-def agpVersion = findProperty('agpVersion') ?: '8.13.1'
+def agpVersion = findProperty('agpVersion') ?: '9.1.0'
 
 buildscript {
   // Versions must be declared here — buildscript{} is evaluated before apply from: "variables.gradle"
-  ext.kotlin_version = '2.1.0'
-  ext.ksp_version = '2.1.0-1.0.29'
+  ext.kotlin_version = '2.3.20'
+  ext.ksp_version = '2.3.6'
   repositories {
         google()
         mavenCentral()
     }
     dependencies {
-      classpath 'com.google.gms:google-services:4.4.2'
+      classpath 'com.google.gms:google-services:4.4.4'
       classpath "com.android.tools.build:gradle:${agpVersion}"
       classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
       classpath "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:$ksp_version"

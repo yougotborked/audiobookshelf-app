@@ -24,7 +24,6 @@ import com.getcapacitor.JSObject
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.internal.EMPTY_REQUEST
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -74,7 +73,7 @@ class ApiHandler(var ctx:Context) {
     val address = config?.address ?: DeviceManager.serverAddress
     val token = config?.token ?: DeviceManager.token
     val mediaType = "application/json; charset=utf-8".toMediaType()
-    val requestBody = payload?.toString()?.toRequestBody(mediaType) ?: EMPTY_REQUEST
+    val requestBody = payload?.toString()?.toRequestBody(mediaType) ?: RequestBody.EMPTY
     val requestUrl = "${address}$endpoint"
     Log.d(tag, "postRequest to $requestUrl")
     try {
@@ -205,7 +204,7 @@ class ApiHandler(var ctx:Context) {
         .url(refreshEndpoint)
         .addHeader("x-refresh-token", refreshToken)
         .addHeader("Content-Type", "application/json")
-        .post(EMPTY_REQUEST)
+        .post(RequestBody.EMPTY)
         .build()
 
       // Make the refresh request
