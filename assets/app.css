@@ -31,9 +31,9 @@ textarea {
 }
 
 #content.playerOpen {
-  height: calc(100% - 184px);
-  min-height: calc(100% - 184px);
-  max-height: calc(100% - 184px);
+  height: calc(100% - 136px); /* bottom-nav 64px + mini-player 72px */
+  min-height: calc(100% - 136px);
+  max-height: calc(100% - 136px);
 }
 
 #bookshelf {

@@ -1,16 +1,20 @@
 <template>
   <div v-if="playbackSession" id="streamContainer" class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none" :class="{ fullscreen: showFullscreen, 'ios-player': platform === 'ios', 'web-player': platform === 'web' }">
-    <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-auto" :style="{ backgroundColor: coverRgb }">
+    <!-- Fullscreen background: purely visual, no pointer-events so clicks pass through -->
+    <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-none" :style="{ backgroundColor: coverRgb }">
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-audio-player)" />
       <!-- Darkening overlay: always applied for contrast, heavier for light cover art -->
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" :style="{ background: coverBgIsLight && theme !== 'black' ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.4)' }" />
+    </div>
 
-      <div class="top-4 left-4 absolute cursor-pointer">
+    <!-- Fullscreen top controls: z-40 so they sit above #playerContent (z-20) in all orientations -->
+    <div v-if="showFullscreen" class="z-40 absolute top-0 left-0 w-full pointer-events-none">
+      <div class="top-4 left-4 absolute cursor-pointer pointer-events-auto">
         <span class="material-symbols text-5xl" @click="collapseFullscreen">keyboard_arrow_down</span>
       </div>
       <div
         v-show="showCastBtn"
-        class="top-6 right-16 absolute cursor-pointer"
+        class="top-6 right-16 absolute cursor-pointer pointer-events-auto"
         :class="{ 'opacity-60': !castAvailable && !isCasting }"
       >
         <span
@@ -18,10 +22,10 @@
           @click="castClick"
         >{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
-      <div class="top-6 right-4 absolute cursor-pointer">
+      <div class="top-6 right-4 absolute cursor-pointer pointer-events-auto">
         <span class="material-symbols text-3xl" @click="showMoreMenuDialog = true">more_vert</span>
       </div>
-      <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-white/75" style="font-size: 10px">{{ isDirectPlayMethod ? getString('LabelPlaybackDirect') : isLocalPlayMethod ? getString('LabelPlaybackLocal') : getString('LabelPlaybackTranscode') }}</p>
+      <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-white/75 pointer-events-none" style="font-size: 10px">{{ isDirectPlayMethod ? getString('LabelPlaybackDirect') : isLocalPlayMethod ? getString('LabelPlaybackLocal') : getString('LabelPlaybackTranscode') }}</p>
     </div>
 
     <div v-if="playerSettings.useChapterTrack && playerSettings.useTotalTrack && showFullscreen" class="absolute total-track w-full z-30 px-6">
@@ -1087,6 +1091,12 @@ function updateScreenSize() {
   document.documentElement.style.setProperty('--cover-image-height-collapsed', 46 + 'px')
   document.documentElement.style.setProperty('--title-author-left-offset-collapsed', titleAuthorLeftOffsetCollapsed + 'px')
   document.documentElement.style.setProperty('--title-author-width-collapsed', titleAuthorWidthCollapsed + 'px')
+
+  // Portrait fullscreen: position title/author block below cover with a fixed gap,
+  // ensuring it never overlaps the cover or the player controls area (min 220px keeps it above controls).
+  const coverBottomFromScreenBottom = (windowHeight.value / 2) + 120 - (coverHeight / 2)
+  const textBlockBottom = Math.max(coverBottomFromScreenBottom - 90, 220)
+  document.documentElement.style.setProperty('--fullscreen-text-bottom', textBlockBottom + 'px')
 }
 
 function minimizePlayerEvt() {
@@ -1278,10 +1288,11 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
   --cover-image-height-collapsed: 46px;
   --title-author-left-offset-collapsed: 80px;
   --title-author-width-collapsed: 40%;
+  --fullscreen-text-bottom: 240px;
 }
 
 .playerContainer {
-  height: 120px;
+  height: 72px;
 }
 .fullscreen .playerContainer {
   height: 200px;
@@ -1302,8 +1313,26 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
   bottom: 22px;
 }
 
+/* Fullscreen seek bar: taller and explicit color so it's always visible on dark backgrounds */
+.fullscreen #playerTrack > div:last-child {
+  height: 10px;
+  background: rgba(178, 204, 192, 0.5);
+}
+.fullscreen #playerTrack .bg-track-cursor {
+  background-color: rgb(26, 214, 145) !important;
+  border-radius: 5px;
+}
+.fullscreen #playerTrack .bg-track-buffered {
+  background-color: rgba(30, 30, 30, 0.6) !important;
+  border-radius: 5px;
+}
+.fullscreen #playerTrack .bg-track {
+  background-color: rgba(178, 204, 192, 0.3) !important;
+  border-radius: 5px;
+}
+
 .cover-wrapper {
-  bottom: 68px;
+  bottom: 13px;
   left: 24px;
   height: var(--cover-image-height-collapsed);
   width: var(--cover-image-width-collapsed);
@@ -1326,7 +1355,7 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
   transform-origin: left bottom;
 
   width: var(--title-author-width-collapsed);
-  bottom: 76px;
+  bottom: 18px;
   left: var(--title-author-left-offset-collapsed);
   text-align: left;
 }
@@ -1344,11 +1373,11 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
 }
 
 .fullscreen .title-author-texts {
-  bottom: calc(50% - var(--cover-image-height) / 2 + 50px);
+  bottom: var(--fullscreen-text-bottom);
   width: 80%;
   left: 10%;
   text-align: center;
-  padding-bottom: calc(((260px - var(--cover-image-height)) / 260) * 40);
+  padding-bottom: 0;
   pointer-events: auto;
 }
 .fullscreen .title-author-texts .title-text {
@@ -1363,7 +1392,7 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
   transition-property: width, bottom;
   width: 128px;
   padding-right: 24px;
-  bottom: 70px;
+  bottom: 16px;
 }
 #playerControls .jump-icon {
   transition: all 0.15s cubic-bezier(0.39, 0.575, 0.565, 1);
@@ -1549,9 +1578,14 @@ defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed
     display: none;
   }
 
-  /* Controls and cover float above the fill */
+  /* Controls float on the far-right above the fill */
   #streamContainer:not(.fullscreen) #playerControls {
-    position: relative;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    bottom: auto;
+    width: 128px;
     z-index: 1;
     padding: 0;
   }
