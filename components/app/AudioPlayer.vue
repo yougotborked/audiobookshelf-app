@@ -986,10 +986,12 @@ function onMetadata(data: { duration: number; currentTime: number; playerState: 
 // When a playback session is started the native android/ios will send the session
 function onPlaybackSession(ps: Record<string, unknown>, opts?: { isLoading?: boolean }) {
   console.log('onPlaybackSession received', JSON.stringify(ps))
+  const isResync = !!(playbackSession.value && (playbackSession.value as Record<string, unknown>).id === ps.id)
   playbackSession.value = ps
 
   isEnded.value = false
-  isLoading.value = opts?.isLoading !== undefined ? opts.isLoading : true
+  // Don't flash the loading spinner when the same session is resent on app resume
+  isLoading.value = isResync ? false : (opts?.isLoading !== undefined ? opts.isLoading : true)
   syncStatus.value = 0
   lastNativeCurrentTime.value = null
   appStore.setPlaybackSession(ps as unknown as import('~/types').PlaybackSession)
