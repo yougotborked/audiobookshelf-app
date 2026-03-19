@@ -2,6 +2,7 @@ package com.audiobookshelf.app.plugins
 
 import android.app.AlertDialog
 import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -221,7 +222,7 @@ class AbsFileSystem : Plugin() {
         }
       }
 
-      val docfile = DocumentFileCompat.fromUri(mainActivity, Uri.parse(contentUrl))
+      val docfile = DocumentFileCompat.fromUri(mainActivity, contentUrl.toUri())
       if (docfile?.exists() == true) {
         success = docfile.delete() == true
       } else {
@@ -255,7 +256,7 @@ class AbsFileSystem : Plugin() {
       return call.resolve(JSObject("{\"success\":false}"))
     }
 
-    val docfile = DocumentFileCompat.fromUri(mainActivity, Uri.parse(contentUrl))
+    val docfile = DocumentFileCompat.fromUri(mainActivity, contentUrl.toUri())
     val success = docfile?.delete() == true
     if (success) {
       localLibraryItem.media.removeAudioTrack(trackLocalFileId)

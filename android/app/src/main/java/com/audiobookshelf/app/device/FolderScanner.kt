@@ -2,6 +2,7 @@ package com.audiobookshelf.app.device
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.anggrayudi.storage.file.*
@@ -287,7 +288,7 @@ class FolderScanner(var ctx: Context) {
       return
     }
 
-    val folderDf = DocumentFileCompat.fromUri(ctx, Uri.parse(downloadItem.localFolder.contentUrl))
+    val folderDf = DocumentFileCompat.fromUri(ctx, downloadItem.localFolder.contentUrl.toUri())
     val foldersFound = folderDf?.search(true, DocumentFileType.FOLDER) ?: mutableListOf()
 
     var itemFolderId = ""
@@ -309,7 +310,7 @@ class FolderScanner(var ctx: Context) {
       Log.d(tag, "scanDownloadItem failed to find media folder")
       return cb(null)
     }
-    val df: DocumentFile? = DocumentFileCompat.fromUri(ctx, Uri.parse(itemFolderUrl))
+    val df: DocumentFile? = DocumentFileCompat.fromUri(ctx, itemFolderUrl.toUri())
 
     if (df == null) {
       Log.e(tag, "Folder Doc File Invalid ${downloadItem.itemFolderPath}")

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.core.net.toUri
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.view.View
@@ -77,7 +78,7 @@ internal fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManage
 
   views.setOnClickPendingIntent(R.id.widgetBackground, wholeWidgetClickPI)
 
-  val imageUri = playbackSession?.getCoverUri(context) ?: Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+  val imageUri = playbackSession?.getCoverUri(context) ?: ("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri()
   val awt: AppWidgetTarget = object : AppWidgetTarget(context.applicationContext, R.id.widgetAlbumArt, views, appWidgetId) {
     override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
       super.onResourceReady(resource, transition)

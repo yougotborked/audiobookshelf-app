@@ -2,6 +2,7 @@ package com.audiobookshelf.app.managers
 
 import android.app.DownloadManager
 import android.net.Uri
+import androidx.core.net.toUri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.anggrayudi.storage.callback.FileCallback
@@ -153,7 +154,7 @@ class DownloadItemManager(
   private fun startWatchingDownloads() {
     if (isDownloading) return // Already watching
 
-      scope.launch {
+    scope.launch {
         Log.d(tag, "Starting watching downloads")
         isDownloading = true
 
@@ -323,7 +324,7 @@ class DownloadItemManager(
             }
 
     val localFolderFile =
-            DocumentFileCompat.fromUri(mainActivity, Uri.parse(downloadItemPart.localFolderUrl))
+            DocumentFileCompat.fromUri(mainActivity, downloadItemPart.localFolderUrl.toUri())
     if (localFolderFile == null) {
       // Failed
       downloadItemPart.failed = true

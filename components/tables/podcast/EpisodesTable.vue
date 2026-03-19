@@ -42,6 +42,12 @@
       <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id as string]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
 
+    <div v-if="!episodesSorted.length" class="py-6 text-center text-fg-muted text-sm">
+      <p v-if="filterKey !== 'all'">{{ strings.LabelNoEpisodesMatchingFilter || 'No episodes match the current filter.' }}</p>
+      <p v-else>{{ strings.LabelNoEpisodes || 'No episodes found.' }}</p>
+      <button v-if="filterKey !== 'all'" class="mt-2 underline text-md-primary text-sm" @click="filterKey = 'all'">Show all episodes</button>
+    </div>
+
     <!-- Huhhh?
         Without anything below the template it will not re-render -->
     <p>&nbsp;</p>

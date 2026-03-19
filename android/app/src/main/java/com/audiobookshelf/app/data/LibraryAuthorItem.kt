@@ -2,6 +2,7 @@ package com.audiobookshelf.app.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Bundle
 import android.support.v4.media.MediaDescriptionCompat
 import androidx.media.utils.MediaConstants
@@ -33,10 +34,10 @@ class LibraryAuthorItem(
   @JsonIgnore
   fun getPortraitUri(): Uri {
     if (imagePath == null) {
-      return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.md_account_outline)
+      return ("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.md_account_outline).toUri()
     }
 
-    return Uri.parse("${DeviceManager.serverAddress}/api/authors/$id/image?token=${DeviceManager.token}")
+    return "${DeviceManager.serverAddress}/api/authors/$id/image?token=${DeviceManager.token}".toUri()
   }
 
   @JsonIgnore

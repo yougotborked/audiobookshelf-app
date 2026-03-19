@@ -3,6 +3,7 @@ package com.audiobookshelf.app.media
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.annotation.AnyRes
 import com.audiobookshelf.app.R
 
@@ -12,10 +13,10 @@ import com.audiobookshelf.app.R
  * @return - uri
  */
 fun getUriToDrawable(context: Context, @AnyRes drawableId: Int): Uri {
-  return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE
+  return (ContentResolver.SCHEME_ANDROID_RESOURCE
     + "://" + context.resources.getResourcePackageName(drawableId)
     + '/' + context.resources.getResourceTypeName(drawableId)
-    + '/' + context.resources.getResourceEntryName(drawableId))
+    + '/' + context.resources.getResourceEntryName(drawableId)).toUri()
 }
 
 
@@ -47,9 +48,8 @@ fun getUriToAbsIconDrawable(context: Context, absIconName: String): Uri {
     "star" -> R.drawable.abs_star
     else -> R.drawable.icon_library_folder
   }
-  return Uri.parse(
-    ContentResolver.SCHEME_ANDROID_RESOURCE
+  return (ContentResolver.SCHEME_ANDROID_RESOURCE
       + "://" + context.resources.getResourcePackageName(drawableId)
       + '/' + context.resources.getResourceTypeName(drawableId)
-      + '/' + context.resources.getResourceEntryName(drawableId))
+      + '/' + context.resources.getResourceEntryName(drawableId)).toUri()
 }

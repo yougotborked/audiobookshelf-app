@@ -2,6 +2,7 @@ package com.audiobookshelf.app.models
 
 import android.app.DownloadManager
 import android.net.Uri
+import androidx.core.net.toUri
 import android.util.Log
 import com.audiobookshelf.app.data.AudioTrack
 import com.audiobookshelf.app.data.EBookFile
@@ -46,7 +47,7 @@ data class DownloadItemPart(
         downloadUrl += "&raw=1" // Download raw cover image
       }
 
-      val downloadUri = Uri.parse(downloadUrl)
+      val downloadUri = downloadUrl.toUri()
       Log.d("DownloadItemPart", "Audio File Destination Uri: $destinationUri | Final Destination Uri: $finalDestinationUri | Download URI $downloadUri")
       return DownloadItemPart(
         id = DeviceManager.getBase64Id(finalDestinationFile.absolutePath),

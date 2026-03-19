@@ -393,8 +393,7 @@ async function clickCard(e: MouseEvent) {
     e.preventDefault()
     selectBtnClick()
   } else {
-    if (recentEpisode.value) router.push(`/item/${libraryItemId.value}/${recentEpisode.value.id}`)
-    else if (collapsedSeries.value) router.push(`/bookshelf/series/${collapsedSeries.value.id}`)
+    if (collapsedSeries.value) router.push(`/bookshelf/series/${collapsedSeries.value.id}`)
     else if (localLibraryItem.value) {
       router.push(`/item/${libraryItemId.value}?localLibraryItemId=${localLibraryItemId.value}`)
     } else {

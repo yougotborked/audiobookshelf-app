@@ -7,11 +7,10 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.os.PowerManager
-import android.provider.Settings
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -127,14 +126,13 @@ class MainActivity : BridgeActivity() {
         REQUEST_PERMISSIONS)
     }
 
-    // 4.3 — Request battery optimization exemption for persistent background playback
-    // minSdk is 26 (>= M=23), so no API guard needed
-    val pm = getSystemService(POWER_SERVICE) as PowerManager
-    if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-      val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-      intent.data = Uri.parse("package:$packageName")
-      startActivity(intent)
+    // Request POST_NOTIFICATIONS permission on Android 13+ for media notification
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_PERMISSIONS)
+      }
     }
+
   }
 
   override fun onDestroy() {
