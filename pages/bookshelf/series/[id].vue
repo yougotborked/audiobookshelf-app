@@ -1,5 +1,5 @@
 <template>
-  <bookshelf-lazy-bookshelf page="series-books" :series-id="seriesId" v-on:downloadSeriesClick="downloadSeriesClick" />
+  <bookshelf-lazy-bookshelf page="series-books" :series-id="seriesId" @downloadSeriesClick="downloadSeriesClick" />
 </template>
 
 <script setup lang="ts">
