@@ -115,7 +115,12 @@ const episodeType = computed(() => {
   if (props.episode.episodeType === 'full') return null // only show Trailer/Bonus
   return props.episode.episodeType as string | null
 })
-const isStreaming = computed(() => appStore.getIsMediaStreaming(props.libraryItemId || '', props.episode.id as string))
+const isStreaming = computed(() => {
+  if (props.localEpisode && props.localLibraryItemId) {
+    if (appStore.getIsMediaStreaming(props.localLibraryItemId, props.localEpisode.id as string)) return true
+  }
+  return appStore.getIsMediaStreaming(props.libraryItemId || '', props.episode.id as string)
+})
 const streamIsPlaying = computed(() => appStore.playerIsPlaying && isStreaming.value)
 const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {

@@ -243,7 +243,7 @@ export default {
       this.appStore.setPlayQueue(queue)
       this.appStore.setQueueIndex(0)
       this.appStore.playerIsStartingPlayback = true
-      this.appStore.playerStartingPlaybackMediaId = first.episodeId
+      this.appStore.playerStartingPlaybackMediaId = first.serverEpisodeId || first.episodeId
 
       const playPayload = {
         libraryItemId: first.libraryItemId,

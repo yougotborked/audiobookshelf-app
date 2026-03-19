@@ -1,6 +1,6 @@
 <template>
   <modals-modal v-model="show">
-    <div class="px-4 pt-2 pb-2 border border-fg/20 rounded-lg">
+    <div class="px-4 pt-2 pb-2">
       <div class="flex items-center justify-between mb-3">
         <p class="text-md-title-m text-md-on-surface">Filter</p>
         <ui-btn v-show="selected !== 'all'" class="text-sm border-yellow-400/40 h-8" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
