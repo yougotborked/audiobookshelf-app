@@ -1,5 +1,5 @@
 <template>
-  <nuxt-link :to="`/bookshelf/library?filter=authors.${$encode(authorId)}`" ref="wrapper" :class="`rounded-${rounded}`" class="w-full h-full bg-md-surface-3 overflow-hidden">
+  <nuxt-link :to="`/bookshelf/library?filter=authors.${encode(authorId)}`" ref="wrapper" :class="`rounded-${rounded}`" class="w-full h-full bg-md-surface-3 overflow-hidden">
     <svg v-if="!imagePath" width="140%" height="140%" style="margin-left: -20%; margin-top: -20%; opacity: 0.6" viewBox="0 0 177 266" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path fill="white" d="M40.7156 165.47C10.2694 150.865 -31.5407 148.629 -38.0532 155.529L63.3191 204.159L76.9443 190.899C66.828 181.394 54.006 171.846 40.7156 165.47Z" stroke="white" stroke-width="4" transform="translate(-2 -1)" />
       <path d="M-38.0532 155.529C-31.5407 148.629 10.2694 150.865 40.7156 165.47C54.006 171.846 66.828 181.394 76.9443 190.899L95.0391 173.37C80.6681 159.403 64.7526 149.155 51.5747 142.834C21.3549 128.337 -46.2471 114.563 -60.6897 144.67L-71.5489 167.307L44.5864 223.019L63.3191 204.159L-38.0532 155.529Z" fill="white" />
@@ -20,72 +20,60 @@
   </nuxt-link>
 </template>
 
-<script>
-export default {
-  props: {
-    author: {
-      type: Object,
-      default: () => {}
-    },
-    rounded: {
-      type: String,
-      default: 'lg'
+<script setup lang="ts">
+const props = defineProps<{
+  author?: Record<string, unknown>
+  rounded?: string
+}>()
+
+const appStore = useAppStore()
+const userStore = useUserStore()
+
+// State
+const showCoverBg = ref(false)
+const coverContain = ref(true)
+
+// Refs
+const wrapper = ref<{ $el: HTMLElement } | null>(null)
+const img = ref<HTMLImageElement | null>(null)
+
+// Utils
+const { encode } = useUtils()
+
+// Computed
+const _author = computed(() => props.author || {})
+const authorId = computed(() => _author.value.id as string)
+const imagePath = computed(() => _author.value.imagePath as string | undefined)
+const updatedAt = computed(() => _author.value.updatedAt as number)
+const serverAddress = computed(() => userStore.getServerAddress)
+const imgSrc = computed(() => {
+  if (!imagePath.value || !serverAddress.value) return undefined
+  const urlQuery = new URLSearchParams({ ts: String(updatedAt.value) })
+  if (appStore.getDoesServerImagesRequireToken) {
+    urlQuery.append('token', userStore.getToken || '')
+  }
+  if (process.env.NODE_ENV !== 'production' && serverAddress.value.startsWith('http://192.168')) {
+    return `http://localhost:3333/api/authors/${authorId.value}/image?${urlQuery.toString()}`
+  }
+  return `${serverAddress.value}/api/authors/${authorId.value}/image?${urlQuery.toString()}`
+})
+
+// Methods
+function imageLoaded() {
+  let aspectRatio = 1.25
+  if (wrapper.value?.$el) {
+    aspectRatio = wrapper.value.$el.clientHeight / wrapper.value.$el.clientWidth
+  }
+  if (img.value) {
+    const { naturalWidth, naturalHeight } = img.value
+    const imgAr = naturalHeight / naturalWidth
+    const arDiff = Math.abs(imgAr - aspectRatio)
+    if (arDiff > 0.15) {
+      showCoverBg.value = true
+    } else {
+      showCoverBg.value = false
+      coverContain.value = false
     }
-  },
-  data() {
-    return {
-      showCoverBg: false,
-      coverContain: true
-    }
-  },
-  computed: {
-    _author() {
-      return this.author || {}
-    },
-    authorId() {
-      return this._author.id
-    },
-    imagePath() {
-      return this._author.imagePath
-    },
-    updatedAt() {
-      return this._author.updatedAt
-    },
-    serverAddress() {
-      return this.$store.getters['user/getServerAddress']
-    },
-    imgSrc() {
-      if (!this.imagePath || !this.serverAddress) return null
-      const urlQuery = new URLSearchParams({ ts: this.updatedAt })
-      if (this.$store.getters.getDoesServerImagesRequireToken) {
-        urlQuery.append('token', this.$store.getters['user/getToken'])
-      }
-      if (process.env.NODE_ENV !== 'production' && this.serverAddress.startsWith('http://192.168')) {
-        // Testing
-        return `http://localhost:3333/api/authors/${this.authorId}/image?${urlQuery.toString()}`
-      }
-      return `${this.serverAddress}/api/authors/${this.authorId}/image?${urlQuery.toString()}`
-    }
-  },
-  methods: {
-    imageLoaded() {
-      var aspectRatio = 1.25
-      if (this.$refs.wrapper) {
-        aspectRatio = this.$refs.wrapper.clientHeight / this.$refs.wrapper.clientWidth
-      }
-      if (this.$refs.img) {
-        var { naturalWidth, naturalHeight } = this.$refs.img
-        var imgAr = naturalHeight / naturalWidth
-        var arDiff = Math.abs(imgAr - aspectRatio)
-        if (arDiff > 0.15) {
-          this.showCoverBg = true
-        } else {
-          this.showCoverBg = false
-          this.coverContain = false
-        }
-      }
-    }
-  },
-  mounted() {}
+  }
 }
 </script>

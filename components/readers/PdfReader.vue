@@ -2,19 +2,19 @@
   <div class="w-full h-full relative">
     <div v-show="canGoPrev" class="absolute top-0 left-0 h-full w-1/2 hover:opacity-100 opacity-0 z-10 cursor-pointer" @click.stop.prevent="prev" @mousedown.prevent>
       <div class="flex items-center justify-center h-full w-1/2">
-        <span class="material-symbols text-5xl text-white cursor-pointer text-opacity-30 hover:text-opacity-90">arrow_back_ios</span>
+        <span class="material-symbols text-5xl text-white/30 hover:text-white/90 cursor-pointer">arrow_back_ios</span>
       </div>
     </div>
     <div v-show="canGoNext" class="absolute top-0 right-0 h-full w-1/2 hover:opacity-100 opacity-0 z-10 cursor-pointer" @click.stop.prevent="next" @mousedown.prevent>
       <div class="flex items-center justify-center h-full w-1/2 ml-auto">
-        <span class="material-symbols text-5xl text-white cursor-pointer text-opacity-30 hover:text-opacity-90">arrow_forward_ios</span>
+        <span class="material-symbols text-5xl text-white/30 hover:text-white/90 cursor-pointer">arrow_forward_ios</span>
       </div>
     </div>
 
     <div class="h-full flex items-center justify-center">
       <div :style="{ width: pdfWidth + 'px', height: pdfHeight + 'px' }" class="w-full h-full overflow-auto">
         <div v-if="loadedRatio > 0 && loadedRatio < 1" style="background-color: green; color: white; text-align: center" :style="{ width: loadedRatio * 100 + '%' }">{{ Math.floor(loadedRatio * 100) }}%</div>
-        <pdf v-if="pdfDocInitParams" ref="pdf" class="m-auto z-10 border border-black border-opacity-20 shadow-md bg-white" :src="pdfDocInitParams" :page="page" :rotate="rotate" @progress="loadedRatio = $event" @error="error" @num-pages="numPagesLoaded" @link-clicked="page = $event" @loaded="loadedEvt"></pdf>
+        <pdf v-if="pdfDocInitParams" ref="pdf" class="m-auto z-10 border border-black/20 shadow-md bg-white" :src="pdfDocInitParams" :page="page" :rotate="rotate" @progress="loadedRatio = $event" @error="error" @num-pages="numPagesLoaded" @link-clicked="page = $event" @loaded="loadedEvt"></pdf>
       </div>
     </div>
 
@@ -41,6 +41,14 @@ export default {
     isLocal: Boolean,
     keepProgress: Boolean
   },
+  setup() {
+    const appStore = useAppStore()
+    const globalsStore = useGlobalsStore()
+    const userStore = useUserStore()
+    const db = useDb()
+    const nativeHttp = useNativeHttp()
+    return { appStore, globalsStore, userStore, db, nativeHttp }
+  },
   data() {
     return {
       rotate: 0,
@@ -55,7 +63,7 @@ export default {
   },
   computed: {
     userToken() {
-      return this.$store.getters['user/getToken']
+      return this.userStore.getToken
     },
     localLibraryItem() {
       if (this.isLocal) return this.libraryItem
@@ -68,7 +76,7 @@ export default {
       if (!this.isLocal) return this.libraryItem.id
       // Check if local library item is connected to the current server
       if (!this.libraryItem.serverAddress || !this.libraryItem.libraryItemId) return null
-      if (this.$store.getters['user/getServerAddress'] === this.libraryItem.serverAddress) {
+      if (this.userStore.getServerAddress === this.libraryItem.serverAddress) {
         return this.libraryItem.libraryItemId
       }
       return null
@@ -96,10 +104,10 @@ export default {
       return this.serverItemProgress
     },
     localItemProgress() {
-      return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId)
+      return this.globalsStore.getLocalMediaProgressById(this.localLibraryItemId)
     },
     serverItemProgress() {
-      return this.$store.getters['user/getUserMediaProgress'](this.serverLibraryItemId)
+      return this.userStore.getUserMediaProgress(this.serverLibraryItemId)
     },
     savedPage() {
       if (!this.keepProgress) return 0
@@ -109,10 +117,10 @@ export default {
       return Number(this.userItemProgress.ebookLocation)
     },
     isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
+      return this.appStore.getIsPlayerOpen
     },
     ebookUrl() {
-      const serverAddress = this.$store.getters['user/getServerAddress']
+      const serverAddress = this.userStore.getServerAddress
       return this.isLocal ? this.url : `${serverAddress}${this.url}`
     }
   },
@@ -136,15 +144,15 @@ export default {
           localLibraryItemId: this.localLibraryItemId,
           ...payload
         }
-        const localResponse = await this.$db.updateLocalEbookProgress(localPayload)
+        const localResponse = await this.db.updateLocalEbookProgress(localPayload)
         if (localResponse.localMediaProgress) {
-          this.$store.commit('globals/updateLocalMediaProgress', localResponse.localMediaProgress)
+          this.globalsStore.updateLocalMediaProgress(localResponse.localMediaProgress)
         }
       }
 
       // Update server item
       if (this.serverLibraryItemId) {
-        this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, payload).catch((error) => {
+        this.nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, payload).catch((error) => {
           console.error('PdfReader.updateProgress failed:', error)
         })
       }
@@ -173,14 +181,14 @@ export default {
       try {
         console.log('[PdfReader] Handling refresh failure - logging out user')
 
-        const serverConnectionConfigId = this.$store.getters['user/getServerConnectionConfigId']
+        const serverConnectionConfigId = this.userStore.getServerConnectionConfigId
 
         // Clear store
-        await this.$store.dispatch('user/logout')
+        await this.userStore.logout()
 
         if (serverConnectionConfigId) {
           // Clear refresh token for server connection config
-          await this.$db.clearRefreshToken(serverConnectionConfigId)
+          await this.db.clearRefreshToken(serverConnectionConfigId)
         }
 
         if (window.location.pathname !== '/connect') {
@@ -195,7 +203,7 @@ export default {
       this.isRefreshing = true
       // Cannot use axios with this pdf reader so we need to handle the refresh separately
       // Should work on migrating to a different pdf reader in the future
-      const newAccessToken = await this.$store.dispatch('user/refreshToken').catch((error) => {
+      const newAccessToken = await this.userStore.refreshToken().catch((error) => {
         console.error('Failed to refresh token', error)
         return null
       })

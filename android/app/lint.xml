@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Intentionally overriding private media3 drawables with custom icons -->
+    <issue id="PrivateResource">
+        <ignore path="src/main/res/drawable/exo_icon_fastforward.xml" />
+        <ignore path="src/main/res/drawable/exo_icon_rewind.xml" />
+    </issue>
+
+    <!-- Cleartext traffic is intentionally permitted: the app connects to local
+         Audiobookshelf server instances which may use plain HTTP -->
+    <issue id="InsecureBaseConfiguration" severity="ignore"/>
+
+    <!-- False positives when checkDependencies=false: these resources ARE used
+         (background_dark in styles, AppTheme.NoActionBar in manifest) -->
+    <issue id="UnusedResources">
+        <ignore path="src/main/res/values/colors.xml" />
+        <ignore path="src/main/res/values/styles.xml" />
+        <!-- Used via DataBinding (ActivityMainBinding inflates R.layout.activity_main) -->
+        <ignore path="src/main/res/layout/activity_main.xml" />
+        <!-- Capacitor framework config file, referenced at runtime not via R -->
+        <ignore path="src/main/res/xml/config.xml" />
+    </issue>
+</lint>

@@ -11,84 +11,68 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed } from 'vue'
 import { Dialog } from '@capacitor/dialog'
+import { useAppStore } from '~/stores/app'
+import { useUserStore } from '~/stores/user'
+import { useStrings } from '~/composables/useStrings'
 
-export default {
-  data() {
-    return {}
-  },
-  computed: {
-    user() {
-      return this.$store.state.user.user
-    },
-    socketConnected() {
-      return this.$store.state.socketConnected
-    },
-    serverReachable() {
-      return this.$store.state.serverReachable
-    },
-    networkConnected() {
-      return this.$store.state.networkConnected
-    },
-    networkConnectionType() {
-      return this.$store.state.networkConnectionType
-    },
-    isNetworkUnmetered() {
-      return this.$store.state.isNetworkUnmetered
-    },
-    isCellular() {
-      return this.networkConnectionType === 'cellular'
-    },
-    attemptingConnection() {
-      return this.$store.state.attemptingConnection
-    },
-    icon() {
-      if (!this.user && !this.attemptingConnection) return null // hide when not connected to server
+const appStore = useAppStore()
+const userStore = useUserStore()
+const strings = useStrings()
 
-      if (this.attemptingConnection) {
-        return 'cloud_sync'
-      } else if (!this.networkConnected) {
-        return 'wifi_off'
-      } else if (!this.socketConnected || !this.serverReachable) {
-        return 'cloud_off'
-      } else if (this.isCellular) {
-        return 'signal_cellular_alt'
-      } else {
-        return 'cloud_done'
-      }
-    },
-    iconClass() {
-      if (!this.networkConnected) return 'text-md-error'
-      else if (!this.socketConnected || !this.serverReachable) return 'text-md-error'
-      else if (!this.isNetworkUnmetered) return 'text-warning'
-      else if (this.isCellular) return 'text-md-on-surface-variant'
-      else return 'text-md-primary'
-    }
-  },
-  methods: {
-    showAlertDialog() {
-      var msg = ''
-      if (this.attemptingConnection) {
-        msg = this.$strings.MessageAttemptingServerConnection
-      } else if (!this.networkConnected) {
-        msg = this.$strings.MessageNoNetworkConnection
-      } else if (!this.socketConnected) {
-        msg = this.$strings.MessageSocketNotConnected
-      } else if (!this.serverReachable) {
-        msg = this.$strings.MessageServerConnectionUnavailable
-      } else if (this.isCellular) {
-        msg = this.isNetworkUnmetered ? this.$strings.MessageSocketConnectedOverUnmeteredCellular : this.$strings.MessageSocketConnectedOverMeteredCellular
-      } else {
-        msg = this.isNetworkUnmetered ? this.$strings.MessageSocketConnectedOverUnmeteredWifi : this.$strings.MessageSocketConnectedOverMeteredWifi
-      }
-      Dialog.alert({
-        title: this.$strings.HeaderConnectionStatus,
-        message: msg
-      })
-    }
-  },
-  mounted() {},
-  beforeDestroy() {}
+const user = computed(() => userStore.user)
+const socketConnected = computed(() => appStore.socketConnected)
+const serverReachable = computed(() => appStore.serverReachable)
+const networkConnected = computed(() => appStore.networkConnected)
+const networkConnectionType = computed(() => appStore.networkConnectionType)
+const isNetworkUnmetered = computed(() => appStore.isNetworkUnmetered)
+const attemptingConnection = computed(() => appStore.attemptingConnection)
+const isCellular = computed(() => networkConnectionType.value === 'cellular')
+
+const icon = computed(() => {
+  if (!user.value && !attemptingConnection.value) return null
+
+  if (attemptingConnection.value) {
+    return 'cloud_sync'
+  } else if (!networkConnected.value) {
+    return 'wifi_off'
+  } else if (!socketConnected.value || !serverReachable.value) {
+    return 'cloud_off'
+  } else if (isCellular.value) {
+    return 'signal_cellular_alt'
+  } else {
+    return 'cloud_done'
+  }
+})
+
+const iconClass = computed(() => {
+  if (!networkConnected.value) return 'text-md-error'
+  else if (!socketConnected.value || !serverReachable.value) return 'text-md-error'
+  else if (!isNetworkUnmetered.value) return 'text-warning'
+  else if (isCellular.value) return 'text-md-on-surface-variant'
+  else return 'text-md-primary'
+})
+
+function showAlertDialog() {
+  let msg = ''
+  if (attemptingConnection.value) {
+    msg = strings.MessageAttemptingServerConnection
+  } else if (!networkConnected.value) {
+    msg = strings.MessageNoNetworkConnection
+  } else if (!socketConnected.value) {
+    msg = strings.MessageSocketNotConnected
+  } else if (!serverReachable.value) {
+    msg = strings.MessageServerConnectionUnavailable
+  } else if (isCellular.value) {
+    msg = isNetworkUnmetered.value ? strings.MessageSocketConnectedOverUnmeteredCellular : strings.MessageSocketConnectedOverMeteredCellular
+  } else {
+    msg = isNetworkUnmetered.value ? strings.MessageSocketConnectedOverUnmeteredWifi : strings.MessageSocketConnectedOverMeteredWifi
+  }
+  Dialog.alert({
+    title: strings.HeaderConnectionStatus,
+    message: msg
+  })
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
   <div class="w-full my-4">
     <div class="w-full bg-md-surface-3 px-4 py-2 flex items-center" :class="expanded ? 'rounded-t-md' : 'rounded-md'" @click.stop="clickBar">
-      <p class="pr-2">{{ $strings.HeaderChapters }}</p>
+      <p class="pr-2">{{ strings.HeaderChapters }}</p>
       <div class="h-6 w-6 rounded-full bg-fg/10 flex items-center justify-center">
         <span class="text-xs font-mono">{{ chapters.length }}</span>
       </div>
@@ -13,19 +13,19 @@
     <transition name="slide">
       <table class="text-xs tracksTable" v-show="expanded">
         <tr>
-          <th class="text-left">{{ $strings.LabelTitle }}</th>
-          <th class="text-center w-16">{{ $strings.LabelStart }}</th>
-          <th class="text-center w-16">{{ $strings.LabelDuration }}</th>
+          <th class="text-left">{{ strings.LabelTitle }}</th>
+          <th class="text-center w-16">{{ strings.LabelStart }}</th>
+          <th class="text-center w-16">{{ strings.LabelDuration }}</th>
         </tr>
         <tr v-for="chapter in chapters" :key="chapter.id">
           <td>
             {{ chapter.title }}
           </td>
           <td class="font-mono text-center underline w-16" @click.stop="goToTimestamp(chapter.start)">
-            {{ $secondsToTimestamp(chapter.start) }}
+            {{ utils.secondsToTimestamp(chapter.start) }}
           </td>
           <td class="font-mono text-center">
-            {{ $secondsToTimestamp(Math.max(0, chapter.end - chapter.start)) }}
+            {{ utils.secondsToTimestamp(Math.max(0, chapter.end - chapter.start)) }}
           </td>
         </tr>
       </table>
@@ -33,44 +33,28 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {
-      expanded: false
-    }
-  },
-  computed: {
-    libraryItemId() {
-      return this.libraryItem.id
-    },
-    media() {
-      return this.libraryItem ? this.libraryItem.media || {} : {}
-    },
-    metadata() {
-      return this.media.metadata || {}
-    },
-    chapters() {
-      return this.media.chapters || []
-    },
-    userCanUpdate() {
-      return this.$store.getters['user/getUserCanUpdate']
-    }
-  },
-  methods: {
-    clickBar() {
-      this.expanded = !this.expanded
-    },
-    goToTimestamp(time) {
-      this.$emit('playAtTimestamp', time)
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+const props = defineProps<{
+  libraryItem: Record<string, unknown>
+}>()
+
+const emit = defineEmits<{
+  playAtTimestamp: [time: number]
+}>()
+
+const strings = useStrings()
+const utils = useUtils()
+
+const expanded = ref(false)
+
+const media = computed(() => (props.libraryItem ? (props.libraryItem.media as Record<string, unknown>) || {} : {}))
+const chapters = computed(() => (media.value.chapters as { id: string | number; title?: string; start: number; end: number }[]) || [])
+
+function clickBar() {
+  expanded.value = !expanded.value
+}
+
+function goToTimestamp(time: number) {
+  emit('playAtTimestamp', time)
 }
 </script>

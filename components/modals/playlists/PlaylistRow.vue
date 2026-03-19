@@ -8,38 +8,37 @@
       <p class="px-2 truncate text-sm">{{ playlist.name }}</p>
     </div>
     <div class="w-24 min-w-[96px] px-1">
-      <ui-btn v-if="inPlaylist" small class="w-full" @click.stop="click">{{ $strings.ButtonRemove }}</ui-btn>
-      <ui-btn v-else small class="w-full" @click.stop="click">{{ $strings.ButtonAdd }}</ui-btn>
+      <ui-btn v-if="inPlaylist" small class="w-full" @click.stop="click">{{ strings.ButtonRemove }}</ui-btn>
+      <ui-btn v-else small class="w-full" @click.stop="click">{{ strings.ButtonAdd }}</ui-btn>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    playlist: {
-      type: Object,
-      default: () => {}
-    },
-    inPlaylist: Boolean
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    items() {
-      return this.playlist.items || []
-    }
-  },
-  methods: {
-    click() {
-      this.$emit('click', this.playlist)
-    },
-    clickCover() {
-      this.$emit('close')
-      this.$router.push(`/playlist/${this.playlist.id}`)
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+import { useRouter } from 'vue-router'
+
+const props = defineProps<{
+  playlist: { id: string; name?: string; items?: unknown[]; [key: string]: unknown }
+  inPlaylist: boolean
+}>()
+const emit = defineEmits<{
+  click: [playlist: Record<string, unknown>]
+  close: []
+}>()
+
+const strings = useStrings()
+const router = useRouter()
+
+const items = computed(() => (props.playlist.items as unknown[]) || [])
+
+function click() {
+  emit('click', props.playlist)
+}
+
+function clickCover() {
+  emit('close')
+  router.push(`/playlist/${props.playlist.id}`)
 }
 </script>

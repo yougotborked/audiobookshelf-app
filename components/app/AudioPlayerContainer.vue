@@ -2,7 +2,7 @@
   <div>
     <app-audio-player ref="audioPlayer" :bookmarks="bookmarks" :sleep-timer-running="isSleepTimerRunning" :sleep-time-remaining="sleepTimeRemaining" :serverLibraryItemId="serverLibraryItemId" @selectPlaybackSpeed="showPlaybackSpeedModal = true" @updateTime="(t) => (currentTime = t)" @showSleepTimer="showSleepTimer" @showBookmarks="showBookmarks" @showQueue="openQueue" @skipNextQueue="onSkipNextRequest" @skipPreviousQueue="onSkipPreviousRequest" />
 
-    <modals-playback-speed-modal v-model="showPlaybackSpeedModal" :playback-rate.sync="playbackSpeed" @update:playbackRate="updatePlaybackSpeed" @change="changePlaybackSpeed" />
+    <modals-playback-speed-modal v-model="showPlaybackSpeedModal" v-model:playback-rate="playbackSpeed" @update:playbackRate="updatePlaybackSpeed" @change="changePlaybackSpeed" />
     <modals-sleep-timer-modal v-model="showSleepTimerModal" :current-time="sleepTimeRemaining" :sleep-timer-running="isSleepTimerRunning" :current-end-of-chapter-time="currentEndOfChapterTime" :is-auto="isAutoSleepTimer" @change="selectSleepTimeout" @cancel="cancelSleepTimer" @increase="increaseSleepTimer" @decrease="decreaseSleepTimer" />
     <modals-bookmarks-modal v-model="showBookmarksModal" :bookmarks="bookmarks" :current-time="currentTime" :library-item-id="serverLibraryItemId" :playback-rate="playbackSpeed" @select="selectBookmark" />
     <modals-queue-modal v-model="showQueueModal" :queue="playQueue" :current-index="queueIndex" @select="selectQueueItem" />
@@ -12,7 +12,7 @@
 <script>
 import { AbsAudioPlayer, AbsLogger } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
-import CellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
+import { useCellularPermission } from '@/composables/useCellularPermission'
 
 const MAX_LOG_LENGTH = 2000
 
@@ -61,20 +61,30 @@ export default {
       serverEpisodeId: null
     }
   },
-  mixins: [CellularPermissionHelpers],
+  setup() {
+    const { checkCellularPermission } = useCellularPermission()
+    const appStore = useAppStore()
+    const userStore = useUserStore()
+    const globalsStore = useGlobalsStore()
+    const eventBus = useEventBus()
+    const toast = useToast()
+    const nativeHttp = useNativeHttp()
+    const platform = usePlatform()
+    return { checkCellularPermission, appStore, userStore, globalsStore, eventBus, toast, nativeHttp, platform }
+  },
   computed: {
     bookmarks() {
       if (!this.serverLibraryItemId) return []
-      return this.$store.getters['user/getUserBookmarksForItem'](this.serverLibraryItemId)
+      return this.userStore.getUserBookmarksForItem(this.serverLibraryItemId)
     },
     isIos() {
-      return this.$platform === 'ios'
+      return this.platform === 'ios'
     },
     playQueue() {
-      return this.$store.state.playQueue
+      return this.appStore.playQueue
     },
     queueIndex() {
-      return this.$store.state.queueIndex
+      return this.appStore.queueIndex
     }
   },
   methods: {
@@ -198,7 +208,7 @@ export default {
     resolvePlaybackTarget({ ids, preferServerIds, forceLocal }) {
       const hasServerTarget = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
       const hasLocalTarget = !!ids.localLibraryItemId
-      const isOffline = !this.$store.state.networkConnected || !this.$store.state.serverReachable
+      const isOffline = !this.appStore.networkConnected || !this.appStore.serverReachable
 
       if (forceLocal && hasLocalTarget) {
         return {
@@ -247,7 +257,7 @@ export default {
       this.showBookmarksModal = true
     },
     openQueue() {
-      const queue = this.$store.state.playQueue
+      const queue = this.appStore.playQueue
       if (!Array.isArray(queue) || !queue.length) {
         AbsLogger.info({
           tag: 'AudioPlayerContainer',
@@ -258,7 +268,7 @@ export default {
 
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
-        message: `[AudioPlayerContainer] openQueue: ${formatForLog({ queueLength: queue.length, queueIndex: this.$store.state.queueIndex })}`
+        message: `[AudioPlayerContainer] openQueue: ${formatForLog({ queueLength: queue.length, queueIndex: this.appStore.queueIndex })}`
       })
 
       this.showQueueModal = true
@@ -311,7 +321,7 @@ export default {
       })
       var res = await AbsAudioPlayer.setSleepTimer({ time: String(time), isChapterTime })
       if (!res.success) {
-        return this.$toast.error('Sleep timer did not set, invalid time')
+        return this.toast.error('Sleep timer did not set, invalid time')
       }
     },
     increaseSleepTimer() {
@@ -360,13 +370,14 @@ export default {
         })
         this.$refs.audioPlayer.setPlaybackSpeed(speed)
       }
+      this.userStore.updateUserSettings({ playbackRate: speed })
     },
     changePlaybackSpeed(speed) {
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
         message: `[AudioPlayerContainer] Change Playback Speed: ${speed}`
       })
-      this.$store.dispatch('user/updateUserSettings', { playbackRate: speed })
+      this.userStore.updateUserSettings({ playbackRate: speed })
     },
     settingsUpdated(settings) {
       AbsLogger.info({
@@ -398,7 +409,7 @@ export default {
       let libraryItemId = this.serverLibraryItemId
       let episodeId = this.serverEpisodeId
       if (!libraryItemId) {
-        const session = this.$store.state.currentPlaybackSession
+        const session = this.appStore.currentPlaybackSession
         if (session) {
           if (session.libraryItemId && !session.libraryItemId.startsWith('local')) {
             libraryItemId = session.libraryItemId
@@ -410,23 +421,20 @@ export default {
         }
       }
       if (!libraryItemId) {
-        this.$toast.error(`Cannot cast locally downloaded media`)
+        this.toast.error(`Cannot cast locally downloaded media`)
         return
       }
       // Change to server library item
       this.playServerLibraryItemAndCast(libraryItemId, episodeId)
     },
     playServerLibraryItemAndCast(libraryItemId, episodeId) {
-      var playbackRate = 1
-      if (this.$refs.audioPlayer) {
-        playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
-      }
+      var playbackRate = this.playbackSpeed || 1
       const startTime = Math.floor(this.currentTime || 0)
-      const queuePayload = this.getQueuePayload(this.$store.state.playQueue, true)
+      const queuePayload = this.getQueuePayload(this.appStore.playQueue, true)
       const payload = { libraryItemId, episodeId, playWhenReady: false, playbackRate }
       if (queuePayload.length) {
         payload.queue = queuePayload
-        const fallbackIndex = this.$store.state.queueIndex ?? 0
+        const fallbackIndex = this.appStore.queueIndex ?? 0
         payload.queueIndex = this.resolveQueueIndex(queuePayload, libraryItemId, episodeId || null, fallbackIndex)
       }
       if (startTime) payload.startTime = startTime
@@ -434,7 +442,7 @@ export default {
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
-            this.$toast.error(errorMsg)
+            this.toast.error(errorMsg)
           } else {
             AbsLogger.info({
               tag: 'AudioPlayerContainer',
@@ -447,7 +455,7 @@ export default {
         })
         .catch((error) => {
           console.error('Failed', error)
-          this.$toast.error('Failed to play')
+          this.toast.error('Failed to play')
         })
     },
     async playLibraryItem(payload) {
@@ -459,15 +467,15 @@ export default {
         tag: 'AudioPlayerContainer',
         message: `[AudioPlayerContainer] playLibraryItem received: ${formatForLog({
           payload,
-          storeQueueSize: this.$store.state.playQueue.length,
-          storeQueueIndex: this.$store.state.queueIndex,
-          isCasting: this.$store.state.isCasting
+          storeQueueSize: this.appStore.playQueue.length,
+          storeQueueIndex: this.appStore.queueIndex,
+          isCasting: this.appStore.isCasting
         })}`
       })
       const ids = this.resolveQueueItemIds(payload)
       const canUseServerIds = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
-      const effectiveForceLocal = !!payload.forceLocal && !(this.$store.state.isCasting && canUseServerIds)
-      const shouldUseServerIds = this.$store.state.isCasting && canUseServerIds && !effectiveForceLocal
+      const effectiveForceLocal = !!payload.forceLocal && !(this.appStore.isCasting && canUseServerIds)
+      const shouldUseServerIds = this.appStore.isCasting && canUseServerIds && !effectiveForceLocal
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
         message: `[AudioPlayerContainer] Resolved IDs for play: ${formatForLog({
@@ -486,13 +494,13 @@ export default {
       let libraryItemId = playbackTarget.libraryItemId
       let episodeId = playbackTarget.episodeId
       if (!libraryItemId) {
-        this.$store.commit('setPlayerDoneStartingPlayback')
-        this.$toast.error('Unable to determine item to play')
+        this.appStore.playerIsStartingPlayback = false
+        this.toast.error('Unable to determine item to play')
         return
       }
       if (playbackTarget.blockedByOffline) {
-        this.$store.commit('setPlayerDoneStartingPlayback')
-        this.$toast.error('No offline copy available. Reconnect to stream this item.')
+        this.appStore.playerIsStartingPlayback = false
+        this.toast.error('No offline copy available. Reconnect to stream this item.')
         return
       }
       if (payload.forceLocal && !effectiveForceLocal) {
@@ -514,8 +522,8 @@ export default {
             localLibraryItemId: ids.localLibraryItemId,
             serverEpisodeId: ids.serverEpisodeId,
             localEpisodeId: ids.localEpisodeId,
-            networkConnected: this.$store.state.networkConnected,
-            serverReachable: this.$store.state.serverReachable
+            networkConnected: this.appStore.networkConnected,
+            serverReachable: this.appStore.serverReachable
           })}`
         })
       }
@@ -527,7 +535,7 @@ export default {
       if (!isLocal) {
         const hasPermission = await this.checkCellularPermission('streaming')
         if (!hasPermission) {
-          this.$store.commit('setPlayerDoneStartingPlayback')
+          this.appStore.playerIsStartingPlayback = false
           return
         }
       }
@@ -537,20 +545,20 @@ export default {
       const serverLibraryItemId = ids.serverLibraryItemId || payload.serverLibraryItemId || null
       const serverEpisodeId = ids.serverEpisodeId || payload.serverEpisodeId || null
 
-      if (this.$store.state.isCasting && isLocal) {
+      if (this.appStore.isCasting && isLocal) {
         const { value } = await Dialog.confirm({
           title: 'Warning',
           message: `Cannot cast downloaded media items. Confirm to close cast and play on your device.`
         })
         if (!value) {
-          this.$store.commit('setPlayerDoneStartingPlayback')
+          this.appStore.playerIsStartingPlayback = false
           return
         }
       }
 
       // if already playing this item then jump to start time
-      const isAlreadyStreaming = this.$store.getters['getIsMediaStreaming'](libraryItemId, episodeId)
-      const isCurrentlyPlaying = this.$store.state.playerIsPlaying || this.$refs.audioPlayer?.isPlaying
+      const isAlreadyStreaming = this.appStore.getIsMediaStreaming(libraryItemId, episodeId)
+      const isCurrentlyPlaying = this.appStore.playerIsPlaying || this.$refs.audioPlayer?.isPlaying
 
       if (isAlreadyStreaming && isCurrentlyPlaying) {
         AbsLogger.info({
@@ -558,9 +566,9 @@ export default {
           message: `Already streaming item: ${formatForLog({
             startTime,
             queueSize: payload.queue?.length,
-            storeQueueSize: this.$store.state.playQueue.length,
-            queueIndex: this.$store.state.queueIndex,
-            playerIsPlaying: this.$store.state.playerIsPlaying,
+            storeQueueSize: this.appStore.playQueue.length,
+            queueIndex: this.appStore.queueIndex,
+            playerIsPlaying: this.appStore.playerIsPlaying,
             audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
           })}`
         })
@@ -570,7 +578,7 @@ export default {
         } else if (this.$refs.audioPlayer) {
           this.$refs.audioPlayer.play()
         }
-        this.$store.commit('setPlayerDoneStartingPlayback')
+        this.appStore.playerIsStartingPlayback = false
         return
       }
 
@@ -579,10 +587,10 @@ export default {
           tag: 'AudioPlayerContainer',
           message: `Item matches current session but player inactive; preparing again: ${formatForLog({
             queueSize: payload.queue?.length,
-            storeQueueSize: this.$store.state.playQueue.length,
-            queueIndex: this.$store.state.queueIndex,
-            playerIsPlaying: this.$store.state.playerIsPlaying,
-            playerIsStartingPlayback: this.$store.state.playerIsStartingPlayback,
+            storeQueueSize: this.appStore.playQueue.length,
+            queueIndex: this.appStore.queueIndex,
+            playerIsPlaying: this.appStore.playerIsPlaying,
+            playerIsStartingPlayback: this.appStore.playerIsStartingPlayback,
             audioPlayerIsPlaying: this.$refs.audioPlayer?.isPlaying
           })}`
         })
@@ -591,15 +599,12 @@ export default {
       this.serverLibraryItemId = null
       this.serverEpisodeId = null
 
-      let playbackRate = 1
-      if (this.$refs.audioPlayer) {
-        playbackRate = this.$refs.audioPlayer.currentPlaybackRate || 1
-      }
+      let playbackRate = this.playbackSpeed || 1
 
       if (payload.queue) {
-        this.$store.commit('setPlayQueue', payload.queue)
+        this.appStore.setPlayQueue(payload.queue)
         if (payload.queueIndex !== undefined) {
-          this.$store.commit('setQueueIndex', payload.queueIndex)
+          this.appStore.setQueueIndex(payload.queueIndex)
         } else {
           const idx = payload.queue.findIndex((q) => {
             const queueIds = this.resolveQueueItemIds(q)
@@ -614,23 +619,23 @@ export default {
               queueLibraryItemId === libraryItemId && (queueEpisodeId || null) === (episodeId || null)
             )
           })
-          if (idx >= 0) this.$store.commit('setQueueIndex', idx)
+          if (idx >= 0) this.appStore.setQueueIndex(idx)
         }
       } else {
-        this.$store.commit('setPlayQueue', [payload])
-        this.$store.commit('setQueueIndex', 0)
+        this.appStore.setPlayQueue([payload])
+        this.appStore.setQueueIndex(0)
       }
 
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
         message: `Called playLibraryItem: ${libraryItemId}`
       })
-      const queuePayload = this.getQueuePayload(this.$store.state.playQueue, useServerQueueIds)
+      const queuePayload = this.getQueuePayload(this.appStore.playQueue, useServerQueueIds)
       AbsLogger.info({
         tag: 'AudioPlayerContainer',
         message: `[AudioPlayerContainer] Queue payload prepared: ${formatForLog({
           preferServerIds: useServerQueueIds,
-          originalQueueSize: this.$store.state.playQueue.length,
+          originalQueueSize: this.appStore.playQueue.length,
           queuePayloadSize: queuePayload.length,
           queuePayloadSample: queuePayload.slice(0, 5)
         })}`
@@ -643,7 +648,7 @@ export default {
       }
       if (queuePayload.length) {
         preparePayload.queue = queuePayload
-        const fallbackIndex = this.$store.state.queueIndex ?? 0
+        const fallbackIndex = this.appStore.queueIndex ?? 0
         preparePayload.queueIndex = this.resolveQueueIndex(queuePayload, libraryItemId, episodeId || null, fallbackIndex)
       }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
@@ -655,7 +660,7 @@ export default {
         .then((data) => {
           if (data.error) {
             const errorMsg = data.error || 'Failed to play'
-            this.$toast.error(errorMsg)
+            this.toast.error(errorMsg)
           } else {
             AbsLogger.info({
               tag: 'AudioPlayerContainer',
@@ -675,7 +680,7 @@ export default {
             } else {
               this.serverEpisodeId = null
             }
-            if (this.$store.state.isCasting) {
+            if (this.appStore.isCasting) {
               AbsAudioPlayer.requestSession()
             }
           }
@@ -685,10 +690,10 @@ export default {
             tag: 'AudioPlayerContainer',
             message: `[AudioPlayerContainer] prepareLibraryItem failed: ${formatForLog({ error: String(error) })}`
           })
-          this.$toast.error('Failed to play')
+          this.toast.error('Failed to play')
         })
         .finally(() => {
-          this.$store.commit('setPlayerDoneStartingPlayback')
+          this.appStore.playerIsStartingPlayback = false
         })
     },
     pauseItem() {
@@ -704,10 +709,10 @@ export default {
           payload: localMediaProgress
         })}`
       })
-      this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
+      this.globalsStore.updateLocalMediaProgress(localMediaProgress)
     },
     onMediaPlayerChanged(data) {
-      this.$store.commit('setMediaPlayer', data.value)
+      this.appStore.setPlaybackSession(data.value)
     },
     onReady() {
       // The UI is reporting elsewhere we are ready
@@ -723,8 +728,8 @@ export default {
         tag: 'AudioPlayerContainer',
         message: `Notify on ready... settingsLoaded: ${this.settingsLoaded}, isReady: ${this.isReady}`
       })
-      if (this.settingsLoaded && this.isReady && this.$store.state.isFirstAudioLoad) {
-        this.$store.commit('setIsFirstAudioLoad', false) // Only run this once on app launch
+      if (this.settingsLoaded && this.isReady && this.appStore.isFirstAudioLoad) {
+        this.appStore.isFirstAudioLoad = false // Only run this once on app launch
         AbsAudioPlayer.onReady()
       }
     },
@@ -735,11 +740,11 @@ export default {
      * When device gains focus then refresh the timestamps in the audio player
      */
     deviceFocused(hasFocus) {
-      if (!this.$store.state.currentPlaybackSession) return
+      if (!this.appStore.currentPlaybackSession) return
 
       if (hasFocus) {
         if (!this.$refs.audioPlayer?.isPlaying) {
-          const playbackSession = this.$store.state.currentPlaybackSession
+          const playbackSession = this.appStore.currentPlaybackSession
           if (this.$refs.audioPlayer.isLocalPlayMethod) {
             const localLibraryItemId = playbackSession.localLibraryItem?.id
             const localEpisodeId = playbackSession.localEpisodeId
@@ -750,7 +755,7 @@ export default {
               })
               return
             }
-            const localMediaProgress = this.$store.state.globals.localMediaProgress.find((mp) => {
+            const localMediaProgress = this.globalsStore.localMediaProgress.find((mp) => {
               if (localEpisodeId) return mp.localEpisodeId === localEpisodeId
               return mp.localLibraryItemId === localLibraryItemId
             })
@@ -774,7 +779,7 @@ export default {
             const libraryItemId = playbackSession.libraryItemId
             const episodeId = playbackSession.episodeId
             const url = episodeId ? `/api/me/progress/${libraryItemId}/${episodeId}` : `/api/me/progress/${libraryItemId}`
-            this.$nativeHttp
+            this.nativeHttp
               .get(url)
               .then((data) => {
                 if (!this.$refs.audioPlayer?.isPlaying && data.libraryItemId === libraryItemId) {
@@ -801,28 +806,28 @@ export default {
     },
 
     onSkipNextRequest() {
-      const nextItem = this.$store.getters['getNextQueueItem']
+      const nextItem = this.appStore.getNextQueueItem
       if (nextItem) {
         this.playLibraryItem({
           libraryItemId: nextItem.localLibraryItem?.id || nextItem.libraryItemId,
           episodeId: nextItem.localEpisode?.id || nextItem.episodeId,
           serverLibraryItemId: nextItem.libraryItemId,
           serverEpisodeId: nextItem.episodeId,
-          queue: this.$store.state.playQueue,
-          queueIndex: this.$store.state.queueIndex + 1
+          queue: this.appStore.playQueue,
+          queueIndex: this.appStore.queueIndex + 1
         })
       }
     },
     onSkipPreviousRequest() {
-      const idx = this.$store.state.queueIndex
+      const idx = this.appStore.queueIndex
       if (idx > 0) {
-        const prevItem = this.$store.state.playQueue[idx - 1]
+        const prevItem = this.appStore.playQueue[idx - 1]
         this.playLibraryItem({
           libraryItemId: prevItem.localLibraryItem?.id || prevItem.libraryItemId,
           episodeId: prevItem.localEpisode?.id || prevItem.episodeId,
           serverLibraryItemId: prevItem.libraryItemId,
           serverEpisodeId: prevItem.episodeId,
-          queue: this.$store.state.playQueue,
+          queue: this.appStore.playQueue,
           queueIndex: idx - 1
         })
       }
@@ -831,26 +836,26 @@ export default {
       if (typeof value === 'number') {
         AbsLogger.info({
           tag: 'AudioPlayerContainer',
-          message: `[AudioPlayerContainer] onQueueIndexUpdate: ${formatForLog({ value, queueLength: this.$store.state.playQueue.length })}`
+          message: `[AudioPlayerContainer] onQueueIndexUpdate: ${formatForLog({ value, queueLength: this.appStore.playQueue.length })}`
         })
-        this.$store.commit('setQueueIndex', value)
+        this.appStore.setQueueIndex(value)
       }
     },
     selectQueueItem(index) {
-      const item = this.$store.state.playQueue[index]
+      const item = this.appStore.playQueue[index]
       if (!item) return
       this.playLibraryItem({
         libraryItemId: item.localLibraryItem?.id || item.libraryItemId,
         episodeId: item.localEpisode?.id || item.episodeId,
         serverLibraryItemId: item.libraryItemId,
         serverEpisodeId: item.episodeId,
-        queue: this.$store.state.playQueue,
+        queue: this.appStore.playQueue,
         queueIndex: index
       })
       this.showQueueModal = false
     },
     onPlaybackEnded() {
-      const nextItem = this.$store.getters['getNextQueueItem']
+      const nextItem = this.appStore.getNextQueueItem
       if (nextItem) {
         this.onSkipNextRequest()
       }
@@ -862,53 +867,53 @@ export default {
     this.onSleepTimerSetListener = await AbsAudioPlayer.addListener('onSleepTimerSet', this.onSleepTimerSet)
     this.onMediaPlayerChangedListener = await AbsAudioPlayer.addListener('onMediaPlayerChanged', this.onMediaPlayerChanged)
     this.onCastAvailableUpdateListener = await AbsAudioPlayer.addListener('onCastAvailableUpdate', ({ value }) => {
-      this.$store.commit('setCastAvailable', value)
+      this.appStore.isCastAvailable = value
     })
     this.onCastSupportUpdateListener = await AbsAudioPlayer.addListener('onCastSupportUpdate', ({ value }) => {
-      this.$store.commit('setCastEnabled', value)
+      this.appStore.isCastEnabled = value
     })
     this.onSkipNextRequestListener = await AbsAudioPlayer.addListener('onSkipNextRequest', this.onSkipNextRequest)
     this.onSkipPreviousRequestListener = await AbsAudioPlayer.addListener('onSkipPreviousRequest', this.onSkipPreviousRequest)
     this.onQueueIndexUpdateListener = await AbsAudioPlayer.addListener('onQueueIndexUpdate', this.onQueueIndexUpdate)
 
     AbsAudioPlayer.getIsCastAvailable().then(({ value }) => {
-      this.$store.commit('setCastAvailable', value)
+      this.appStore.isCastAvailable = value
     })
     AbsAudioPlayer.getIsCastSupported?.().then?.(({ value }) => {
-      this.$store.commit('setCastEnabled', value)
+      this.appStore.isCastEnabled = value
     })
 
-    this.playbackSpeed = this.$store.getters['user/getUserSetting']('playbackRate')
+    this.playbackSpeed = this.userStore.getUserSetting('playbackRate')
     AbsLogger.info({
       tag: 'AudioPlayerContainer',
       message: `[AudioPlayerContainer] Init Playback Speed: ${this.playbackSpeed}`
     })
 
-    this.$eventBus.$on('abs-ui-ready', this.onReady)
-    this.$eventBus.$on('play-item', this.playLibraryItem)
-    this.$eventBus.$on('pause-item', this.pauseItem)
-    this.$eventBus.$on('close-stream', this.closeStreamOnly)
-    this.$eventBus.$on('cast-local-item', this.castLocalItem)
-    this.$eventBus.$on('user-settings', this.settingsUpdated)
-    this.$eventBus.$on('playback-time-update', this.playbackTimeUpdate)
-    this.$eventBus.$on('device-focus-update', this.deviceFocused)
-    this.$eventBus.$on('playback-ended', this.onPlaybackEnded)
+    this.eventBus.on('abs-ui-ready', this.onReady)
+    this.eventBus.on('play-item', this.playLibraryItem)
+    this.eventBus.on('pause-item', this.pauseItem)
+    this.eventBus.on('close-stream', this.closeStreamOnly)
+    this.eventBus.on('cast-local-item', this.castLocalItem)
+    this.eventBus.on('user-settings', this.settingsUpdated)
+    this.eventBus.on('playback-time-update', this.playbackTimeUpdate)
+    this.eventBus.on('device-focus-update', this.deviceFocused)
+    this.eventBus.on('playback-ended', this.onPlaybackEnded)
 
     if (
-      this.$store.state.currentPlaybackSession &&
-      this.$store.state.isCasting
+      this.appStore.currentPlaybackSession &&
+      this.appStore.isCasting
     ) {
       AbsAudioPlayer.requestSession()
     }
 
-    if (this.$store.state.playQueue.length) {
+    if (this.appStore.playQueue.length) {
       AbsAudioPlayer.setPlayQueue({
-        queue: this.$store.state.playQueue,
-        queueIndex: this.$store.state.queueIndex
+        queue: this.appStore.playQueue,
+        queueIndex: this.appStore.queueIndex
       })
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.onLocalMediaProgressUpdateListener?.remove()
     this.onSleepTimerEndedListener?.remove()
     this.onSleepTimerSetListener?.remove()
@@ -919,15 +924,15 @@ export default {
     this.onSkipPreviousRequestListener?.remove()
     this.onQueueIndexUpdateListener?.remove()
 
-    this.$eventBus.$off('abs-ui-ready', this.onReady)
-    this.$eventBus.$off('play-item', this.playLibraryItem)
-    this.$eventBus.$off('pause-item', this.pauseItem)
-    this.$eventBus.$off('close-stream', this.closeStreamOnly)
-    this.$eventBus.$off('cast-local-item', this.castLocalItem)
-    this.$eventBus.$off('user-settings', this.settingsUpdated)
-    this.$eventBus.$off('playback-time-update', this.playbackTimeUpdate)
-    this.$eventBus.$off('device-focus-update', this.deviceFocused)
-    this.$eventBus.$off('playback-ended', this.onPlaybackEnded)
+    this.eventBus.off('abs-ui-ready', this.onReady)
+    this.eventBus.off('play-item', this.playLibraryItem)
+    this.eventBus.off('pause-item', this.pauseItem)
+    this.eventBus.off('close-stream', this.closeStreamOnly)
+    this.eventBus.off('cast-local-item', this.castLocalItem)
+    this.eventBus.off('user-settings', this.settingsUpdated)
+    this.eventBus.off('playback-time-update', this.playbackTimeUpdate)
+    this.eventBus.off('device-focus-update', this.deviceFocused)
+    this.eventBus.off('playback-ended', this.onPlaybackEnded)
   }
 }
 </script>

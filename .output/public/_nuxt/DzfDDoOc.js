@@ -1,0 +1,1 @@
+import{Q as s,a4 as o}from"./GQdYg7xT.js";function m(){return{getJumpLabel:n=>{const t=Number(n);if(isNaN(t))return"";const e=t>=120,u=e?"UnitMinutesShort":"UnitSecondsShort",r=e?t/60:t;return s(u,[o(r)])}}}export{m as u};

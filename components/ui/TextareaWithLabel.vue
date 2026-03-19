@@ -5,37 +5,32 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    value: [String, Number],
-    label: String,
-    disabled: Boolean,
-    rows: {
-      type: Number,
-      default: 2
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    inputValue: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    }
-  },
-  methods: {
-    blur() {
-      if (this.$refs.input && this.$refs.input.blur) {
-        this.$refs.input.blur()
-      }
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+
+const props = defineProps<{
+  modelValue?: string | number
+  label?: string
+  disabled?: boolean
+  rows?: number
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: string | number]
+}>()
+
+const input = ref<{ blur: () => void } | null>(null)
+
+const inputValue = computed({
+  get() { return props.modelValue },
+  set(val: string | number | undefined) { if (val !== undefined) emit('update:modelValue', val) }
+})
+
+function blur() {
+  if (input.value && input.value.blur) {
+    input.value.blur()
+  }
 }
+
+defineExpose({ blur })
 </script>

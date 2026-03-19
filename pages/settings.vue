@@ -3,8 +3,8 @@
     <!-- Display settings -->
     <p class="text-md-label-m text-md-primary mb-3 uppercase tracking-widest">{{ $strings.HeaderUserInterfaceSettings }}</p>
     <div class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleEnableAltView">
-        <ui-toggle-switch v-model="enableBookshelfView" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="enableBookshelfView" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelUseBookshelfView }}</p>
     </div>
@@ -18,19 +18,19 @@
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelHapticFeedback }}</p>
       <div @click.stop="showHapticFeedbackOptions">
-        <ui-text-input :value="hapticFeedbackOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="hapticFeedbackOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelLanguage }}</p>
       <div @click.stop="showLanguageOptions">
-        <ui-text-input :value="languageOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="languageOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelTheme }}</p>
       <div @click.stop="showThemeOptions">
-        <ui-text-input :value="themeOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="themeOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
 
@@ -39,43 +39,43 @@
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelJumpBackwardsTime }}</p>
       <div @click.stop="showJumpBackwardsOptions">
-        <ui-text-input :value="jumpBackwardsOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="jumpBackwardsOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelJumpForwardsTime }}</p>
       <div @click.stop="showJumpForwardOptions">
-        <ui-text-input :value="jumpForwardOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="jumpForwardOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
     <div class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleDisableAutoRewind">
-        <ui-toggle-switch v-model="settings.disableAutoRewind" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.disableAutoRewind" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelDisableAutoRewind }}</p>
     </div>
     <div v-if="!isiOS" class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleEnableMp3IndexSeeking">
-        <ui-toggle-switch v-model="settings.enableMp3IndexSeeking" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.enableMp3IndexSeeking" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelEnableMp3IndexSeeking }}</p>
       <span class="material-symbols text-xl ml-2" @click.stop="showConfirmMp3IndexSeeking">info</span>
     </div>
     <div class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleAllowSeekingOnMediaControls">
-        <ui-toggle-switch v-model="settings.allowSeekingOnMediaControls" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.allowSeekingOnMediaControls" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelAllowSeekingOnMediaControls }}</p>
     </div>
     <div class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleAutoContinuePlaylists">
-        <ui-toggle-switch v-model="settings.autoContinuePlaylists" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.autoContinuePlaylists" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelAutoContinuePlaylists }}</p>
     </div>
     <div class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleAutoCacheUnplayedEpisodes">
-        <ui-toggle-switch v-model="settings.autoCacheUnplayedEpisodes" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.autoCacheUnplayedEpisodes" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelAutoCacheUnplayedEpisodes }}</p>
     </div>
@@ -84,8 +84,8 @@
     <template v-if="!isiOS">
       <p class="text-md-label-m text-md-primary mb-3 mt-8 uppercase tracking-widest">{{ $strings.HeaderSleepTimerSettings }}</p>
       <div class="flex items-center py-3">
-        <div class="w-10 flex justify-center" @click="toggleDisableShakeToResetSleepTimer">
-          <ui-toggle-switch v-model="settings.disableShakeToResetSleepTimer" @input="saveSettings" />
+        <div class="w-10 flex justify-center">
+          <ui-toggle-switch v-model="settings.disableShakeToResetSleepTimer" @update:modelValue="saveSettings" />
         </div>
         <p class="pl-4">{{ $strings.LabelDisableShakeToReset }}</p>
         <span class="material-symbols text-xl ml-2" @click.stop="showInfo('disableShakeToResetSleepTimer')">info</span>
@@ -93,35 +93,35 @@
       <div v-if="!settings.disableShakeToResetSleepTimer" class="py-3 flex items-center">
         <p class="pr-4 w-36">{{ $strings.LabelShakeSensitivity }}</p>
         <div @click.stop="showShakeSensitivityOptions">
-          <ui-text-input :value="shakeSensitivityOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+          <ui-text-input :model-value="shakeSensitivityOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
         </div>
       </div>
     </template>
     <div class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleDisableSleepTimerFadeOut">
-        <ui-toggle-switch v-model="settings.disableSleepTimerFadeOut" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.disableSleepTimerFadeOut" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelDisableAudioFadeOut }}</p>
       <span class="material-symbols text-xl ml-2" @click.stop="showInfo('disableSleepTimerFadeOut')">info</span>
     </div>
     <template v-if="!isiOS">
       <div class="flex items-center py-3">
-        <div class="w-10 flex justify-center" @click="toggleDisableSleepTimerResetFeedback">
-          <ui-toggle-switch v-model="settings.disableSleepTimerResetFeedback" @input="saveSettings" />
+        <div class="w-10 flex justify-center">
+          <ui-toggle-switch v-model="settings.disableSleepTimerResetFeedback" @update:modelValue="saveSettings" />
         </div>
         <p class="pl-4">{{ $strings.LabelDisableVibrateOnReset }}</p>
         <span class="material-symbols text-xl ml-2" @click.stop="showInfo('disableSleepTimerResetFeedback')">info</span>
       </div>
       <div class="flex items-center py-3">
-        <div class="w-10 flex justify-center" @click="toggleSleepTimerAlmostDoneChime">
-          <ui-toggle-switch v-model="settings.enableSleepTimerAlmostDoneChime" @input="saveSettings" />
+        <div class="w-10 flex justify-center">
+          <ui-toggle-switch v-model="settings.enableSleepTimerAlmostDoneChime" @update:modelValue="saveSettings" />
         </div>
         <p class="pl-4">{{ $strings.LabelSleepTimerAlmostDoneChime }}</p>
         <span class="material-symbols text-xl ml-2" @click.stop="showInfo('enableSleepTimerAlmostDoneChime')">info</span>
       </div>
       <div class="flex items-center py-3">
-        <div class="w-10 flex justify-center" @click="toggleAutoSleepTimer">
-          <ui-toggle-switch v-model="settings.autoSleepTimer" @input="saveSettings" />
+        <div class="w-10 flex justify-center">
+          <ui-toggle-switch v-model="settings.autoSleepTimer" @update:modelValue="saveSettings" />
         </div>
         <p class="pl-4">{{ $strings.LabelAutoSleepTimer }}</p>
         <span class="material-symbols text-xl ml-2" @click.stop="showInfo('autoSleepTimer')">info</span>
@@ -130,21 +130,21 @@
     <!-- Auto Sleep timer settings -->
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelStartTime }}</p>
-      <ui-text-input type="time" v-model="settings.autoSleepTimerStartTime" style="width: 145px; max-width: 145px" @input="autoSleepTimerTimeUpdated" />
+      <ui-text-input type="time" v-model="settings.autoSleepTimerStartTime" style="width: 145px; max-width: 145px" @update:modelValue="autoSleepTimerTimeUpdated" />
     </div>
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelEndTime }}</p>
-      <ui-text-input type="time" v-model="settings.autoSleepTimerEndTime" style="width: 145px; max-width: 145px" @input="autoSleepTimerTimeUpdated" />
+      <ui-text-input type="time" v-model="settings.autoSleepTimerEndTime" style="width: 145px; max-width: 145px" @update:modelValue="autoSleepTimerTimeUpdated" />
     </div>
     <div v-if="settings.autoSleepTimer" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelSleepTimer }}</p>
       <div @click.stop="showSleepTimerOptions">
-        <ui-text-input :value="sleepTimerLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="sleepTimerLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
     <div v-if="settings.autoSleepTimer" class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click="toggleAutoSleepTimerAutoRewind">
-        <ui-toggle-switch v-model="settings.autoSleepTimerAutoRewind" @input="saveSettings" />
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="settings.autoSleepTimerAutoRewind" @update:modelValue="saveSettings" />
       </div>
       <p class="pl-4">{{ $strings.LabelAutoSleepTimerAutoRewind }}</p>
       <span class="material-symbols text-xl ml-2" @click.stop="showInfo('autoSleepTimerAutoRewind')">info</span>
@@ -152,7 +152,7 @@
     <div v-if="settings.autoSleepTimerAutoRewind" class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelAutoRewindTime }}</p>
       <div @click.stop="showAutoSleepTimerRewindOptions">
-        <ui-text-input :value="autoSleepTimerRewindLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
+        <ui-text-input :model-value="autoSleepTimerRewindLengthOption" readonly append-icon="expand_more" style="width: 145px; max-width: 145px" />
       </div>
     </div>
 
@@ -161,13 +161,13 @@
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelDownloadUsingCellular }}</p>
       <div @click.stop="showDownloadUsingCellularOptions">
-        <ui-text-input :value="downloadUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="downloadUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelStreamingUsingCellular }}</p>
       <div @click.stop="showStreamingUsingCellularOptions">
-        <ui-text-input :value="streamingUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
+        <ui-text-input :model-value="streamingUsingCellularOption" readonly append-icon="expand_more" style="max-width: 200px" />
       </div>
     </div>
 
@@ -176,13 +176,13 @@
       <p class="text-md-label-m text-md-primary mb-3 mt-8 uppercase tracking-widest">{{ $strings.HeaderAndroidAutoSettings }}</p>
       <div class="py-3 flex items-center">
         <p class="pr-4 w-36">{{ $strings.LabelAndroidAutoBrowseLimitForGrouping }}</p>
-        <ui-text-input type="number" v-model="settings.androidAutoBrowseLimitForGrouping" style="width: 145px; max-width: 145px" @input="androidAutoBrowseLimitForGroupingUpdated" />
+        <ui-text-input type="number" v-model="settings.androidAutoBrowseLimitForGrouping" style="width: 145px; max-width: 145px" @update:modelValue="androidAutoBrowseLimitForGroupingUpdated" />
         <span class="material-symbols text-xl ml-2" @click.stop="showInfo('androidAutoBrowseLimitForGrouping')">info</span>
       </div>
       <div class="py-3 flex items-center">
         <p class="pr-4 w-36">{{ $strings.LabelAndroidAutoBrowseSeriesSequenceOrder }}</p>
         <div @click.stop="showAndroidAutoBrowseSeriesSequenceOrderOptions">
-          <ui-text-input :value="androidAutoBrowseSeriesSequenceOrderOption" readonly append-icon="expand_more" style="max-width: 200px" />
+          <ui-text-input :model-value="androidAutoBrowseSeriesSequenceOrderOption" readonly append-icon="expand_more" style="max-width: 200px" />
         </div>
       </div>
     </template>
@@ -197,516 +197,501 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { Dialog } from '@capacitor/dialog'
-import jumpLabelMixin from '@/mixins/jumpLabel'
+import { useAppStore } from '~/stores/app'
+import { useGlobalsStore } from '~/stores/globals'
+import { languageCodeOptions, setLanguageCode } from '~/composables/useStrings'
 
-export default {
-  mixins: [jumpLabelMixin],
-  data() {
-    return {
-      loading: false,
-      deviceData: null,
-      showMoreMenuDialog: false,
-      showSleepTimerLengthModal: false,
-      showAutoSleepTimerRewindLengthModal: false,
-      moreMenuSetting: '',
-      settings: {
-        disableAutoRewind: false,
-        enableAltView: true,
-        allowSeekingOnMediaControls: false,
-        jumpForwardTime: 10,
-        jumpBackwardsTime: 10,
-        enableMp3IndexSeeking: false,
-        disableShakeToResetSleepTimer: false,
-        shakeSensitivity: 'MEDIUM',
-        lockOrientation: 0,
-        hapticFeedback: 'LIGHT',
-        autoSleepTimer: false,
-        autoSleepTimerStartTime: '22:00',
-        autoSleepTimerEndTime: '06:00',
-        sleepTimerLength: 900000, // 15 minutes
-        disableSleepTimerFadeOut: false,
-        disableSleepTimerResetFeedback: false,
-        enableSleepTimerAlmostDoneChime: false,
-        autoContinuePlaylists: false,
-        autoCacheUnplayedEpisodes: false,
-        autoSleepTimerAutoRewind: false,
-        autoSleepTimerAutoRewindTime: 300000, // 5 minutes
-        languageCode: 'en-us',
-        downloadUsingCellular: 'ALWAYS',
-        streamingUsingCellular: 'ALWAYS',
-        androidAutoBrowseLimitForGrouping: 100,
-        androidAutoBrowseSeriesSequenceOrder: 'ASC'
-      },
-      theme: 'dark',
-      lockCurrentOrientation: false,
-      settingInfo: {
-        disableShakeToResetSleepTimer: {
-          name: this.$strings.LabelDisableShakeToReset,
-          message: this.$strings.LabelDisableShakeToResetHelp
-        },
-        autoSleepTimer: {
-          name: this.$strings.LabelAutoSleepTimer,
-          message: this.$strings.LabelAutoSleepTimerHelp
-        },
-        disableSleepTimerFadeOut: {
-          name: this.$strings.LabelDisableAudioFadeOut,
-          message: this.$strings.LabelDisableAudioFadeOutHelp
-        },
-        disableSleepTimerResetFeedback: {
-          name: this.$strings.LabelDisableVibrateOnReset,
-          message: this.$strings.LabelDisableVibrateOnResetHelp
-        },
-        enableSleepTimerAlmostDoneChime: {
-          name: this.$strings.LabelSleepTimerAlmostDoneChime,
-          message: this.$strings.LabelSleepTimerAlmostDoneChimeHelp
-        },
-        autoSleepTimerAutoRewind: {
-          name: this.$strings.LabelAutoSleepTimerAutoRewind,
-          message: this.$strings.LabelAutoSleepTimerAutoRewindHelp
-        },
-        enableMp3IndexSeeking: {
-          name: this.$strings.LabelEnableMp3IndexSeeking,
-          message: this.$strings.LabelEnableMp3IndexSeekingHelp
-        },
-        androidAutoBrowseLimitForGrouping: {
-          name: this.$strings.LabelAndroidAutoBrowseLimitForGrouping,
-          message: this.$strings.LabelAndroidAutoBrowseLimitForGroupingHelp
-        }
-      },
-      hapticFeedbackItems: [
-        {
-          text: this.$strings.LabelOff,
-          value: 'OFF'
-        },
-        {
-          text: this.$strings.LabelLight,
-          value: 'LIGHT'
-        },
-        {
-          text: this.$strings.LabelMedium,
-          value: 'MEDIUM'
-        },
-        {
-          text: this.$strings.LabelHeavy,
-          value: 'HEAVY'
-        }
-      ],
-      shakeSensitivityItems: [
-        {
-          text: this.$strings.LabelVeryLow,
-          value: 'VERY_LOW'
-        },
-        {
-          text: this.$strings.LabelLow,
-          value: 'LOW'
-        },
-        {
-          text: this.$strings.LabelMedium,
-          value: 'MEDIUM'
-        },
-        {
-          text: this.$strings.LabelHigh,
-          value: 'HIGH'
-        },
-        {
-          text: this.$strings.LabelVeryHigh,
-          value: 'VERY_HIGH'
-        }
-      ],
-      downloadUsingCellularItems: [
-        {
-          text: this.$strings.LabelAskConfirmation,
-          value: 'ASK'
-        },
-        {
-          text: this.$strings.LabelAlways,
-          value: 'ALWAYS'
-        },
-        {
-          text: this.$strings.LabelNever,
-          value: 'NEVER'
-        }
-      ],
-      streamingUsingCellularItems: [
-        {
-          text: this.$strings.LabelAskConfirmation,
-          value: 'ASK'
-        },
-        {
-          text: this.$strings.LabelAlways,
-          value: 'ALWAYS'
-        },
-        {
-          text: this.$strings.LabelNever,
-          value: 'NEVER'
-        }
-      ],
-      androidAutoBrowseSeriesSequenceOrderItems: [
-        {
-          text: this.$strings.LabelSequenceAscending,
-          value: 'ASC'
-        },
-        {
-          text: this.$strings.LabelSequenceDescending,
-          value: 'DESC'
-        }
-      ]
-    }
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const { getJumpLabel } = useJumpLabel()
+
+const loading = ref(false)
+const deviceData = ref<Record<string, unknown> | null>(null)
+const showMoreMenuDialog = ref(false)
+const showSleepTimerLengthModal = ref(false)
+const showAutoSleepTimerRewindLengthModal = ref(false)
+const moreMenuSetting = ref('')
+const theme = ref('dark')
+const lockCurrentOrientation = ref(false)
+
+const settings = reactive({
+  disableAutoRewind: false,
+  enableAltView: true,
+  allowSeekingOnMediaControls: false,
+  jumpForwardTime: 10,
+  jumpBackwardsTime: 10,
+  enableMp3IndexSeeking: false,
+  disableShakeToResetSleepTimer: false,
+  shakeSensitivity: 'MEDIUM',
+  lockOrientation: 'NONE' as string | number,
+  hapticFeedback: 'LIGHT',
+  autoSleepTimer: false,
+  autoSleepTimerStartTime: '22:00',
+  autoSleepTimerEndTime: '06:00',
+  sleepTimerLength: 900000, // 15 minutes
+  disableSleepTimerFadeOut: false,
+  disableSleepTimerResetFeedback: false,
+  enableSleepTimerAlmostDoneChime: false,
+  autoContinuePlaylists: false,
+  autoCacheUnplayedEpisodes: false,
+  autoSleepTimerAutoRewind: false,
+  autoSleepTimerAutoRewindTime: 300000, // 5 minutes
+  languageCode: 'en-us',
+  downloadUsingCellular: 'ALWAYS',
+  streamingUsingCellular: 'ALWAYS',
+  androidAutoBrowseLimitForGrouping: 100,
+  androidAutoBrowseSeriesSequenceOrder: 'ASC'
+})
+
+const strings = useStrings()
+
+const settingInfo = computed(() => ({
+  disableShakeToResetSleepTimer: {
+    name: strings.LabelDisableShakeToReset,
+    message: strings.LabelDisableShakeToResetHelp
   },
-  computed: {
-    // This is flipped because alt view was the default until v0.9.61-beta
-    enableBookshelfView: {
-      get() {
-        return !this.settings.enableAltView
-      },
-      set(val) {
-        this.settings.enableAltView = !val
-      }
-    },
-    isiOS() {
-      return this.$platform === 'ios'
-    },
-    jumpForwardSecondsOptions() {
-      return this.$store.state.globals.jumpForwardSecondsOptions || []
-    },
-    jumpBackwardsSecondsOptions() {
-      return this.$store.state.globals.jumpBackwardsSecondsOptions || []
-    },
-    languageOptionItems() {
-      return this.$languageCodeOptions || []
-    },
-    jumpForwardOption() {
-      return this.getJumpLabel(this.settings.jumpForwardTime)
-    },
-    jumpBackwardsOption() {
-      return this.getJumpLabel(this.settings.jumpBackwardsTime)
-    },
-    themeOptionItems() {
-      return [
-        {
-          text: this.$strings.LabelThemeBlack,
-          value: 'black'
-        },
-        {
-          text: this.$strings.LabelThemeDark,
-          value: 'dark'
-        },
-        {
-          text: this.$strings.LabelThemeLight,
-          value: 'light'
-        }
-      ]
-    },
-    shakeSensitivityOption() {
-      const item = this.shakeSensitivityItems.find((i) => i.value === this.settings.shakeSensitivity)
-      return item?.text || 'Error'
-    },
-    hapticFeedbackOption() {
-      const item = this.hapticFeedbackItems.find((i) => i.value === this.settings.hapticFeedback)
-      return item?.text || 'Error'
-    },
-    languageOption() {
-      return this.languageOptionItems.find((i) => i.value === this.settings.languageCode)?.text || ''
-    },
-    themeOption() {
-      return this.themeOptionItems.find((i) => i.value === this.theme)?.text || ''
-    },
-    sleepTimerLengthOption() {
-      if (!this.settings.sleepTimerLength) return this.$strings.LabelEndOfChapter
-      const minutes = Number(this.settings.sleepTimerLength) / 1000 / 60
-      return `${minutes} min`
-    },
-    autoSleepTimerRewindLengthOption() {
-      const minutes = Number(this.settings.autoSleepTimerAutoRewindTime) / 1000 / 60
-      return `${minutes} min`
-    },
-    downloadUsingCellularOption() {
-      const item = this.downloadUsingCellularItems.find((i) => i.value === this.settings.downloadUsingCellular)
-      return item?.text || 'Error'
-    },
-    streamingUsingCellularOption() {
-      const item = this.streamingUsingCellularItems.find((i) => i.value === this.settings.streamingUsingCellular)
-      return item?.text || 'Error'
-    },
-    androidAutoBrowseSeriesSequenceOrderOption() {
-      const item = this.androidAutoBrowseSeriesSequenceOrderItems.find((i) => i.value === this.settings.androidAutoBrowseSeriesSequenceOrder)
-      return item?.text || 'Error'
-    },
-    moreMenuItems() {
-      if (this.moreMenuSetting === 'shakeSensitivity') return this.shakeSensitivityItems
-      else if (this.moreMenuSetting === 'hapticFeedback') return this.hapticFeedbackItems
-      else if (this.moreMenuSetting === 'language') return this.languageOptionItems
-      else if (this.moreMenuSetting === 'theme') return this.themeOptionItems
-      else if (this.moreMenuSetting === 'downloadUsingCellular') return this.downloadUsingCellularItems
-      else if (this.moreMenuSetting === 'streamingUsingCellular') return this.streamingUsingCellularItems
-      else if (this.moreMenuSetting === 'androidAutoBrowseSeriesSequenceOrder') return this.androidAutoBrowseSeriesSequenceOrderItems
-      else if (this.moreMenuSetting === 'jumpForward')
-        return this.jumpForwardSecondsOptions.map((value) => ({
-          text: this.getJumpLabel(value),
-          value: value
-        }))
-      else if (this.moreMenuSetting === 'jumpBackwards')
-        return this.jumpBackwardsSecondsOptions.map((value) => ({
-          text: this.getJumpLabel(value),
-          value: value
-        }))
-      return []
-    },
-    moreMenuSelected() {
-      if (this.moreMenuSetting === 'jumpForward') return this.settings.jumpForwardTime
-      if (this.moreMenuSetting === 'jumpBackwards') return this.settings.jumpBackwardsTime
-      if (this.moreMenuSetting === 'language') return this.settings.languageCode
-      if (this.moreMenuSetting === 'theme') return this.theme
-      if (this.moreMenuSetting === 'downloadUsingCellular') return this.settings.downloadUsingCellular
-      if (this.moreMenuSetting === 'streamingUsingCellular') return this.settings.streamingUsingCellular
-      if (this.moreMenuSetting === 'androidAutoBrowseSeriesSequenceOrder') return this.settings.androidAutoBrowseSeriesSequenceOrder
-      if (this.moreMenuSetting === 'shakeSensitivity') return this.settings.shakeSensitivity
-      if (this.moreMenuSetting === 'hapticFeedback') return this.settings.hapticFeedback
-      return null
-    }
+  autoSleepTimer: {
+    name: strings.LabelAutoSleepTimer,
+    message: strings.LabelAutoSleepTimerHelp
   },
-  methods: {
-    sleepTimerLengthModalSelection(value) {
-      this.settings.sleepTimerLength = value
-      this.saveSettings()
-    },
-    showAutoSleepTimerRewindLengthModalSelection(value) {
-      this.settings.autoSleepTimerAutoRewindTime = value
-      this.saveSettings()
-    },
-    showSleepTimerOptions() {
-      this.showSleepTimerLengthModal = true
-    },
-    showAutoSleepTimerRewindOptions() {
-      this.showAutoSleepTimerRewindLengthModal = true
-    },
-    showHapticFeedbackOptions() {
-      this.moreMenuSetting = 'hapticFeedback'
-      this.showMoreMenuDialog = true
-    },
-    showShakeSensitivityOptions() {
-      this.moreMenuSetting = 'shakeSensitivity'
-      this.showMoreMenuDialog = true
-    },
-    showLanguageOptions() {
-      this.moreMenuSetting = 'language'
-      this.showMoreMenuDialog = true
-    },
-    showThemeOptions() {
-      this.moreMenuSetting = 'theme'
-      this.showMoreMenuDialog = true
-    },
-    showJumpForwardOptions() {
-      this.moreMenuSetting = 'jumpForward'
-      this.showMoreMenuDialog = true
-    },
-    showJumpBackwardsOptions() {
-      this.moreMenuSetting = 'jumpBackwards'
-      this.showMoreMenuDialog = true
-    },
-    showDownloadUsingCellularOptions() {
-      this.moreMenuSetting = 'downloadUsingCellular'
-      this.showMoreMenuDialog = true
-    },
-    showStreamingUsingCellularOptions() {
-      this.moreMenuSetting = 'streamingUsingCellular'
-      this.showMoreMenuDialog = true
-    },
-    showAndroidAutoBrowseSeriesSequenceOrderOptions() {
-      this.moreMenuSetting = 'androidAutoBrowseSeriesSequenceOrder'
-      this.showMoreMenuDialog = true
-    },
-    clickMenuAction(action) {
-      this.showMoreMenuDialog = false
-      if (this.moreMenuSetting === 'shakeSensitivity') {
-        this.settings.shakeSensitivity = action
-        this.saveSettings()
-      } else if (this.moreMenuSetting === 'hapticFeedback') {
-        this.settings.hapticFeedback = action
-        this.hapticFeedbackUpdated(action)
-      } else if (this.moreMenuSetting === 'language') {
-        this.settings.languageCode = action
-        this.saveSettings()
-      } else if (this.moreMenuSetting === 'theme') {
-        this.theme = action
-        this.saveTheme(action)
-      } else if (this.moreMenuSetting === 'downloadUsingCellular') {
-        this.settings.downloadUsingCellular = action
-        this.saveSettings()
-      } else if (this.moreMenuSetting === 'streamingUsingCellular') {
-        this.settings.streamingUsingCellular = action
-        this.saveSettings()
-      } else if (this.moreMenuSetting === 'androidAutoBrowseSeriesSequenceOrder') {
-        this.settings.androidAutoBrowseSeriesSequenceOrder = action
-        this.saveSettings()
-      } else if (this.moreMenuSetting === 'jumpForward') {
-        this.settings.jumpForwardTime = action
-        this.saveSettings()
-      } else if (this.moreMenuSetting === 'jumpBackwards') {
-        this.settings.jumpBackwardsTime = action
-        this.saveSettings()
-      }
-    },
-    saveTheme(theme) {
-      document.documentElement.dataset.theme = theme
-      this.$localStore.setTheme(theme)
-    },
-    autoSleepTimerTimeUpdated(val) {
-      if (!val) return // invalid times return falsy
-      this.saveSettings()
-    },
-    androidAutoBrowseLimitForGroupingUpdated(val) {
-      if (!val) return // invalid times return falsy
-      if (val > 1000) val = 1000
-      if (val < 30) val = 30
-      this.saveSettings()
-    },
-    hapticFeedbackUpdated(val) {
-      this.$store.commit('globals/setHapticFeedback', val)
-      this.saveSettings()
-    },
-    showInfo(setting) {
-      if (this.settingInfo[setting]) {
-        Dialog.alert({
-          title: this.settingInfo[setting].name,
-          message: this.settingInfo[setting].message
-        })
-      }
-    },
-    async showConfirmMp3IndexSeeking() {
-      const confirmResult = await Dialog.confirm({
-        title: this.settingInfo.enableMp3IndexSeeking.name,
-        message: this.settingInfo.enableMp3IndexSeeking.message,
-        cancelButtonTitle: 'View More'
-      })
-      if (!confirmResult.value) {
-        window.open('https://exoplayer.dev/troubleshooting.html#why-is-seeking-inaccurate-in-some-mp3-files', '_blank')
-      }
-    },
-    toggleEnableMp3IndexSeeking() {
-      this.settings.enableMp3IndexSeeking = !this.settings.enableMp3IndexSeeking
-      this.saveSettings()
-    },
-    toggleAutoSleepTimer() {
-      this.settings.autoSleepTimer = !this.settings.autoSleepTimer
-      this.saveSettings()
-    },
-    toggleAutoSleepTimerAutoRewind() {
-      this.settings.autoSleepTimerAutoRewind = !this.settings.autoSleepTimerAutoRewind
-      this.saveSettings()
-    },
-    toggleDisableSleepTimerFadeOut() {
-      this.settings.disableSleepTimerFadeOut = !this.settings.disableSleepTimerFadeOut
-      this.saveSettings()
-    },
-    toggleDisableShakeToResetSleepTimer() {
-      this.settings.disableShakeToResetSleepTimer = !this.settings.disableShakeToResetSleepTimer
-      this.saveSettings()
-    },
-    toggleDisableSleepTimerResetFeedback() {
-      this.settings.disableSleepTimerResetFeedback = !this.settings.disableSleepTimerResetFeedback
-      this.saveSettings()
-    },
-    toggleSleepTimerAlmostDoneChime() {
-      this.settings.enableSleepTimerAlmostDoneChime = !this.settings.enableSleepTimerAlmostDoneChime
-      this.saveSettings()
-    },
-    toggleDisableAutoRewind() {
-      this.settings.disableAutoRewind = !this.settings.disableAutoRewind
-      this.saveSettings()
-    },
-    toggleEnableAltView() {
-      this.settings.enableAltView = !this.settings.enableAltView
-      this.saveSettings()
-    },
-    toggleAllowSeekingOnMediaControls() {
-      this.settings.allowSeekingOnMediaControls = !this.settings.allowSeekingOnMediaControls
-      this.saveSettings()
-    },
-    toggleAutoContinuePlaylists() {
-      this.settings.autoContinuePlaylists = !this.settings.autoContinuePlaylists
-      this.saveSettings()
-    },
-    toggleAutoCacheUnplayedEpisodes() {
-      this.settings.autoCacheUnplayedEpisodes = !this.settings.autoCacheUnplayedEpisodes
-      this.saveSettings()
-    },
-    getCurrentOrientation() {
-      const orientation = window.screen?.orientation || {}
-      const type = orientation.type || ''
-
-      if (type.includes('landscape')) return 'LANDSCAPE'
-      return 'PORTRAIT' // default
-    },
-    toggleLockOrientation() {
-      this.lockCurrentOrientation = !this.lockCurrentOrientation
-      if (this.lockCurrentOrientation) {
-        this.settings.lockOrientation = this.getCurrentOrientation()
-      } else {
-        this.settings.lockOrientation = 'NONE'
-      }
-      this.$setOrientationLock(this.settings.lockOrientation)
-      this.saveSettings()
-    },
-    async saveSettings() {
-      await this.$hapticsImpact()
-      const updatedDeviceData = await this.$db.updateDeviceSettings({ ...this.settings })
-      if (updatedDeviceData) {
-        this.$store.commit('setDeviceData', updatedDeviceData)
-        this.deviceData = updatedDeviceData
-        this.$setLanguageCode(updatedDeviceData.deviceSettings?.languageCode || 'en-us')
-        this.setDeviceSettings()
-      }
-    },
-    setDeviceSettings() {
-      const deviceSettings = this.deviceData.deviceSettings || {}
-      this.settings.disableAutoRewind = !!deviceSettings.disableAutoRewind
-      this.settings.enableAltView = !!deviceSettings.enableAltView
-      this.settings.allowSeekingOnMediaControls = !!deviceSettings.allowSeekingOnMediaControls
-      this.settings.jumpForwardTime = deviceSettings.jumpForwardTime || 10
-      this.settings.jumpBackwardsTime = deviceSettings.jumpBackwardsTime || 10
-      this.settings.enableMp3IndexSeeking = !!deviceSettings.enableMp3IndexSeeking
-
-      this.settings.lockOrientation = deviceSettings.lockOrientation || 'NONE'
-      this.lockCurrentOrientation = this.settings.lockOrientation !== 'NONE'
-      this.settings.hapticFeedback = deviceSettings.hapticFeedback || 'LIGHT'
-
-      this.settings.disableShakeToResetSleepTimer = !!deviceSettings.disableShakeToResetSleepTimer
-      this.settings.shakeSensitivity = deviceSettings.shakeSensitivity || 'MEDIUM'
-      this.settings.autoSleepTimer = !!deviceSettings.autoSleepTimer
-      this.settings.autoSleepTimerStartTime = deviceSettings.autoSleepTimerStartTime || '22:00'
-      this.settings.autoSleepTimerEndTime = deviceSettings.autoSleepTimerEndTime || '06:00'
-      this.settings.sleepTimerLength = !isNaN(deviceSettings.sleepTimerLength) ? deviceSettings.sleepTimerLength : 900000 // 15 minutes
-      this.settings.disableSleepTimerFadeOut = !!deviceSettings.disableSleepTimerFadeOut
-      this.settings.disableSleepTimerResetFeedback = !!deviceSettings.disableSleepTimerResetFeedback
-      this.settings.enableSleepTimerAlmostDoneChime = !!deviceSettings.enableSleepTimerAlmostDoneChime
-
-      this.settings.autoContinuePlaylists = !!deviceSettings.autoContinuePlaylists
-      this.settings.autoCacheUnplayedEpisodes = !!deviceSettings.autoCacheUnplayedEpisodes
-      this.settings.autoSleepTimerAutoRewind = !!deviceSettings.autoSleepTimerAutoRewind
-      this.settings.autoSleepTimerAutoRewindTime = !isNaN(deviceSettings.autoSleepTimerAutoRewindTime) ? deviceSettings.autoSleepTimerAutoRewindTime : 300000 // 5 minutes
-
-      this.settings.languageCode = deviceSettings.languageCode || 'en-us'
-
-      this.settings.downloadUsingCellular = deviceSettings.downloadUsingCellular || 'ALWAYS'
-      this.settings.streamingUsingCellular = deviceSettings.streamingUsingCellular || 'ALWAYS'
-
-      this.settings.androidAutoBrowseLimitForGrouping = deviceSettings.androidAutoBrowseLimitForGrouping
-      this.settings.androidAutoBrowseSeriesSequenceOrder = deviceSettings.androidAutoBrowseSeriesSequenceOrder || 'ASC'
-    },
-    async init() {
-      this.loading = true
-      this.theme = (await this.$localStore.getTheme()) || 'dark'
-      this.deviceData = await this.$db.getDeviceData()
-      this.$store.commit('setDeviceData', this.deviceData)
-      this.setDeviceSettings()
-      this.loading = false
-    }
+  disableSleepTimerFadeOut: {
+    name: strings.LabelDisableAudioFadeOut,
+    message: strings.LabelDisableAudioFadeOutHelp
   },
-  mounted() {
-    this.init()
+  disableSleepTimerResetFeedback: {
+    name: strings.LabelDisableVibrateOnReset,
+    message: strings.LabelDisableVibrateOnResetHelp
+  },
+  enableSleepTimerAlmostDoneChime: {
+    name: strings.LabelSleepTimerAlmostDoneChime,
+    message: strings.LabelSleepTimerAlmostDoneChimeHelp
+  },
+  autoSleepTimerAutoRewind: {
+    name: strings.LabelAutoSleepTimerAutoRewind,
+    message: strings.LabelAutoSleepTimerAutoRewindHelp
+  },
+  enableMp3IndexSeeking: {
+    name: strings.LabelEnableMp3IndexSeeking,
+    message: strings.LabelEnableMp3IndexSeekingHelp
+  },
+  androidAutoBrowseLimitForGrouping: {
+    name: strings.LabelAndroidAutoBrowseLimitForGrouping,
+    message: strings.LabelAndroidAutoBrowseLimitForGroupingHelp
+  }
+}))
+
+const hapticFeedbackItems = computed(() => [
+  { text: strings.LabelOff, value: 'OFF' },
+  { text: strings.LabelLight, value: 'LIGHT' },
+  { text: strings.LabelMedium, value: 'MEDIUM' },
+  { text: strings.LabelHeavy, value: 'HEAVY' }
+])
+
+const shakeSensitivityItems = computed(() => [
+  { text: strings.LabelVeryLow, value: 'VERY_LOW' },
+  { text: strings.LabelLow, value: 'LOW' },
+  { text: strings.LabelMedium, value: 'MEDIUM' },
+  { text: strings.LabelHigh, value: 'HIGH' },
+  { text: strings.LabelVeryHigh, value: 'VERY_HIGH' }
+])
+
+const downloadUsingCellularItems = computed(() => [
+  { text: strings.LabelAskConfirmation, value: 'ASK' },
+  { text: strings.LabelAlways, value: 'ALWAYS' },
+  { text: strings.LabelNever, value: 'NEVER' }
+])
+
+const streamingUsingCellularItems = computed(() => [
+  { text: strings.LabelAskConfirmation, value: 'ASK' },
+  { text: strings.LabelAlways, value: 'ALWAYS' },
+  { text: strings.LabelNever, value: 'NEVER' }
+])
+
+const androidAutoBrowseSeriesSequenceOrderItems = computed(() => [
+  { text: strings.LabelSequenceAscending, value: 'ASC' },
+  { text: strings.LabelSequenceDescending, value: 'DESC' }
+])
+
+// This is flipped because alt view was the default until v0.9.61-beta
+const enableBookshelfView = computed({
+  get() {
+    return !settings.enableAltView
+  },
+  set(val: boolean) {
+    settings.enableAltView = !val
+  }
+})
+
+const isiOS = computed(() => usePlatform() === 'ios')
+
+const jumpForwardSecondsOptions = computed(() => globalsStore.jumpForwardSecondsOptions || [])
+const jumpBackwardsSecondsOptions = computed(() => globalsStore.jumpBackwardsSecondsOptions || [])
+const languageOptionItems = computed(() => languageCodeOptions || [])
+
+const jumpForwardOption = computed(() => getJumpLabel(settings.jumpForwardTime))
+const jumpBackwardsOption = computed(() => getJumpLabel(settings.jumpBackwardsTime))
+
+const themeOptionItems = computed(() => [
+  { text: strings.LabelThemeBlack, value: 'black' },
+  { text: strings.LabelThemeDark, value: 'dark' },
+  { text: strings.LabelThemeLight, value: 'light' }
+])
+
+const shakeSensitivityOption = computed(() => {
+  const item = shakeSensitivityItems.value.find((i) => i.value === settings.shakeSensitivity)
+  return item?.text || 'Error'
+})
+
+const hapticFeedbackOption = computed(() => {
+  const item = hapticFeedbackItems.value.find((i) => i.value === settings.hapticFeedback)
+  return item?.text || 'Error'
+})
+
+const languageOption = computed(() => languageOptionItems.value.find((i) => i.value === settings.languageCode)?.text || '')
+const themeOption = computed(() => themeOptionItems.value.find((i) => i.value === theme.value)?.text || '')
+
+const sleepTimerLengthOption = computed(() => {
+  if (!settings.sleepTimerLength) return strings.LabelEndOfChapter
+  const minutes = Number(settings.sleepTimerLength) / 1000 / 60
+  return `${minutes} min`
+})
+
+const autoSleepTimerRewindLengthOption = computed(() => {
+  const minutes = Number(settings.autoSleepTimerAutoRewindTime) / 1000 / 60
+  return `${minutes} min`
+})
+
+const downloadUsingCellularOption = computed(() => {
+  const item = downloadUsingCellularItems.value.find((i) => i.value === settings.downloadUsingCellular)
+  return item?.text || 'Error'
+})
+
+const streamingUsingCellularOption = computed(() => {
+  const item = streamingUsingCellularItems.value.find((i) => i.value === settings.streamingUsingCellular)
+  return item?.text || 'Error'
+})
+
+const androidAutoBrowseSeriesSequenceOrderOption = computed(() => {
+  const item = androidAutoBrowseSeriesSequenceOrderItems.value.find((i) => i.value === settings.androidAutoBrowseSeriesSequenceOrder)
+  return item?.text || 'Error'
+})
+
+const moreMenuItems = computed(() => {
+  if (moreMenuSetting.value === 'shakeSensitivity') return shakeSensitivityItems.value
+  else if (moreMenuSetting.value === 'hapticFeedback') return hapticFeedbackItems.value
+  else if (moreMenuSetting.value === 'language') return languageOptionItems.value
+  else if (moreMenuSetting.value === 'theme') return themeOptionItems.value
+  else if (moreMenuSetting.value === 'downloadUsingCellular') return downloadUsingCellularItems.value
+  else if (moreMenuSetting.value === 'streamingUsingCellular') return streamingUsingCellularItems.value
+  else if (moreMenuSetting.value === 'androidAutoBrowseSeriesSequenceOrder') return androidAutoBrowseSeriesSequenceOrderItems.value
+  else if (moreMenuSetting.value === 'jumpForward')
+    return jumpForwardSecondsOptions.value.map((value) => ({
+      text: getJumpLabel(value),
+      value: value
+    }))
+  else if (moreMenuSetting.value === 'jumpBackwards')
+    return jumpBackwardsSecondsOptions.value.map((value) => ({
+      text: getJumpLabel(value),
+      value: value
+    }))
+  return []
+})
+
+const moreMenuSelected = computed(() => {
+  if (moreMenuSetting.value === 'jumpForward') return settings.jumpForwardTime
+  if (moreMenuSetting.value === 'jumpBackwards') return settings.jumpBackwardsTime
+  if (moreMenuSetting.value === 'language') return settings.languageCode
+  if (moreMenuSetting.value === 'theme') return theme.value
+  if (moreMenuSetting.value === 'downloadUsingCellular') return settings.downloadUsingCellular
+  if (moreMenuSetting.value === 'streamingUsingCellular') return settings.streamingUsingCellular
+  if (moreMenuSetting.value === 'androidAutoBrowseSeriesSequenceOrder') return settings.androidAutoBrowseSeriesSequenceOrder
+  if (moreMenuSetting.value === 'shakeSensitivity') return settings.shakeSensitivity
+  if (moreMenuSetting.value === 'hapticFeedback') return settings.hapticFeedback
+  return null
+})
+
+function sleepTimerLengthModalSelection(value: number) {
+  settings.sleepTimerLength = value
+  saveSettings()
+}
+
+function showAutoSleepTimerRewindLengthModalSelection(value: number) {
+  settings.autoSleepTimerAutoRewindTime = value
+  saveSettings()
+}
+
+function showSleepTimerOptions() {
+  showSleepTimerLengthModal.value = true
+}
+
+function showAutoSleepTimerRewindOptions() {
+  showAutoSleepTimerRewindLengthModal.value = true
+}
+
+function showHapticFeedbackOptions() {
+  moreMenuSetting.value = 'hapticFeedback'
+  showMoreMenuDialog.value = true
+}
+
+function showShakeSensitivityOptions() {
+  moreMenuSetting.value = 'shakeSensitivity'
+  showMoreMenuDialog.value = true
+}
+
+function showLanguageOptions() {
+  moreMenuSetting.value = 'language'
+  showMoreMenuDialog.value = true
+}
+
+function showThemeOptions() {
+  moreMenuSetting.value = 'theme'
+  showMoreMenuDialog.value = true
+}
+
+function showJumpForwardOptions() {
+  moreMenuSetting.value = 'jumpForward'
+  showMoreMenuDialog.value = true
+}
+
+function showJumpBackwardsOptions() {
+  moreMenuSetting.value = 'jumpBackwards'
+  showMoreMenuDialog.value = true
+}
+
+function showDownloadUsingCellularOptions() {
+  moreMenuSetting.value = 'downloadUsingCellular'
+  showMoreMenuDialog.value = true
+}
+
+function showStreamingUsingCellularOptions() {
+  moreMenuSetting.value = 'streamingUsingCellular'
+  showMoreMenuDialog.value = true
+}
+
+function showAndroidAutoBrowseSeriesSequenceOrderOptions() {
+  moreMenuSetting.value = 'androidAutoBrowseSeriesSequenceOrder'
+  showMoreMenuDialog.value = true
+}
+
+function clickMenuAction(action: string) {
+  showMoreMenuDialog.value = false
+  if (moreMenuSetting.value === 'shakeSensitivity') {
+    settings.shakeSensitivity = action
+    saveSettings()
+  } else if (moreMenuSetting.value === 'hapticFeedback') {
+    settings.hapticFeedback = action
+    hapticFeedbackUpdated(action)
+  } else if (moreMenuSetting.value === 'language') {
+    settings.languageCode = action
+    saveSettings()
+  } else if (moreMenuSetting.value === 'theme') {
+    theme.value = action
+    saveTheme(action)
+  } else if (moreMenuSetting.value === 'downloadUsingCellular') {
+    settings.downloadUsingCellular = action
+    saveSettings()
+  } else if (moreMenuSetting.value === 'streamingUsingCellular') {
+    settings.streamingUsingCellular = action
+    saveSettings()
+  } else if (moreMenuSetting.value === 'androidAutoBrowseSeriesSequenceOrder') {
+    settings.androidAutoBrowseSeriesSequenceOrder = action
+    saveSettings()
+  } else if (moreMenuSetting.value === 'jumpForward') {
+    settings.jumpForwardTime = Number(action)
+    saveSettings()
+  } else if (moreMenuSetting.value === 'jumpBackwards') {
+    settings.jumpBackwardsTime = Number(action)
+    saveSettings()
   }
 }
+
+function saveTheme(t: string) {
+  document.documentElement.dataset.theme = t
+  useLocalStore().setTheme(t)
+}
+
+function autoSleepTimerTimeUpdated(val: string) {
+  if (!val) return // invalid times return falsy
+  saveSettings()
+}
+
+function androidAutoBrowseLimitForGroupingUpdated(val: number) {
+  if (!val) return // invalid values return falsy
+  if (val > 1000) val = 1000
+  if (val < 30) val = 30
+  saveSettings()
+}
+
+function hapticFeedbackUpdated(val: string) {
+  globalsStore.hapticFeedback = val
+  saveSettings()
+}
+
+function showInfo(setting: string) {
+  const info = (settingInfo.value as Record<string, { name: string; message: string }>)[setting]
+  if (info) {
+    Dialog.alert({
+      title: info.name,
+      message: info.message
+    })
+  }
+}
+
+async function showConfirmMp3IndexSeeking() {
+  const info = settingInfo.value.enableMp3IndexSeeking
+  const confirmResult = await Dialog.confirm({
+    title: info.name,
+    message: info.message,
+    cancelButtonTitle: 'View More'
+  })
+  if (!confirmResult.value) {
+    window.open('https://exoplayer.dev/troubleshooting.html#why-is-seeking-inaccurate-in-some-mp3-files', '_blank')
+  }
+}
+
+function toggleEnableMp3IndexSeeking() {
+  settings.enableMp3IndexSeeking = !settings.enableMp3IndexSeeking
+  saveSettings()
+}
+
+function toggleAutoSleepTimer() {
+  settings.autoSleepTimer = !settings.autoSleepTimer
+  saveSettings()
+}
+
+function toggleAutoSleepTimerAutoRewind() {
+  settings.autoSleepTimerAutoRewind = !settings.autoSleepTimerAutoRewind
+  saveSettings()
+}
+
+function toggleDisableSleepTimerFadeOut() {
+  settings.disableSleepTimerFadeOut = !settings.disableSleepTimerFadeOut
+  saveSettings()
+}
+
+function toggleDisableShakeToResetSleepTimer() {
+  settings.disableShakeToResetSleepTimer = !settings.disableShakeToResetSleepTimer
+  saveSettings()
+}
+
+function toggleDisableSleepTimerResetFeedback() {
+  settings.disableSleepTimerResetFeedback = !settings.disableSleepTimerResetFeedback
+  saveSettings()
+}
+
+function toggleSleepTimerAlmostDoneChime() {
+  settings.enableSleepTimerAlmostDoneChime = !settings.enableSleepTimerAlmostDoneChime
+  saveSettings()
+}
+
+function toggleDisableAutoRewind() {
+  settings.disableAutoRewind = !settings.disableAutoRewind
+  saveSettings()
+}
+
+function toggleEnableAltView() {
+  settings.enableAltView = !settings.enableAltView
+  saveSettings()
+}
+
+function toggleAllowSeekingOnMediaControls() {
+  settings.allowSeekingOnMediaControls = !settings.allowSeekingOnMediaControls
+  saveSettings()
+}
+
+function toggleAutoContinuePlaylists() {
+  settings.autoContinuePlaylists = !settings.autoContinuePlaylists
+  saveSettings()
+}
+
+function toggleAutoCacheUnplayedEpisodes() {
+  settings.autoCacheUnplayedEpisodes = !settings.autoCacheUnplayedEpisodes
+  saveSettings()
+}
+
+function getCurrentOrientation(): string {
+  const orientation = window.screen?.orientation || {}
+  const type = (orientation as ScreenOrientation).type || ''
+
+  if (type.includes('landscape')) return 'LANDSCAPE'
+  return 'PORTRAIT' // default
+}
+
+function toggleLockOrientation() {
+  lockCurrentOrientation.value = !lockCurrentOrientation.value
+  if (lockCurrentOrientation.value) {
+    settings.lockOrientation = getCurrentOrientation()
+  } else {
+    settings.lockOrientation = 'NONE'
+  }
+  useUtils().setOrientationLock(settings.lockOrientation as string)
+  saveSettings()
+}
+
+async function saveSettings() {
+  await useHaptics().impact()
+  const db = useDb()
+  const updatedDeviceData = await db.updateDeviceSettings({ ...settings }) as Record<string, unknown> | null
+  if (updatedDeviceData) {
+    appStore.setDeviceData(updatedDeviceData as Parameters<typeof appStore.setDeviceData>[0])
+    deviceData.value = updatedDeviceData
+    const deviceSettings = updatedDeviceData.deviceSettings as Record<string, unknown> | undefined
+    await setLanguageCode((deviceSettings?.languageCode as string) || 'en-us')
+    setDeviceSettings()
+  }
+}
+
+function setDeviceSettings() {
+  const ds = (deviceData.value?.deviceSettings as Record<string, unknown>) || {}
+  settings.disableAutoRewind = !!ds.disableAutoRewind
+  settings.enableAltView = !!ds.enableAltView
+  settings.allowSeekingOnMediaControls = !!ds.allowSeekingOnMediaControls
+  settings.jumpForwardTime = (ds.jumpForwardTime as number) || 10
+  settings.jumpBackwardsTime = (ds.jumpBackwardsTime as number) || 10
+  settings.enableMp3IndexSeeking = !!ds.enableMp3IndexSeeking
+
+  settings.lockOrientation = (ds.lockOrientation as string) || 'NONE'
+  lockCurrentOrientation.value = settings.lockOrientation !== 'NONE'
+  settings.hapticFeedback = (ds.hapticFeedback as string) || 'LIGHT'
+
+  settings.disableShakeToResetSleepTimer = !!ds.disableShakeToResetSleepTimer
+  settings.shakeSensitivity = (ds.shakeSensitivity as string) || 'MEDIUM'
+  settings.autoSleepTimer = !!ds.autoSleepTimer
+  settings.autoSleepTimerStartTime = (ds.autoSleepTimerStartTime as string) || '22:00'
+  settings.autoSleepTimerEndTime = (ds.autoSleepTimerEndTime as string) || '06:00'
+  settings.sleepTimerLength = !isNaN(ds.sleepTimerLength as number) ? (ds.sleepTimerLength as number) : 900000 // 15 minutes
+  settings.disableSleepTimerFadeOut = !!ds.disableSleepTimerFadeOut
+  settings.disableSleepTimerResetFeedback = !!ds.disableSleepTimerResetFeedback
+  settings.enableSleepTimerAlmostDoneChime = !!ds.enableSleepTimerAlmostDoneChime
+
+  settings.autoContinuePlaylists = !!ds.autoContinuePlaylists
+  settings.autoCacheUnplayedEpisodes = !!ds.autoCacheUnplayedEpisodes
+  settings.autoSleepTimerAutoRewind = !!ds.autoSleepTimerAutoRewind
+  settings.autoSleepTimerAutoRewindTime = !isNaN(ds.autoSleepTimerAutoRewindTime as number) ? (ds.autoSleepTimerAutoRewindTime as number) : 300000 // 5 minutes
+
+  settings.languageCode = (ds.languageCode as string) || 'en-us'
+
+  settings.downloadUsingCellular = (ds.downloadUsingCellular as string) || 'ALWAYS'
+  settings.streamingUsingCellular = (ds.streamingUsingCellular as string) || 'ALWAYS'
+
+  settings.androidAutoBrowseLimitForGrouping = (ds.androidAutoBrowseLimitForGrouping as number) || 100
+  settings.androidAutoBrowseSeriesSequenceOrder = (ds.androidAutoBrowseSeriesSequenceOrder as string) || 'ASC'
+}
+
+async function init() {
+  loading.value = true
+  const localStore = useLocalStore()
+  const db = useDb()
+  theme.value = (await localStore.getTheme()) || 'dark'
+  deviceData.value = (await db.getDeviceData()) as Record<string, unknown> | null
+  appStore.setDeviceData(deviceData.value as Parameters<typeof appStore.setDeviceData>[0])
+  setDeviceSettings()
+  loading.value = false
+}
+
+onMounted(() => {
+  init()
+})
 </script>

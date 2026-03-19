@@ -4,89 +4,100 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { AbsDownloader } from '@/plugins/capacitor'
+import { useGlobalsStore } from '~/stores/globals'
+import { useEventBus } from '~/composables/useEventBus'
+import { useToast } from '~/composables/useToast'
+import { useStrings } from '~/composables/useStrings'
+import { usePlatform } from '~/composables/usePlatform'
 
-export default {
-  data() {
-    return {
-      downloadItemListener: null,
-      completeListener: null,
-      itemPartUpdateListener: null
-    }
-  },
-  computed: {
-    downloadItems() {
-      return this.$store.state.globals.itemDownloads
-    },
-    downloadItemParts() {
-      let parts = []
-      this.downloadItems.forEach((di) => parts.push(...di.downloadItemParts))
-      return parts
-    },
-    downloadItemPartsRemaining() {
-      return this.downloadItemParts.filter((dip) => !dip.completed)
-    },
-    progress() {
-      let totalBytes = 0
-      let totalBytesDownloaded = 0
-      this.downloadItemParts.forEach((dip) => {
-        totalBytes += dip.fileSize
-        totalBytesDownloaded += dip.bytesDownloaded
-      })
+const router = useRouter()
+const globalsStore = useGlobalsStore()
+const eventBus = useEventBus()
+const toast = useToast()
+const strings = useStrings()
+const platform = usePlatform()
 
-      if (!totalBytes) return 0
-      return Math.min(1, totalBytesDownloaded / totalBytes)
-    },
-    isIos() {
-      return this.$platform === 'ios'
-    }
-  },
-  methods: {
-    clickedIt() {
-      this.$router.push('/downloading')
-    },
-    onItemDownloadComplete(data) {
-      console.log('DownloadProgressIndicator onItemDownloadComplete', JSON.stringify(data))
-      if (!data || !data.libraryItemId) {
-        console.error('Invalid item download complete payload')
-        return
-      }
+let downloadItemListener: { remove: () => void } | null = null
+let completeListener: { remove: () => void } | null = null
+let itemPartUpdateListener: { remove: () => void } | null = null
 
-      if (!data.localLibraryItem) {
-        this.$toast.error(this.$strings.MessageItemDownloadCompleteFailedToCreate)
-      } else {
-        this.$eventBus.$emit('new-local-library-item', data.localLibraryItem)
-      }
+const downloadItems = computed(() => globalsStore.itemDownloads)
 
-      if (data.localMediaProgress) {
-        console.log('onItemDownloadComplete updating local media progress', data.localMediaProgress.id)
-        this.$store.commit('globals/updateLocalMediaProgress', data.localMediaProgress)
-      }
+const downloadItemParts = computed(() => {
+  const parts: Record<string, unknown>[] = []
+  downloadItems.value.forEach((di) => parts.push(...(di.downloadItemParts as Record<string, unknown>[])))
+  return parts
+})
 
-      this.$store.commit('globals/removeItemDownload', data.libraryItemId)
-    },
-    onDownloadItem(downloadItem) {
-      console.log('DownloadProgressIndicator onDownloadItem', JSON.stringify(downloadItem))
+const downloadItemPartsRemaining = computed(() => downloadItemParts.value.filter((dip) => !dip.completed))
 
-      downloadItem.itemProgress = 0
-      downloadItem.episodes = downloadItem.downloadItemParts.filter((dip) => dip.episode).map((dip) => dip.episode)
+const progress = computed(() => {
+  let totalBytes = 0
+  let totalBytesDownloaded = 0
+  downloadItemParts.value.forEach((dip) => {
+    totalBytes += dip.fileSize as number
+    totalBytesDownloaded += dip.bytesDownloaded as number
+  })
+  if (!totalBytes) return 0
+  return Math.min(1, totalBytesDownloaded / totalBytes)
+})
 
-      this.$store.commit('globals/addUpdateItemDownload', downloadItem)
-    },
-    onDownloadItemPartUpdate(itemPart) {
-      this.$store.commit('globals/updateDownloadItemPart', itemPart)
-    }
-  },
-  async mounted() {
-    this.downloadItemListener = await AbsDownloader.addListener('onDownloadItem', (data) => this.onDownloadItem(data))
-    this.itemPartUpdateListener = await AbsDownloader.addListener('onDownloadItemPartUpdate', (data) => this.onDownloadItemPartUpdate(data))
-    this.completeListener = await AbsDownloader.addListener('onItemDownloadComplete', (data) => this.onItemDownloadComplete(data))
-  },
-  beforeDestroy() {
-    this.downloadItemListener?.remove()
-    this.completeListener?.remove()
-    this.itemPartUpdateListener?.remove()
-  }
+const isIos = computed(() => platform === 'ios')
+
+function clickedIt() {
+  router.push('/downloading')
 }
+
+function onItemDownloadComplete(data: Record<string, unknown>) {
+  console.log('DownloadProgressIndicator onItemDownloadComplete', JSON.stringify(data))
+  if (!data || !data.libraryItemId) {
+    console.error('Invalid item download complete payload')
+    return
+  }
+
+  if (!data.localLibraryItem) {
+    toast.error(strings.MessageItemDownloadCompleteFailedToCreate)
+  } else {
+    eventBus.emit('new-local-library-item', data.localLibraryItem as Record<string, unknown>)
+  }
+
+  if (data.localMediaProgress) {
+    console.log('onItemDownloadComplete updating local media progress', (data.localMediaProgress as Record<string, unknown>).id)
+    globalsStore.updateLocalMediaProgress(data.localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+  }
+
+  globalsStore.removeItemDownload(data.libraryItemId as string)
+}
+
+function onDownloadItem(downloadItem: Record<string, unknown>) {
+  console.log('DownloadProgressIndicator onDownloadItem', JSON.stringify(downloadItem))
+
+  downloadItem.itemProgress = 0
+  downloadItem.episodes = (downloadItem.downloadItemParts as Record<string, unknown>[]).filter((dip) => dip.episode).map((dip) => dip.episode)
+
+  globalsStore.addUpdateItemDownload(downloadItem as Parameters<typeof globalsStore.addUpdateItemDownload>[0])
+}
+
+function onDownloadItemPartUpdate(itemPart: Record<string, unknown>) {
+  globalsStore.updateDownloadItemPart(itemPart as Parameters<typeof globalsStore.updateDownloadItemPart>[0])
+}
+
+onMounted(async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  downloadItemListener = await AbsDownloader.addListener('onDownloadItem', (data: any) => onDownloadItem(data as Record<string, unknown>))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  itemPartUpdateListener = await AbsDownloader.addListener('onDownloadItemPartUpdate', (data: any) => onDownloadItemPartUpdate(data as Record<string, unknown>))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  completeListener = await AbsDownloader.addListener('onItemDownloadComplete', (data: any) => onItemDownloadComplete(data as Record<string, unknown>))
+})
+
+onBeforeUnmount(() => {
+  downloadItemListener?.remove()
+  completeListener?.remove()
+  itemPartUpdateListener?.remove()
+})
 </script>

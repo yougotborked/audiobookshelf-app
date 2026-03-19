@@ -1,9 +1,8 @@
-export default function ({ store, redirect, route }) {
-  const user = store.state.user.user
-  const serverConfig = store.state.user.serverConnectionConfig
+export default defineNuxtRouteMiddleware((to) => {
+  const userStore = useUserStore()
 
-  if (!user && !serverConfig) {
-    const redirectTarget = route?.fullPath || route?.path || '/'
-    return redirect(`/connect?redirect=${encodeURIComponent(redirectTarget)}`)
+  if (!userStore.user && !userStore.serverConnectionConfig) {
+    const redirectTarget = to.fullPath || '/'
+    return navigateTo(`/connect?redirect=${encodeURIComponent(redirectTarget)}`)
   }
-}
+})

@@ -1,51 +1,40 @@
 <template>
   <div class="relative rounded-sm overflow-hidden" :style="{ width: width + 'px', height: height + 'px' }">
-    <div v-if="items.length" class="flex flex-wrap justify-center h-full relative bg-md-surface-3 bg-opacity-95 rounded-sm">
-      <div class="absolute top-0 left-0 w-full h-full bg-gray-400 bg-opacity-5" />
+    <div v-if="items?.length" class="flex flex-wrap justify-center h-full relative bg-md-surface-3/95 rounded-sm">
+      <div class="absolute top-0 left-0 w-full h-full bg-gray-400/5" />
       <covers-book-cover v-for="(li, index) in libraryItemCovers" :key="index" :library-item="li" :width="itemCoverWidth" :book-cover-aspect-ratio="1" />
     </div>
     <div v-else class="relative w-full h-full flex items-center justify-center p-2 bg-md-surface-3 rounded-sm">
-      <div class="absolute top-0 left-0 w-full h-full bg-gray-400 bg-opacity-5" />
+      <div class="absolute top-0 left-0 w-full h-full bg-gray-400/5" />
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    items: {
-      type: Array,
-      default: () => []
-    },
-    width: Number,
-    height: Number
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    sizeMultiplier() {
-      return this.width / (120 * 1.6 * 2)
-    },
-    itemCoverWidth() {
-      if (this.libraryItemCovers.length === 1) return this.width
-      return this.width / 2
-    },
-    libraryItemCovers() {
-      if (!this.items.length) return []
-      if (this.items.length === 1) return [this.items[0].libraryItem]
+<script setup lang="ts">
+const props = defineProps<{
+  items?: Record<string, unknown>[]
+  width?: number
+  height?: number
+}>()
 
-      const covers = []
-      for (let i = 0; i < 4; i++) {
-        let index = i % this.items.length
-        if (this.items.length === 2 && i >= 2) index = (i + 1) % 2 // for playlists with 2 items show covers in checker pattern
+// Computed
+const sizeMultiplier = computed(() => (props.width || 0) / (120 * 1.6 * 2))
+const itemCoverWidth = computed(() => {
+  if (libraryItemCovers.value.length === 1) return props.width || 0
+  return (props.width || 0) / 2
+})
+const libraryItemCovers = computed(() => {
+  const itemList = props.items || []
+  if (!itemList.length) return []
+  if (itemList.length === 1) return [itemList[0].libraryItem as Record<string, unknown>]
 
-        covers.push(this.items[index].libraryItem)
-      }
-      return covers
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+  const covers: Record<string, unknown>[] = []
+  for (let i = 0; i < 4; i++) {
+    let index = i % itemList.length
+    if (itemList.length === 2 && i >= 2) index = (i + 1) % 2
+
+    covers.push(itemList[index].libraryItem as Record<string, unknown>)
+  }
+  return covers
+})
 </script>

@@ -18,17 +18,19 @@
   </svg>
 </template>
 
-<script>
-export default {
-  props: {
-    size: { type: String, default: 'la-sm' } // kept for backward compat
-  },
-  computed: {
-    sizePx() {
-      const map = { 'la-sm': 24, 'la-lg': 32, 'la-2x': 48, 'la-3x': 64 }
-      return map[this.size] ?? 24
-    },
-    strokeWidth() { return this.sizePx < 32 ? 4 : 3 }
-  }
-}
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = withDefaults(defineProps<{
+  size?: string
+}>(), {
+  size: 'la-sm'
+})
+
+const sizePx = computed(() => {
+  const map: Record<string, number> = { 'la-sm': 24, 'la-lg': 32, 'la-2x': 48, 'la-3x': 64 }
+  return map[props.size] ?? 24
+})
+
+const strokeWidth = computed(() => sizePx.value < 32 ? 4 : 3)
 </script>

@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 package com.audiobookshelf.app.player
 
 import android.util.SparseArray
+import androidx.core.util.size
 import androidx.media3.common.C
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
@@ -94,7 +96,7 @@ class CastTimelineTracker {
       scratchItemIds.add(id)
     }
     var index = 0
-    while (index < itemIdToData.size()) {
+    while (index < itemIdToData.size) {
       if (!scratchItemIds.contains(itemIdToData.keyAt(index))) {
         itemIdToData.removeAt(index)
       } else {

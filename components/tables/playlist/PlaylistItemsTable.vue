@@ -1,18 +1,17 @@
 <template>
   <div class="w-full bg-md-secondary-container rounded-lg">
     <div class="w-full h-14 flex items-center px-3">
-      <p class="pr-2">{{ $strings.HeaderPlaylistItems }}</p>
+      <p class="pr-2">{{ strings.HeaderPlaylistItems }}</p>
 
-      <div class="w-6 h-6 md:w-7 md:h-7 bg-fg bg-opacity-10 rounded-full flex items-center justify-center">
+      <div class="w-6 h-6 md:w-7 md:h-7 bg-fg/10 rounded-full flex items-center justify-center">
         <span class="text-xs md:text-sm font-mono leading-none">{{ displayCount }}</span>
       </div>
 
       <div class="flex-grow" />
       <p v-if="totalDuration" class="text-sm text-md-on-surface">{{ totalDurationPretty }}</p>
     </div>
-    <template v-for="item in items">
+    <template v-for="item in items" :key="itemKey(item)">
       <tables-playlist-item-table-row
-        :key="itemKey(item)"
         :item="item"
         :playlist-id="playlistId"
         @showMore="showMore"
@@ -21,52 +20,48 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    playlistId: String,
-    items: {
-      type: Array,
-      default: () => []
-    },
-    totalItems: {
-      type: Number,
-      default: null
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    displayCount() {
-      if (this.totalItems && this.totalItems > this.items.length) {
-        return `${this.items.length}/${this.totalItems}`
-      }
-      return `${this.items.length}`
-    },
-    totalDuration() {
-      var _total = 0
-      this.items.forEach((item) => {
-        if (item.episode) _total += item.episode.duration
-        else _total += item.libraryItem.media.duration
-      })
-      return _total
-    },
-    totalDurationPretty() {
-      return this.$elapsedPrettyExtended(this.totalDuration)
-    }
-  },
-  methods: {
-    itemKey(item) {
-      if (item?.id) return item.id
-      const episodeId = item?.episodeId || item?.episode?.serverEpisodeId || item?.episode?.id || 'book'
-      const libraryItemId = item?.libraryItemId || item?.libraryItem?.id || 'unknown'
-      return `${libraryItemId}_${episodeId}`
-    },
-    showMore(playlistItem) {
-      this.$emit('showMore', playlistItem)
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+const props = defineProps<{
+  playlistId?: string
+  items: Record<string, unknown>[]
+  totalItems?: number | null
+}>()
+
+const emit = defineEmits<{
+  showMore: [item: Record<string, unknown>]
+}>()
+
+const strings = useStrings()
+const utils = useUtils()
+
+const displayCount = computed(() => {
+  if (props.totalItems && props.totalItems > props.items.length) {
+    return `${props.items.length}/${props.totalItems}`
+  }
+  return `${props.items.length}`
+})
+
+const totalDuration = computed(() => {
+  let _total = 0
+  props.items.forEach((item) => {
+    const ep = item.episode as Record<string, unknown> | undefined
+    if (ep) _total += (ep.duration as number) || 0
+    else _total += ((item.libraryItem as Record<string, unknown>)?.media as Record<string, unknown>)?.duration as number || 0
+  })
+  return _total
+})
+
+const totalDurationPretty = computed(() => utils.elapsedPrettyExtended(totalDuration.value))
+
+function itemKey(item: Record<string, unknown>) {
+  if (item?.id) return item.id as string
+  const ep = item?.episode as Record<string, unknown> | undefined
+  const episodeId = (item?.episodeId as string) || (ep?.serverEpisodeId as string) || (ep?.id as string) || 'book'
+  const libraryItemId = (item?.libraryItemId as string) || ((item?.libraryItem as Record<string, unknown>)?.id as string) || 'unknown'
+  return `${libraryItemId}_${episodeId}`
+}
+
+function showMore(playlistItem: Record<string, unknown>) {
+  emit('showMore', playlistItem)
 }
 </script>

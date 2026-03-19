@@ -6,7 +6,7 @@
           <div v-for="key in comicMetadataKeys" :key="key" class="w-full px-2 py-1">
             <p class="text-xs">
               <strong>{{ key }}</strong>
-              : {{ comicMetadata[key] }}
+              : {{ comicMetadata?.[key] }}
             </p>
           </div>
         </div>
@@ -32,338 +32,330 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import Path from 'path'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+// @ts-ignore
 import { Archive } from 'libarchive.js/main.js'
+// @ts-ignore
 import { CompressedFile } from 'libarchive.js/src/compressed-file'
 
 Archive.init({
   workerUrl: '/libarchive/worker-bundle.js'
 })
 
-export default {
-  props: {
-    url: String,
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    },
-    isLocal: Boolean,
-    keepProgress: Boolean,
-    showingToolbar: Boolean
-  },
-  data() {
-    return {
-      loading: false,
-      pages: null,
-      filesObject: null,
-      mainImg: null,
-      page: 0,
-      numPages: 0,
-      showPageMenu: false,
-      showInfoMenu: false,
-      loadTimeout: null,
-      loadedFirstPage: false,
-      comicMetadata: null,
-      pageMenuWidth: 256
+const props = defineProps<{
+  url: string
+  libraryItem: Record<string, unknown>
+  isLocal: boolean
+  keepProgress: boolean
+  showingToolbar: boolean
+}>()
+
+const emit = defineEmits<{
+  loaded: [data: { hasMetadata: unknown }]
+}>()
+
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const userStore = useUserStore()
+const nativeHttp = useNativeHttp()
+const db = useDb()
+const toast = useToast()
+const utils = useUtils()
+
+const loading = ref(false)
+const pages = ref<string[] | null>(null)
+const filesObject = ref<Record<string, InstanceType<typeof CompressedFile>> | null>(null)
+const mainImg = ref<string | null>(null)
+const page = ref(0)
+const numPages = ref(0)
+const showPageMenu = ref(false)
+const showInfoMenu = ref(false)
+const loadTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+const loadedFirstPage = ref(false)
+const comicMetadata = ref<Record<string, unknown> | null>(null)
+const pageMenuWidth = ref(256)
+
+const libraryItemId = computed(() => (props.libraryItem as Record<string, unknown>)?.id as string)
+const localLibraryItem = computed(() => {
+  if (props.isLocal) return props.libraryItem
+  return (props.libraryItem.localLibraryItem as Record<string, unknown>) || null
+})
+const localLibraryItemId = computed(() => (localLibraryItem.value as Record<string, unknown>)?.id as string)
+const serverLibraryItemId = computed(() => {
+  if (!props.isLocal) return props.libraryItem.id as string
+  if (!props.libraryItem.serverAddress || !props.libraryItem.libraryItemId) return null
+  if (userStore.getServerAddress === props.libraryItem.serverAddress) {
+    return props.libraryItem.libraryItemId as string
+  }
+  return null
+})
+const comicMetadataKeys = computed(() => comicMetadata.value ? Object.keys(comicMetadata.value) : [])
+const canGoNext = computed(() => page.value < numPages.value)
+const canGoPrev = computed(() => page.value > 1)
+const userItemProgress = computed(() => props.isLocal ? localItemProgress.value : serverItemProgress.value)
+const localItemProgress = computed(() => globalsStore.getLocalMediaProgressById(localLibraryItemId.value))
+const serverItemProgress = computed(() => userStore.getUserMediaProgress(serverLibraryItemId.value || ''))
+const savedPage = computed(() => {
+  if (!props.keepProgress) return 0
+  if (!userItemProgress.value?.ebookLocation || isNaN(userItemProgress.value.ebookLocation as number)) return 0
+  return Number(userItemProgress.value.ebookLocation)
+})
+const cleanedPageNames = computed(() => {
+  return (
+    pages.value?.map((p) => {
+      if (p.length > 40) {
+        const firstHalf = p.slice(0, 18)
+        const lastHalf = p.slice(p.length - 17)
+        return `${firstHalf} ... ${lastHalf}`
+      }
+      return p
+    }) || []
+  )
+})
+const pageItems = computed(() => {
+  let index = 1
+  return cleanedPageNames.value.map((p) => ({
+    text: p,
+    value: index++
+  }))
+})
+const isPlayerOpen = computed(() => appStore.getIsPlayerOpen)
+
+watch(() => props.url, () => {
+  extract()
+}, { immediate: true })
+
+async function updateProgress() {
+  if (!props.keepProgress) return
+
+  if (!numPages.value) {
+    console.error('Num pages not loaded')
+    return
+  }
+  if (savedPage.value === page.value) {
+    return
+  }
+
+  const payload = {
+    ebookLocation: String(page.value),
+    ebookProgress: Math.max(0, Math.min(1, (Number(page.value) - 1) / Number(numPages.value)))
+  }
+
+  // Update local item
+  if (localLibraryItemId.value) {
+    const localPayload = {
+      localLibraryItemId: localLibraryItemId.value,
+      ...payload
     }
-  },
-  watch: {
-    url: {
-      immediate: true,
-      handler() {
-        this.extract()
-      }
+    const localResponse = await db.updateLocalEbookProgress(localPayload)
+    if ((localResponse as Record<string, unknown>)?.localMediaProgress) {
+      globalsStore.updateLocalMediaProgress((localResponse as Record<string, unknown>).localMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
     }
-  },
-  computed: {
-    libraryItemId() {
-      return this.libraryItem?.id
-    },
-    localLibraryItem() {
-      if (this.isLocal) return this.libraryItem
-      return this.libraryItem.localLibraryItem || null
-    },
-    localLibraryItemId() {
-      return this.localLibraryItem?.id
-    },
-    serverLibraryItemId() {
-      if (!this.isLocal) return this.libraryItem.id
-      // Check if local library item is connected to the current server
-      if (!this.libraryItem.serverAddress || !this.libraryItem.libraryItemId) return null
-      if (this.$store.getters['user/getServerAddress'] === this.libraryItem.serverAddress) {
-        return this.libraryItem.libraryItemId
-      }
-      return null
-    },
-    comicMetadataKeys() {
-      return this.comicMetadata ? Object.keys(this.comicMetadata) : []
-    },
-    canGoNext() {
-      return this.page < this.numPages
-    },
-    canGoPrev() {
-      return this.page > 1
-    },
-    userItemProgress() {
-      if (this.isLocal) return this.localItemProgress
-      return this.serverItemProgress
-    },
-    localItemProgress() {
-      return this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId)
-    },
-    serverItemProgress() {
-      return this.$store.getters['user/getUserMediaProgress'](this.serverLibraryItemId)
-    },
-    savedPage() {
-      if (!this.keepProgress) return 0
+  }
 
-      // Validate ebookLocation is a number
-      if (!this.userItemProgress?.ebookLocation || isNaN(this.userItemProgress.ebookLocation)) return 0
-      return Number(this.userItemProgress.ebookLocation)
-    },
-    selectedCleanedPage() {
-      return this.cleanedPageNames[this.page - 1]
-    },
-    cleanedPageNames() {
-      return (
-        this.pages?.map((p) => {
-          if (p.length > 40) {
-            let firstHalf = p.slice(0, 18)
-            let lastHalf = p.slice(p.length - 17)
-            return `${firstHalf} ... ${lastHalf}`
-          }
-          return p
-        }) || []
-      )
-    },
-    pageItems() {
-      let index = 1
-      return this.cleanedPageNames.map((p) => {
-        return {
-          text: p,
-          value: index++
-        }
-      })
-    },
-    isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
-    }
-  },
-  methods: {
-    async updateProgress() {
-      if (!this.keepProgress) return
-
-      if (!this.numPages) {
-        console.error('Num pages not loaded')
-        return
-      }
-      if (this.savedPage === this.page) {
-        return
-      }
-
-      const payload = {
-        ebookLocation: String(this.page),
-        ebookProgress: Math.max(0, Math.min(1, (Number(this.page) - 1) / Number(this.numPages)))
-      }
-
-      // Update local item
-      if (this.localLibraryItemId) {
-        const localPayload = {
-          localLibraryItemId: this.localLibraryItemId,
-          ...payload
-        }
-        const localResponse = await this.$db.updateLocalEbookProgress(localPayload)
-        if (localResponse.localMediaProgress) {
-          this.$store.commit('globals/updateLocalMediaProgress', localResponse.localMediaProgress)
-        }
-      }
-
-      // Update server item
-      if (this.serverLibraryItemId) {
-        this.$nativeHttp.patch(`/api/me/progress/${this.serverLibraryItemId}`, payload).catch((error) => {
-          console.error('ComicReader.updateProgress failed:', error)
-        })
-      }
-    },
-    clickShowInfoMenu() {
-      this.showInfoMenu = !this.showInfoMenu
-      this.showPageMenu = false
-    },
-    clickShowPageMenu() {
-      if (!this.numPages) return
-      this.showPageMenu = !this.showPageMenu
-      this.showInfoMenu = false
-    },
-    next() {
-      if (!this.canGoNext) return
-      this.setPage(this.page + 1)
-    },
-    prev() {
-      if (!this.canGoPrev) return
-      this.setPage(this.page - 1)
-    },
-    setPage(page) {
-      if (page <= 0 || page > this.numPages) {
-        return
-      }
-      this.showPageMenu = false
-      const filename = this.pages[page - 1]
-      this.page = page
-
-      this.updateProgress()
-      return this.extractFile(filename)
-    },
-    setLoadTimeout() {
-      this.loadTimeout = setTimeout(() => {
-        this.loading = true
-      }, 150)
-    },
-    extractFile(filename) {
-      return new Promise(async (resolve) => {
-        this.setLoadTimeout()
-        var file = await this.filesObject[filename].extract()
-        var reader = new FileReader()
-        reader.onload = (e) => {
-          this.mainImg = e.target.result
-          this.loading = false
-          resolve()
-        }
-        reader.onerror = (e) => {
-          console.error(e)
-          this.$toast.error('Read page file failed')
-          this.loading = false
-          resolve()
-        }
-        reader.readAsDataURL(file)
-        clearTimeout(this.loadTimeout)
-      })
-    },
-    async extract() {
-      this.loading = true
-
-      // TODO: Handle JWT auth refresh
-      const buff = await this.$axios.$get(this.url, {
-        responseType: 'blob'
-      })
-
-      const archive = await Archive.open(buff)
-      const originalFilesObject = await archive.getFilesObject()
-      // to support images in subfolders we need to flatten the object
-      //   ref: https://github.com/advplyr/audiobookshelf/issues/811
-      this.filesObject = this.flattenFilesObject(originalFilesObject)
-      console.log('Extracted files object', this.filesObject)
-      var filenames = Object.keys(this.filesObject)
-      this.parseFilenames(filenames)
-
-      var xmlFile = filenames.find((f) => (Path.extname(f) || '').toLowerCase() === '.xml')
-      if (xmlFile) await this.extractXmlFile(xmlFile)
-
-      this.numPages = this.pages.length
-
-      // Calculate page menu size
-      const largestFilename = this.cleanedPageNames
-        .map((p) => p)
-        .sort((a, b) => a.length - b.length)
-        .pop()
-      const pEl = document.createElement('p')
-      pEl.innerText = largestFilename
-      pEl.style.fontSize = '0.875rem'
-      pEl.style.opacity = 0
-      pEl.style.position = 'absolute'
-      document.body.appendChild(pEl)
-      const textWidth = pEl.getBoundingClientRect()?.width
-      if (textWidth) {
-        this.pageMenuWidth = textWidth + (16 + 5 + 2 + 5)
-      }
-      pEl.remove()
-
-      if (this.pages.length) {
-        this.loading = false
-
-        const startPage = this.savedPage > 0 && this.savedPage <= this.numPages ? this.savedPage : 1
-        await this.setPage(startPage)
-        this.loadedFirstPage = true
-
-        this.$emit('loaded', {
-          hasMetadata: this.comicMetadata
-        })
-      } else {
-        this.$toast.error('Unable to extract pages')
-        this.loading = false
-      }
-    },
-    flattenFilesObject(filesObject) {
-      const flattenObject = (obj, prefix = '') => {
-        var _obj = {}
-        for (const key in obj) {
-          const newKey = prefix ? prefix + '/' + key : key
-          if (obj[key] instanceof CompressedFile) {
-            _obj[newKey] = obj[key]
-          } else if (!key.startsWith('_') && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-            _obj = {
-              ..._obj,
-              ...flattenObject(obj[key], newKey)
-            }
-          } else {
-            _obj[newKey] = obj[key]
-          }
-        }
-        return _obj
-      }
-      return flattenObject(filesObject)
-    },
-    async extractXmlFile(filename) {
-      try {
-        var file = await this.filesObject[filename].extract()
-        var reader = new FileReader()
-        reader.onload = (e) => {
-          this.comicMetadata = this.$xmlToJson(e.target.result)
-          console.log('Metadata', this.comicMetadata)
-        }
-        reader.onerror = (e) => {
-          console.error(e)
-        }
-        reader.readAsText(file)
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    parseImageFilename(filename) {
-      var basename = Path.basename(filename, Path.extname(filename))
-      var numbersinpath = basename.match(/\d+/g)
-      if (!numbersinpath?.length) {
-        return {
-          index: -1,
-          filename
-        }
-      } else {
-        return {
-          index: Number(numbersinpath[numbersinpath.length - 1]),
-          filename
-        }
-      }
-    },
-    parseFilenames(filenames) {
-      const acceptableImages = ['.jpeg', '.jpg', '.png', '.webp']
-      var imageFiles = filenames.filter((f) => {
-        return acceptableImages.includes((Path.extname(f) || '').toLowerCase())
-      })
-      var imageFileObjs = imageFiles.map((img) => {
-        return this.parseImageFilename(img)
-      })
-
-      var imagesWithNum = imageFileObjs.filter((i) => i.index >= 0)
-      var orderedImages = imagesWithNum.sort((a, b) => a.index - b.index).map((i) => i.filename)
-      var noNumImages = imageFileObjs.filter((i) => i.index < 0)
-      orderedImages = orderedImages.concat(noNumImages.map((i) => i.filename))
-
-      this.pages = orderedImages
-    }
-  },
-  mounted() {},
-  beforeDestroy() {}
+  // Update server item
+  if (serverLibraryItemId.value) {
+    nativeHttp.patch(`/api/me/progress/${serverLibraryItemId.value}`, payload).catch((error: Error) => {
+      console.error('ComicReader.updateProgress failed:', error)
+    })
+  }
 }
+
+function clickShowInfoMenu() {
+  showInfoMenu.value = !showInfoMenu.value
+  showPageMenu.value = false
+}
+
+function clickShowPageMenu() {
+  if (!numPages.value) return
+  showPageMenu.value = !showPageMenu.value
+  showInfoMenu.value = false
+}
+
+function next() {
+  if (!canGoNext.value) return
+  setPage(page.value + 1)
+}
+
+function prev() {
+  if (!canGoPrev.value) return
+  setPage(page.value - 1)
+}
+
+function setPage(p: number) {
+  if (p <= 0 || p > numPages.value) {
+    return
+  }
+  showPageMenu.value = false
+  const filename = pages.value![p - 1]
+  page.value = p
+
+  updateProgress()
+  return extractFile(filename)
+}
+
+function setLoadTimeout() {
+  loadTimeout.value = setTimeout(() => {
+    loading.value = true
+  }, 150)
+}
+
+function extractFile(filename: string) {
+  return new Promise<void>(async (resolve) => {
+    setLoadTimeout()
+    const file = await filesObject.value![filename].extract()
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      mainImg.value = (e.target as FileReader).result as string
+      loading.value = false
+      resolve()
+    }
+    reader.onerror = (e) => {
+      console.error(e)
+      toast.error('Read page file failed')
+      loading.value = false
+      resolve()
+    }
+    reader.readAsDataURL(file as Blob)
+    clearTimeout(loadTimeout.value!)
+  })
+}
+
+async function extract() {
+  loading.value = true
+
+  // TODO: Handle JWT auth refresh
+  const buff = await (window as unknown as Record<string, unknown>).$axios ? (window as unknown as Record<string, unknown>).$axios : null
+  // Use fetch directly as $axios is not available in script setup
+  const response = await fetch(props.url, {
+    headers: {
+      Authorization: `Bearer ${userStore.getToken}`
+    }
+  })
+  const blobData = await response.blob()
+
+  const archive = await Archive.open(blobData)
+  const originalFilesObject = await archive.getFilesObject()
+  filesObject.value = flattenFilesObject(originalFilesObject)
+  console.log('Extracted files object', filesObject.value)
+  const filenames = Object.keys(filesObject.value)
+  parseFilenames(filenames)
+
+  const xmlFile = filenames.find((f) => (Path.extname(f) || '').toLowerCase() === '.xml')
+  if (xmlFile) await extractXmlFile(xmlFile)
+
+  numPages.value = pages.value!.length
+
+  // Calculate page menu size
+  const largestFilename = cleanedPageNames.value
+    .map((p) => p)
+    .sort((a, b) => a.length - b.length)
+    .pop()
+  if (largestFilename) {
+    const pEl = document.createElement('p')
+    pEl.innerText = largestFilename
+    pEl.style.fontSize = '0.875rem'
+    pEl.style.opacity = '0'
+    pEl.style.position = 'absolute'
+    document.body.appendChild(pEl)
+    const textWidth = pEl.getBoundingClientRect()?.width
+    if (textWidth) {
+      pageMenuWidth.value = textWidth + (16 + 5 + 2 + 5)
+    }
+    pEl.remove()
+  }
+
+  if (pages.value!.length) {
+    loading.value = false
+
+    const startPage = savedPage.value > 0 && savedPage.value <= numPages.value ? savedPage.value : 1
+    await setPage(startPage)
+    loadedFirstPage.value = true
+
+    emit('loaded', {
+      hasMetadata: comicMetadata.value
+    })
+  } else {
+    toast.error('Unable to extract pages')
+    loading.value = false
+  }
+}
+
+function flattenFilesObject(filesObj: Record<string, unknown>): Record<string, InstanceType<typeof CompressedFile>> {
+  const flattenObject = (obj: Record<string, unknown>, prefix = ''): Record<string, InstanceType<typeof CompressedFile>> => {
+    let _obj: Record<string, InstanceType<typeof CompressedFile>> = {}
+    for (const key in obj) {
+      const newKey = prefix ? prefix + '/' + key : key
+      if (obj[key] instanceof CompressedFile) {
+        _obj[newKey] = obj[key] as InstanceType<typeof CompressedFile>
+      } else if (!key.startsWith('_') && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        _obj = {
+          ..._obj,
+          ...flattenObject(obj[key] as Record<string, unknown>, newKey)
+        }
+      } else {
+        _obj[newKey] = obj[key] as InstanceType<typeof CompressedFile>
+      }
+    }
+    return _obj
+  }
+  return flattenObject(filesObj)
+}
+
+async function extractXmlFile(filename: string) {
+  try {
+    const file = await filesObject.value![filename].extract()
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const xmlStr = (e.target as FileReader).result as string
+      comicMetadata.value = utils.xmlToJson(xmlStr)
+      console.log('Metadata', comicMetadata.value)
+    }
+    reader.onerror = (e) => {
+      console.error(e)
+    }
+    reader.readAsText(file as Blob)
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+function parseImageFilename(filename: string) {
+  const basename = Path.basename(filename, Path.extname(filename))
+  const numbersinpath = basename.match(/\d+/g)
+  if (!numbersinpath?.length) {
+    return {
+      index: -1,
+      filename
+    }
+  } else {
+    return {
+      index: Number(numbersinpath[numbersinpath.length - 1]),
+      filename
+    }
+  }
+}
+
+function parseFilenames(filenames: string[]) {
+  const acceptableImages = ['.jpeg', '.jpg', '.png', '.webp']
+  const imageFiles = filenames.filter((f) => {
+    return acceptableImages.includes((Path.extname(f) || '').toLowerCase())
+  })
+  const imageFileObjs = imageFiles.map((img) => {
+    return parseImageFilename(img)
+  })
+
+  const imagesWithNum = imageFileObjs.filter((i) => i.index >= 0)
+  let orderedImages = imagesWithNum.sort((a, b) => a.index - b.index).map((i) => i.filename)
+  const noNumImages = imageFileObjs.filter((i) => i.index < 0)
+  orderedImages = orderedImages.concat(noNumImages.map((i) => i.filename))
+
+  pages.value = orderedImages
+}
+
+defineExpose({ clickShowInfoMenu, clickShowPageMenu, next, prev })
 </script>
 
 <style scoped>

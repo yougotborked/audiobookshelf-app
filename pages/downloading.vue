@@ -3,8 +3,8 @@
     <p class="mb-4 text-base text-md-on-surface">{{ $strings.HeaderDownloads }} ({{ downloadItemParts.length }})</p>
 
     <div v-if="!downloadItemParts.length" class="py-6 text-center text-lg">No download item parts</div>
-    <template v-for="(itemPart, num) in downloadItemParts">
-      <div :key="itemPart.id" class="w-full">
+    <template v-for="(itemPart, num) in downloadItemParts" :key="itemPart.id">
+      <div class="w-full">
         <div class="flex">
           <div class="w-14">
             <span v-if="itemPart.completed" class="material-symbols text-md-primary">check_circle</span>
@@ -21,23 +21,17 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {}
-  },
-  computed: {
-    downloadItems() {
-      return this.$store.state.globals.itemDownloads
-    },
-    downloadItemParts() {
-      let parts = []
-      this.downloadItems.forEach((di) => parts.push(...di.downloadItemParts))
-      return parts
-    }
-  },
-  mounted() {},
-  beforeDestroy() {}
-}
+<script setup lang="ts">
+import { useGlobalsStore } from '~/stores/globals'
+
+const globalsStore = useGlobalsStore()
+
+const downloadItems = computed(() => globalsStore.itemDownloads)
+const downloadItemParts = computed(() => {
+  type Part = { id: string; completed: boolean; progress: number; filename: string; [key: string]: unknown }
+  const parts: Part[] = []
+  downloadItems.value.forEach((di) => parts.push(...(di.downloadItemParts as unknown as Part[])))
+  return parts
+})
 </script>
 

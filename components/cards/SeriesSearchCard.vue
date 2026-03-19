@@ -7,32 +7,16 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    series: {
-      type: Object,
-      default: () => {}
-    },
-    bookItems: {
-      type: Array,
-      default: () => []
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    },
-    name() {
-      return this.series.name
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+const props = defineProps<{
+  series?: Record<string, unknown>
+  bookItems?: unknown[]
+}>()
+
+const globalsStore = useGlobalsStore()
+
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio as number)
+const name = computed(() => (props.series?.name as string) || '')
 </script>
 
 <style>

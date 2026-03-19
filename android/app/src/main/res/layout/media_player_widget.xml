@@ -1,9 +1,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/widgetBackground"
   android:layout_width="fill_parent"
   android:layout_height="fill_parent"
   android:orientation="horizontal"
+  android:baselineAligned="false"
   android:theme="@style/AppTheme.AppWidgetContainer"
   style="@style/Widget.Android.AppWidget.Container">
 
@@ -13,7 +15,9 @@
     android:layout_weight="3"
     android:background="?android:attr/colorAccent"
     android:theme="@style/MediaPlayerWidgetTheme"
-    android:orientation="horizontal">
+    android:baselineAligned="false"
+    android:orientation="horizontal"
+    tools:ignore="NestedWeights">
 
     <ImageView
       android:id="@+id/widgetAlbumArt"
@@ -21,6 +25,7 @@
       android:layout_height="match_parent"
       android:layout_weight="2"
       android:scaleType="centerCrop"
+      android:contentDescription="@string/widget_album_art_description"
       android:src="@drawable/icon" />
 
     <LinearLayout
@@ -29,29 +34,30 @@
       android:layout_weight="3"
       android:layout_marginVertical="8dp"
       android:orientation="vertical"
-      android:gravity="center_vertical">
+      android:gravity="center_vertical"
+      tools:ignore="NestedWeights">
 
       <TextView
         android:id="@+id/widgetArtistText"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="2"
-        android:layout_marginLeft="8dp"
+        android:layout_marginStart="8dp"
         android:gravity="bottom"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Artist"/>
+        android:text="@string/widget_artist_placeholder"/>
 
       <TextView
         android:id="@+id/widgetMediaTitle"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="2"
-        android:layout_marginLeft="8dp"
+        android:layout_marginStart="8dp"
         android:gravity="top"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Title"/>
+        android:text="@string/widget_title_placeholder"/>
 
       <LinearLayout
         android:id="@+id/widgetButtonContainer"
@@ -60,7 +66,8 @@
         android:layout_weight="3"
         android:orientation="horizontal"
         android:background="?android:attr/colorAccent"
-        android:theme="@style/MediaPlayerWidgetTheme">
+        android:theme="@style/MediaPlayerWidgetTheme"
+        tools:ignore="NestedWeights">
 
         <ImageView
           android:id="@+id/widgetRewindButton"
@@ -69,6 +76,8 @@
           android:layout_weight="1"
           android:layout_margin="8dp"
           android:src="@drawable/exo_icon_rewind"
+          android:contentDescription="@string/action_jump_backward"
+          tools:ignore="PrivateResource"
           style="@style/Widget.Android.AppWidget.InnerView"/>
 
         <ImageView
@@ -77,6 +86,7 @@
           android:layout_height="match_parent"
           android:layout_weight="1"
           android:layout_margin="6dp"
+          android:contentDescription="@string/widget_play_pause_description"
           android:src="@drawable/ic_media_play_dark" />
 
         <ImageView
@@ -85,7 +95,9 @@
           android:layout_height="match_parent"
           android:layout_weight="1"
           android:layout_margin="8dp"
-          android:src="@drawable/exo_icon_fastforward" />
+          android:src="@drawable/exo_icon_fastforward"
+          android:contentDescription="@string/action_jump_forward"
+          tools:ignore="PrivateResource" />
       </LinearLayout>
 
     </LinearLayout>
@@ -101,6 +113,7 @@
         android:layout_height="16dp"
         android:layout_margin="6dp"
         android:adjustViewBounds ="true"
+        android:contentDescription="@string/app_name"
         android:src="@drawable/icon_monochrome" />
     </LinearLayout>
 

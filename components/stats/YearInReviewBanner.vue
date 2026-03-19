@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-md-surface-1 rounded-md shadow-lg border border-white border-opacity-5 p-2 sm:p-4 mb-4">
+  <div class="bg-md-surface-1 rounded-md shadow-lg border border-white/5 p-2 sm:p-4 mb-4">
     <!-- hack to get icon fonts loaded on init -->
     <div class="h-0 w-0 overflow-hidden opacity-0">
       <span class="material-symbols">close</span>
@@ -9,7 +9,7 @@
     <div class="flex items-center">
       <p class="hidden md:block text-xl font-semibold">{{ yearInReviewYear }} Year in Review</p>
       <div class="hidden md:block flex-grow" />
-      <ui-btn class="w-full md:w-auto" @click.stop="clickShowYearInReview">{{ showYearInReview ? $strings.LabelYearReviewHide : $strings.LabelYearReviewShow }}</ui-btn>
+      <ui-btn class="w-full md:w-auto" @click.stop="clickShowYearInReview">{{ showYearInReview ? strings.LabelYearReviewHide : strings.LabelYearReviewShow }}</ui-btn>
     </div>
 
     <!-- your year in review -->
@@ -41,13 +41,13 @@
           <span class="material-symbols text-lg sm:pl-1 py-px sm:py-0">chevron_right</span>
         </ui-btn>
       </div>
-      <stats-year-in-review ref="yearInReview" :variant="yearInReviewVariant" :year="yearInReviewYear" :processing.sync="processingYearInReview" />
+      <stats-year-in-review ref="yearInReview" :variant="yearInReviewVariant" :year="yearInReviewYear" v-model:processing="processingYearInReview" />
 
       <!-- your year in review short -->
       <div class="w-full max-w-[800px] mx-auto my-4">
         <!-- share button -->
         <ui-btn small :disabled="processingYearInReviewShort" class="inline-flex sm:hidden items-center font-semibold mb-1" @click="shareYearInReviewShort"> Share </ui-btn>
-        <stats-year-in-review-short ref="yearInReviewShort" :year="yearInReviewYear" :processing.sync="processingYearInReviewShort" />
+        <stats-year-in-review-short ref="yearInReviewShort" :year="yearInReviewYear" v-model:processing="processingYearInReviewShort" />
       </div>
 
       <!-- your server in review -->
@@ -78,57 +78,60 @@
           </ui-btn>
         </div>
       </div>
-      <stats-year-in-review-server v-if="isAdminOrUp" ref="yearInReviewServer" :year="yearInReviewYear" :variant="yearInReviewServerVariant" :processing.sync="processingYearInReviewServer" />
+      <stats-year-in-review-server v-if="isAdminOrUp" ref="yearInReviewServer" :year="yearInReviewYear" :variant="yearInReviewServerVariant" v-model:processing="processingYearInReviewServer" />
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      showYearInReview: false,
-      yearInReviewYear: 0,
-      yearInReviewVariant: 0,
-      yearInReviewServerVariant: 0,
-      processingYearInReview: false,
-      processingYearInReviewShort: false,
-      processingYearInReviewServer: false
-    }
-  },
-  computed: {
-    isAdminOrUp() {
-      return this.$store.getters['user/getIsAdminOrUp']
-    }
-  },
-  methods: {
-    shareYearInReviewServer() {
-      this.$refs.yearInReviewServer.share()
-    },
-    shareYearInReview() {
-      this.$refs.yearInReview.share()
-    },
-    shareYearInReviewShort() {
-      this.$refs.yearInReviewShort.share()
-    },
-    refreshYearInReviewServer() {
-      this.$refs.yearInReviewServer.refresh()
-    },
-    refreshYearInReview() {
-      this.$refs.yearInReview.refresh()
-      this.$refs.yearInReviewShort.refresh()
-    },
-    clickShowYearInReview() {
-      this.showYearInReview = !this.showYearInReview
-    }
-  },
-  beforeMount() {
-    this.yearInReviewYear = new Date().getFullYear()
-    // When not December show previous year
-    if (new Date().getMonth() < 11) {
-      this.yearInReviewYear--
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+
+const strings = useStrings()
+const userStore = useUserStore()
+
+const showYearInReview = ref(false)
+const yearInReviewYear = ref(0)
+const yearInReviewVariant = ref(0)
+const yearInReviewServerVariant = ref(0)
+const processingYearInReview = ref(false)
+const processingYearInReviewShort = ref(false)
+const processingYearInReviewServer = ref(false)
+
+const yearInReview = ref<{ share: () => void; refresh: () => void } | null>(null)
+const yearInReviewShort = ref<{ share: () => void; refresh: () => void } | null>(null)
+const yearInReviewServer = ref<{ share: () => void; refresh: () => void } | null>(null)
+
+const isAdminOrUp = computed(() => userStore.getIsAdminOrUp)
+
+function shareYearInReviewServer() {
+  yearInReviewServer.value?.share()
+}
+
+function shareYearInReview() {
+  yearInReview.value?.share()
+}
+
+function shareYearInReviewShort() {
+  yearInReviewShort.value?.share()
+}
+
+function refreshYearInReviewServer() {
+  yearInReviewServer.value?.refresh()
+}
+
+function refreshYearInReview() {
+  yearInReview.value?.refresh()
+  yearInReviewShort.value?.refresh()
+}
+
+function clickShowYearInReview() {
+  showYearInReview.value = !showYearInReview.value
+}
+
+// beforeMount logic
+yearInReviewYear.value = new Date().getFullYear()
+// When not December show previous year
+if (new Date().getMonth() < 11) {
+  yearInReviewYear.value--
 }
 </script>

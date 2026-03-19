@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 package com.audiobookshelf.app.player
 
 import androidx.media3.common.C

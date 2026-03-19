@@ -91,7 +91,7 @@
     </div>
 
     <!-- Podcast Num Episodes -->
-    <div v-else-if="numEpisodes && !numEpisodesIncomplete && !isSelectionMode" class="absolute rounded-full bg-black bg-opacity-90 box-shadow-md z-10 flex items-center justify-center" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', width: 1.25 * sizeMultiplier + 'rem', height: 1.25 * sizeMultiplier + 'rem' }">
+    <div v-else-if="numEpisodes && !numEpisodesIncomplete && !isSelectionMode" class="absolute rounded-full bg-black/90 box-shadow-md z-10 flex items-center justify-center" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', width: 1.25 * sizeMultiplier + 'rem', height: 1.25 * sizeMultiplier + 'rem' }">
       <p class="text-white" :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }">{{ numEpisodes }}</p>
     </div>
 
@@ -102,472 +102,343 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
+import { getString } from '~/composables/useStrings'
 
-export default {
-  props: {
-    index: Number,
-    width: {
-      type: Number,
-      default: 120
-    },
-    height: {
-      type: Number,
-      default: 192
-    },
-    bookCoverAspectRatio: Number,
-    showSequence: Boolean,
-    isAltViewEnabled: Boolean,
-    bookMount: {
-      // Book can be passed as prop or set with setEntity()
-      type: Object,
-      default: () => null
-    },
-    orderBy: String,
-    filterBy: String,
-    sortingIgnorePrefix: Boolean
-  },
-  data() {
-    return {
-      isProcessingReadUpdate: false,
-      libraryItem: null,
-      imageReady: false,
-      selected: false,
-      isSelectionMode: false,
-      showCoverBg: false,
-      localLibraryItem: null
+const props = defineProps<{
+  index?: number
+  width?: number
+  height?: number
+  bookCoverAspectRatio?: number
+  showSequence?: boolean
+  isAltViewEnabled?: boolean
+  bookMount?: Record<string, unknown> | null
+  orderBy?: string
+  filterBy?: string
+  sortingIgnorePrefix?: boolean
+}>()
+
+const appStore = useAppStore()
+const userStore = useUserStore()
+const globalsStore = useGlobalsStore()
+const router = useRouter()
+const utils = useUtils()
+const { impact } = useHaptics()
+const eventBus = useEventBus()
+
+// State
+const isProcessingReadUpdate = ref(false)
+const libraryItem = ref<Record<string, unknown> | null>(null)
+const imageReady = ref(false)
+const selected = ref(false)
+const isSelectionMode = ref(false)
+const showCoverBg = ref(false)
+const localLibraryItem = ref<Record<string, unknown> | null>(null)
+
+// Refs
+const card = ref<HTMLElement | null>(null)
+const cover = ref<HTMLImageElement | null>(null)
+const coverBg = ref<HTMLElement | null>(null)
+
+// Watch
+watch(() => props.bookMount, (newVal) => {
+  if (newVal) {
+    libraryItem.value = newVal
+  }
+})
+
+// Computed
+const _libraryItem = computed(() => libraryItem.value || {})
+const isLocal = computed(() => !!_libraryItem.value.isLocal)
+const media = computed(() => (_libraryItem.value.media as Record<string, unknown>) || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+const mediaType = computed(() => _libraryItem.value.mediaType as string | undefined)
+const isPodcast = computed(() => mediaType.value === 'podcast')
+const placeholderUrl = computed(() => '/book_placeholder.jpg')
+const bookCoverSrc = computed(() => {
+  if (isLocal.value) {
+    if (libraryItem.value?.coverContentUrl) return Capacitor.convertFileSrc(libraryItem.value.coverContentUrl as string)
+    return placeholderUrl.value
+  }
+  return globalsStore.getLibraryItemCoverSrc(_libraryItem.value, placeholderUrl.value)
+})
+const libraryItemId = computed(() => _libraryItem.value.id as string)
+const libraryId = computed(() => _libraryItem.value.libraryId as string)
+const hasEbook = computed(() => media.value.ebookFile)
+const numTracks = computed(() => media.value.numTracks as number)
+const numEpisodes = computed(() => {
+  if (isLocal.value && isPodcast.value && media.value.episodes) return (media.value.episodes as unknown[]).length
+  return media.value.numEpisodes as number
+})
+const numEpisodesIncomplete = computed(() => {
+  if (isLocal.value) return 0
+  return (_libraryItem.value.numEpisodesIncomplete as number) || 0
+})
+const processingBatch = computed(() => appStore.playerIsStartingPlayback)
+const collapsedSeries = computed(() => _libraryItem.value.collapsedSeries as Record<string, unknown> | undefined)
+const booksInSeries = computed(() => (collapsedSeries.value?.numBooks as number) || 0)
+const seriesSequenceList = computed(() => (collapsedSeries.value?.seriesSequenceList as string) || null)
+const libraryItemIdsInSeries = computed(() => (collapsedSeries.value?.libraryItemIds as string[]) || [])
+const hasCover = computed(() => !!media.value.coverPath)
+const squareAspectRatio = computed(() => (props.bookCoverAspectRatio || 0) === 1)
+const sizeMultiplier = computed(() => {
+  const baseSize = squareAspectRatio.value ? 192 : 120
+  return (props.width || 120) / baseSize
+})
+const title = computed(() => (mediaMetadata.value.title as string) || '')
+const playIconFontSize = computed(() => Math.max(2, 3 * sizeMultiplier.value))
+const authors = computed(() => (mediaMetadata.value.authors as unknown[]) || [])
+const author = computed(() => {
+  if (isPodcast.value) return mediaMetadata.value.author as string
+  return mediaMetadata.value.authorName as string
+})
+const authorLF = computed(() => mediaMetadata.value.authorNameLF as string)
+const series = computed(() => mediaMetadata.value.series as Record<string, unknown> | undefined)
+const seriesSequence = computed(() => series.value?.sequence as string || null)
+const recentEpisode = computed(() => _libraryItem.value.recentEpisode as Record<string, unknown> | undefined)
+const recentEpisodeNumber = computed(() => {
+  if (!recentEpisode.value) return null
+  if (recentEpisode.value.episode) {
+    return (recentEpisode.value.episode as string).replace(/^#/, '')
+  }
+  return ''
+})
+const displayTitle = computed(() => {
+  if (recentEpisode.value) return recentEpisode.value.title as string
+
+  const ignorePrefix = props.orderBy === 'media.metadata.title' && props.sortingIgnorePrefix
+  if (collapsedSeries.value) return ignorePrefix ? collapsedSeries.value.nameIgnorePrefix as string : collapsedSeries.value.name as string
+  return ignorePrefix ? mediaMetadata.value.titleIgnorePrefix as string : title.value
+})
+const displayLineTwo = computed(() => {
+  if (recentEpisode.value) return title.value
+  if (collapsedSeries.value) return ''
+  if (isPodcast.value) return author.value
+
+  if (props.orderBy === 'media.metadata.authorNameLF') return authorLF.value
+  return author.value
+})
+const displaySortLine = computed(() => {
+  if (collapsedSeries.value) return null
+  if (props.orderBy === 'mtimeMs') return 'Modified ' + utils.formatDate(_libraryItem.value.mtimeMs as number)
+  if (props.orderBy === 'birthtimeMs') return 'Born ' + utils.formatDate(_libraryItem.value.birthtimeMs as number)
+  if (props.orderBy === 'addedAt') return getString('LabelAddedDate', [utils.formatDate(_libraryItem.value.addedAt as number)])
+  if (props.orderBy === 'media.duration') return 'Duration: ' + utils.elapsedPrettyExtended(media.value.duration as number, false)
+  if (props.orderBy === 'size') return 'Size: ' + utils.bytesPretty(_libraryItem.value.size as number)
+  if (props.orderBy === 'media.numTracks') return `${numEpisodes.value} Episodes`
+  return null
+})
+const localLibraryItemId = computed(() => {
+  if (isLocal.value) return libraryItemId.value
+  return (localLibraryItem.value?.id as string) || null
+})
+const localEpisode = computed(() => {
+  if (!recentEpisode.value || !localLibraryItem.value) return null
+  const episodes = (localLibraryItem.value.media as Record<string, unknown>)?.episodes as Record<string, unknown>[] || []
+  return episodes.find((ep) => ep.serverEpisodeId === recentEpisode.value?.id)
+})
+const episodeProgress = computed(() => {
+  if (!recentEpisode.value) return null
+  if (isLocal.value) return globalsStore.getLocalMediaProgressById(libraryItemId.value, recentEpisode.value.id as string)
+  return userStore.getUserMediaProgress(libraryItemId.value, recentEpisode.value.id as string)
+})
+const userProgress = computed(() => {
+  if (recentEpisode.value) return episodeProgress.value || null
+  if (isLocal.value) return globalsStore.getLocalMediaProgressById(libraryItemId.value)
+  return userStore.getUserMediaProgress(libraryItemId.value)
+})
+const useEBookProgress = computed(() => {
+  if (!userProgress.value || (userProgress.value as Record<string, unknown>).progress) return false
+  return ((userProgress.value as Record<string, unknown>).ebookProgress as number) > 0
+})
+const userProgressPercent = computed(() => {
+  if (useEBookProgress.value) return Math.max(Math.min(1, (userProgress.value as Record<string, unknown>).ebookProgress as number), 0)
+  return Math.max(Math.min(1, ((userProgress.value as Record<string, unknown>)?.progress as number) || 0), 0) || 0
+})
+const itemIsFinished = computed(() => !!(userProgress.value as Record<string, unknown>)?.isFinished)
+const showError = computed(() => isMissing.value || isInvalid.value)
+const isStreaming = computed(() => appStore.getIsMediaStreaming(libraryItemId.value, recentEpisode.value?.id as string))
+const streamIsPlaying = computed(() => appStore.playerIsPlaying && isStreaming.value)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
+const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
+  const mediaId = appStore.playerStartingPlaybackMediaId
+  return mediaId === recentEpisode.value?.id
+})
+const isMissing = computed(() => _libraryItem.value.isMissing as boolean)
+const isInvalid = computed(() => _libraryItem.value.isInvalid as boolean)
+const isExplicit = computed(() => !!( mediaMetadata.value.explicit))
+const overlayWrapperClasslist = computed(() => {
+  const classes: string[] = []
+  if (isSelectionMode.value) classes.push('opacity-60')
+  else classes.push('opacity-40')
+  if (selected.value) {
+    classes.push('border-2 border-yellow-400')
+  }
+  return classes
+})
+const userCanUpdate = computed(() => userStore.getUserCanUpdate)
+const userCanDelete = computed(() => userStore.getUserCanDelete)
+const userCanDownload = computed(() => userStore.getUserCanDownload)
+const titleFontSize = computed(() => 0.75 * sizeMultiplier.value)
+const authorFontSize = computed(() => 0.6 * sizeMultiplier.value)
+const placeholderCoverPadding = computed(() => 0.8 * sizeMultiplier.value)
+const authorBottom = computed(() => 0.75 * sizeMultiplier.value)
+const titleCleaned = computed(() => {
+  if (!title.value) return ''
+  if (title.value.length > 60) {
+    return title.value.slice(0, 57) + '...'
+  }
+  return title.value
+})
+const authorCleaned = computed(() => {
+  if (!author.value) return ''
+  if (author.value.length > 30) {
+    return author.value.slice(0, 27) + '...'
+  }
+  return author.value
+})
+const titleDisplayBottomOffset = computed(() => {
+  if (!props.isAltViewEnabled) return 0
+  else if (!displaySortLine.value) return 3 * sizeMultiplier.value
+  return 4.25 * sizeMultiplier.value
+})
+const showHasLocalDownload = computed(() => {
+  if (localLibraryItem.value || isLocal.value) {
+    if (recentEpisode.value && !isLocal.value) {
+      return !!localEpisode.value
+    } else {
+      return true
     }
-  },
-  watch: {
-    bookMount: {
-      handler(newVal) {
-        if (newVal) {
-          this.libraryItem = newVal
+  }
+  return false
+})
+const rssFeed = computed(() => {
+  if (booksInSeries.value) return null
+  return _libraryItem.value.rssFeed || null
+})
+const showPlayButton = computed(() => {
+  return false
+  // return !isMissing.value && !isInvalid.value && !isStreaming.value && (numTracks.value || recentEpisode.value)
+})
+
+// Methods
+function setSelectionMode(val: boolean) {
+  isSelectionMode.value = val
+  if (!val) selected.value = false
+}
+
+function setEntity(_libraryItem: Record<string, unknown>) {
+  let item = _libraryItem
+
+  if (series.value) {
+    item = {
+      ..._libraryItem,
+      media: {
+        ..._libraryItem.media as Record<string, unknown>,
+        metadata: {
+          ...(_libraryItem.media as Record<string, unknown>).metadata as Record<string, unknown>
         }
       }
     }
-  },
-  computed: {
-    _libraryItem() {
-      return this.libraryItem || {}
-    },
-    isLocal() {
-      return !!this._libraryItem.isLocal
-    },
-    media() {
-      return this._libraryItem.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    mediaType() {
-      return this._libraryItem.mediaType
-    },
-    isPodcast() {
-      return this.mediaType === 'podcast'
-    },
-    placeholderUrl() {
-      return '/book_placeholder.jpg'
-    },
-    bookCoverSrc() {
-      if (this.isLocal) {
-        if (this.libraryItem.coverContentUrl) return Capacitor.convertFileSrc(this.libraryItem.coverContentUrl)
-        return this.placeholderUrl
-      }
-      return this.store.getters['globals/getLibraryItemCoverSrc'](this._libraryItem, this.placeholderUrl)
-    },
-    libraryItemId() {
-      return this._libraryItem.id
-    },
-    libraryId() {
-      return this._libraryItem.libraryId
-    },
-    hasEbook() {
-      return this.media.ebookFile
-    },
-    numTracks() {
-      return this.media.numTracks
-    },
-    numEpisodes() {
-      if (this.isLocal && this.isPodcast && this.media.episodes) return this.media.episodes.length
-      return this.media.numEpisodes
-    },
-    numEpisodesIncomplete() {
-      if (this.isLocal) return 0
-      return this._libraryItem.numEpisodesIncomplete || 0
-    },
-    processingBatch() {
-      return this.store.state.processingBatch
-    },
-    booksInSeries() {
-      // Only added to audiobook object when collapseSeries is enabled
-      return this._libraryItem.booksInSeries
-    },
-    hasCover() {
-      return !!this.media.coverPath
-    },
-    squareAspectRatio() {
-      return this.bookCoverAspectRatio === 1
-    },
-    sizeMultiplier() {
-      var baseSize = this.squareAspectRatio ? 192 : 120
-      return this.width / baseSize
-    },
-    title() {
-      return this.mediaMetadata.title || ''
-    },
-    playIconFontSize() {
-      return Math.max(2, 3 * this.sizeMultiplier)
-    },
-    authors() {
-      return this.mediaMetadata.authors || []
-    },
-    author() {
-      if (this.isPodcast) return this.mediaMetadata.author
-      return this.mediaMetadata.authorName
-    },
-    authorLF() {
-      return this.mediaMetadata.authorNameLF
-    },
-    series() {
-      // Only included when filtering by series or collapse series
-      return this.mediaMetadata.series
-    },
-    seriesSequence() {
-      return this.series?.sequence || null
-    },
-    recentEpisode() {
-      // Only added to item when getting currently listening podcasts
-      return this._libraryItem.recentEpisode
-    },
-    recentEpisodeNumber() {
-      if (!this.recentEpisode) return null
-      if (this.recentEpisode.episode) {
-        return this.recentEpisode.episode.replace(/^#/, '')
-      }
-      return ''
-    },
-    collapsedSeries() {
-      // Only added to item object when collapseSeries is enabled
-      return this._libraryItem.collapsedSeries
-    },
-    booksInSeries() {
-      // Only added to item object when collapseSeries is enabled
-      return this.collapsedSeries?.numBooks || 0
-    },
-    seriesSequenceList() {
-      return this.collapsedSeries?.seriesSequenceList || null
-    },
-    libraryItemIdsInSeries() {
-      // Only added to item object when collapseSeries is enabled
-      return this.collapsedSeries?.libraryItemIds || []
-    },
-    displayTitle() {
-      if (this.recentEpisode) return this.recentEpisode.title
-
-      const ignorePrefix = this.orderBy === 'media.metadata.title' && this.sortingIgnorePrefix
-      if (this.collapsedSeries) return ignorePrefix ? this.collapsedSeries.nameIgnorePrefix : this.collapsedSeries.name
-      return ignorePrefix ? this.mediaMetadata.titleIgnorePrefix : this.title
-    },
-    displayLineTwo() {
-      if (this.recentEpisode) return this.title
-      if (this.collapsedSeries) return ''
-      if (this.isPodcast) return this.author
-
-      if (this.orderBy === 'media.metadata.authorNameLF') return this.authorLF
-      return this.author
-    },
-    displaySortLine() {
-      if (this.collapsedSeries) return null
-      if (this.orderBy === 'mtimeMs') return 'Modified ' + this.$formatDate(this._libraryItem.mtimeMs)
-      if (this.orderBy === 'birthtimeMs') return 'Born ' + this.$formatDate(this._libraryItem.birthtimeMs)
-      if (this.orderBy === 'addedAt') return this.$getString('LabelAddedDate', [this.$formatDate(this._libraryItem.addedAt)])
-      if (this.orderBy === 'media.duration') return 'Duration: ' + this.$elapsedPrettyExtended(this.media.duration, false)
-      if (this.orderBy === 'size') return 'Size: ' + this.$bytesPretty(this._libraryItem.size)
-      if (this.orderBy === 'media.numTracks') return `${this.numEpisodes} Episodes`
-      return null
-    },
-    episodeProgress() {
-      // Only used on home page currently listening podcast shelf
-      if (!this.recentEpisode) return null
-      if (this.isLocal) return this.store.getters['globals/getLocalMediaProgressById'](this.libraryItemId, this.recentEpisode.id)
-      return this.store.getters['user/getUserMediaProgress'](this.libraryItemId, this.recentEpisode.id)
-    },
-    userProgress() {
-      if (this.recentEpisode) return this.episodeProgress || null
-      if (this.isLocal) return this.store.getters['globals/getLocalMediaProgressById'](this.libraryItemId)
-      return this.store.getters['user/getUserMediaProgress'](this.libraryItemId)
-    },
-    useEBookProgress() {
-      if (!this.userProgress || this.userProgress.progress) return false
-      return this.userProgress.ebookProgress > 0
-    },
-    userProgressPercent() {
-      if (this.useEBookProgress) return Math.max(Math.min(1, this.userProgress.ebookProgress), 0)
-      return Math.max(Math.min(1, this.userProgress?.progress || 0), 0) || 0
-    },
-    itemIsFinished() {
-      return !!this.userProgress?.isFinished
-    },
-    showError() {
-      return this.isMissing || this.isInvalid
-    },
-    localLibraryItemId() {
-      if (this.isLocal) return this.libraryItemId
-      return this.localLibraryItem?.id || null
-    },
-    localEpisode() {
-      if (!this.recentEpisode || !this.localLibraryItem) return null
-      // Current recentEpisode is only implemented server side so this will always be the serverEpisodeId
-      return this.localLibraryItem.media.episodes.find((ep) => ep.serverEpisodeId === this.recentEpisode.id)
-    },
-    isStreaming() {
-      return this.store.getters['getIsMediaStreaming'](this.libraryItemId, this.recentEpisode?.id)
-    },
-    streamIsPlaying() {
-      return this.store.state.playerIsPlaying && this.isStreaming
-    },
-    playerIsStartingPlayback() {
-      // Play has been pressed and waiting for native play response
-      return this.store.state.playerIsStartingPlayback
-    },
-    playerIsStartingForThisMedia() {
-      const mediaId = this.store.state.playerStartingPlaybackMediaId
-      return mediaId === this.recentEpisode?.id
-    },
-    isMissing() {
-      return this._libraryItem.isMissing
-    },
-    isInvalid() {
-      return this._libraryItem.isInvalid
-    },
-    isExplicit() {
-      return !!this.mediaMetadata.explicit
-    },
-    overlayWrapperClasslist() {
-      var classes = []
-      if (this.isSelectionMode) classes.push('bg-opacity-60')
-      else classes.push('bg-opacity-40')
-      if (this.selected) {
-        classes.push('border-2 border-yellow-400')
-      }
-      return classes
-    },
-    store() {
-      return this.$store || this.$nuxt.$store
-    },
-    userCanUpdate() {
-      return this.store.getters['user/getUserCanUpdate']
-    },
-    userCanDelete() {
-      return this.store.getters['user/getUserCanDelete']
-    },
-    userCanDownload() {
-      return this.store.getters['user/getUserCanDownload']
-    },
-    titleFontSize() {
-      return 0.75 * this.sizeMultiplier
-    },
-    authorFontSize() {
-      return 0.6 * this.sizeMultiplier
-    },
-    placeholderCoverPadding() {
-      return 0.8 * this.sizeMultiplier
-    },
-    authorBottom() {
-      return 0.75 * this.sizeMultiplier
-    },
-    titleCleaned() {
-      if (!this.title) return ''
-      if (this.title.length > 60) {
-        return this.title.slice(0, 57) + '...'
-      }
-      return this.title
-    },
-    authorCleaned() {
-      if (!this.author) return ''
-      if (this.author.length > 30) {
-        return this.author.slice(0, 27) + '...'
-      }
-      return this.author
-    },
-    titleDisplayBottomOffset() {
-      if (!this.isAltViewEnabled) return 0
-      else if (!this.displaySortLine) return 3 * this.sizeMultiplier
-      return 4.25 * this.sizeMultiplier
-    },
-    showHasLocalDownload() {
-      if (this.localLibraryItem || this.isLocal) {
-        if (this.recentEpisode && !this.isLocal) {
-          return !!this.localEpisode
-        } else {
-          return true
-        }
-      }
-      return false
-    },
-    rssFeed() {
-      if (this.booksInSeries) return null
-      return this._libraryItem.rssFeed || null
-    },
-    showPlayButton() {
-      return false
-      // return !this.isMissing && !this.isInvalid && !this.isStreaming && (this.numTracks || this.recentEpisode)
-    }
-  },
-  methods: {
-    setSelectionMode(val) {
-      this.isSelectionMode = val
-      if (!val) this.selected = false
-    },
-    setEntity(_libraryItem) {
-      var libraryItem = _libraryItem
-
-      // this code block is only necessary when showing a selected series with sequence #
-      //   it will update the selected series so we get realtime updates for series sequence changes
-      if (this.series) {
-        // i know.. but the libraryItem passed to this func cannot be modified so we need to create a copy
-        libraryItem = {
-          ..._libraryItem,
-          media: {
-            ..._libraryItem.media,
-            metadata: {
-              ..._libraryItem.media.metadata
-            }
-          }
-        }
-        var mediaMetadata = libraryItem.media.metadata
-        if (mediaMetadata.series) {
-          var newSeries = mediaMetadata.series.find((se) => se.id === this.series.id)
-          if (newSeries) {
-            // update selected series
-            libraryItem.media.metadata.series = newSeries
-            this.libraryItem = libraryItem
-            return
-          }
-        }
-      }
-
-      this.libraryItem = libraryItem
-    },
-    setLocalLibraryItem(localLibraryItem) {
-      // Server books may have a local library item
-      this.localLibraryItem = localLibraryItem
-    },
-    async play() {},
-    async playEpisode() {
-      if (this.playerIsStartingPlayback) return
-
-      await this.$hapticsImpact()
-      const eventBus = this.$eventBus || this.$nuxt.$eventBus
-      if (this.streamIsPlaying) {
-        eventBus.$emit('pause-item')
+    const meta = (item.media as Record<string, unknown>).metadata as Record<string, unknown>
+    if (meta.series) {
+      const newSeries = (meta.series as Record<string, unknown>[]).find((se) => se.id === series.value?.id)
+      if (newSeries) {
+        (item.media as Record<string, unknown>).metadata = { ...meta, series: newSeries }
+        libraryItem.value = item
         return
-      }
-
-      this.store.commit('setPlayerIsStartingPlayback', this.recentEpisode.id)
-      if (this.localEpisode) {
-        // Play episode locally
-        eventBus.$emit('play-item', {
-          libraryItemId: this.localLibraryItemId,
-          episodeId: this.localEpisode.id,
-          serverLibraryItemId: this.libraryItemId,
-          serverEpisodeId: this.recentEpisode.id
-        })
-        return
-      }
-
-      eventBus.$emit('play-item', { libraryItemId: this.libraryItemId, episodeId: this.recentEpisode.id })
-    },
-    async clickCard(e) {
-      if (this.isSelectionMode) {
-        e.stopPropagation()
-        e.preventDefault()
-        this.selectBtnClick()
-      } else {
-        const router = this.$router || this.$nuxt.$router
-        if (router) {
-          if (this.recentEpisode) router.push(`/item/${this.libraryItemId}/${this.recentEpisode.id}`)
-          else if (this.collapsedSeries) router.push(`/bookshelf/series/${this.collapsedSeries.id}`)
-          else if (this.localLibraryItem) {
-            // Pass local library item id to server page to allow falling back to offline page
-            router.push(`/item/${this.libraryItemId}?localLibraryItemId=${this.localLibraryItemId}`)
-          } else {
-            router.push(`/item/${this.libraryItemId}`)
-          }
-        }
-      }
-    },
-    editClick() {
-      this.$emit('edit', this.libraryItem)
-    },
-    showEditModalTracks() {
-      // More menu func
-      this.store.commit('showEditModalOnTab', { libraryItem: this.libraryItem, tab: 'tracks' })
-    },
-    showEditModalMatch() {
-      // More menu func
-      this.store.commit('showEditModalOnTab', { libraryItem: this.libraryItem, tab: 'match' })
-    },
-    showEditModalDownload() {
-      // More menu func
-      this.store.commit('showEditModalOnTab', { libraryItem: this.libraryItem, tab: 'download' })
-    },
-    openCollections() {
-      this.store.commit('setSelectedLibraryItem', this.libraryItem)
-      this.store.commit('globals/setShowUserCollectionsModal', true)
-    },
-    clickReadEBook() {
-      this.store.commit('showEReader', this.libraryItem)
-    },
-    selectBtnClick() {
-      if (this.processingBatch) return
-      this.selected = !this.selected
-      this.$emit('select', this.libraryItem)
-    },
-    destroy() {
-      // destroy the vue listeners, etc
-      this.$destroy()
-
-      // remove the element from the DOM
-      if (this.$el && this.$el.parentNode) {
-        this.$el.parentNode.removeChild(this.$el)
-      } else if (this.$el && this.$el.remove) {
-        this.$el.remove()
-      }
-    },
-    setCoverBg() {
-      if (this.$refs.coverBg) {
-        this.$refs.coverBg.style.backgroundImage = `url("${this.bookCoverSrc}")`
-      }
-    },
-    imageLoaded() {
-      this.imageReady = true
-
-      if (this.$refs.cover && this.bookCoverSrc !== this.placeholderUrl) {
-        const { naturalWidth, naturalHeight } = this.$refs.cover
-        const aspectRatio = naturalHeight / naturalWidth
-        const arDiff = Math.abs(aspectRatio - this.bookCoverAspectRatio)
-
-        // If image aspect ratio is <= 1.45 or >= 1.75 then use cover bg, otherwise stretch to fit
-        if (arDiff > 0.15) {
-          this.showCoverBg = true
-          this.$nextTick(this.setCoverBg)
-        } else {
-          this.showCoverBg = false
-        }
-      }
-    }
-  },
-  mounted() {
-    if (this.bookMount) {
-      this.setEntity(this.bookMount)
-
-      if (this.bookMount.localLibraryItem) {
-        this.setLocalLibraryItem(this.bookMount.localLibraryItem)
       }
     }
   }
+
+  libraryItem.value = item
 }
+
+function setLocalLibraryItem(item: Record<string, unknown>) {
+  localLibraryItem.value = item
+}
+
+async function play() {}
+
+async function playEpisode() {
+  if (playerIsStartingPlayback.value) return
+
+  await impact()
+  if (streamIsPlaying.value) {
+    eventBus.emit('pause-item')
+    return
+  }
+
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = recentEpisode.value?.id as string
+
+  if (localEpisode.value) {
+    eventBus.emit('play-item', {
+      libraryItemId: localLibraryItemId.value as string,
+      episodeId: localEpisode.value.id as string,
+      serverLibraryItemId: libraryItemId.value,
+      serverEpisodeId: recentEpisode.value?.id as string
+    })
+    return
+  }
+
+  eventBus.emit('play-item', { libraryItemId: libraryItemId.value, episodeId: recentEpisode.value?.id as string })
+}
+
+async function clickCard(e: MouseEvent) {
+  if (isSelectionMode.value) {
+    e.stopPropagation()
+    e.preventDefault()
+    selectBtnClick()
+  } else {
+    if (collapsedSeries.value) router.push(`/bookshelf/series/${collapsedSeries.value.id}`)
+    else if (localLibraryItem.value) {
+      router.push(`/item/${libraryItemId.value}?localLibraryItemId=${localLibraryItemId.value}`)
+    } else {
+      router.push(`/item/${libraryItemId.value}`)
+    }
+  }
+}
+
+function selectBtnClick() {
+  if (processingBatch.value) return
+  selected.value = !selected.value
+}
+
+function setCoverBg() {
+  if (coverBg.value) {
+    coverBg.value.style.backgroundImage = `url("${bookCoverSrc.value}")`
+  }
+}
+
+function imageLoaded() {
+  imageReady.value = true
+
+  if (cover.value && bookCoverSrc.value !== placeholderUrl.value) {
+    const { naturalWidth, naturalHeight } = cover.value
+    const aspectRatio = naturalHeight / naturalWidth
+    const arDiff = Math.abs(aspectRatio - (props.bookCoverAspectRatio || 1.6))
+
+    if (arDiff > 0.15) {
+      showCoverBg.value = true
+      nextTick(setCoverBg)
+    } else {
+      showCoverBg.value = false
+    }
+  }
+}
+
+onMounted(() => {
+  if (props.bookMount) {
+    setEntity(props.bookMount)
+
+    if (props.bookMount.localLibraryItem) {
+      setLocalLibraryItem(props.bookMount.localLibraryItem as Record<string, unknown>)
+    }
+  }
+})
+
+defineExpose({ setSelectionMode, setEntity, setLocalLibraryItem, isHovering: false })
 </script>

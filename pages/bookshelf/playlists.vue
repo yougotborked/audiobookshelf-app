@@ -15,117 +15,109 @@
   </div>
 </template>
 
-<script>
-import { AbsDownloader } from '@/plugins/capacitor'
+<script setup lang="ts">
+import { AbsDownloader } from '~/plugins/capacitor'
 import {
   buildUnfinishedAutoPlaylist,
   collectDownloadedEpisodeKeys,
   toCacheablePlaylist
-} from '@/mixins/autoPlaylistHelpers'
-export default {
-  async asyncData({ store, app }) {
-    const name = app.$strings.LabelAutoUnfinishedPodcasts
-    const enabled = store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
-    if (!enabled)
-      return { autoPlaylist: { id: 'unfinished', name, items: [], totalItems: 0 } }
-    const cached = await app.$localStore.getCachedPlaylist('unfinished')
-    if (cached)
-      return {
-        autoPlaylist: {
-          ...cached,
-          totalItems: cached.totalItems || (cached.items ? cached.items.length : 0)
-        }
-      }
-    return { autoPlaylist: { id: 'unfinished', name, items: [], totalItems: 0 } }
-  },
-  data() {
-    return {
-      autoPlaylist: { name: '', items: [], totalItems: 0 },
-      downloadedEpisodeKeys: null
-    }
-  },
-  mounted() {
-    if (this.autoCacheUnplayedEpisodes) this.fetchAutoPlaylist()
-  },
-  watch: {
-    networkConnected(newVal) {
-      if (newVal && this.autoCacheUnplayedEpisodes) {
-        if (!this.autoPlaylist.items.length) {
-          setTimeout(() => {
-            this.fetchAutoPlaylist()
-          }, 1000)
-        } else {
-          this.checkAutoDownload()
-        }
-      }
-    },
-    autoCacheUnplayedEpisodes(newVal) {
-      if (newVal && !this.autoPlaylist.items.length) {
-        this.fetchAutoPlaylist()
-      }
-    }
-  },
-  computed: {
-    networkConnected() {
-      return this.$store.state.networkConnected
-    },
-    autoCacheUnplayedEpisodes() {
-      return this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes
-    }
-  },
-  methods: {
-    async fetchAutoPlaylist() {
-      try {
-        const { items, downloadedEpisodeKeys, totalItems } = await buildUnfinishedAutoPlaylist({
-          store: this.$store,
-          db: this.$db,
-          localStore: this.$localStore,
-          nativeHttp: this.$nativeHttp,
-          networkConnected: this.networkConnected
-        })
+} from '~/composables/useAutoPlaylist'
 
-        this.downloadedEpisodeKeys = downloadedEpisodeKeys
+const strings = useStrings()
+const db = useDb()
+const localStore = useLocalStore()
+const nativeHttp = useNativeHttp()
 
-        this.autoPlaylist = {
-          id: 'unfinished',
-          name: this.$strings.LabelAutoUnfinishedPodcasts,
-          items,
-          totalItems
-        }
+const appStore = useAppStore()
 
-        await this.$localStore.setCachedPlaylist(toCacheablePlaylist(this.autoPlaylist))
-        this.checkAutoDownload()
-      } catch (error) {
-        console.error('Failed to fetch auto playlist', error)
-      }
-    },
-    async ensureDownloadedKeySet() {
-      if (this.downloadedEpisodeKeys instanceof Set) {
-        return this.downloadedEpisodeKeys
-      }
+const networkConnected = computed(() => appStore.networkConnected)
+const autoCacheUnplayedEpisodes = computed(() => appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes)
 
-      const localLibraries = await this.$db.getLocalLibraryItems('podcast')
-      this.downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraries)
-      return this.downloadedEpisodeKeys
-    },
-    async checkAutoDownload() {
-      if (!this.networkConnected) return
-      if (!this.$store.state.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+const defaultAutoPlaylist = { id: 'unfinished', name: strings.LabelAutoUnfinishedPodcasts, items: [], totalItems: 0 }
 
-      const downloadedKeys = await this.ensureDownloadedKeySet()
+// Load cached playlist at setup time (replaces asyncData)
+const autoPlaylist = ref<{ id: string; name: string; items: any[]; totalItems: number }>(defaultAutoPlaylist)
+const downloadedEpisodeKeys = ref<Set<string> | null>(null)
 
-      for (const qi of this.autoPlaylist.items) {
-        const liId = qi.libraryItemId || qi.libraryItem?.libraryItemId || qi.libraryItem?.id
-        const epId = qi.episodeId || qi.episode?.serverEpisodeId || qi.episode?.id
-        if (!liId || !epId) continue
-
-        const key = `${liId}_${epId}`
-        if (downloadedKeys.has(key)) continue
-
-        AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
-        downloadedKeys.add(key)
-      }
+const enabled = autoCacheUnplayedEpisodes.value
+if (enabled) {
+  const cached = await localStore.getCachedPlaylist('unfinished')
+  if (cached) {
+    autoPlaylist.value = {
+      ...(cached as any),
+      totalItems: (cached.totalItems as number) || ((cached.items as any[])?.length ?? 0)
     }
   }
 }
+
+watch(networkConnected, (newVal) => {
+  if (newVal && autoCacheUnplayedEpisodes.value) {
+    if (!autoPlaylist.value.items.length) {
+      setTimeout(() => {
+        fetchAutoPlaylist()
+      }, 1000)
+    } else {
+      checkAutoDownload()
+    }
+  }
+})
+
+watch(autoCacheUnplayedEpisodes, (newVal) => {
+  if (newVal && !autoPlaylist.value.items.length) {
+    fetchAutoPlaylist()
+  }
+})
+
+async function fetchAutoPlaylist() {
+  try {
+    const { items, downloadedEpisodeKeys: keys, totalItems } = await buildUnfinishedAutoPlaylist(networkConnected.value)
+
+    downloadedEpisodeKeys.value = keys
+
+    autoPlaylist.value = {
+      id: 'unfinished',
+      name: strings.LabelAutoUnfinishedPodcasts,
+      items,
+      totalItems
+    }
+
+    await localStore.setCachedPlaylist(toCacheablePlaylist(autoPlaylist.value))
+    checkAutoDownload()
+  } catch (error) {
+    console.error('Failed to fetch auto playlist', error)
+  }
+}
+
+async function ensureDownloadedKeySet(): Promise<Set<string>> {
+  if (downloadedEpisodeKeys.value instanceof Set) {
+    return downloadedEpisodeKeys.value
+  }
+
+  const localLibraries = await db.getLocalLibraryItems('podcast')
+  downloadedEpisodeKeys.value = collectDownloadedEpisodeKeys(localLibraries as Record<string, unknown>[])
+  return downloadedEpisodeKeys.value!
+}
+
+async function checkAutoDownload() {
+  if (!networkConnected.value) return
+  if (!appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
+
+  const downloadedKeys = await ensureDownloadedKeySet()
+
+  for (const qi of autoPlaylist.value.items) {
+    const liId = qi.libraryItemId || qi.libraryItem?.libraryItemId || qi.libraryItem?.id
+    const epId = qi.episodeId || qi.episode?.serverEpisodeId || qi.episode?.id
+    if (!liId || !epId) continue
+
+    const key = `${liId}_${epId}`
+    if (downloadedKeys.has(key)) continue
+
+    AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: epId })
+    downloadedKeys.add(key)
+  }
+}
+
+onMounted(() => {
+  if (autoCacheUnplayedEpisodes.value) fetchAutoPlaylist()
+})
 </script>

@@ -8,6 +8,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.graphics.BitmapFactory
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
+import androidx.core.net.toUri
 import com.audiobookshelf.app.BuildConfig
 import com.audiobookshelf.app.R
 import com.audiobookshelf.app.device.DeviceManager
@@ -162,7 +163,7 @@ class PlaybackSession(
   @JsonIgnore
   fun getCoverUri(ctx: Context): Uri {
     if (localLibraryItem?.coverContentUrl != null) {
-      var coverUri = Uri.parse(localLibraryItem?.coverContentUrl.toString())
+      var coverUri = localLibraryItem?.coverContentUrl.toString().toUri()
       if (coverUri.toString().startsWith("file:")) {
         coverUri =
                 FileProvider.getUriForFile(
@@ -173,33 +174,33 @@ class PlaybackSession(
       }
 
       return coverUri
-              ?: Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+              ?: ("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri()
     }
 
     if (coverPath == null)
-            return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+            return ("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri()
 
     // As of v2.17.0 token is not needed with cover image requests
     if (checkIsServerVersionGte("2.17.0")) {
-      return Uri.parse("$serverAddress/api/items/$libraryItemId/cover")
+      return "$serverAddress/api/items/$libraryItemId/cover".toUri()
     }
-    return Uri.parse("$serverAddress/api/items/$libraryItemId/cover?token=${DeviceManager.token}")
+    return "$serverAddress/api/items/$libraryItemId/cover?token=${DeviceManager.token}".toUri()
   }
 
   @JsonIgnore
   fun getContentUri(audioTrack: AudioTrack): Uri {
-    if (isLocal) return Uri.parse(audioTrack.contentUrl) // Local content url
+    if (isLocal) return audioTrack.contentUrl.toUri() // Local content url
     // As of v2.22.0 tracks use a different endpoint
     // See: https://github.com/advplyr/audiobookshelf/pull/4263
     if (checkIsServerVersionGte("2.22.0")) {
       return if (isDirectPlay) {
-        Uri.parse("$serverAddress/public/session/$id/track/${audioTrack.index}")
+        "$serverAddress/public/session/$id/track/${audioTrack.index}".toUri()
       } else {
         // Transcode uses HlsRouter on server
-        Uri.parse("$serverAddress${audioTrack.contentUrl}")
+        "$serverAddress${audioTrack.contentUrl}".toUri()
       }
     }
-    return Uri.parse("$serverAddress${audioTrack.contentUrl}?token=${DeviceManager.token}")
+    return "$serverAddress${audioTrack.contentUrl}?token=${DeviceManager.token}".toUri()
   }
 
   @JsonIgnore
@@ -294,9 +295,9 @@ class PlaybackSession(
 
     // As of v2.17.0 token is not needed with cover image requests
     val coverUri = if (checkIsServerVersionGte("2.17.0")) {
-      Uri.parse("$serverAddress/api/items/$libraryItemId/cover")
+      "$serverAddress/api/items/$libraryItemId/cover".toUri()
     } else {
-      Uri.parse("$serverAddress/api/items/$libraryItemId/cover?token=${DeviceManager.token}")
+      "$serverAddress/api/items/$libraryItemId/cover?token=${DeviceManager.token}".toUri()
     }
 
     // Cast always uses server cover uri

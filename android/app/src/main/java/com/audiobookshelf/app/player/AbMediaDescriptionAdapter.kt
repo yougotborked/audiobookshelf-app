@@ -1,3 +1,4 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 package com.audiobookshelf.app.player
 
 import android.app.PendingIntent
@@ -5,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.support.v4.media.session.MediaControllerCompat
 import com.audiobookshelf.app.BuildConfig
@@ -86,7 +88,7 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
 
         Glide.with(playerNotificationService)
           .asBitmap()
-          .load(Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon))
+          .load(("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri())
           .submit()
           .get()
       }

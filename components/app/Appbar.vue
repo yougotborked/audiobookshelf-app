@@ -5,7 +5,7 @@
         <span class="material-symbols text-3xl text-md-on-surface">arrow_back</span>
       </a>
       <div v-if="user && currentLibrary">
-        <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-md-surface-1 bg-opacity-30 rounded-md flex items-center" @click="clickShowLibraryModal">
+        <button type="button" aria-label="Show library modal" class="pl-1.5 pr-2.5 py-2 bg-md-surface-1/30 rounded-md flex items-center" @click="clickShowLibraryModal">
           <ui-library-icon :icon="currentLibraryIcon" :size="4" font-size="base" />
           <p class="text-md-body-m leading-4 ml-2 mt-0.5 max-w-24 truncate text-md-on-surface landscape:hidden">{{ currentLibraryName }}</p>
         </button>
@@ -42,95 +42,75 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { AbsAudioPlayer } from '@/plugins/capacitor'
 
-export default {
-  data() {
-    return {
-      onCastAvailableUpdateListener: null,
-      onCastSupportUpdateListener: null
-    }
-  },
-  computed: {
-    isCastAvailable: {
-      get() {
-        return this.$store.state.isCastAvailable
-      },
-      set(val) {
-        this.$store.commit('setCastAvailable', val)
-      }
-    },
-    castEnabled: {
-      get() {
-        return this.$store.state.isCastEnabled
-      },
-      set(val) {
-        this.$store.commit('setCastEnabled', val)
-      }
-    },
-    currentLibrary() {
-      return this.$store.getters['libraries/getCurrentLibrary']
-    },
-    currentLibraryName() {
-      return this.currentLibrary?.name || ''
-    },
-    currentLibraryIcon() {
-      return this.currentLibrary?.icon || 'database'
-    },
-    showBack() {
-      if (!this.$route.name) return true
-      return this.$route.name !== 'index' && !this.$route.name.startsWith('bookshelf')
-    },
-    user() {
-      return this.$store.state.user.user
-    },
-    username() {
-      return this.user?.username || 'err'
-    },
-    isCasting() {
-      return this.$store.state.isCasting
-    }
-  },
-  methods: {
-    castClick() {
-      if (this.$store.getters['getIsCurrentSessionLocal']) {
-        this.$eventBus.$emit('cast-local-item')
-        return
-      }
-      AbsAudioPlayer.requestSession()
-    },
-    clickShowSideDrawer() {
-      this.$store.commit('setShowSideDrawer', true)
-    },
-    clickShowLibraryModal() {
-      this.$store.commit('libraries/setShowModal', true)
-    },
-    back() {
-      window.history.back()
-    },
-    onCastAvailableUpdate(data) {
-      this.isCastAvailable = data && data.value
-    },
-    onCastSupportUpdate(data) {
-      this.castEnabled = data && data.value
-    }
-  },
-  async mounted() {
-    AbsAudioPlayer.getIsCastAvailable().then((data) => {
-      this.isCastAvailable = data && data.value
-    })
-    AbsAudioPlayer.getIsCastSupported?.().then?.((data) => {
-      this.castEnabled = data && data.value
-    })
-    this.onCastAvailableUpdateListener = await AbsAudioPlayer.addListener('onCastAvailableUpdate', this.onCastAvailableUpdate)
-    this.onCastSupportUpdateListener = await AbsAudioPlayer.addListener('onCastSupportUpdate', this.onCastSupportUpdate)
-  },
-  beforeDestroy() {
-    this.onCastAvailableUpdateListener?.remove()
-    this.onCastSupportUpdateListener?.remove()
+const appStore = useAppStore()
+const userStore = useUserStore()
+const librariesStore = useLibrariesStore()
+const route = useRoute()
+const bus = useEventBus()
+
+const onCastAvailableUpdateListener = ref<{ remove(): void } | null>(null)
+const onCastSupportUpdateListener = ref<{ remove(): void } | null>(null)
+
+const currentLibrary = computed(() => librariesStore.getCurrentLibrary)
+const currentLibraryName = computed(() => currentLibrary.value?.name || '')
+const currentLibraryIcon = computed(() => (currentLibrary.value as Record<string, unknown>)?.icon as string || 'database')
+const showBack = computed(() => {
+  if (!route.name) return true
+  const name = String(route.name)
+  return name !== 'index' && !name.startsWith('bookshelf')
+})
+const user = computed(() => userStore.user)
+const isCasting = computed(() => appStore.isCasting)
+const isCastAvailable = computed(() => appStore.isCastAvailable)
+const castEnabled = computed(() => appStore.isCastEnabled)
+
+function castClick() {
+  if (appStore.getIsCurrentSessionLocal) {
+    bus.emit('cast-local-item')
+    return
   }
+  AbsAudioPlayer.requestSession()
 }
+
+function clickShowSideDrawer() {
+  appStore.showSideDrawer = true
+}
+
+function clickShowLibraryModal() {
+  librariesStore.showModal = true
+}
+
+function back() {
+  window.history.back()
+}
+
+function onCastAvailableUpdate(data: { value?: boolean } | null) {
+  appStore.isCastAvailable = !!(data && data.value)
+}
+
+function onCastSupportUpdate(data: { value?: boolean } | null) {
+  appStore.isCastEnabled = !!(data && data.value)
+}
+
+onMounted(async () => {
+  AbsAudioPlayer.getIsCastAvailable().then((data: { value?: boolean } | null) => {
+    appStore.isCastAvailable = !!(data && data.value)
+  })
+  const castSupportedFn = (AbsAudioPlayer as Record<string, unknown>).getIsCastSupported as (() => Promise<{ value?: boolean } | null>) | undefined
+  castSupportedFn?.()?.then?.((data) => {
+    appStore.isCastEnabled = !!(data && data.value)
+  })
+  onCastAvailableUpdateListener.value = await AbsAudioPlayer.addListener('onCastAvailableUpdate', onCastAvailableUpdate)
+  onCastSupportUpdateListener.value = await AbsAudioPlayer.addListener('onCastSupportUpdate', onCastSupportUpdate)
+})
+
+onBeforeUnmount(() => {
+  onCastAvailableUpdateListener.value?.remove()
+  onCastSupportUpdateListener.value?.remove()
+})
 </script>
 
 <style>

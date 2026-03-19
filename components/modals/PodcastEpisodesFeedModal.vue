@@ -6,18 +6,18 @@
       </div>
     </template>
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
-      <div class="feed-content w-full overflow-x-hidden overflow-y-auto bg-md-surface-1 rounded-lg border border-white border-opacity-20" @click.stop.prevent>
-        <template v-for="(episode, index) in episodes">
-          <div :key="index" class="relative" :class="itemEpisodeMap[episode.enclosure.url] ? 'bg-md-surface-3 bg-opacity-40' : selectedEpisodes[String(index)] ? 'bg-md-primary bg-opacity-10' : index % 2 == 0 ? 'bg-md-surface-3 bg-opacity-25' : 'bg-md-surface-3 bg-opacity-5'" @click="selectEpisode(episode, index)">
+      <div class="feed-content w-full overflow-x-hidden overflow-y-auto bg-md-surface-1 rounded-lg border border-white/20" @click.stop.prevent>
+        <template v-for="(episode, index) in episodes" :key="index">
+          <div class="relative" :class="itemEpisodeMap[(episode as any).enclosure.url] ? 'bg-md-surface-3/40' : selectedEpisodes[String(index)] ? 'bg-md-primary/10' : index % 2 == 0 ? 'bg-md-surface-3/25' : 'bg-md-surface-3/5'" @click="selectEpisode(episode, index)">
             <div class="absolute top-0 left-0 h-full flex items-center p-2">
-              <span v-if="itemEpisodeMap[episode.enclosure.url]" class="material-symbols text-md-primary text-xl">download_done</span>
+              <span v-if="itemEpisodeMap[(episode as any).enclosure.url]" class="material-symbols text-md-primary text-xl">download_done</span>
               <ui-checkbox v-else v-model="selectedEpisodes[String(index)]" small checkbox-bg="md-surface-3" border-color="gray-600" />
             </div>
-            <div class="pl-9 pr-2 py-2 border-b border-white border-opacity-10">
-              <p v-if="episode.episode" class="font-semibold text-gray-200 text-xs">#{{ episode.episode }}</p>
-              <p class="break-words mb-1 text-sm">{{ episode.title }}</p>
-              <p v-if="episode.subtitle" class="break-words mb-1 text-xs text-gray-300 episode-subtitle">{{ episode.subtitle }}</p>
-              <p class="text-xxs text-gray-300">{{ $getString('LabelPublishedDate', [episode.publishedAt ? $dateDistanceFromNow(episode.publishedAt) : $strings.LabelUnknown]) }}</p>
+            <div class="pl-9 pr-2 py-2 border-b border-white/10">
+              <p v-if="(episode as any).episode" class="font-semibold text-gray-200 text-xs">#{{ (episode as any).episode }}</p>
+              <p class="break-words mb-1 text-sm">{{ (episode as any).title }}</p>
+              <p v-if="(episode as any).subtitle" class="break-words mb-1 text-xs text-gray-300 episode-subtitle">{{ (episode as any).subtitle }}</p>
+              <p class="text-xxs text-gray-300">{{ utils.dateDistanceFromNow((episode as any).publishedAt) ? getString('LabelPublishedDate', [(episode as any).publishedAt ? utils.dateDistanceFromNow((episode as any).publishedAt) : strings.LabelUnknown]) : '' }}</p>
             </div>
           </div>
         </template>
@@ -29,102 +29,103 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  props: {
-    value: Boolean,
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    },
-    episodes: {
-      type: Array,
-      default: () => []
-    }
-  },
-  data() {
-    return {
-      processing: false,
-      selectedEpisodes: {}
-    }
-  },
-  watch: {
-    show: {
-      immediate: true,
-      handler(newVal) {
-        if (newVal) this.init()
-      }
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    },
-    allDownloaded() {
-      return !this.episodes.some((episode) => !this.itemEpisodeMap[episode.enclosure.url])
-    },
-    episodesSelected() {
-      return Object.keys(this.selectedEpisodes).filter((key) => !!this.selectedEpisodes[key])
-    },
-    itemEpisodes() {
-      if (!this.libraryItem) return []
-      return this.libraryItem.media.episodes || []
-    },
-    itemEpisodeMap() {
-      var map = {}
-      this.itemEpisodes.forEach((item) => {
-        if (item.enclosure) map[item.enclosure.url] = true
-      })
-      return map
-    }
-  },
-  methods: {
-    downloadEpisodes() {
-      const episodesToDownload = this.episodesSelected.map((episodeIndex) => this.episodes[Number(episodeIndex)])
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { useStrings, getString } from '~/composables/useStrings'
+import { useNativeHttp } from '~/composables/useNativeHttp'
+import { useToast } from '~/composables/useToast'
+import { useUtils } from '~/composables/useUtils'
 
-      const payloadSize = JSON.stringify(episodesToDownload).length
-      const sizeInMb = payloadSize / 1024 / 1024
-      const sizeInMbPretty = sizeInMb.toFixed(2) + 'MB'
-      console.log('Request size', sizeInMb)
-      if (sizeInMb > 4.99) {
-        return this.$toast.error(`Request is too large (${sizeInMbPretty}) should be < 5Mb`)
-      }
+const props = defineProps<{
+  modelValue: boolean
+  libraryItem: Record<string, unknown>
+  episodes: Record<string, unknown>[]
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [val: boolean]
+}>()
 
-      this.processing = true
-      this.$nativeHttp
-        .post(`/api/podcasts/${this.libraryItem.id}/download-episodes`, episodesToDownload)
-        .then(() => {
-          this.processing = false
-          this.$toast.success('Started downloading episodes on server')
-          this.show = false
-        })
-        .catch((error) => {
-          var errorMsg = error.response && error.response.data ? error.response.data : 'Failed to download episodes'
-          console.error('Failed to download episodes', error)
-          this.processing = false
-          this.$toast.error(errorMsg)
+const strings = useStrings()
+const nativeHttp = useNativeHttp()
+const toast = useToast()
+const utils = useUtils()
 
-          this.selectedEpisodes = {}
-        })
-    },
-    selectEpisode(episode, index) {
-      if (this.itemEpisodeMap[episode.enclosure.url]) return
-      this.selectedEpisodes[String(index)] = !this.selectedEpisodes[String(index)]
-    },
-    init() {
-      this.episodes.sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1))
-      for (let i = 0; i < this.episodes.length; i++) {
-        // this.selectedEpisodes[String(i)] = false
-        this.$set(this.selectedEpisodes, String(i), false)
-      }
-    }
-  },
-  mounted() {}
+const processing = ref(false)
+const selectedEpisodes = ref<Record<string, boolean>>({})
+
+const show = computed({
+  get() { return props.modelValue },
+  set(val: boolean) { emit('update:modelValue', val) }
+})
+
+const episodesSelected = computed(() => Object.keys(selectedEpisodes.value).filter((key) => !!selectedEpisodes.value[key]))
+
+const itemEpisodes = computed(() => {
+  if (!props.libraryItem) return []
+  return ((props.libraryItem.media as Record<string, unknown>).episodes as Record<string, unknown>[]) || []
+})
+
+const itemEpisodeMap = computed(() => {
+  const map: Record<string, boolean> = {}
+  itemEpisodes.value.forEach((item) => {
+    const enc = item.enclosure as Record<string, string>
+    if (enc) map[enc.url] = true
+  })
+  return map
+})
+
+watch(show, (newVal: boolean) => {
+  if (newVal) init()
+}, { immediate: true })
+
+function downloadEpisodes() {
+  const episodesToDownload = episodesSelected.value.map((episodeIndex) => props.episodes[Number(episodeIndex)])
+
+  const payloadSize = JSON.stringify(episodesToDownload).length
+  const sizeInMb = payloadSize / 1024 / 1024
+  const sizeInMbPretty = sizeInMb.toFixed(2) + 'MB'
+  console.log('Request size', sizeInMb)
+  if (sizeInMb > 4.99) {
+    toast.error(`Request is too large (${sizeInMbPretty}) should be < 5Mb`)
+    return
+  }
+
+  processing.value = true
+  nativeHttp
+    .post(`/api/podcasts/${props.libraryItem.id}/download-episodes`, episodesToDownload)
+    .then(() => {
+      processing.value = false
+      toast.success('Started downloading episodes on server')
+      show.value = false
+    })
+    .catch((error) => {
+      const err = error as Record<string, Record<string, string>>
+      const errorMsg = err.response && err.response.data ? err.response.data : 'Failed to download episodes'
+      console.error('Failed to download episodes', error)
+      processing.value = false
+      toast.error(errorMsg as string)
+
+      selectedEpisodes.value = {}
+    })
+}
+
+function selectEpisode(episode: Record<string, unknown>, index: number) {
+  const enc = episode.enclosure as Record<string, string>
+  if (itemEpisodeMap.value[enc.url]) return
+  selectedEpisodes.value[String(index)] = !selectedEpisodes.value[String(index)]
+}
+
+function init() {
+  const sorted = [...props.episodes].sort((a, b) => {
+    const aTime = a.publishedAt as number
+    const bTime = b.publishedAt as number
+    return aTime < bTime ? 1 : -1
+  })
+  const newSelected: Record<string, boolean> = {}
+  for (let i = 0; i < sorted.length; i++) {
+    newSelected[String(i)] = false
+  }
+  selectedEpisodes.value = newSelected
 }
 </script>
 

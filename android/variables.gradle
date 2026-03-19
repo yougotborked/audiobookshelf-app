@@ -1,7 +1,7 @@
 ext {
     minSdkVersion = 26
-    compileSdkVersion = 35
-    targetSdkVersion = 35
+    compileSdkVersion = 36
+    targetSdkVersion = 36
     androidxActivityVersion = '1.9.2'
     androidxAppCompatVersion = '1.7.0'
     androidxCoordinatorLayoutVersion = '1.3.0'
@@ -11,16 +11,16 @@ ext {
     androidxJunitVersion = '1.2.1'
     androidxEspressoCoreVersion = '3.6.1'
     cordovaAndroidVersion = '10.1.1'
-    androidx_core_ktx_version = '1.16.0'
-    androidx_media_version = '1.7.0'
+    androidx_core_ktx_version = '1.18.0'
+    androidx_media_version = '1.7.1'
     exoplayer_version = '2.18.7' // DEPRECATED: kept for reference; replaced by media3
-    media3_version = '1.5.1'
-    glide_version = '4.16.0'
+    media3_version = '1.9.2'
+    glide_version = '5.0.5'
     junit_version = '4.13.2'
-    kotlin_version = '2.1.0'
-    kotlin_coroutines_version = '1.10.1'
+    kotlin_version = '2.3.20'
+    kotlin_coroutines_version = '1.10.2'
     test_runner_version = '1.1.0'
     coreSplashScreenVersion = '1.0.1'
     androidxWebkitVersion = '1.12.1'
-    ksp_version = '2.1.0-1.0.29'
+    ksp_version = '2.3.6'
 }

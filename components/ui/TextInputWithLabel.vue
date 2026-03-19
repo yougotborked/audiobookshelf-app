@@ -5,21 +5,24 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    value: [String, Number],
-    label: String,
-    type: { type: String, default: 'text' },
-    disabled: Boolean,
-    placeholder: String,
-    autofocus: { type: Boolean, default: true }
-  },
-  computed: {
-    inputValue: {
-      get() { return this.value },
-      set(val) { this.$emit('input', val) }
-    }
-  }
-}
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = defineProps<{
+  modelValue?: string | number
+  label?: string
+  type?: string
+  disabled?: boolean
+  placeholder?: string
+  autofocus?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: string | number]
+}>()
+
+const inputValue = computed({
+  get() { return props.modelValue },
+  set(val: string | number | undefined) { if (val !== undefined) emit('update:modelValue', val) }
+})
 </script>

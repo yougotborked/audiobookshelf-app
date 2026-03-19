@@ -6,34 +6,25 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    value: [String, Number],
-    min: Number,
-    max: Number,
-    step: Number,
-    inputWidth: {
-      type: String,
-      default: 'unset'
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    input: {
-      get() {
-        return this.value
-      },
-      set(val) {
-        this.$emit('input', val)
-      }
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = defineProps<{
+  modelValue?: string | number
+  min?: number
+  max?: number
+  step?: number
+  inputWidth?: string
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: string | number]
+}>()
+
+const input = computed({
+  get() { return props.modelValue },
+  set(val: string | number | undefined) { if (val !== undefined) emit('update:modelValue', val) }
+})
 </script>
 
 <style scoped>

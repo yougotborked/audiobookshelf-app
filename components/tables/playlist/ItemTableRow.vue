@@ -24,7 +24,7 @@
           </button>
         </div>
         <div class="w-8 min-w-8 flex justify-center">
-          <button class="w-8 h-8 rounded-full flex items-center justify-center" @click.stop.prevent="showMore">
+          <button class="w-8 h-8 rounded-full flex items-center justify-center" @click.stop.prevent="showMoreMenu">
             <span class="material-symbols text-2xl">more_vert</span>
           </button>
         </div>
@@ -34,174 +34,127 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    playlistId: String,
-    item: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    itemUrl() {
-      if (this.episodeId) return `/item/${this.libraryItemId}/${this.episodeId}`
-      return `/item/${this.libraryItemId}`
-    },
-    libraryItem() {
-      return this.item.libraryItem || {}
-    },
-    libraryItemId() {
-      return this.item.libraryItemId || this.libraryItem.id
-    },
-    localLibraryItem() {
-      return this.item.localLibraryItem
-    },
-    episode() {
-      return this.item.episode
-    },
-    episodeId() {
-      // Prefer the server episode id so progress can be looked up correctly
-      return this.item.episodeId || this.episode?.serverEpisodeId || this.episode?.id || null
-    },
-    localEpisode() {
-      return this.item.localEpisode
-    },
-    media() {
-      return this.libraryItem.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    mediaType() {
-      return this.libraryItem.mediaType
-    },
-    isPodcast() {
-      return this.mediaType === 'podcast'
-    },
-    tracks() {
-      if (this.episode) return []
-      return this.media.tracks || []
-    },
-    itemTitle() {
-      if (this.episode) return this.episode.title
-      return this.mediaMetadata.title || ''
-    },
-    bookAuthors() {
-      if (this.episode) return []
-      return this.mediaMetadata.authors || []
-    },
-    bookAuthorName() {
-      return this.bookAuthors.map((au) => au.name).join(', ')
-    },
-    authorName() {
-      if (this.episode) return this.mediaMetadata.author
-      return this.bookAuthorName
-    },
-    itemDuration() {
-      if (this.episode) return this.$elapsedPretty(this.episode.duration)
-      return this.$elapsedPretty(this.media.duration)
-    },
-    isMissing() {
-      return this.libraryItem.isMissing
-    },
-    isInvalid() {
-      return this.libraryItem.isInvalid
-    },
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    },
-    coverWidth() {
-      return 50
-    },
-    showPlayBtn() {
-      return !this.isMissing && !this.isInvalid && (this.tracks.length || this.episode)
-    },
-    isOpenInPlayer() {
-      if (
-        this.localLibraryItem &&
-        this.localEpisode &&
-        this.$store.getters['getIsMediaStreaming'](this.localLibraryItem.id, this.localEpisode.id)
-      )
-        return true
-      return this.$store.getters['getIsMediaStreaming'](this.libraryItemId, this.episodeId)
-    },
-    streamIsPlaying() {
-      return this.$store.state.playerIsPlaying && this.isOpenInPlayer
-    },
-    playerIsStartingPlayback() {
-      // Play has been pressed and waiting for native play response
-      return this.$store.state.playerIsStartingPlayback
-    },
-    playerIsStartingForThisMedia() {
-      const mediaId = this.$store.state.playerStartingPlaybackMediaId
-      if (!mediaId) return false
+<script setup lang="ts">
+const props = defineProps<{
+  playlistId?: string
+  item: Record<string, unknown>
+}>()
 
-      let thisMediaId = this.episodeId || this.libraryItemId
-      return mediaId === thisMediaId
-    },
-    userItemProgress() {
-      return (
-        this.$store.getters['globals/getLocalMediaProgressByServerItemId'](
-          this.libraryItemId,
-          this.episodeId
-        ) ||
-        this.$store.getters['user/getUserMediaProgress'](
-          this.libraryItemId,
-          this.episodeId
-        )
-      )
-    },
-    userIsFinished() {
-      if (this.userItemProgress?.isFinished) return true
-      return this.progressPercent >= 0.97
-    },
-    progressPercent() {
-      return Math.max(Math.min(1, this.userItemProgress?.progress || 0), 0)
-    }
-  },
-  methods: {
-    showMore() {
-      const playlistItem = {
-        libraryItem: this.libraryItem,
-        episode: this.episode
-      }
-      if (this.localLibraryItem) {
-        playlistItem.libraryItem.localLibraryItem = this.localLibraryItem
-      }
-      if (this.localEpisode && playlistItem.episode) {
-        playlistItem.episode.localEpisode = this.localEpisode
-      }
-      this.$emit('showMore', playlistItem)
-    },
-    async playClick() {
-      if (this.playerIsStartingPlayback) return
+const emit = defineEmits<{
+  showMore: [item: Record<string, unknown>]
+}>()
 
-      await this.$hapticsImpact()
-      let mediaId = this.episodeId || this.libraryItemId
-      if (this.streamIsPlaying) {
-        this.$eventBus.$emit('pause-item')
-      } else if (this.localLibraryItem) {
-        this.$store.commit('setPlayerIsStartingPlayback', mediaId)
-        this.$eventBus.$emit('play-item', {
-          libraryItemId: this.localLibraryItem.id,
-          episodeId: this.localEpisode?.id,
-          serverLibraryItemId: this.libraryItemId,
-          serverEpisodeId: this.episodeId
-        })
-      } else {
-        this.$store.commit('setPlayerIsStartingPlayback', mediaId)
-        this.$eventBus.$emit('play-item', {
-          libraryItemId: this.libraryItemId,
-          episodeId: this.episodeId
-        })
-      }
-    }
-  },
-  mounted() {}
+const utils = useUtils()
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const userStore = useUserStore()
+const { impact } = useHaptics()
+const eventBus = useEventBus()
+
+const libraryItem = computed(() => (props.item.libraryItem as Record<string, unknown>) || {})
+const libraryItemId = computed(() => (props.item.libraryItemId as string) || (libraryItem.value.id as string))
+const localLibraryItem = computed(() => props.item.localLibraryItem as Record<string, unknown> | undefined)
+const episode = computed(() => props.item.episode as Record<string, unknown> | undefined)
+const episodeId = computed(() => {
+  // Prefer the server episode id so progress can be looked up correctly
+  return (props.item.episodeId as string) || (episode.value?.serverEpisodeId as string) || (episode.value?.id as string) || null
+})
+const localEpisode = computed(() => props.item.localEpisode as Record<string, unknown> | undefined)
+const media = computed(() => (libraryItem.value.media as Record<string, unknown>) || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+const tracks = computed(() => {
+  if (episode.value) return []
+  return (media.value.tracks as unknown[]) || []
+})
+const itemTitle = computed(() => {
+  if (episode.value) return episode.value.title as string
+  return (mediaMetadata.value.title as string) || ''
+})
+const bookAuthors = computed(() => {
+  if (episode.value) return []
+  return (mediaMetadata.value.authors as Record<string, unknown>[]) || []
+})
+const bookAuthorName = computed(() => bookAuthors.value.map((au) => au.name as string).join(', '))
+const authorName = computed(() => {
+  if (episode.value) return mediaMetadata.value.author as string
+  return bookAuthorName.value
+})
+const itemDuration = computed(() => {
+  if (episode.value) return utils.elapsedPretty(episode.value.duration as number)
+  return utils.elapsedPretty(media.value.duration as number)
+})
+const isMissing = computed(() => libraryItem.value.isMissing as boolean)
+const isInvalid = computed(() => libraryItem.value.isInvalid as boolean)
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
+const showPlayBtn = computed(() => !isMissing.value && !isInvalid.value && (tracks.value.length || episode.value))
+const itemUrl = computed(() => {
+  if (episodeId.value) return `/item/${libraryItemId.value}/${episodeId.value}`
+  return `/item/${libraryItemId.value}`
+})
+
+const isOpenInPlayer = computed(() => {
+  if (localLibraryItem.value && localEpisode.value && appStore.getIsMediaStreaming(localLibraryItem.value.id as string, localEpisode.value.id as string))
+    return true
+  return appStore.getIsMediaStreaming(libraryItemId.value, episodeId.value)
+})
+const streamIsPlaying = computed(() => appStore.playerIsPlaying && isOpenInPlayer.value)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
+const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
+  const mediaId = appStore.playerStartingPlaybackMediaId
+  if (!mediaId) return false
+  const thisMediaId = episodeId.value || libraryItemId.value
+  return mediaId === thisMediaId
+})
+
+const userItemProgress = computed(() =>
+  globalsStore.getLocalMediaProgressByServerItemId(libraryItemId.value, episodeId.value) ||
+  userStore.getUserMediaProgress(libraryItemId.value, episodeId.value)
+)
+const progressPercent = computed(() => Math.max(Math.min(1, (userItemProgress.value as Record<string, unknown>)?.progress as number || 0), 0))
+const userIsFinished = computed(() => {
+  if ((userItemProgress.value as Record<string, unknown>)?.isFinished) return true
+  return progressPercent.value >= 0.97
+})
+
+function showMoreMenu() {
+  const playlistItem: Record<string, unknown> = {
+    libraryItem: { ...libraryItem.value },
+    episode: episode.value ? { ...episode.value } : undefined
+  }
+  if (localLibraryItem.value) {
+    (playlistItem.libraryItem as Record<string, unknown>).localLibraryItem = localLibraryItem.value
+  }
+  if (localEpisode.value && playlistItem.episode) {
+    (playlistItem.episode as Record<string, unknown>).localEpisode = localEpisode.value
+  }
+  emit('showMore', playlistItem)
+}
+
+async function playClick() {
+  if (playerIsStartingPlayback.value) return
+
+  await impact()
+  const mediaId = episodeId.value || libraryItemId.value
+  if (streamIsPlaying.value) {
+    eventBus.emit('pause-item')
+  } else if (localLibraryItem.value) {
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = mediaId
+    eventBus.emit('play-item', {
+      libraryItemId: localLibraryItem.value.id as string,
+      episodeId: (localEpisode.value?.id as string | undefined) ?? null,
+      serverLibraryItemId: libraryItemId.value,
+      serverEpisodeId: episodeId.value
+    })
+  } else {
+    appStore.playerIsStartingPlayback = true
+    appStore.playerStartingPlaybackMediaId = mediaId
+    eventBus.emit('play-item', {
+      libraryItemId: libraryItemId.value,
+      episodeId: episodeId.value
+    })
+  }
 }
 </script>
 

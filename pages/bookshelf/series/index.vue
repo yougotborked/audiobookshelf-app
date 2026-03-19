@@ -2,13 +2,5 @@
   <bookshelf-lazy-bookshelf page="series" />
 </template>
 
-<script>
-export default {
-  data() {
-    return {}
-  },
-  computed: {},
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
 </script>

@@ -154,6 +154,9 @@ class AbsAudioPlayer : Plugin() {
     // Send current state to UI after resume to sync up (with small delay to let WebView fully resume)
     if (::playerNotificationService.isInitialized && playerNotificationService.currentPlaybackSession != null) {
       Handler(Looper.getMainLooper()).postDelayed({
+        // Re-send the playback session first so the Vue layer can reconnect if it lost track of
+        // the session while the app was backgrounded (e.g. a navigation event cleared the store).
+        playerNotificationService.clientEventEmitter?.onPlaybackSession(playerNotificationService.currentPlaybackSession!!)
         playerNotificationService.sendClientMetadata(PlayerState.READY)
         playerNotificationService.clientEventEmitter?.onPlayingUpdate(playerNotificationService.currentPlayer.isPlaying)
         playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()

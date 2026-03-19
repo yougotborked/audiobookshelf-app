@@ -1,0 +1,134 @@
+import { ref, readonly } from 'vue'
+import enUsStrings from '~/strings/en-us.json'
+
+const defaultCode = 'en-us'
+
+export const languageCodeMap: Record<string, { label: string; dateFnsLocale: string }> = {
+  bn: { label: 'বাংলা', dateFnsLocale: 'bn' },
+  ca: { label: 'Català', dateFnsLocale: 'ca' },
+  cs: { label: 'Čeština', dateFnsLocale: 'cs' },
+  da: { label: 'Dansk', dateFnsLocale: 'da' },
+  de: { label: 'Deutsch', dateFnsLocale: 'de' },
+  'en-us': { label: 'English', dateFnsLocale: 'enUS' },
+  es: { label: 'Español', dateFnsLocale: 'es' },
+  fi: { label: 'Suomi', dateFnsLocale: 'fi' },
+  fr: { label: 'Français', dateFnsLocale: 'fr' },
+  hr: { label: 'Hrvatski', dateFnsLocale: 'hr' },
+  it: { label: 'Italiano', dateFnsLocale: 'it' },
+  lt: { label: 'Lietuvių', dateFnsLocale: 'lt' },
+  hu: { label: 'Magyar', dateFnsLocale: 'hu' },
+  nl: { label: 'Nederlands', dateFnsLocale: 'nl' },
+  no: { label: 'Norsk', dateFnsLocale: 'no' },
+  pl: { label: 'Polski', dateFnsLocale: 'pl' },
+  'pt-br': { label: 'Português (Brasil)', dateFnsLocale: 'ptBR' },
+  ru: { label: 'Русский', dateFnsLocale: 'ru' },
+  sl: { label: 'Slovenščina', dateFnsLocale: 'sl' },
+  sv: { label: 'Svenska', dateFnsLocale: 'sv' },
+  tr: { label: 'Türkçe', dateFnsLocale: 'tr' },
+  uk: { label: 'Українська', dateFnsLocale: 'uk' },
+  'vi-vn': { label: 'Tiếng Việt', dateFnsLocale: 'vi' },
+  'zh-cn': { label: '简体中文 (Simplified Chinese)', dateFnsLocale: 'zhCN' }
+}
+
+export const languageCodeOptions = Object.keys(languageCodeMap).map((code) => ({
+  text: languageCodeMap[code].label,
+  value: code
+}))
+
+export const languageCodes = {
+  default: defaultCode,
+  current: defaultCode,
+  local: null as string | null,
+  server: null as string | null
+}
+
+type StringsMap = Record<string, string>
+
+const _strings = ref<StringsMap>({ ...enUsStrings as StringsMap })
+const _translations: Record<string, StringsMap> = { [defaultCode]: enUsStrings as StringsMap }
+
+function supplant(str: string, subs: Record<string, string | number>): string {
+  return str.replace(/{([^{}]*)}/g, (a, b) => {
+    const r = subs[b]
+    return typeof r === 'string' || typeof r === 'number' ? String(r) : a
+  })
+}
+
+export function useStrings() {
+  return _strings.value
+}
+
+export function getString(key: string, subs?: (string | number)[]): string {
+  const str = _strings.value[key]
+  if (!str) return ''
+  if (subs && Array.isArray(subs) && subs.length) {
+    return supplant(str, Object.fromEntries(subs.map((v, i) => [String(i), v])))
+  }
+  return str
+}
+
+export function formatNumber(num: number): string {
+  return Intl.NumberFormat(languageCodes.current).format(num)
+}
+
+async function loadTranslationStrings(code: string): Promise<StringsMap | null> {
+  try {
+    const fileContents = await import(`~/strings/${code}.json`)
+    return fileContents.default as StringsMap
+  } catch (error) {
+    console.error('Failed to load i18n strings', code, error)
+    return null
+  }
+}
+
+export async function setLanguageCode(code: string): Promise<boolean> {
+  if (!code) return false
+  if (languageCodes.current === code) return false
+
+  const strings = _translations[code] || await loadTranslationStrings(code)
+  if (!strings) {
+    console.warn(`Invalid lang code ${code}`)
+    return false
+  }
+
+  _translations[code] = strings
+  languageCodes.current = code
+  const localStore = useLocalStore()
+  await localStore.setLanguage(code)
+
+  const defaultStrings = _translations[defaultCode]
+  for (const key in _strings.value) {
+    _strings.value[key] = strings[key] || defaultStrings[key]
+  }
+
+  const { setDateFnsLocale } = useUtils()
+  setDateFnsLocale(languageCodeMap[code]?.dateFnsLocale || 'enUS')
+
+  useEventBus().emit('change-lang', code)
+  return true
+}
+
+export function setServerLanguageCode(code: string): void {
+  if (!code) return
+  if (!languageCodeMap[code]) {
+    console.warn('invalid server language in', code)
+    return
+  }
+  languageCodes.server = code
+  if (!languageCodes.local && code !== defaultCode) {
+    setLanguageCode(code)
+  }
+}
+
+export async function initializeI18n(): Promise<void> {
+  const localStore = useLocalStore()
+  const localLanguage = await localStore.getLanguage()
+  if (!localLanguage) return
+  if (!languageCodeMap[localLanguage]) {
+    console.warn('Invalid local language code', localLanguage)
+    await localStore.setLanguage(defaultCode)
+    return
+  }
+  languageCodes.local = localLanguage
+  await setLanguageCode(localLanguage)
+}

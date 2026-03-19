@@ -8,8 +8,8 @@
     </div>
 
     <div v-if="!isIos" class="w-full max-w-full px-2 py-2">
-      <template v-for="folder in localFolders">
-        <nuxt-link :to="`/localMedia/folders/${folder.id}`" :key="folder.id" class="flex items-center px-2 py-4 bg-primary rounded-md border-bg mb-1">
+      <template v-for="folder in localFolders" :key="folder.id">
+        <nuxt-link :to="`/localMedia/folders/${folder.id}`" class="flex items-center px-2 py-4 bg-primary rounded-md border-bg mb-1">
           <span class="material-symbols fill text-xl text-yellow-400">folder</span>
           <p class="ml-2">{{ folder.name }}</p>
           <div class="flex-grow" />
@@ -36,84 +36,87 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed } from 'vue'
 import { AbsFileSystem } from '@/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
 
-export default {
-  data() {
-    return {
-      localFolders: [],
-      localLibraryItems: [],
-      newFolderMediaType: null,
-      mediaTypeItems: [
-        {
-          value: 'book',
-          text: this.$strings.LabelBooks
-        },
-        {
-          value: 'podcast',
-          text: this.$strings.LabelPodcasts
-        }
-      ],
-      syncing: false,
-      isAndroid10OrBelow: false,
-      overrideFolderRestriction: false
-    }
+const toast = useToast()
+const db = useDb()
+const platform = usePlatform()
+const strings = useStrings()
+const { getAndroidSDKVersion } = useUtils()
+
+// State
+const localFolders = ref<any[]>([])
+const localLibraryItems = ref<any[]>([])
+const newFolderMediaType = ref<string | null>(null)
+const mediaTypeItems = [
+  {
+    value: 'book',
+    text: strings.LabelBooks
   },
-  computed: {
-    isIos() {
-      return this.$platform === 'ios'
-    }
-  },
-  methods: {
-    async selectFolder() {
-      if (!this.newFolderMediaType) {
-        return this.$toast.error('Must select a media type')
-      }
-      var folderObj = await AbsFileSystem.selectFolder({ mediaType: this.newFolderMediaType })
-      if (!folderObj) return
-      if (folderObj.error) {
-        return this.$toast.error(`Error: ${folderObj.error || 'Unknown Error'}`)
-      }
+  {
+    value: 'podcast',
+    text: strings.LabelPodcasts
+  }
+]
+const syncing = ref(false)
+const isAndroid10OrBelow = ref(false)
+const overrideFolderRestriction = ref(false)
 
-      const indexOfExisting = this.localFolders.findIndex((lf) => lf.id == folderObj.id)
-      if (indexOfExisting >= 0) {
-        this.localFolders.splice(indexOfExisting, 1, folderObj)
-      } else {
-        this.localFolders.push(folderObj)
-      }
+// Computed
+const isIos = computed(() => platform === 'ios')
 
-      const permissionsGood = await AbsFileSystem.checkFolderPermissions({ folderUrl: folderObj.contentUrl })
+// Methods
+async function selectFolder() {
+  if (!newFolderMediaType.value) {
+    return toast.error('Must select a media type')
+  }
+  const folderObj = await AbsFileSystem.selectFolder({ mediaType: newFolderMediaType.value })
+  if (!folderObj) return
+  if (folderObj.error) {
+    return toast.error(`Error: ${folderObj.error || 'Unknown Error'}`)
+  }
 
-      if (!permissionsGood) {
-        this.$toast.error('Folder permissions failed')
-        return
-      } else {
-        this.$toast.success('Folder permission success')
-      }
-    },
-    async showLocalFolderMoreInfo() {
-      const confirmResult = await Dialog.confirm({
-        title: this.$strings.HeaderLocalFolders,
-        message: this.$strings.MessageLocalFolderDescription,
-        cancelButtonTitle: 'View More'
-      })
-      if (!confirmResult.value) {
-        window.open('https://www.audiobookshelf.org/guides/android_app_shared_storage', '_blank')
-      }
-    },
-    async init() {
-      const androidSdkVersion = await this.$getAndroidSDKVersion()
-      this.isAndroid10OrBelow = !!androidSdkVersion && androidSdkVersion <= 29
-      console.log(`androidSdkVersion=${androidSdkVersion}, isAndroid10OrBelow=${this.isAndroid10OrBelow}`)
+  const indexOfExisting = localFolders.value.findIndex((lf) => lf.id == folderObj.id)
+  if (indexOfExisting >= 0) {
+    localFolders.value.splice(indexOfExisting, 1, folderObj)
+  } else {
+    localFolders.value.push(folderObj)
+  }
 
-      this.localFolders = (await this.$db.getLocalFolders()) || []
-      this.localLibraryItems = await this.$db.getLocalLibraryItems()
-    }
-  },
-  mounted() {
-    this.init()
+  const permissionsGood = await AbsFileSystem.checkFolderPermissions({ folderUrl: folderObj.contentUrl })
+
+  if (!permissionsGood) {
+    toast.error('Folder permissions failed')
+    return
+  } else {
+    toast.success('Folder permission success')
   }
 }
+
+async function showLocalFolderMoreInfo() {
+  const confirmResult = await Dialog.confirm({
+    title: strings.HeaderLocalFolders,
+    message: strings.MessageLocalFolderDescription,
+    cancelButtonTitle: 'View More'
+  })
+  if (!confirmResult.value) {
+    window.open('https://www.audiobookshelf.org/guides/android_app_shared_storage', '_blank')
+  }
+}
+
+async function init() {
+  const androidSdkVersion = await getAndroidSDKVersion()
+  isAndroid10OrBelow.value = !!androidSdkVersion && androidSdkVersion <= 29
+  console.log(`androidSdkVersion=${androidSdkVersion}, isAndroid10OrBelow=${isAndroid10OrBelow.value}`)
+
+  localFolders.value = (await db.getLocalFolders()) || []
+  localLibraryItems.value = await db.getLocalLibraryItems()
+}
+
+onMounted(() => {
+  init()
+})
 </script>

@@ -8,7 +8,7 @@
   >
     <input
       v-model="input"
-      ref="input"
+      ref="inputEl"
       :autofocus="autofocus"
       :type="type"
       :disabled="disabled"
@@ -34,55 +34,60 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    value: [String, Number],
-    placeholder: String,
-    type: String,
-    disabled: Boolean,
-    readonly: Boolean,
-    borderless: Boolean,
-    autofocus: { type: Boolean, default: true },
-    bg: { type: String, default: 'bg' },        // kept for backward compat
-    rounded: { type: String, default: 'sm' },   // kept for backward compat
-    prependIcon: { type: String, default: null },
-    appendIcon: { type: String, default: null },
-    clearable: Boolean
-  },
-  data() {
-    return { focused: false }
-  },
-  computed: {
-    input: {
-      get() { return this.value },
-      set(val) { this.$emit('input', val) }
-    },
-    inputClass() {
-      return [
-        'w-full bg-transparent text-md-on-surface text-md-body-l',
-        'placeholder:text-md-on-surface-variant',
-        'focus:outline-none disabled:opacity-40',
-        this.prependIcon ? 'pl-10' : 'pl-4',
-        this.appendIcon || this.clearable ? 'pr-10' : 'pr-4',
-        'py-3'
-      ].join(' ')
-    }
-  },
-  methods: {
-    onFocus() { if (!this.readonly) this.focused = true },
-    clear() { this.input = '' },
-    focus() {
-      if (this.$refs.input) {
-        this.$refs.input.focus()
-        this.$refs.input.click()
-      }
-    },
-    keyup() {
-      if (this.$refs.input) this.input = this.$refs.input.value
-    }
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+
+const props = defineProps<{
+  modelValue?: string | number
+  placeholder?: string
+  type?: string
+  disabled?: boolean
+  readonly?: boolean
+  borderless?: boolean
+  autofocus?: boolean
+  bg?: string        // kept for backward compat
+  rounded?: string   // kept for backward compat
+  prependIcon?: string | null
+  appendIcon?: string | null
+  clearable?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [val: string | number]
+}>()
+
+const inputEl = ref<HTMLInputElement | null>(null)
+const focused = ref(false)
+
+const input = computed({
+  get() { return props.modelValue },
+  set(val: string | number | undefined) { if (val !== undefined) emit('update:modelValue', val) }
+})
+
+const inputClass = computed(() => {
+  return [
+    'w-full bg-transparent text-md-on-surface text-md-body-l',
+    'placeholder:text-md-on-surface-variant',
+    'focus:outline-none disabled:opacity-40',
+    props.prependIcon ? 'pl-10' : 'pl-4',
+    props.appendIcon || props.clearable ? 'pr-10' : 'pr-4',
+    'py-3'
+  ].join(' ')
+})
+
+function onFocus() { if (!props.readonly) focused.value = true }
+function clear() { input.value = '' }
+function focus() {
+  if (inputEl.value) {
+    inputEl.value.focus()
+    inputEl.value.click()
   }
 }
+function keyup() {
+  if (inputEl.value) input.value = inputEl.value.value
+}
+
+defineExpose({ focus })
 </script>
 
 <style scoped>

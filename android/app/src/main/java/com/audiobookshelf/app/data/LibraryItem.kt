@@ -2,6 +2,7 @@ package com.audiobookshelf.app.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Bundle
 import android.support.v4.media.MediaDescriptionCompat
 import androidx.media.utils.MediaConstants
@@ -50,15 +51,15 @@ class LibraryItem(
   @JsonIgnore
   fun getCoverUri(): Uri {
     if (media.coverPath == null) {
-      return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+      return ("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri()
     }
 
     // As of v2.17.0 token is not needed with cover image requests
     if (DeviceManager.isServerVersionGreaterThanOrEqualTo("2.17.0")) {
-      return Uri.parse("${DeviceManager.serverAddress}/api/items/$id/cover")
+      return "${DeviceManager.serverAddress}/api/items/$id/cover".toUri()
     }
 
-    return Uri.parse("${DeviceManager.serverAddress}/api/items/$id/cover?token=${DeviceManager.token}")
+    return "${DeviceManager.serverAddress}/api/items/$id/cover?token=${DeviceManager.token}".toUri()
   }
 
   @JsonIgnore

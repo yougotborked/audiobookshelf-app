@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
+import androidx.core.content.edit
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -40,7 +41,7 @@ class SecureStorage(private val context: Context) {
             val encoded = Base64.encodeToString(combined, Base64.DEFAULT)
 
             val sharedPrefs = context.getSharedPreferences("SecureStorage", Context.MODE_PRIVATE)
-            sharedPrefs.edit().putString("refresh_token_$serverConnectionId", encoded).apply()
+            sharedPrefs.edit { putString("refresh_token_$serverConnectionId", encoded) }
 
             Log.d(TAG, "Successfully stored encrypted refresh token for server: $serverConnectionId")
             true
@@ -81,7 +82,7 @@ class SecureStorage(private val context: Context) {
     fun removeRefreshToken(serverConnectionId: String): Boolean {
         return try {
             val sharedPrefs = context.getSharedPreferences("SecureStorage", Context.MODE_PRIVATE)
-            sharedPrefs.edit().remove("refresh_token_$serverConnectionId").apply()
+            sharedPrefs.edit { remove("refresh_token_$serverConnectionId") }
             Log.d(TAG, "Successfully removed refresh token for server: $serverConnectionId")
             true
         } catch (e: Exception) {

@@ -68,55 +68,55 @@
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelTheme }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.theme" name="theme" :items="themeItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.theme" name="theme" :items="themeItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelFontFamily }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.font" name="font" :items="fontItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.font" name="font" :items="fontItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelFontScale }}</p>
               </div>
-              <ui-range-input v-model="ereaderSettings.fontScale" :min="5" :max="300" :step="5" input-width="180px" @input="settingsUpdated" />
+              <ui-range-input v-model="ereaderSettings.fontScale" :min="5" :max="300" :step="5" input-width="180px" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelLineSpacing }}</p>
               </div>
-              <ui-range-input v-model="ereaderSettings.lineSpacing" :min="100" :max="300" :step="5" input-width="180px" @input="settingsUpdated" />
+              <ui-range-input v-model="ereaderSettings.lineSpacing" :min="100" :max="300" :step="5" input-width="180px" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelFontBoldness }}</p>
               </div>
-              <ui-range-input v-model="ereaderSettings.textStroke" :min="0" :max="300" :step="5" input-width="180px" @input="settingsUpdated" />
+              <ui-range-input v-model="ereaderSettings.textStroke" :min="0" :max="300" :step="5" input-width="180px" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelLayout }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.spread" name="spread" :items="spreadItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.spread" name="spread" :items="spreadItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelNavigateWithVolume }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolume" name="navigate-volume" :items="navigateWithVolumeItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolume" name="navigate-volume" :items="navigateWithVolumeItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelNavigateWithVolumeWhilePlaying }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolumeWhilePlaying" name="navigate-volume-playing" :items="onOffToggleButtonItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.navigateWithVolumeWhilePlaying" name="navigate-volume-playing" :items="onOffToggleButtonItems" @update:modelValue="settingsUpdated" />
             </div>
             <div class="flex items-center mb-6">
               <div class="w-32">
                 <p class="text-sm">{{ $strings.LabelKeepScreenAwake }}</p>
               </div>
-              <ui-toggle-btns v-model="ereaderSettings.keepScreenAwake" name="keep-awake" :items="onOffToggleButtonItems" @input="settingsUpdated" />
+              <ui-toggle-btns v-model="ereaderSettings.keepScreenAwake" name="keep-awake" :items="onOffToggleButtonItems" @update:modelValue="settingsUpdated" />
             </div>
           </div>
         </div>
@@ -131,6 +131,11 @@ import { VolumeButtons } from '@capacitor-community/volume-buttons'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 
 export default {
+  setup() {
+    const appStore = useAppStore()
+    const eventBus = useEventBus()
+    return { appStore, eventBus }
+  },
   data() {
     return {
       touchstartX: 0,
@@ -181,10 +186,10 @@ export default {
   computed: {
     show: {
       get() {
-        return this.$store.state.showReader
+        return this.appStore.showReader
       },
       set(val) {
-        this.$store.commit('setShowReader', val)
+        this.appStore.showReader = val
       }
     },
     isIos() {
@@ -194,7 +199,7 @@ export default {
       return this.mediaMetadata.title || 'No Title'
     },
     selectedLibraryItem() {
-      return this.$store.state.selectedLibraryItem
+      return this.appStore.selectedLibraryItem
     },
     media() {
       return this.selectedLibraryItem?.media || null
@@ -334,13 +339,13 @@ export default {
       return `/api/items/${this.selectedLibraryItem.id}/ebook`
     },
     isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
+      return this.appStore.getIsPlayerOpen
     },
     keepProgress() {
-      return this.$store.state.ereaderKeepProgress
+      return this.appStore.ereaderKeepProgress
     },
     ebookFileId() {
-      return this.$store.state.ereaderFileId
+      return this.appStore.ereaderFileId
     }
   },
   methods: {
@@ -509,14 +514,14 @@ export default {
       }
     },
     registerListeners() {
-      this.$eventBus.$on('close-ebook', this.closeEvt)
+      this.eventBus.on('close-ebook', this.closeEvt)
       document.body.addEventListener('touchstart', this.touchstart)
       document.body.addEventListener('touchend', this.touchend)
       this.initWatchVolume()
       this.initKeepScreenAwake()
     },
     unregisterListeners() {
-      this.$eventBus.$on('close-ebook', this.closeEvt)
+      this.eventBus.off('close-ebook', this.closeEvt)
       document.body.removeEventListener('touchstart', this.touchstart)
       document.body.removeEventListener('touchend', this.touchend)
       VolumeButtons.clearWatch().catch((error) => {

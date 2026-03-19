@@ -9,25 +9,12 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    author: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    name() {
-      return this.author.name
-    }
-  },
-  methods: {},
-  mounted() {}
-}
+<script setup lang="ts">
+const props = defineProps<{
+  author?: Record<string, unknown>
+}>()
+
+const name = computed(() => (props.author?.name as string) || '')
 </script>
 
 <style>

@@ -1,0 +1,1 @@
+import{al as o,E as n,aa as a}from"./GQdYg7xT.js";const c=o(t=>{const e=n();if(!e.user&&!e.serverConnectionConfig){const r=t.fullPath||"/";return a(`/connect?redirect=${encodeURIComponent(r)}`)}});export{c as default};

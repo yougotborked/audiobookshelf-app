@@ -1,476 +1,413 @@
 <template>
   <div class="w-full layout-wrapper bg-md-surface-1">
     <app-appbar />
-    <div id="content" class="overflow-hidden relative" :class="isPlayerOpen ? 'playerOpen' : ''">
-      <Nuxt :key="currentLang" />
+    <div id="content" class="overflow-hidden relative" :class="appStore.getIsPlayerOpen ? 'playerOpen' : ''">
+      <slot />
     </div>
     <app-audio-player-container ref="streamContainer" />
     <modals-libraries-modal />
     <modals-playlists-add-create-modal />
     <modals-select-local-folder-modal />
     <modals-rssfeeds-rss-feed-modal />
-    <app-side-drawer :key="currentLang" />
+    <app-side-drawer />
     <readers-reader />
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { CapacitorHttp } from '@capacitor/core'
-import { AbsLogger } from '@/plugins/capacitor'
+import { AbsLogger } from '~/plugins/capacitor'
 
-export default {
-  data() {
-    return {
-      inittingLibraries: false,
-      hasMounted: false,
-      disconnectTime: 0,
-      timeLostFocus: 0,
-      currentLang: null,
-      connectionRetryTimeout: null
-    }
-  },
-  watch: {
-    networkConnected: {
-      handler(newVal, oldVal) {
-        if (!this.hasMounted) {
-          // watcher runs before mount, handling libraries/connection should be handled in mount
-          return
-        }
-        if (newVal) {
-          console.log(`[default] network connected changed ${oldVal} -> ${newVal}`)
-          if (!this.user) {
-            this.attemptConnection()
-          } else if (!this.currentLibraryId) {
-            this.initLibraries()
-          } else {
-            var timeSinceDisconnect = Date.now() - this.disconnectTime
-            if (timeSinceDisconnect > 5000) {
-              console.log('Time since disconnect was', timeSinceDisconnect, 'sync with server')
-              setTimeout(() => {
-                this.syncLocalSessions(false)
-              }, 4000)
-            }
-          }
-          if (this.user && this.currentLibraryId) {
-            this.$store.dispatch('autoDownloadCheck')
-          }
-        } else {
-          console.log(`[default] lost network connection`)
-          this.disconnectTime = Date.now()
-          this.clearConnectionRetry()
-        }
-      }
-    },
-    socketConnected(newVal) {
-      if (newVal) {
-        this.clearConnectionRetry()
-      } else {
-        this.scheduleConnectionRetry(1200)
-      }
-    },
-    serverReachable(newVal) {
-      if (newVal) {
-        this.clearConnectionRetry()
-      } else {
-        this.scheduleConnectionRetry(2000)
+const appStore = useAppStore()
+const userStore = useUserStore()
+const librariesStore = useLibrariesStore()
+const globalsStore = useGlobalsStore()
+const router = useRouter()
+const route = useRoute()
+const config = useRuntimeConfig()
+const { isValidVersion, setOrientationLock } = useUtils()
+const bus = useEventBus()
+
+const inittingLibraries = ref(false)
+const hasMounted = ref(false)
+const disconnectTime = ref(0)
+const timeLostFocus = ref(0)
+const connectionRetryTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+
+const streamContainer = ref<{ audioPlayerReady: boolean; streamOpen: (stream: unknown) => void } | null>(null)
+
+// Watchers
+watch(() => appStore.networkConnected, (newVal, oldVal) => {
+  if (!hasMounted.value) return
+  if (newVal) {
+    console.log(`[default] network connected changed ${oldVal} -> ${newVal}`)
+    if (!userStore.user) {
+      attemptConnection()
+    } else if (!librariesStore.currentLibraryId) {
+      initLibraries()
+    } else {
+      const timeSinceDisconnect = Date.now() - disconnectTime.value
+      if (timeSinceDisconnect > 5000) {
+        console.log('Time since disconnect was', timeSinceDisconnect, 'sync with server')
+        setTimeout(() => { syncLocalSessions(false) }, 4000)
       }
     }
-  },
-  computed: {
-    isPlayerOpen() {
-      return this.$store.getters['getIsPlayerOpen']
-    },
-    routeName() {
-      return this.$route.name
-    },
-    networkConnected() {
-      return this.$store.state.networkConnected
-    },
-    user() {
-      return this.$store.state.user.user
-    },
-    currentLibraryId() {
-      return this.$store.state.libraries.currentLibraryId
-    },
-    currentLibraryName() {
-      return this.$store.getters['libraries/getCurrentLibraryName']
-    },
-    socketConnected() {
-      return this.$store.state.socketConnected
-    },
-    serverReachable() {
-      return this.$store.state.serverReachable
-    },
-    attemptingConnection: {
-      get() {
-        return this.$store.state.attemptingConnection
-      },
-      set(val) {
-        this.$store.commit('setAttemptingConnection', val)
-      }
+    if (userStore.user && librariesStore.currentLibraryId) {
+      appStore.autoDownloadCheck()
     }
-  },
-  methods: {
-    initialStream(stream) {
-      if (this.$refs.streamContainer?.audioPlayerReady) {
-        this.$refs.streamContainer.streamOpen(stream)
-      }
-    },
-    async loadSavedSettings() {
-      const userSavedServerSettings = await this.$localStore.getServerSettings()
-      if (userSavedServerSettings) {
-        this.$store.commit('setServerSettings', userSavedServerSettings)
-      }
+  } else {
+    console.log('[default] lost network connection')
+    disconnectTime.value = Date.now()
+    clearConnectionRetry()
+  }
+})
 
-      await this.$store.dispatch('user/loadUserSettings')
-    },
-    async attemptConnection() {
-      console.warn('[default] attemptConnection')
-      if (!this.networkConnected) {
-        console.warn('[default] No network connection')
-        AbsLogger.info({ tag: 'default', message: 'attemptConnection: No network connection' })
-        return
-      }
-      if (this.attemptingConnection) {
-        return
-      }
-      this.attemptingConnection = true
+watch(() => appStore.socketConnected, (newVal) => {
+  if (newVal) {
+    clearConnectionRetry()
+  } else {
+    scheduleConnectionRetry(1200)
+  }
+})
 
-      const deviceData = await this.$db.getDeviceData()
-      let serverConfig = null
-      if (deviceData) {
-        this.$store.commit('globals/setHapticFeedback', deviceData.deviceSettings?.hapticFeedback)
+watch(() => appStore.serverReachable, (newVal) => {
+  if (newVal) {
+    clearConnectionRetry()
+  } else {
+    scheduleConnectionRetry(2000)
+  }
+})
 
-        if (deviceData.lastServerConnectionConfigId && deviceData.serverConnectionConfigs.length) {
-          serverConfig = deviceData.serverConnectionConfigs.find((scc) => scc.id == deviceData.lastServerConnectionConfigId)
-        }
-      }
-
-      if (!serverConfig) {
-        // No last server config set
-        this.attemptingConnection = false
-        AbsLogger.info({ tag: 'default', message: 'attemptConnection: No last server config set' })
-        return
-      }
-
-      AbsLogger.info({ tag: 'default', message: `attemptConnection: Got server config, attempt authorize (${serverConfig.name})` })
-
-      const nativeHttpOptions = {
-        headers: {
-          Authorization: `Bearer ${serverConfig.token}`
-        },
-        connectTimeout: 6000,
-        serverConnectionConfig: serverConfig
-      }
-      const authRes = await this.$nativeHttp.post(`${serverConfig.address}/api/authorize`, null, nativeHttpOptions).catch((error) => {
-        AbsLogger.error({ tag: 'default', message: `attemptConnection: Server auth failed (${serverConfig.name})` })
-        return false
-      })
-
-      if (!authRes) {
-        this.attemptingConnection = false
-        this.scheduleConnectionRetry(5000)
-        return
-      }
-
-      const { user, userDefaultLibraryId, serverSettings, ereaderDevices } = authRes
-      this.$store.commit('setServerSettings', serverSettings)
-      this.$store.commit('libraries/setEReaderDevices', ereaderDevices)
-
-      if (this.$isValidVersion(serverSettings.version, '2.26.0')) {
-        // Check if the server is using the new JWT auth and is still using an old token in the server config
-        // If so, redirect to /connect and request to re-login
-        if (serverConfig.token === user.token || user.isOldToken) {
-          this.attemptingConnection = false
-          AbsLogger.info({ tag: 'default', message: `attemptConnection: Server is using new JWT auth but config is still using an old token (server version: ${serverSettings.version}) (${serverConfig.name})` })
-          // Clear last server config
-          await this.$store.dispatch('user/logout')
-          this.$router.push(`/connect?error=oldAuthToken&serverConnectionConfigId=${serverConfig.id}`)
-          return
-        }
-
-        // Token may have been refreshed during the authorize call so refetch from store
-        serverConfig.token = this.$store.getters['user/getToken'] || serverConfig.token
-      }
-
-      // Set library - Use last library if set and available fallback to default user library
-      const lastLibraryId = await this.$localStore.getLastLibraryId()
-      if (lastLibraryId && (!user.librariesAccessible.length || user.librariesAccessible.includes(lastLibraryId))) {
-        this.$store.commit('libraries/setCurrentLibrary', lastLibraryId)
-      } else if (userDefaultLibraryId) {
-        this.$store.commit('libraries/setCurrentLibrary', userDefaultLibraryId)
-      }
-      serverConfig.version = serverSettings.version
-      const serverConnectionConfig = await this.$db.setServerConnectionConfig(serverConfig)
-
-      this.$store.commit('user/setUser', user)
-      this.$store.commit('user/setAccessToken', serverConnectionConfig.token)
-      this.$store.commit('user/setServerConnectionConfig', serverConnectionConfig)
-
-      this.$socket.connect(serverConnectionConfig.address, serverConnectionConfig.token)
-
-      AbsLogger.info({ tag: 'default', message: `attemptConnection: Successful connection to last saved server config (${serverConnectionConfig.name})` })
-      await this.initLibraries()
-      this.attemptingConnection = false
-    },
-    itemRemoved(libraryItem) {
-      if (this.$route.name.startsWith('item')) {
-        if (this.$route.params.id === libraryItem.id) {
-          this.$router.replace(`/bookshelf`)
-        }
-      }
-    },
-    socketConnectionFailed(err) {
-      this.$toast.error('Socket connection error: ' + err.message)
-    },
-    async initLibraries() {
-      if (this.inittingLibraries) {
-        return
-      }
-      this.inittingLibraries = true
-      try {
-        await this.$store.dispatch('libraries/load')
-
-        AbsLogger.info({ tag: 'default', message: `initLibraries loading library ${this.currentLibraryName}` })
-        await this.$store.dispatch('libraries/fetch', this.currentLibraryId)
-        this.$eventBus.$emit('library-changed')
-        if (this.$store.state.user.user) {
-          await this.$store.dispatch('autoDownloadCheck')
-        }
-      } finally {
-        this.inittingLibraries = false
-      }
-    },
-    async syncLocalSessions(isFirstSync) {
-      if (!this.user) {
-        console.log('[default] No need to sync local sessions - not connected to server')
-        return
-      }
-
-      AbsLogger.info({ tag: 'default', message: 'Calling syncLocalSessions' })
-      const response = await this.$db.syncLocalSessionsWithServer(isFirstSync)
-      if (response?.error) {
-        console.error('[default] Failed to sync local sessions', response.error)
-      } else {
-        console.log('[default] Successfully synced local sessions')
-        // Reload local media progresses
-        await this.$store.dispatch('globals/loadLocalMediaProgress')
-      }
-    },
-    userUpdated(user) {
-      if (this.user?.id == user.id) {
-        this.$store.commit('user/setUser', user)
-      }
-    },
-    async userMediaProgressUpdated(payload) {
-      const prog = payload.data // MediaProgress
-      await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: Received updated media progress for current user from socket event. Media item id ${payload.id}` })
-
-      // Check if this media item is currently open in the player, paused, and this progress update is coming from a different session
-      const isMediaOpenInPlayer = this.$store.getters['getIsMediaStreaming'](prog.libraryItemId, prog.episodeId)
-      if (isMediaOpenInPlayer && this.$store.getters['getCurrentPlaybackSessionId'] !== payload.sessionId && !this.$store.state.playerIsPlaying) {
-        await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: Item is currently open in player, paused and this progress update is coming from a different session. Updating playback time to ${payload.data.currentTime}` })
-        this.$eventBus.$emit('playback-time-update', payload.data.currentTime)
-      }
-
-      // Get local media progress if exists
-      const localProg = await this.$db.getLocalMediaProgressForServerItem({ libraryItemId: prog.libraryItemId, episodeId: prog.episodeId })
-
-      let newLocalMediaProgress = null
-      // Progress update is more recent then local progress
-      if (localProg && localProg.lastUpdate < prog.lastUpdate) {
-        if (localProg.currentTime == prog.currentTime && localProg.isFinished == prog.isFinished) {
-          await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: server lastUpdate is more recent but progress is up-to-date (libraryItemId: ${prog.libraryItemId}${prog.episodeId ? ` episodeId: ${prog.episodeId}` : ''})` })
-          return
-        }
-
-        // Server progress is more up-to-date
-        await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: syncing progress from server with local item for "${prog.libraryItemId}" ${prog.episodeId ? `episode ${prog.episodeId}` : ''} | server lastUpdate=${prog.lastUpdate} > local lastUpdate=${localProg.lastUpdate}` })
-        const payload = {
-          localMediaProgressId: localProg.id,
-          mediaProgress: prog
-        }
-        newLocalMediaProgress = await this.$db.syncServerMediaProgressWithLocalMediaProgress(payload)
-      } else if (!localProg) {
-        // Check if local library item exists
-        //   local media progress may not exist yet if it hasn't been played
-        const localLibraryItem = await this.$db.getLocalLibraryItemByLId(prog.libraryItemId)
-        if (localLibraryItem) {
-          if (prog.episodeId) {
-            // If episode check if local episode exists
-            const lliEpisodes = localLibraryItem.media.episodes || []
-            const localEpisode = lliEpisodes.find((ep) => ep.serverEpisodeId === prog.episodeId)
-            if (localEpisode) {
-              // Add new local media progress
-              const payload = {
-                localLibraryItemId: localLibraryItem.id,
-                localEpisodeId: localEpisode.id,
-                mediaProgress: prog
-              }
-              newLocalMediaProgress = await this.$db.syncServerMediaProgressWithLocalMediaProgress(payload)
-            }
-          } else {
-            // Add new local media progress
-            const payload = {
-              localLibraryItemId: localLibraryItem.id,
-              mediaProgress: prog
-            }
-            newLocalMediaProgress = await this.$db.syncServerMediaProgressWithLocalMediaProgress(payload)
-          }
-        } else {
-          console.log(`[default] userMediaProgressUpdate no local media progress or lli found for this server item ${prog.id}`)
-        }
-      }
-
-      if (newLocalMediaProgress?.id) {
-        await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: local media progress updated for ${newLocalMediaProgress.id}` })
-        this.$store.commit('globals/updateLocalMediaProgress', newLocalMediaProgress)
-      }
-    },
-    async visibilityChanged() {
-      if (document.visibilityState === 'visible') {
-        const elapsedTimeOutOfFocus = Date.now() - this.timeLostFocus
-        console.log(`✅ [default] device visibility: has focus (${elapsedTimeOutOfFocus}ms out of focus)`)
-        // If device out of focus for more than 30s then reload local media progress
-        if (elapsedTimeOutOfFocus > 30000) {
-          console.log(`✅ [default] device visibility: reloading local media progress`)
-          // Reload local media progresses
-          await this.$store.dispatch('globals/loadLocalMediaProgress')
-        }
-        if (document.visibilityState === 'visible') {
-          this.$eventBus.$emit('device-focus-update', true)
-        }
-      } else {
-        console.log('⛔️ [default] device visibility: does NOT have focus')
-        this.timeLostFocus = Date.now()
-        this.$eventBus.$emit('device-focus-update', false)
-      }
-    },
-    changeLanguage(code) {
-      console.log('Changed lang', code)
-      this.currentLang = code
-      document.documentElement.lang = code
-    },
-    scheduleConnectionRetry(delay = 2000) {
-      if (this.connectionRetryTimeout) return
-      if (!this.networkConnected) return
-      if (!this.user && !this.$store.state.user.serverConnectionConfig) return
-
-      console.log(`[default] scheduling connection retry in ${delay}ms`)
-      this.connectionRetryTimeout = setTimeout(() => {
-        this.connectionRetryTimeout = null
-        this.retryConnectionIfNeeded().catch((error) => {
-          console.error('[default] retryConnectionIfNeeded failed', error)
-        })
-      }, Math.max(delay, 0))
-    },
-    clearConnectionRetry() {
-      if (this.connectionRetryTimeout) {
-        clearTimeout(this.connectionRetryTimeout)
-        this.connectionRetryTimeout = null
-      }
-    },
-    async retryConnectionIfNeeded() {
-      if (!this.networkConnected) return
-      if (this.attemptingConnection) return
-
-      const hasUser = !!this.user
-      const serverConfig = this.$store.state.user.serverConnectionConfig
-
-      if (!hasUser) {
-        await this.attemptConnection()
-        return
-      }
-
-      if (!serverConfig?.address || !serverConfig?.token) {
-        console.warn('[default] No server config available for retry connection')
-        return
-      }
-
-      if (!this.$socket) {
-        console.warn('[default] Socket plugin unavailable, cannot retry connection')
-        return
-      }
-
-      const socketIsConnected = this.$socket?.socket?.connected
-
-      if (!socketIsConnected) {
-        console.log('[default] Socket disconnected, reconnecting')
-        this.$socket.logout()
-        this.$socket.connect(serverConfig.address, serverConfig.token)
-      } else if (!this.$socket.isAuthenticated) {
-        console.log('[default] Socket connected but unauthenticated, sending auth event')
-        this.$socket.sendAuthenticate()
-      }
-
-      try {
-        await this.syncLocalSessions(false)
-      } catch (error) {
-        console.error('[default] retryConnectionIfNeeded sync failed', error)
-      } finally {
-        if (!this.$store.state.serverReachable) {
-          this.scheduleConnectionRetry(5000)
-        }
-      }
-    }
-  },
-  async mounted() {
-    this.$eventBus.$on('change-lang', this.changeLanguage)
-    document.addEventListener('visibilitychange', this.visibilityChanged)
-
-    this.$socket.on('user_updated', this.userUpdated)
-    this.$socket.on('user_media_progress_updated', this.userMediaProgressUpdated)
-
-    if (this.$store.state.isFirstLoad) {
-      AbsLogger.info({ tag: 'default', message: `mounted: initializing first load (${this.$platform} v${this.$config.version})` })
-      this.$store.commit('setIsFirstLoad', false)
-
-      this.loadSavedSettings()
-
-      const deviceData = await this.$db.getDeviceData()
-      this.$store.commit('setDeviceData', deviceData)
-
-      if (deviceData?.lastServerConnectionConfigId && deviceData.serverConnectionConfigs?.length) {
-        const scc = deviceData.serverConnectionConfigs.find(
-          (s) => s.id == deviceData.lastServerConnectionConfigId
-        )
-        if (scc) {
-          this.$store.commit('user/setAccessToken', scc.token)
-          this.$store.commit('user/setServerConnectionConfig', scc)
-        }
-      }
-
-      this.$setOrientationLock(this.$store.getters['getOrientationLockSetting'])
-
-      await this.$store.dispatch('init')
-      await this.$store.dispatch('setupNetworkListener')
-
-      const serverConfig = this.$store.state.user.serverConnectionConfig
-      if (serverConfig && this.user) {
-        AbsLogger.info({ tag: 'default', message: `mounted: Server connected, init libraries (${this.$store.getters['user/getServerConfigName']})` })
-        await this.initLibraries()
-      } else if (serverConfig) {
-        AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempting connection (${this.$store.getters['user/getServerConfigName']})` })
-        await this.attemptConnection()
-      } else {
-        AbsLogger.info({ tag: 'default', message: `mounted: Server not connected, attempt connection` })
-        await this.attemptConnection()
-      }
-
-      await this.syncLocalSessions(true)
-
-      this.hasMounted = true
-
-      AbsLogger.info({ tag: 'default', message: 'mounted: fully initialized' })
-      this.$eventBus.$emit('abs-ui-ready')
-    }
-  },
-  beforeDestroy() {
-    this.$eventBus.$off('change-lang', this.changeLanguage)
-    document.removeEventListener('visibilitychange', this.visibilityChanged)
-    this.$socket.off('user_updated', this.userUpdated)
-    this.$socket.off('user_media_progress_updated', this.userMediaProgressUpdated)
-    this.clearConnectionRetry()
+// Methods
+function initialStream(stream: unknown) {
+  if (streamContainer.value?.audioPlayerReady) {
+    streamContainer.value.streamOpen(stream)
   }
 }
+
+async function loadSavedSettings() {
+  const userSavedServerSettings = await useLocalStore().getServerSettings()
+  if (userSavedServerSettings) {
+    appStore.setServerSettings(userSavedServerSettings)
+  }
+  await userStore.loadUserSettings()
+}
+
+async function attemptConnection() {
+  console.warn('[default] attemptConnection')
+  if (!appStore.networkConnected) {
+    console.warn('[default] No network connection')
+    await AbsLogger.info({ tag: 'default', message: 'attemptConnection: No network connection' })
+    return
+  }
+  if (appStore.attemptingConnection) return
+  appStore.attemptingConnection = true
+
+  const deviceData = await useDb().getDeviceData() as Record<string, unknown> | null
+  let serverConfig: Record<string, unknown> | null = null
+  if (deviceData) {
+    globalsStore.hapticFeedback = (deviceData.deviceSettings as Record<string, unknown>)?.hapticFeedback as string || 'LIGHT'
+    if (deviceData.lastServerConnectionConfigId && (deviceData.serverConnectionConfigs as unknown[])?.length) {
+      serverConfig = (deviceData.serverConnectionConfigs as Record<string, unknown>[]).find(
+        (scc) => scc.id == deviceData.lastServerConnectionConfigId
+      ) || null
+    }
+  }
+
+  if (!serverConfig) {
+    appStore.attemptingConnection = false
+    await AbsLogger.info({ tag: 'default', message: 'attemptConnection: No last server config set' })
+    return
+  }
+
+  await AbsLogger.info({ tag: 'default', message: `attemptConnection: Got server config, attempt authorize (${serverConfig.name})` })
+
+  const nativeHttpOptions = {
+    headers: { Authorization: `Bearer ${serverConfig.token}` },
+    connectTimeout: 6000,
+    serverConnectionConfig: serverConfig as { id: string; address: string; token?: string; refreshToken?: string }
+  }
+  const authRes = await useNativeHttp().post(`${serverConfig.address}/api/authorize`, null, nativeHttpOptions).catch(() => false) as Record<string, unknown> | false
+
+  if (!authRes) {
+    appStore.attemptingConnection = false
+    scheduleConnectionRetry(5000)
+    return
+  }
+
+  const { user, userDefaultLibraryId, serverSettings, ereaderDevices } = authRes as Record<string, unknown>
+  appStore.setServerSettings(serverSettings as Record<string, unknown>)
+  librariesStore.ereaderDevices = ereaderDevices as unknown[]
+
+  const serverSettingsObj = serverSettings as Record<string, unknown>
+  const userObj = user as Record<string, unknown>
+  if (isValidVersion(serverSettingsObj.version as string, '2.26.0')) {
+    if (serverConfig.token === userObj.token || userObj.isOldToken) {
+      appStore.attemptingConnection = false
+      await AbsLogger.info({ tag: 'default', message: `attemptConnection: Old token detected, requesting re-login` })
+      await userStore.logout()
+      router.push(`/connect?error=oldAuthToken&serverConnectionConfigId=${serverConfig.id}`)
+      return
+    }
+    serverConfig.token = userStore.accessToken || serverConfig.token
+  }
+
+  const lastLibraryId = await useLocalStore().getLastLibraryId()
+  const userLibrariesAccessible = (userObj.librariesAccessible as string[]) || []
+  if (lastLibraryId && (!userLibrariesAccessible.length || userLibrariesAccessible.includes(lastLibraryId))) {
+    librariesStore.currentLibraryId = lastLibraryId
+  } else if (userDefaultLibraryId) {
+    librariesStore.currentLibraryId = userDefaultLibraryId as string
+  }
+
+  serverConfig.version = serverSettingsObj.version
+  const savedServerConnectionConfig = await useDb().setServerConnectionConfig(serverConfig) as Record<string, unknown>
+
+  userStore.user = userObj
+  userStore.accessToken = (savedServerConnectionConfig.token || serverConfig.token) as string
+  userStore.serverConnectionConfig = savedServerConnectionConfig as import('~/types').ServerConnectionConfig
+
+  useSocket().connect(savedServerConnectionConfig.address as string, savedServerConnectionConfig.token as string)
+
+  await AbsLogger.info({ tag: 'default', message: `attemptConnection: Successful connection (${savedServerConnectionConfig.name})` })
+  await initLibraries()
+  appStore.attemptingConnection = false
+}
+
+async function initLibraries() {
+  if (inittingLibraries.value) return
+  inittingLibraries.value = true
+  try {
+    await librariesStore.load()
+    await AbsLogger.info({ tag: 'default', message: `initLibraries loading library ${librariesStore.getCurrentLibraryName}` })
+    await librariesStore.fetch(librariesStore.currentLibraryId)
+    bus.emit('library-changed', librariesStore.currentLibraryId)
+    if (userStore.user) {
+      await appStore.autoDownloadCheck()
+    }
+  } finally {
+    inittingLibraries.value = false
+  }
+}
+
+async function syncLocalSessions(isFirstSync: boolean) {
+  if (!userStore.user) {
+    console.log('[default] No need to sync local sessions - not connected to server')
+    return
+  }
+  await AbsLogger.info({ tag: 'default', message: 'Calling syncLocalSessions' })
+  const response = await useDb().syncLocalSessionsWithServer(isFirstSync) as Record<string, unknown> | null
+  if (response?.error) {
+    console.error('[default] Failed to sync local sessions', response.error)
+  } else {
+    console.log('[default] Successfully synced local sessions')
+    await globalsStore.loadLocalMediaProgress()
+  }
+}
+
+function userUpdated(user: Record<string, unknown>) {
+  if (userStore.user?.id == user.id) {
+    userStore.user = user
+  }
+}
+
+async function userMediaProgressUpdated(payload: Record<string, unknown>) {
+  const prog = payload.data as Record<string, unknown>
+  await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: Received updated media progress. Media item id ${payload.id}` })
+
+  const isMediaOpenInPlayer = appStore.getIsMediaStreaming(prog.libraryItemId as string, prog.episodeId as string)
+  if (isMediaOpenInPlayer && appStore.getCurrentPlaybackSessionId !== payload.sessionId && !appStore.playerIsPlaying) {
+    await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: Item in player, paused, from different session. Updating to ${(payload.data as Record<string, unknown>).currentTime}` })
+    bus.emit('playback-time-update', { currentTime: (payload.data as Record<string, unknown>).currentTime as number, duration: 0 })
+  }
+
+  const localProg = await useDb().getLocalMediaProgressForServerItem({ libraryItemId: prog.libraryItemId, episodeId: prog.episodeId }) as Record<string, unknown> | null
+  let newLocalMediaProgress: Record<string, unknown> | null = null
+
+  if (localProg && (localProg.lastUpdate as number) < (prog.lastUpdate as number)) {
+    if (localProg.currentTime == prog.currentTime && localProg.isFinished == prog.isFinished) {
+      await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: server lastUpdate is more recent but progress is up-to-date` })
+      return
+    }
+    await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: syncing progress from server` })
+    newLocalMediaProgress = await useDb().syncServerMediaProgressWithLocalMediaProgress({
+      localMediaProgressId: localProg.id,
+      mediaProgress: prog
+    }) as Record<string, unknown> | null
+  } else if (!localProg) {
+    const localLibraryItem = await useDb().getLocalLibraryItemByLId(prog.libraryItemId as string) as Record<string, unknown> | null
+    if (localLibraryItem) {
+      if (prog.episodeId) {
+        const lliEpisodes = ((localLibraryItem.media as Record<string, unknown>)?.episodes as Record<string, unknown>[]) || []
+        const localEpisode = lliEpisodes.find((ep) => ep.serverEpisodeId === prog.episodeId)
+        if (localEpisode) {
+          newLocalMediaProgress = await useDb().syncServerMediaProgressWithLocalMediaProgress({
+            localLibraryItemId: localLibraryItem.id,
+            localEpisodeId: localEpisode.id,
+            mediaProgress: prog
+          }) as Record<string, unknown> | null
+        }
+      } else {
+        newLocalMediaProgress = await useDb().syncServerMediaProgressWithLocalMediaProgress({
+          localLibraryItemId: localLibraryItem.id,
+          mediaProgress: prog
+        }) as Record<string, unknown> | null
+      }
+    } else {
+      console.log(`[default] userMediaProgressUpdate no local media progress or lli found for ${prog.id}`)
+    }
+  }
+
+  if (newLocalMediaProgress?.id) {
+    await AbsLogger.info({ tag: 'default', message: `userMediaProgressUpdate: local media progress updated for ${newLocalMediaProgress.id}` })
+    globalsStore.updateLocalMediaProgress(newLocalMediaProgress as Parameters<typeof globalsStore.updateLocalMediaProgress>[0])
+  }
+}
+
+async function visibilityChanged() {
+  if (document.visibilityState === 'visible') {
+    const elapsed = Date.now() - timeLostFocus.value
+    console.log(`✅ [default] device visibility: has focus (${elapsed}ms out of focus)`)
+    if (elapsed > 30000) {
+      console.log('✅ [default] reloading local media progress')
+      await globalsStore.loadLocalMediaProgress()
+    }
+    bus.emit('device-focus-update', true)
+  } else {
+    console.log('⛔️ [default] device visibility: does NOT have focus')
+    timeLostFocus.value = Date.now()
+    bus.emit('device-focus-update', false)
+  }
+}
+
+function changeLanguage(code: string) {
+  console.log('Changed lang', code)
+  document.documentElement.lang = code
+}
+
+function scheduleConnectionRetry(delay = 2000) {
+  if (connectionRetryTimeout.value) return
+  if (!appStore.networkConnected) return
+  if (!userStore.user && !userStore.serverConnectionConfig) return
+
+  console.log(`[default] scheduling connection retry in ${delay}ms`)
+  connectionRetryTimeout.value = setTimeout(() => {
+    connectionRetryTimeout.value = null
+    retryConnectionIfNeeded().catch((error) => {
+      console.error('[default] retryConnectionIfNeeded failed', error)
+    })
+  }, Math.max(delay, 0))
+}
+
+function clearConnectionRetry() {
+  if (connectionRetryTimeout.value) {
+    clearTimeout(connectionRetryTimeout.value)
+    connectionRetryTimeout.value = null
+  }
+}
+
+async function retryConnectionIfNeeded() {
+  if (!appStore.networkConnected) return
+  if (appStore.attemptingConnection) return
+
+  const hasUser = !!userStore.user
+  const serverConfig = userStore.serverConnectionConfig
+
+  if (!hasUser) {
+    await attemptConnection()
+    return
+  }
+
+  if (!serverConfig?.address || !serverConfig?.token) {
+    console.warn('[default] No server config available for retry connection')
+    return
+  }
+
+  const socket = useSocket()
+  const socketIsConnected = (socket as unknown as Record<string, unknown>)?.socket
+    ? ((socket as unknown as Record<string, unknown>).socket as Record<string, unknown>)?.connected
+    : false
+
+  if (!socketIsConnected) {
+    console.log('[default] Socket disconnected, reconnecting')
+    socket.logout()
+    socket.connect(serverConfig.address, serverConfig.token)
+  } else if (!socket.isAuthenticated) {
+    console.log('[default] Socket connected but unauthenticated, sending auth event')
+    socket.sendAuthenticate()
+  }
+
+  try {
+    await syncLocalSessions(false)
+  } catch (error) {
+    console.error('[default] retryConnectionIfNeeded sync failed', error)
+  } finally {
+    if (!appStore.serverReachable) {
+      scheduleConnectionRetry(5000)
+    }
+  }
+}
+
+// Lifecycle
+onMounted(async () => {
+  bus.on('change-lang', changeLanguage)
+  document.addEventListener('visibilitychange', visibilityChanged)
+
+  const socket = useSocket()
+  socket.$on('user_updated', userUpdated)
+  socket.$on('user_media_progress_updated', userMediaProgressUpdated)
+
+  if (appStore.isFirstLoad) {
+    await AbsLogger.info({ tag: 'default', message: `mounted: initializing first load (${usePlatform()} v${config.public.version})` })
+    appStore.isFirstLoad = false
+
+    await loadSavedSettings()
+
+    const deviceData = await useDb().getDeviceData() as Record<string, unknown> | null
+    appStore.setDeviceData(deviceData)
+
+    if (deviceData?.lastServerConnectionConfigId && (deviceData.serverConnectionConfigs as unknown[])?.length) {
+      const scc = (deviceData.serverConnectionConfigs as Record<string, unknown>[]).find(
+        (s) => s.id == deviceData.lastServerConnectionConfigId
+      )
+      if (scc) {
+        userStore.accessToken = scc.token as string
+        userStore.serverConnectionConfig = scc as import('~/types').ServerConnectionConfig
+      }
+    }
+
+    setOrientationLock(appStore.getOrientationLockSetting)
+
+    await appStore.init()
+    await appStore.setupNetworkListener()
+
+    const serverConfig = userStore.serverConnectionConfig
+    if (serverConfig && userStore.user) {
+      await AbsLogger.info({ tag: 'default', message: `mounted: Server connected, init libraries (${userStore.getServerConfigName})` })
+      await initLibraries()
+    } else if (serverConfig) {
+      await AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempting connection (${userStore.getServerConfigName})` })
+      await attemptConnection()
+    } else {
+      await AbsLogger.info({ tag: 'default', message: 'mounted: No server config, redirecting to connect' })
+      router.push('/connect')
+      return
+    }
+
+    await syncLocalSessions(true)
+    hasMounted.value = true
+
+    await AbsLogger.info({ tag: 'default', message: 'mounted: fully initialized' })
+    bus.emit('abs-ui-ready')
+  }
+})
+
+onBeforeUnmount(() => {
+  bus.off('change-lang', changeLanguage)
+  document.removeEventListener('visibilitychange', visibilityChanged)
+  const socket = useSocket()
+  socket.$off('user_updated', userUpdated)
+  socket.$off('user_media_progress_updated', userMediaProgressUpdated)
+  clearConnectionRetry()
+})
 </script>

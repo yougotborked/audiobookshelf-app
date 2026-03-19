@@ -1,11 +1,10 @@
 <template>
   <modals-modal v-model="show" :processing="processing" anchor-selector="[aria-label='Show library modal']">
     <div class="px-4 pt-2 pb-2">
-      <p class="text-md-title-m text-md-on-surface mb-3">{{ $strings.HeaderLibraries }}</p>
+      <p class="text-md-title-m text-md-on-surface mb-3">{{ strings.HeaderLibraries }}</p>
       <ul class="w-full" role="listbox">
-        <template v-for="library in libraries">
+        <template v-for="library in libraries" :key="library.id">
           <li
-            :key="library.id"
             class="select-none relative rounded-md-md cursor-pointer mb-1"
             :class="currentLibraryId === library.id ? 'bg-md-secondary-container' : 'hover:bg-md-on-surface/5'"
             role="option"
@@ -23,39 +22,36 @@
   </modals-modal>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      processing: false
-    }
-  },
-  computed: {
-    show: {
-      get() {
-        return this.$store.state.libraries.showModal
-      },
-      set(val) {
-        this.$store.commit('libraries/setShowModal', val)
-      }
-    },
-    currentLibraryId() {
-      return this.$store.state.libraries.currentLibraryId
-    },
-    libraries() {
-      return this.$store.state.libraries.libraries
-    }
-  },
-  methods: {
-    async clickedOption(lib) {
-      await this.$hapticsImpact()
-      this.show = false
-      if (lib.id === this.currentLibraryId) return
-      await this.$store.dispatch('libraries/fetch', lib.id)
-      this.$eventBus.$emit('library-changed', lib.id)
-      this.$localStore.setLastLibraryId(lib.id)
-    }
-  },
-  mounted() {}
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useStrings } from '~/composables/useStrings'
+import { useHaptics } from '~/composables/useHaptics'
+import { useEventBus } from '~/composables/useEventBus'
+import { useLocalStore } from '~/composables/useLocalStore'
+import { useLibrariesStore } from '~/stores/libraries'
+
+const strings = useStrings()
+const { impact } = useHaptics()
+const eventBus = useEventBus()
+const localStore = useLocalStore()
+const librariesStore = useLibrariesStore()
+
+const processing = ref(false)
+
+const show = computed({
+  get() { return librariesStore.showModal },
+  set(val: boolean) { librariesStore.showModal = val }
+})
+
+const currentLibraryId = computed(() => librariesStore.currentLibraryId)
+const libraries = computed(() => librariesStore.libraries)
+
+async function clickedOption(lib: Record<string, unknown>) {
+  await impact()
+  show.value = false
+  if (lib.id === currentLibraryId.value) return
+  await librariesStore.fetch(lib.id as string)
+  eventBus.emit('library-changed', lib.id as string)
+  localStore.setLastLibraryId(lib.id as string)
 }
 </script>

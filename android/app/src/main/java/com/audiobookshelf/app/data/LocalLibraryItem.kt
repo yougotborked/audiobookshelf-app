@@ -11,6 +11,7 @@ import android.util.Log
 import android.graphics.BitmapFactory
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.media.utils.MediaConstants
 import com.audiobookshelf.app.BuildConfig
 import com.audiobookshelf.app.R
@@ -51,9 +52,9 @@ class LocalLibraryItem(
   @JsonIgnore
   fun getCoverUri(ctx:Context): Uri {
     if (coverContentUrl?.startsWith("file:") == true) {
-      return FileProvider.getUriForFile(ctx, "${BuildConfig.APPLICATION_ID}.fileprovider", Uri.parse(coverContentUrl).toFile())
+      return FileProvider.getUriForFile(ctx, "${BuildConfig.APPLICATION_ID}.fileprovider", coverContentUrl!!.toUri().toFile())
     }
-    return if (coverContentUrl != null) Uri.parse(coverContentUrl) else Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+    return coverContentUrl?.toUri() ?: ("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri()
   }
 
   @JsonIgnore

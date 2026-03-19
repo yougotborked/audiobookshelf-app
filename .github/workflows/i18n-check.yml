@@ -18,7 +18,7 @@ jobs:
     - name: Set up node
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
+        node-version: '24'
 
     # The only argument is the `directory`, which is where the i18n files are
     # stored.

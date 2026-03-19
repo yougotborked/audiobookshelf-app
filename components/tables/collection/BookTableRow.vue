@@ -15,7 +15,7 @@
         </div>
       </div>
       <div class="w-8 min-w-8 flex justify-center">
-        <button v-if="showPlayBtn" class="w-8 h-8 rounded-full border border-white border-opacity-20 flex items-center justify-center" @click.stop.prevent="playClick">
+        <button v-if="showPlayBtn" class="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center" @click.stop.prevent="playClick">
           <span class="material-symbols text-2xl fill" :class="streamIsPlaying ? '' : 'text-md-primary'">{{ streamIsPlaying ? 'pause' : 'play_arrow' }}</span>
         </button>
       </div>
@@ -23,98 +23,59 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    collectionId: String,
-    book: {
-      type: Object,
-      default: () => {}
-    }
-  },
-  data() {
-    return {
-      isProcessingReadUpdate: false,
-      processingRemove: false
-    }
-  },
-  computed: {
-    libraryItemId() {
-      return this.book.id
-    },
-    localLibraryItem() {
-      return this.book.localLibraryItem
-    },
-    media() {
-      return this.book.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    tracks() {
-      return this.media.tracks || []
-    },
-    bookTitle() {
-      return this.mediaMetadata.title || ''
-    },
-    bookAuthor() {
-      return this.mediaMetadata.authorName || ''
-    },
-    bookDuration() {
-      return this.$elapsedPretty(this.media.duration)
-    },
-    bookCoverAspectRatio() {
-      return this.$store.getters['libraries/getBookCoverAspectRatio']
-    },
-    bookWidth() {
-      if (this.bookCoverAspectRatio === 1) return 50
-      return 50
-    },
-    isMissing() {
-      return this.book.isMissing
-    },
-    isInvalid() {
-      return this.book.isInvalid
-    },
-    showPlayBtn() {
-      return !this.isMissing && !this.isInvalid && this.tracks.length
-    },
-    playerIsStartingPlayback() {
-      // Play has been pressed and waiting for native play response
-      return this.$store.state.playerIsStartingPlayback
-    },
-    isOpenInPlayer() {
-      if (this.localLibraryItem && this.$store.getters['getIsMediaStreaming'](this.localLibraryItem.id)) return true
-      return this.$store.getters['getIsMediaStreaming'](this.libraryItemId)
-    },
-    streamIsPlaying() {
-      return this.$store.state.playerIsPlaying && this.isOpenInPlayer
-    }
-  },
-  methods: {
-    async playClick() {
-      if (this.playerIsStartingPlayback) return
-      await this.$hapticsImpact()
+<script setup lang="ts">
+const props = defineProps<{
+  collectionId?: string
+  book: Record<string, unknown>
+}>()
 
-      if (this.streamIsPlaying) {
-        this.$eventBus.$emit('pause-item')
-        return
-      }
+const utils = useUtils()
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const { impact } = useHaptics()
+const eventBus = useEventBus()
 
-      this.$store.commit('setPlayerIsStartingPlayback', this.libraryItemId)
-      if (this.localLibraryItem) {
-        this.$eventBus.$emit('play-item', {
-          libraryItemId: this.localLibraryItem.id,
-          serverLibraryItemId: this.libraryItemId
-        })
-      } else {
-        this.$eventBus.$emit('play-item', {
-          libraryItemId: this.libraryItemId
-        })
-      }
-    }
-  },
-  mounted() {}
+const libraryItemId = computed(() => props.book.id as string)
+const localLibraryItem = computed(() => props.book.localLibraryItem as Record<string, unknown> | undefined)
+const media = computed(() => (props.book.media as Record<string, unknown>) || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+const tracks = computed(() => (media.value.tracks as unknown[]) || [])
+const bookTitle = computed(() => (mediaMetadata.value.title as string) || '')
+const bookAuthor = computed(() => (mediaMetadata.value.authorName as string) || '')
+const bookDuration = computed(() => utils.elapsedPretty(media.value.duration as number))
+const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
+const bookWidth = computed(() => 50)
+const isMissing = computed(() => props.book.isMissing as boolean)
+const isInvalid = computed(() => props.book.isInvalid as boolean)
+const showPlayBtn = computed(() => !isMissing.value && !isInvalid.value && tracks.value.length)
+const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
+const isOpenInPlayer = computed(() => {
+  if (localLibraryItem.value && appStore.getIsMediaStreaming(localLibraryItem.value.id as string)) return true
+  return appStore.getIsMediaStreaming(libraryItemId.value)
+})
+const streamIsPlaying = computed(() => appStore.playerIsPlaying && isOpenInPlayer.value)
+
+async function playClick() {
+  if (playerIsStartingPlayback.value) return
+  await impact()
+
+  if (streamIsPlaying.value) {
+    eventBus.emit('pause-item')
+    return
+  }
+
+  appStore.playerIsStartingPlayback = true
+  appStore.playerStartingPlaybackMediaId = libraryItemId.value
+  if (localLibraryItem.value) {
+    eventBus.emit('play-item', {
+      libraryItemId: localLibraryItem.value.id as string,
+      serverLibraryItemId: libraryItemId.value
+    })
+  } else {
+    eventBus.emit('play-item', {
+      libraryItemId: libraryItemId.value
+    })
+  }
 }
 </script>
 

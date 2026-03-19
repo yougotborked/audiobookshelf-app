@@ -1,9 +1,8 @@
 <template>
   <div class="w-full layout-wrapper bg-md-surface-1">
-    <Nuxt />
+    <slot />
   </div>
 </template>
 
-<script>
-export default {}
+<script setup lang="ts">
 </script>

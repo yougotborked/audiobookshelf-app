@@ -1,0 +1,1 @@
+import{_ as s,o as a,c as o,am as r}from"./GQdYg7xT.js";const t={},c={class:"w-full layout-wrapper bg-md-surface-1"};function n(e,l){return a(),o("div",c,[r(e.$slots,"default")])}const f=s(t,[["render",n]]);export{f as default};

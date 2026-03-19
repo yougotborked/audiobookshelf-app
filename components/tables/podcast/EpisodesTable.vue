@@ -1,24 +1,24 @@
 <template>
   <div class="w-full">
     <!-- Podcast episode downloads queue -->
-    <div v-if="episodeDownloadsQueued.length" class="px-4 py-2 my-2 bg-info bg-opacity-40 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
+    <div v-if="episodeDownloadsQueued.length" class="px-4 py-2 my-2 bg-info/40 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
       <div class="flex items-center">
-        <p class="text-sm py-1">{{ $getString('MessageEpisodesQueuedForDownload', [episodeDownloadsQueued.length]) }}</p>
+        <p class="text-sm py-1">{{ getString('MessageEpisodesQueuedForDownload', [episodeDownloadsQueued.length]) }}</p>
         <div class="flex-grow" />
         <span v-if="isAdminOrUp" class="material-symbols text-xl ml-3 cursor-pointer" @click="clearDownloadQueue">close</span>
       </div>
     </div>
 
     <!-- Podcast episodes currently downloading -->
-    <div v-if="episodesDownloading.length" class="px-4 py-2 my-2 bg-md-primary bg-opacity-20 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
-      <div v-for="episode in episodesDownloading" :key="episode.id" class="flex items-center">
+    <div v-if="episodesDownloading.length" class="px-4 py-2 my-2 bg-md-primary/20 text-sm font-semibold rounded-md text-md-on-surface relative w-full">
+      <div v-for="episode in episodesDownloading" :key="(episode.id as string)" class="flex items-center">
         <widgets-loading-spinner />
-        <p class="text-sm py-1 pl-4">{{ $strings.MessageDownloadingEpisode }} "{{ episode.episodeDisplayTitle }}"</p>
+        <p class="text-sm py-1 pl-4">{{ strings.MessageDownloadingEpisode }} "{{ (episode as any).episodeDisplayTitle }}"</p>
       </div>
     </div>
 
     <div class="flex items-center">
-      <p class="text-lg mb-1 font-semibold">{{ $strings.HeaderEpisodes }} ({{ episodesFiltered.length }})</p>
+      <p class="text-lg mb-1 font-semibold">{{ strings.HeaderEpisodes }} ({{ episodesFiltered.length }})</p>
 
       <div class="flex-grow" />
 
@@ -32,15 +32,21 @@
         <div v-show="filterKey !== 'all' && episodesAreFiltered" class="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-md-primary border border-green-300 shadow-sm z-10 pointer-events-none" />
       </button>
 
-      <div class="flex items-center border border-white border-opacity-25 rounded px-2" @click="clickSort">
+      <div class="flex items-center border border-white/25 rounded px-2" @click="clickSort">
         <p class="text-sm text-md-on-surface">{{ sortText }}</p>
         <span class="material-symbols ml-1 text-md-on-surface">{{ sortDesc ? 'arrow_drop_down' : 'arrow_drop_up' }}</span>
       </div>
     </div>
 
-    <template v-for="episode in episodesSorted">
-      <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" :key="episode.id" @addToPlaylist="addEpisodeToPlaylist" />
+    <template v-for="episode in episodesSorted" :key="(episode.id as string)">
+      <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id as string]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
+
+    <div v-if="!episodesSorted.length" class="py-6 text-center text-fg-muted text-sm">
+      <p v-if="filterKey !== 'all'">{{ strings.LabelNoEpisodesMatchingFilter || 'No episodes match the current filter.' }}</p>
+      <p v-else>{{ strings.LabelNoEpisodes || 'No episodes found.' }}</p>
+      <button v-if="filterKey !== 'all'" class="mt-2 underline text-md-primary text-sm" @click="filterKey = 'all'">Show all episodes</button>
+    </div>
 
     <!-- Huhhh?
         Without anything below the template it will not re-render -->
@@ -50,290 +56,245 @@
 
     <modals-podcast-episodes-feed-modal v-model="showPodcastEpisodeFeed" :library-item="libraryItem" :episodes="podcastFeedEpisodes" />
 
-    <modals-order-modal v-model="showSortModal" :order-by.sync="sortKey" :descending.sync="sortDesc" episodes />
+    <modals-order-modal v-model="showSortModal" :order-by="sortKey" @update:order-by="sortKey = $event" :descending="sortDesc" @update:descending="sortDesc = $event" episodes />
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { Dialog } from '@capacitor/dialog'
+import { getString } from '@/composables/useStrings'
 
-export default {
-  props: {
-    libraryItem: {
-      type: Object,
-      default: () => {}
-    },
-    episodes: {
-      type: Array,
-      default: () => []
-    },
-    localLibraryItemId: String,
-    localEpisodes: {
-      type: Array,
-      default: () => []
-    },
-    isLocal: Boolean // If is local then episodes and libraryItemId are local, otherwise local is passed in localLibraryItemId and localEpisodes
-  },
-  data() {
-    return {
-      episodesCopy: [],
-      showFiltersModal: false,
-      showSortModal: false,
-      sortKey: 'publishedAt',
-      sortDesc: true,
-      filterKey: 'incomplete',
-      fetchingRSSFeed: false,
-      podcastFeedEpisodes: [],
-      showPodcastEpisodeFeed: false,
-      episodesDownloading: [],
-      episodeDownloadsQueued: []
+const props = defineProps<{
+  libraryItem: Record<string, unknown>
+  episodes: Record<string, unknown>[]
+  localLibraryItemId?: string
+  localEpisodes?: Record<string, unknown>[]
+  isLocal?: boolean
+}>()
+
+const strings = useStrings()
+const appStore = useAppStore()
+const globalsStore = useGlobalsStore()
+const userStore = useUserStore()
+const nativeHttp = useNativeHttp()
+const toast = useToast()
+const route = useRoute()
+const socketInstance = useSocket()
+
+const episodesCopy = ref<Record<string, unknown>[]>([])
+const showFiltersModal = ref(false)
+const showSortModal = ref(false)
+const sortKey = ref('publishedAt')
+const sortDesc = ref(true)
+const filterKey = ref('incomplete')
+const fetchingRSSFeed = ref(false)
+const podcastFeedEpisodes = ref<Record<string, unknown>[]>([])
+const showPodcastEpisodeFeed = ref(false)
+const episodesDownloading = ref<Record<string, unknown>[]>([])
+const episodeDownloadsQueued = ref<Record<string, unknown>[]>([])
+
+const isAdminOrUp = computed(() => userStore.getIsAdminOrUp)
+const socketConnected = computed(() => appStore.socketConnected)
+const networkConnected = computed(() => appStore.networkConnected)
+const libraryItemId = computed(() => (props.libraryItem?.id as string) || null)
+const media = computed(() => (props.libraryItem?.media as Record<string, unknown>) || {})
+const mediaMetadata = computed(() => (media.value.metadata as Record<string, unknown>) || {})
+
+const episodeSortItems = computed(() => [
+  { text: strings.LabelPubDate, value: 'publishedAt' },
+  { text: strings.LabelTitle, value: 'title' },
+  { text: strings.LabelSeason, value: 'season' },
+  { text: strings.LabelEpisode, value: 'episode' },
+  { text: strings.LabelFilename, value: 'audioFile.metadata.filename' }
+])
+
+const filterItems = computed(() => [
+  { text: strings.LabelShowAll, value: 'all' },
+  { text: strings.LabelIncomplete, value: 'incomplete' },
+  { text: strings.LabelInProgress, value: 'inProgress' },
+  { text: strings.LabelComplete, value: 'complete' },
+  { text: strings.LabelDownloaded, value: 'downloaded' }
+])
+
+const localEpisodeMap = computed(() => {
+  const epmap: Record<string, Record<string, unknown>> = {}
+  ;(props.localEpisodes || []).forEach((localEp) => {
+    if (localEp.serverEpisodeId) {
+      epmap[localEp.serverEpisodeId as string] = localEp
     }
-  },
-  watch: {
-    episodes: {
-      immediate: true,
-      handler() {
-        this.init()
-      }
+  })
+  return epmap
+})
+
+function getEpisodeProgress(episode: Record<string, unknown>) {
+  if (props.isLocal) return globalsStore.getLocalMediaProgressById(libraryItemId.value || '', episode.id as string)
+  return userStore.getUserMediaProgress(libraryItemId.value || '', episode.id as string)
+}
+
+const episodesFiltered = computed(() => {
+  return episodesCopy.value.filter((ep) => {
+    if (filterKey.value === 'downloaded') {
+      return !!localEpisodeMap.value[ep.id as string]
     }
-  },
-  computed: {
-    isAdminOrUp() {
-      return this.$store.getters['user/getIsAdminOrUp']
-    },
-    socketConnected() {
-      return this.$store.state.socketConnected
-    },
-    networkConnected() {
-      return this.$store.state.networkConnected
-    },
-    libraryItemId() {
-      return this.libraryItem?.id || null
-    },
-    media() {
-      return this.libraryItem?.media || {}
-    },
-    mediaMetadata() {
-      return this.media.metadata || {}
-    },
-    episodesAreFiltered() {
-      return this.episodesFiltered.length !== this.episodesCopy.length
-    },
-    episodeSortItems() {
-      return [
-        {
-          text: this.$strings.LabelPubDate,
-          value: 'publishedAt'
-        },
-        {
-          text: this.$strings.LabelTitle,
-          value: 'title'
-        },
-        {
-          text: this.$strings.LabelSeason,
-          value: 'season'
-        },
-        {
-          text: this.$strings.LabelEpisode,
-          value: 'episode'
-        },
-        {
-          text: this.$strings.LabelFilename,
-          value: 'audioFile.metadata.filename'
-        }
-      ]
-    },
-    filterItems() {
-      return [
-        {
-          text: this.$strings.LabelShowAll,
-          value: 'all'
-        },
-        {
-          text: this.$strings.LabelIncomplete,
-          value: 'incomplete'
-        },
-        {
-          text: this.$strings.LabelInProgress,
-          value: 'inProgress'
-        },
-        {
-          text: this.$strings.LabelComplete,
-          value: 'complete'
-        },
-        {
-          text: this.$strings.LabelDownloaded,
-          value: 'downloaded'
-        }
-      ]
-    },
-    episodesFiltered() {
-      return this.episodesCopy.filter((ep) => {
-        if (this.filterKey === 'downloaded') {
-          return !!this.localEpisodeMap[ep.id]
-        }
-        var mediaProgress = this.getEpisodeProgress(ep)
-        if (this.filterKey === 'incomplete') {
-          return !mediaProgress?.isFinished
-        } else if (this.filterKey === 'complete') {
-          return mediaProgress?.isFinished
-        } else if (this.filterKey === 'inProgress') {
-          return mediaProgress && !mediaProgress.isFinished
-        } else if (this.filterKey === 'all') {
-          console.log('Filter key is all')
-          return true
-        }
-        return true
-      })
-    },
-    episodesSorted() {
-      return this.episodesFiltered.sort((a, b) => {
-        let aValue
-        let bValue
-
-        if (this.sortKey.includes('.')) {
-          const getNestedValue = (ob, s) => s.split('.').reduce((o, k) => o?.[k], ob)
-          aValue = getNestedValue(a, this.sortKey)
-          bValue = getNestedValue(b, this.sortKey)
-        } else {
-          aValue = a[this.sortKey]
-          bValue = b[this.sortKey]
-        }
-
-        // Sort episodes with no pub date as the oldest
-        if (this.sortKey === 'publishedAt') {
-          if (!aValue) aValue = Number.MAX_VALUE
-          if (!bValue) bValue = Number.MAX_VALUE
-        }
-
-        if (this.sortDesc) {
-          return String(bValue).localeCompare(String(aValue), undefined, { numeric: true, sensitivity: 'base' })
-        }
-        return String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' })
-      })
-    },
-    // Map of local episodes where server episode id is key
-    localEpisodeMap() {
-      var epmap = {}
-      this.localEpisodes.forEach((localEp) => {
-        if (localEp.serverEpisodeId) {
-          epmap[localEp.serverEpisodeId] = localEp
-        }
-      })
-      return epmap
-    },
-    sortText() {
-      if (!this.sortKey) return ''
-      const _sel = this.episodeSortItems.find((i) => i.value === this.sortKey)
-      return _sel?.text || ''
+    const mediaProgress = getEpisodeProgress(ep) as Record<string, unknown> | null
+    if (filterKey.value === 'incomplete') {
+      return !mediaProgress?.isFinished
+    } else if (filterKey.value === 'complete') {
+      return mediaProgress?.isFinished
+    } else if (filterKey.value === 'inProgress') {
+      return mediaProgress && !mediaProgress.isFinished
     }
-  },
-  methods: {
-    async clearDownloadQueue() {
-      if (!this.networkConnected) {
-        this.$toast.error(this.$strings.MessageNoNetworkConnection)
-        return
-      }
+    return true
+  })
+})
 
-      const { value } = await Dialog.confirm({
-        title: this.$strings.HeaderConfirm,
-        message: this.$strings.MessageConfirmDeleteEpisodeDownloadQueue
-      })
+const episodesAreFiltered = computed(() => episodesFiltered.value.length !== episodesCopy.value.length)
 
-      if (value) {
-        this.$nativeHttp
-          .get(`/api/podcasts/${this.libraryItemId}/clear-queue`)
-          .then(() => {
-            this.$toast.success('Episode download queue cleared')
-            this.episodeDownloadsQueued = []
-          })
-          .catch((error) => {
-            console.error('Failed to clear queue', error)
-            this.$toast.error('Failed to clear queue')
-          })
-      }
-    },
-    async searchEpisodes() {
-      if (!this.networkConnected || !this.socketConnected) {
-        return this.$toast.error(this.$strings.MessageNoNetworkConnection)
-      }
+const episodesSorted = computed(() => {
+  return [...episodesFiltered.value].sort((a, b) => {
+    let aValue: unknown
+    let bValue: unknown
 
-      if (!this.mediaMetadata.feedUrl) {
-        return this.$toast.error('Podcast does not have an RSS Feed')
-      }
-      this.fetchingRSSFeed = true
-      const payload = await this.$nativeHttp.post(`/api/podcasts/feed`, { rssFeed: this.mediaMetadata.feedUrl }).catch((error) => {
-        console.error('Failed to get feed', error)
-        this.$toast.error('Failed to get podcast feed')
-        return null
-      })
-      this.fetchingRSSFeed = false
-      if (!payload) return
-
-      console.log('Podcast feed', payload)
-      const podcastfeed = payload.podcast
-      if (!podcastfeed.episodes || !podcastfeed.episodes.length) {
-        this.$toast.info('No episodes found in RSS feed')
-        return
-      }
-
-      this.podcastFeedEpisodes = podcastfeed.episodes
-      this.showPodcastEpisodeFeed = true
-    },
-    addEpisodeToPlaylist(episode) {
-      this.$store.commit('globals/setSelectedPlaylistItems', [{ libraryItem: this.libraryItem, episode }])
-      this.$store.commit('globals/setShowPlaylistsAddCreateModal', true)
-    },
-    setFilter(filter) {
-      this.filterKey = filter
-      this.showFiltersModal = false
-    },
-    showFilters() {
-      this.showFiltersModal = true
-    },
-    clickSort() {
-      this.showSortModal = true
-    },
-    getEpisodeProgress(episode) {
-      if (this.isLocal) return this.$store.getters['globals/getLocalMediaProgressById'](this.libraryItemId, episode.id)
-      return this.$store.getters['user/getUserMediaProgress'](this.libraryItemId, episode.id)
-    },
-    init() {
-      this.sortDesc = this.mediaMetadata.type === 'episodic'
-      this.episodesCopy = this.episodes.map((ep) => {
-        return { ...ep }
-      })
-    },
-    episodeDownloadQueued(episodeDownload) {
-      if (episodeDownload.libraryItemId === this.libraryItemId) {
-        this.episodeDownloadsQueued.push(episodeDownload)
-      }
-    },
-    episodeDownloadStarted(episodeDownload) {
-      if (episodeDownload.libraryItemId === this.libraryItemId) {
-        this.episodeDownloadsQueued = this.episodeDownloadsQueued.filter((d) => d.id !== episodeDownload.id)
-        this.episodesDownloading.push(episodeDownload)
-      }
-    },
-    episodeDownloadFinished(episodeDownload) {
-      if (episodeDownload.libraryItemId === this.libraryItemId) {
-        this.episodeDownloadsQueued = this.episodeDownloadsQueued.filter((d) => d.id !== episodeDownload.id)
-        this.episodesDownloading = this.episodesDownloading.filter((d) => d.id !== episodeDownload.id)
-      }
+    if (sortKey.value.includes('.')) {
+      const getNestedValue = (ob: Record<string, unknown>, s: string): unknown => s.split('.').reduce((o: unknown, k: string) => (o as Record<string, unknown>)?.[k], ob)
+      aValue = getNestedValue(a, sortKey.value)
+      bValue = getNestedValue(b, sortKey.value)
+    } else {
+      aValue = a[sortKey.value]
+      bValue = b[sortKey.value]
     }
-  },
-  mounted() {
-    if (this.$route.query['episodefilter'] === 'downloaded') {
-      this.filterKey = 'downloaded'
+
+    // Sort episodes with no pub date as the oldest
+    if (sortKey.value === 'publishedAt') {
+      if (!aValue) aValue = Number.MAX_VALUE
+      if (!bValue) bValue = Number.MAX_VALUE
     }
-    this.$socket.$on('episode_download_queued', this.episodeDownloadQueued)
-    this.$socket.$on('episode_download_started', this.episodeDownloadStarted)
-    this.$socket.$on('episode_download_finished', this.episodeDownloadFinished)
-  },
-  beforeDestroy() {
-    this.$socket.$off('episode_download_queued', this.episodeDownloadQueued)
-    this.$socket.$off('episode_download_started', this.episodeDownloadStarted)
-    this.$socket.$off('episode_download_finished', this.episodeDownloadFinished)
+
+    if (sortDesc.value) {
+      return String(bValue).localeCompare(String(aValue), undefined, { numeric: true, sensitivity: 'base' })
+    }
+    return String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' })
+  })
+})
+
+const sortText = computed(() => {
+  if (!sortKey.value) return ''
+  const _sel = episodeSortItems.value.find((i) => i.value === sortKey.value)
+  return _sel?.text || ''
+})
+
+async function clearDownloadQueue() {
+  if (!networkConnected.value) {
+    toast.error(strings.MessageNoNetworkConnection)
+    return
+  }
+
+  const { value } = await Dialog.confirm({
+    title: strings.HeaderConfirm,
+    message: strings.MessageConfirmDeleteEpisodeDownloadQueue
+  })
+
+  if (value) {
+    nativeHttp
+      .get(`/api/podcasts/${libraryItemId.value}/clear-queue`)
+      .then(() => {
+        toast.success('Episode download queue cleared')
+        episodeDownloadsQueued.value = []
+      })
+      .catch((error: Error) => {
+        console.error('Failed to clear queue', error)
+        toast.error('Failed to clear queue')
+      })
   }
 }
+
+async function searchEpisodes() {
+  if (!networkConnected.value || !socketConnected.value) {
+    return toast.error(strings.MessageNoNetworkConnection)
+  }
+
+  if (!mediaMetadata.value.feedUrl) {
+    return toast.error('Podcast does not have an RSS Feed')
+  }
+  fetchingRSSFeed.value = true
+  const payload = await nativeHttp.post(`/api/podcasts/feed`, { rssFeed: mediaMetadata.value.feedUrl }).catch((error: Error) => {
+    console.error('Failed to get feed', error)
+    toast.error('Failed to get podcast feed')
+    return null
+  }) as Record<string, unknown> | null
+  fetchingRSSFeed.value = false
+  if (!payload) return
+
+  console.log('Podcast feed', payload)
+  const podcastfeed = payload.podcast as Record<string, unknown>
+  if (!(podcastfeed.episodes as unknown[])?.length) {
+    toast.info('No episodes found in RSS feed')
+    return
+  }
+
+  podcastFeedEpisodes.value = podcastfeed.episodes as Record<string, unknown>[]
+  showPodcastEpisodeFeed.value = true
+}
+
+function addEpisodeToPlaylist(episode: Record<string, unknown>) {
+  globalsStore.selectedPlaylistItems = [{ libraryItem: props.libraryItem, episode }]
+  globalsStore.showPlaylistsAddCreateModal = true
+}
+
+function setFilter(filter: string) {
+  filterKey.value = filter
+  showFiltersModal.value = false
+}
+
+function showFilters() {
+  showFiltersModal.value = true
+}
+
+function clickSort() {
+  showSortModal.value = true
+}
+
+function init() {
+  sortDesc.value = mediaMetadata.value.type === 'episodic'
+  episodesCopy.value = props.episodes.map((ep) => ({ ...ep }))
+}
+
+function episodeDownloadQueued(episodeDownload: Record<string, unknown>) {
+  if (episodeDownload.libraryItemId === libraryItemId.value) {
+    episodeDownloadsQueued.value.push(episodeDownload)
+  }
+}
+
+function episodeDownloadStarted(episodeDownload: Record<string, unknown>) {
+  if (episodeDownload.libraryItemId === libraryItemId.value) {
+    episodeDownloadsQueued.value = episodeDownloadsQueued.value.filter((d) => d.id !== episodeDownload.id)
+    episodesDownloading.value.push(episodeDownload)
+  }
+}
+
+function episodeDownloadFinished(episodeDownload: Record<string, unknown>) {
+  if (episodeDownload.libraryItemId === libraryItemId.value) {
+    episodeDownloadsQueued.value = episodeDownloadsQueued.value.filter((d) => d.id !== episodeDownload.id)
+    episodesDownloading.value = episodesDownloading.value.filter((d) => d.id !== episodeDownload.id)
+  }
+}
+
+watch(() => props.episodes, () => {
+  init()
+}, { immediate: true })
+
+onMounted(() => {
+  if (route.query['episodefilter'] === 'downloaded') {
+    filterKey.value = 'downloaded'
+  }
+  socketInstance.$on('episode_download_queued', episodeDownloadQueued)
+  socketInstance.$on('episode_download_started', episodeDownloadStarted)
+  socketInstance.$on('episode_download_finished', episodeDownloadFinished)
+})
+
+onBeforeUnmount(() => {
+  socketInstance.$off('episode_download_queued', episodeDownloadQueued)
+  socketInstance.$off('episode_download_started', episodeDownloadStarted)
+  socketInstance.$off('episode_download_finished', episodeDownloadFinished)
+})
 </script>
