@@ -130,8 +130,12 @@ export default {
         .filter((ep) => {
           if (ep.progress?.isFinished) return false
           if (ep.libraryItemId) {
-            const storeProgress = this.userStore.getUserMediaProgress(ep.libraryItemId, ep.id)
-            if (storeProgress?.isFinished) return false
+            const serverProg = this.userStore.getUserMediaProgress(ep.libraryItemId, ep.id)
+            if (serverProg?.isFinished) return false
+            // Also check local progress — native layer updates this immediately on finish
+            // before the server socket confirms, so episodes don't linger in the list
+            const localProg = this.globalsStore.getLocalMediaProgressByServerItemId(ep.libraryItemId, ep.id)
+            if (localProg?.isFinished) return false
           }
           return true
         })

@@ -158,7 +158,13 @@ const playerIsStartingForThisMedia = computed(() => {
 })
 const userItemProgress = computed(() => {
   if (isLocal.value) return localItemProgress.value
-  return serverItemProgress.value
+  const serverProg = serverItemProgress.value
+  const localProg = localItemProgress.value
+  if (!localProg) return serverProg
+  if (!serverProg) return localProg
+  const serverUpdate = (serverProg as Record<string, unknown>).lastUpdate as number || 0
+  const localUpdate = (localProg as Record<string, unknown>).lastUpdate as number || 0
+  return localUpdate > serverUpdate ? localProg : serverProg
 })
 const localItemProgress = computed(() => {
   if (!localLibraryItemId.value || !localEpisodeId.value) return null

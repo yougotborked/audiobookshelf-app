@@ -130,14 +130,14 @@ const playerIsStartingForThisMedia = computed(() => {
 })
 const itemProgress = computed(() => {
   if (props.isLocal) return globalsStore.getLocalMediaProgressById(props.libraryItemId || '', props.episode.id as string)
-  return userStore.getUserMediaProgress(props.libraryItemId || '', props.episode.id as string)
-})
-const localMediaProgress = computed(() => {
-  if (props.isLocal) return globalsStore.getLocalMediaProgressById(props.libraryItemId || '', props.episode.id as string)
-  else if (props.localLibraryItemId && props.localEpisode) {
-    return globalsStore.getLocalMediaProgressById(props.localLibraryItemId, props.localEpisode.id as string)
-  }
-  return null
+  const serverProg = userStore.getUserMediaProgress(props.libraryItemId || '', props.episode.id as string)
+  const localProg = globalsStore.getLocalMediaProgressByServerItemId(props.libraryItemId || '', props.episode.id as string)
+  if (!localProg) return serverProg
+  if (!serverProg) return localProg
+  // Use whichever was updated more recently so local finished state isn't overridden by stale server data
+  const serverUpdate = (serverProg as Record<string, unknown>).lastUpdate as number || 0
+  const localUpdate = (localProg as Record<string, unknown>).lastUpdate as number || 0
+  return localUpdate > serverUpdate ? localProg : serverProg
 })
 const itemProgressPercent = computed(() => (itemProgress.value as Record<string, unknown>)?.progress as number || 0)
 const userIsFinished = computed(() => !!(itemProgress.value as Record<string, unknown>)?.isFinished)
