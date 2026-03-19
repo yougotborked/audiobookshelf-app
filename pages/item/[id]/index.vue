@@ -323,6 +323,7 @@ const isPlaying = computed(() => {
 const playerIsPlaying = computed(() => appStore.playerIsPlaying && (isStreaming.value || isPlaying.value))
 const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
   const mediaId = appStore.playerStartingPlaybackMediaId
   if (!mediaId) return false
   if (isPodcast.value) {

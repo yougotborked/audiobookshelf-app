@@ -30,10 +30,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v5
 
-      - name: Use Node.js 20.x with npm cache
+      - name: Use Node.js 24.x with npm cache
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: '**/package-lock.json'
 

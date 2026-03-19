@@ -76,6 +76,7 @@ const playerIsStartingPlayback = computed(() => {
   return appStore.playerIsStartingPlayback
 })
 const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
   if (!mediaIdStartingPlayback.value) return false
   const mediaId = appStore.playerStartingPlaybackMediaId
   return mediaId === mediaIdStartingPlayback.value

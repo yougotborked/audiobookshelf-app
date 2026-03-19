@@ -262,6 +262,7 @@ const isStreaming = computed(() => appStore.getIsMediaStreaming(libraryItemId.va
 const streamIsPlaying = computed(() => appStore.playerIsPlaying && isStreaming.value)
 const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
   const mediaId = appStore.playerStartingPlaybackMediaId
   return mediaId === recentEpisode.value?.id
 })

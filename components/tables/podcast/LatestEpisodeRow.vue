@@ -122,6 +122,7 @@ const isStreaming = computed(() => {
 const streamIsPlaying = computed(() => appStore.playerIsPlaying && isStreaming.value)
 const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
   if (!props.episode?.id) return false
   const mediaId = appStore.playerStartingPlaybackMediaId
   return mediaId === props.episode.id

@@ -135,6 +135,7 @@ const autoContinuePlaylists = computed(() => appStore.deviceData?.deviceSettings
 const showPlayButton = computed(() => playableItems.value.length)
 const playerIsStartingPlayback = computed(() => appStore.playerIsStartingPlayback)
 const playerIsStartingForThisMedia = computed(() => {
+  if (!appStore.playerIsStartingPlayback) return false
   if (!mediaIdStartingPlayback.value) return false
   const mediaId = appStore.playerStartingPlaybackMediaId
   return mediaId === mediaIdStartingPlayback.value
