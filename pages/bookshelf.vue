@@ -11,10 +11,9 @@
 <script setup lang="ts">
 const route = useRoute()
 
-const hideToolbar = computed(() => isHome.value || isLatest.value || isPodcastSearch.value)
+const hideToolbar = computed(() => isHome.value || isDiscover.value)
 const isHome = computed(() => route.name === 'bookshelf')
-const isLatest = computed(() => route.name === 'bookshelf-latest')
-const isPodcastSearch = computed(() => route.name === 'bookshelf-add-podcast')
+const isDiscover = computed(() => route.name === 'bookshelf-discover')
 </script>
 
 <style>

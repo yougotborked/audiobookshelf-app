@@ -65,12 +65,9 @@ const items = computed(() => {
   if (isPodcast.value) {
     navItems = [
       { to: '/bookshelf', routeName: 'bookshelf', iconPack: 'abs-icons', icon: 'home', text: strings.ButtonHome },
-      { to: '/bookshelf/latest', routeName: 'bookshelf-latest', iconPack: 'abs-icons', icon: 'list', text: strings.ButtonLatest },
+      { to: '/bookshelf/discover', routeName: 'bookshelf-discover', iconPack: 'material-symbols', icon: 'explore', text: strings.ButtonDiscover },
       { to: '/bookshelf/library', routeName: 'bookshelf-library', iconPack: 'abs-icons', icon: currentLibraryIcon.value, text: strings.ButtonLibrary }
     ]
-    if (userIsAdminOrUp.value) {
-      navItems.push({ to: '/bookshelf/add-podcast', routeName: 'bookshelf-add-podcast', iconPack: 'material-symbols', icon: 'podcasts', text: strings.ButtonAdd })
-    }
   } else {
     navItems = [
       { to: '/bookshelf', routeName: 'bookshelf', iconPack: 'abs-icons', icon: 'home', text: strings.ButtonHome },
