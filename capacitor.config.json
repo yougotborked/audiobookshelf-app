@@ -1,7 +1,7 @@
 {
   "appId": "com.audiobookshelf.app",
   "appName": "audiobookshelf-app",
-  "webDir": "dist",
+  "webDir": ".output/public",
   "plugins": {
     "CapacitorHttp": {
       "enabled": false

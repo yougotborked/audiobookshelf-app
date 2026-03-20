@@ -1,1 +1,0 @@
-button.icon-btn:disabled{cursor:not-allowed}button.icon-btn:before{background-color:#fff0;border-radius:6px;content:"";height:100%;left:0;position:absolute;top:0;transition:all .1s ease-in-out;width:100%}button.icon-btn:hover:not(:disabled):before{background-color:#ffffff1a}button.icon-btn:disabled:before{background-color:#0003}button.icon-btn:disabled span{color:#777}

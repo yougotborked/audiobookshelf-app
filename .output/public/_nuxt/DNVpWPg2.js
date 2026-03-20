@@ -1,1 +1,0 @@
-import{_ as c}from"./D6wklvAg.js";import{_ as e,o as t,M as s}from"./GQdYg7xT.js";import"./D3wz1_Vw.js";import"./Bxc42DUt.js";const _={};function n(r,a){const o=c;return t(),s(o,{page:"collections"})}const p=e(_,[["render",n]]);export{p as default};

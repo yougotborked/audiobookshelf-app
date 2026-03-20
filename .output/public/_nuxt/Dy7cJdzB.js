@@ -1,1 +1,0 @@
-import{_ as e}from"./D6wklvAg.js";import{_ as r,o as s,M as _}from"./GQdYg7xT.js";import"./D3wz1_Vw.js";import"./Bxc42DUt.js";const c={};function t(n,a){const o=e;return s(),_(o,{page:"series"})}const l=r(c,[["render",t]]);export{l as default};

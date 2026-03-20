@@ -103,7 +103,7 @@
           <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
             <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white/20 pointer-events-none" />
 
-            <span v-if="!isLoading" class="material-symbols fill" :class="{ 'text-white': coverRgb && !coverBgIsLight }">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
+            <span v-if="!isLoading" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
           <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
