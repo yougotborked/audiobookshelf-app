@@ -49,6 +49,9 @@ jobs:
 
       - name: Build Nuxt project (static)
         run: npm run generate
+        env:
+          PODCAST_INDEX_KEY: ${{ secrets.PODCAST_INDEX_KEY }}
+          PODCAST_INDEX_SECRET: ${{ secrets.PODCAST_INDEX_SECRET }}
 
       - name: Copy web to Android (Capacitor)
         run: npx cap sync
