@@ -65,7 +65,7 @@ export const useLibrariesStore = defineStore('libraries', {
       }
       const nativeHttp = useNativeHttp()
       try {
-        const data = await nativeHttp.get(`/api/libraries/${libraryId}?include=filterdata`) as Record<string, unknown>
+        const data = await nativeHttp.get(`/api/libraries/${libraryId}?include=filterdata`, { connectTimeout: 10000 }) as Record<string, unknown>
         const library = data.library as Library
         const filterData = data.filterdata as Record<string, unknown>
         const issues = (data.issues as number) || 0
@@ -97,7 +97,7 @@ export const useLibrariesStore = defineStore('libraries', {
 
       const nativeHttp = useNativeHttp()
       try {
-        const data = await nativeHttp.get('/api/libraries') as Record<string, unknown>
+        const data = await nativeHttp.get('/api/libraries', { connectTimeout: 10000 }) as Record<string, unknown>
         const libraries = (data.libraries || data) as Library[]
         if (libraries.length && (!this.currentLibraryId || !libraries.find((li) => li.id == this.currentLibraryId))) {
           this.currentLibraryId = libraries[0].id

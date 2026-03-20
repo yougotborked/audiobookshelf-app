@@ -109,7 +109,7 @@ async function runSearch(value: string | null) {
     return
   }
   isFetching.value = true
-  const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}&limit=5`).catch((error: Error) => {
+  const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}&limit=5`, { connectTimeout: 10000 }).catch((error: Error) => {
     console.error('Search error', error)
     return null
   })) as Record<string, Record<string, unknown>[]> | null

@@ -30,7 +30,6 @@
 </template>
 <script setup lang="ts">
 import { AbsLogger } from '@/plugins/capacitor'
-import { FileSharer } from '@webnativellc/capacitor-filesharer'
 
 const strings = useStrings()
 const toast = useToast()
@@ -113,19 +112,32 @@ function getLogsString(): string {
 
 async function shareLogs() {
   await useHaptics().impact()
-  // Share .txt file with logs
-  const base64Data = Buffer.from(getLogsString()).toString('base64')
+  const logsString = getLogsString()
   const platform = usePlatform()
   const version = runtimeConfig.public.version
+  const filename = `abs_logs_${platform}_${version}.txt`
 
-  FileSharer.share({
-    filename: `abs_logs_${platform}_${version}.txt`,
-    contentType: 'text/plain',
-    base64Data
-  }).catch((error: Error) => {
-    if (error.message !== 'USER_CANCELLED') {
-      console.error('Failed to share', error.message)
-      toast.error('Failed to share: ' + error.message)
+  if (!navigator.share) {
+    toast.error('Share not supported on this device')
+    return
+  }
+
+  const shareData: ShareData = { title: filename }
+  if (navigator.canShare) {
+    const file = new File([logsString], filename, { type: 'text/plain' })
+    if (navigator.canShare({ files: [file] })) {
+      shareData.files = [file]
+    } else {
+      shareData.text = logsString
+    }
+  } else {
+    shareData.text = logsString
+  }
+
+  navigator.share(shareData).catch((err: Error) => {
+    if (err.name !== 'AbortError') {
+      console.error('Failed to share', err.message)
+      toast.error('Failed to share: ' + err.message)
     }
   })
 }

@@ -79,7 +79,7 @@ function clickBar() {
 async function updateEbookStatus() {
   processing.value = true
   try {
-    await nativeHttp.patch(`/api/items/${libraryItemId.value}/ebook/${selectedFile.value?.ino}/status`, null)
+    await nativeHttp.patch(`/api/items/${libraryItemId.value}/ebook/${selectedFile.value?.ino}/status`, null, { connectTimeout: 10000 })
     toast.success('Ebook updated')
   } catch (error) {
     console.error('Failed to update ebook', error)

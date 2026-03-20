@@ -962,7 +962,7 @@ async function authenticateToken() {
     },
     serverConnectionConfig: serverConfig.value as { id: string; address: string; token?: string; refreshToken?: string }
   }
-  const authRes = await nativeHttp.post(`${serverConfig.value.address}/api/authorize`, null, nativeHttpOptions).catch((err: any) => {
+  const authRes = await nativeHttp.post(`${serverConfig.value.address}/api/authorize`, null, { ...nativeHttpOptions, connectTimeout: 10000 }).catch((err: any) => {
     console.error('[ServerConnectForm] Server auth failed', err)
     const errorMsg = err.message || err
     error.value = 'Failed to authorize'

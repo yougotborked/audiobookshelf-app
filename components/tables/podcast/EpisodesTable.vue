@@ -42,7 +42,7 @@
       <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id as string]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
 
-    <div v-if="!episodesSorted.length" class="py-6 text-center text-fg-muted text-sm">
+    <div v-if="!episodesSorted.length" class="py-6 text-center text-md-on-surface-variant text-sm">
       <p v-if="filterKey !== 'all'">{{ strings.LabelNoEpisodesMatchingFilter || 'No episodes match the current filter.' }}</p>
       <p v-else>{{ strings.LabelNoEpisodes || 'No episodes found.' }}</p>
       <button v-if="filterKey !== 'all'" class="mt-2 underline text-md-primary text-sm" @click="filterKey = 'all'">Show all episodes</button>
@@ -217,7 +217,7 @@ async function searchEpisodes() {
     return toast.error('Podcast does not have an RSS Feed')
   }
   fetchingRSSFeed.value = true
-  const payload = await nativeHttp.post(`/api/podcasts/feed`, { rssFeed: mediaMetadata.value.feedUrl }).catch((error: Error) => {
+  const payload = await nativeHttp.post(`/api/podcasts/feed`, { rssFeed: mediaMetadata.value.feedUrl }, { connectTimeout: 10000 }).catch((error: Error) => {
     console.error('Failed to get feed', error)
     toast.error('Failed to get podcast feed')
     return null

@@ -32,7 +32,7 @@ let series: any = null
 let loadedFromCache = false
 
 if (isNetworkAvailable) {
-  series = await nativeHttp.get(`/api/series/${seriesId}`).catch((error: any) => {
+  series = await nativeHttp.get(`/api/series/${seriesId}`, { connectTimeout: 10000 }).catch((error: any) => {
     console.error('Failed to load series', error)
     return null
   })
@@ -117,7 +117,7 @@ async function fetchSeriesEntities(page: number) {
     return true
   }
 
-  const payload = await nativeHttp.get(`/api/libraries/${seriesData.value.libraryId}/${entityPath}${fullQueryString}`).catch((error: any) => {
+  const payload = await nativeHttp.get(`/api/libraries/${seriesData.value.libraryId}/${entityPath}${fullQueryString}`, { connectTimeout: 10000 }).catch((error: any) => {
     console.error('failed to fetch books', error)
     return null
   })

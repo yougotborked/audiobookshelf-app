@@ -195,7 +195,7 @@ export default {
           return
         }
 
-        const episodePayload = await this.nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200`)
+        const episodePayload = await this.nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200`, { connectTimeout: 10000 })
 
         if (!episodePayload) {
           throw new Error('Empty response payload')
@@ -262,7 +262,7 @@ export default {
       this.eventBus.emit('play-item', playPayload)
     },
     async addEpisodeToPlaylist(episode) {
-      const libraryItem = await this.nativeHttp.get(`/api/items/${episode.libraryItemId}`).catch((error) => {
+      const libraryItem = await this.nativeHttp.get(`/api/items/${episode.libraryItemId}`, { connectTimeout: 10000 }).catch((error) => {
         console.error('[PodcastCatchUpFeed] Failed to get library item', error)
         this.toast.error('Failed to get library item')
         return null

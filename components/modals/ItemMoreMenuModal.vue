@@ -308,7 +308,7 @@ async function toggleFinished() {
     const updatePayload = { isFinished: !userIsFinished.value }
     AbsLogger.info({ tag: 'ItemMoreMenuModal', message: `toggleFinished server request: ${JSON.stringify({ _serverLibraryItemId, payload: updatePayload })}` })
     let serverError = null
-    await nativeHttp.patch(`/api/me/progress/${_serverLibraryItemId}`, updatePayload).catch(async (error) => {
+    await nativeHttp.patch(`/api/me/progress/${_serverLibraryItemId}`, updatePayload, { connectTimeout: 10000 }).catch(async (error) => {
       serverError = error
       const status = (error?.response?.status as number)
       const data = error?.response?.data
@@ -381,7 +381,7 @@ async function toggleEpisodeFinished() {
     const updatePayload = { isFinished: !userIsFinished.value }
     AbsLogger.info({ tag: 'ItemMoreMenuModal', message: `toggleEpisodeFinished server request: ${JSON.stringify({ _serverLibraryItemId, _serverEpisodeId, payload: updatePayload })}` })
     let serverError = null
-    await nativeHttp.patch(`/api/me/progress/${_serverLibraryItemId}/${_serverEpisodeId}`, updatePayload).catch(async (error) => {
+    await nativeHttp.patch(`/api/me/progress/${_serverLibraryItemId}/${_serverEpisodeId}`, updatePayload, { connectTimeout: 10000 }).catch(async (error) => {
       serverError = error
       const status = (error?.response?.status as number)
       const data = error?.response?.data

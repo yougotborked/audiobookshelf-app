@@ -208,7 +208,7 @@ async function fetchEntities(page: number) {
       payload = { results: [], total: 0 }
     }
   } else {
-    payload = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/${entityPath}${fullQueryString}`).catch((error: unknown) => {
+    payload = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/${entityPath}${fullQueryString}`, { connectTimeout: 10000 }).catch((error: unknown) => {
       console.error('failed to fetch books', error)
       return null
     })) as { results: Record<string, unknown>[]; total: number } | null

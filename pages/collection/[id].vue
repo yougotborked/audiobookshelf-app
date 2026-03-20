@@ -139,7 +139,7 @@ onMounted(async () => {
     let fetchedCollection: Record<string, unknown> | null = null
 
     if (isNetworkAvailable) {
-      fetchedCollection = await nativeHttp.get(`/api/collections/${id}`).catch((error: any) => {
+      fetchedCollection = await nativeHttp.get(`/api/collections/${id}`, { connectTimeout: 10000 }).catch((error: any) => {
         console.error('Failed to fetch collection', error)
         return null
       }) as Record<string, unknown> | null

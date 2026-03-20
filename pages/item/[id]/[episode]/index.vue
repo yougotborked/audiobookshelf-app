@@ -1,33 +1,33 @@
 <template>
-  <div v-if="!libraryItem || !episode" class="w-full h-full relative flex items-center justify-center bg-bg">
-    <widgets-loading-spinner size="la-lg" />
+  <div v-if="!libraryItem || !episode" class="w-full h-full relative flex items-center justify-center bg-md-surface-0">
+    <ui-loading-indicator />
   </div>
-  <div v-else class="w-full h-full px-3 py-4 overflow-y-auto overflow-x-hidden relative bg-bg">
+  <div v-else class="w-full h-full px-3 py-4 overflow-y-auto overflow-x-hidden relative bg-md-surface-0">
     <div class="flex mb-2">
       <div class="w-10 min-w-10">
         <covers-preview-cover :src="coverUrl" :width="40" :book-cover-aspect-ratio="bookCoverAspectRatio" :show-resolution="false" class="md:hidden" />
       </div>
       <div class="flex-grow px-2">
         <div class="-mt-0.5 mb-0.5">
-          <nuxt-link :to="`/item/${libraryItemId}`" class="text-sm text-fg underline">{{ podcast.metadata.title }}</nuxt-link>
+          <nuxt-link :to="`/item/${libraryItemId}`" class="text-sm text-md-on-surface underline">{{ podcast.metadata.title }}</nuxt-link>
         </div>
-        <p v-if="publishedAt" class="text-xs text-fg-muted">{{ $dateDistanceFromNow(publishedAt) }}</p>
+        <p v-if="publishedAt" class="text-xs text-md-on-surface-variant">{{ $dateDistanceFromNow(publishedAt) }}</p>
       </div>
     </div>
 
-    <p class="text-lg font-semibold">{{ title }}</p>
+    <p class="text-lg font-semibold text-md-on-surface">{{ title }}</p>
 
     <div v-if="episodeNumber || season || episodeType" class="flex py-2 items-center -mx-0.5">
-      <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary/60 rounded-full text-xs font-light text-fg">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
-      <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary/60 rounded-full text-xs font-light text-fg">{{ $strings.LabelSeason }} #{{ season }}</div>
-      <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-primary/60 rounded-full text-xs font-light text-fg capitalize">{{ episodeType }}</div>
+      <div v-if="episodeNumber" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ $strings.LabelEpisode }} #{{ episodeNumber }}</div>
+      <div v-if="season" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface">{{ $strings.LabelSeason }} #{{ season }}</div>
+      <div v-if="episodeType" class="px-2 pt-px pb-0.5 mx-0.5 bg-md-secondary-container rounded-full text-xs font-light text-md-on-surface capitalize">{{ episodeType }}</div>
     </div>
 
     <!-- user progress card -->
-    <div v-if="progressPercent > 0" class="px-4 py-2 bg-primary text-sm font-semibold rounded-md text-fg mt-4 relative" :class="resettingProgress ? 'opacity-25' : ''">
+    <div v-if="progressPercent > 0" class="px-4 py-2 bg-md-primary-container text-sm font-semibold rounded-md-md text-md-on-primary-container mt-4 relative" :class="resettingProgress ? 'opacity-25' : ''">
       <p class="leading-6">{{ $strings.LabelYourProgress }}: {{ Math.round(progressPercent * 100) }}%</p>
-      <p v-if="progressPercent < 1" class="text-fg-muted text-xs">{{ $getString('LabelTimeRemaining', [$elapsedPretty(userTimeRemaining)]) }}</p>
-      <p v-else class="text-fg-muted text-xs">{{ $strings.LabelFinished }} {{ $formatDate(userProgressFinishedAt) }}</p>
+      <p v-if="progressPercent < 1" class="text-md-on-primary-container/70 text-xs">{{ $getString('LabelTimeRemaining', [$elapsedPretty(userTimeRemaining)]) }}</p>
+      <p v-else class="text-md-on-primary-container/70 text-xs">{{ $strings.LabelFinished }} {{ $formatDate(userProgressFinishedAt) }}</p>
     </div>
 
     <!-- action buttons -->
@@ -44,11 +44,11 @@
       </ui-btn>
     </div>
 
-    <p class="text-sm text-fg mt-1.5 mb-0.5 default-style description-container" v-html="transformedDescription"></p>
+    <p class="text-sm text-md-on-surface mt-1.5 mb-0.5 default-style description-container" v-html="transformedDescription"></p>
 
     <!-- loading overlay -->
     <div v-if="processing" class="absolute top-0 left-0 w-full h-full bg-black/30 flex items-center justify-center">
-      <widgets-loading-spinner size="la-lg" />
+      <ui-loading-indicator />
     </div>
 
     <modals-dialog v-model="showMoreMenu" :items="moreMenuItems" @action="moreMenuAction" />
@@ -470,7 +470,7 @@ async function discardProgress() {
 
     if (serverItemProgressId) {
       await nativeHttp
-        .delete(`/api/me/progress/${serverItemProgressId}`)
+        .delete(`/api/me/progress/${serverItemProgressId}`, { connectTimeout: 10000 })
         .then(() => {
           console.log('Progress reset complete')
           toast.success(`Your progress was reset`)
@@ -508,7 +508,7 @@ async function toggleFinished() {
     const updatePayload = {
       isFinished: !userIsFinished.value
     }
-    nativeHttp.patch(`/api/me/progress/${libraryItemId.value}/${episode.value?.id}`, updatePayload).catch((error: any) => {
+    nativeHttp.patch(`/api/me/progress/${libraryItemId.value}/${episode.value?.id}`, updatePayload, { connectTimeout: 10000 }).catch((error: any) => {
       console.error('Failed', error)
       toast.error(updatePayload.isFinished ? (useNuxtApp() as any).$strings.ToastItemMarkedAsFinishedFailed : (useNuxtApp() as any).$strings.ToastItemMarkedAsNotFinishedFailed)
     })
@@ -526,7 +526,7 @@ async function deleteEpisodeFromServerClick() {
   if (value) {
     processing.value = true
     nativeHttp
-      .delete(`/api/podcasts/${serverLibraryItemId.value}/episode/${serverEpisodeId.value}?hard=1`)
+      .delete(`/api/podcasts/${serverLibraryItemId.value}/episode/${serverEpisodeId.value}?hard=1`, { connectTimeout: 10000 })
       .then(() => {
         router.replace(`/item/${serverLibraryItemId.value}`)
       })
@@ -568,7 +568,7 @@ onMounted(async () => {
     const canRequest = appStore.networkConnected && userStore.serverConnectionConfig
 
     if (canRequest) {
-      fetchedLibraryItem = await nativeHttp.get(`/api/items/${libItemId}?expanded=1`).catch((error: any) => {
+      fetchedLibraryItem = await nativeHttp.get(`/api/items/${libItemId}?expanded=1`, { connectTimeout: 10000 }).catch((error: any) => {
         console.error('Failed', error)
         return null
       })

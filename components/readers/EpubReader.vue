@@ -149,7 +149,7 @@ async function updateProgress(payload: { ebookLocation: string; ebookProgress?: 
 
   // Update server item
   if (serverLibraryItemId.value) {
-    nativeHttp.patch(`/api/me/progress/${serverLibraryItemId.value}`, payload).catch((error: Error) => {
+    nativeHttp.patch(`/api/me/progress/${serverLibraryItemId.value}`, payload, { connectTimeout: 10000 }).catch((error: Error) => {
       console.error('EpubReader.updateProgress failed:', error)
     })
   }

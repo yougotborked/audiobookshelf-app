@@ -170,8 +170,15 @@ export function useUtils() {
     return json
   }
 
-  const encode = (text: string): string => encodeURIComponent(Buffer.from(text).toString('base64'))
-  const decode = (text: string): string => Buffer.from(decodeURIComponent(text), 'base64').toString()
+  const encode = (text: string): string => {
+    const bytes = new TextEncoder().encode(text)
+    return encodeURIComponent(btoa(String.fromCharCode(...bytes)))
+  }
+  const decode = (text: string): string => {
+    const binary = atob(decodeURIComponent(text))
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0))
+    return new TextDecoder().decode(bytes)
+  }
 
   const setOrientationLock = (orientationLockSetting: string | undefined): void => {
     if (!window.screen?.orientation) return

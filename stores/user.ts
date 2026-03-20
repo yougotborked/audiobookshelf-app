@@ -141,7 +141,7 @@ export const useUserStore = defineStore('user', {
           options.headers = { 'x-refresh-token': refreshToken }
         }
         const nativeHttp = useNativeHttp()
-        await nativeHttp.post('/logout', null, options).catch((error: Error) => {
+        await nativeHttp.post('/logout', null, { ...options, connectTimeout: 10000 }).catch((error: Error) => {
           console.error('Failed to logout', error)
         })
       }

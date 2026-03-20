@@ -423,7 +423,7 @@ async function fetchPlaylist() {
       checkAutoDownload()
       return
     }
-    fetchedPlaylist = await nativeHttp.get(`/api/playlists/${playlistId}`).catch(() => null)
+    fetchedPlaylist = await nativeHttp.get(`/api/playlists/${playlistId}`, { connectTimeout: 10000 }).catch(() => null)
     if (!fetchedPlaylist) return
   }
 

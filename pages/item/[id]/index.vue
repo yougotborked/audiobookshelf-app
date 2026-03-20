@@ -33,7 +33,7 @@
             <widgets-explicit-indicator v-if="isExplicit" />
             <widgets-abridged-indicator v-if="isAbridged" />
           </div>
-          <p v-if="subtitle" class="text-fg text-base">{{ subtitle }}</p>
+          <p v-if="subtitle" class="text-md-on-surface text-base">{{ subtitle }}</p>
         </div>
 
         <div v-if="hasLocal" class="mx-1">
@@ -73,8 +73,8 @@
 
           <div v-if="!isPodcast && progressPercent > 0" class="px-4 py-2 bg-md-surface-2 text-md-body-m rounded-md-md text-md-on-surface mt-4 text-center">
             <p>{{ $strings.LabelYourProgress }}: {{ Math.round(progressPercent * 100) }}%</p>
-            <p v-if="!useEBookProgress && !userIsFinished" class="text-fg-muted text-xs">{{ $getString('LabelTimeRemaining', [$elapsedPretty(userTimeRemaining)]) }}</p>
-            <p v-else-if="userIsFinished" class="text-fg-muted text-xs">{{ $strings.LabelFinished }} {{ $formatDate(userProgressFinishedAt) }}</p>
+            <p v-if="!useEBookProgress && !userIsFinished" class="text-md-on-surface-variant text-xs">{{ $getString('LabelTimeRemaining', [$elapsedPretty(userTimeRemaining)]) }}</p>
+            <p v-else-if="userIsFinished" class="text-md-on-surface-variant text-xs">{{ $strings.LabelFinished }} {{ $formatDate(userProgressFinishedAt) }}</p>
           </div>
         </div>
 
@@ -139,7 +139,7 @@
         <div v-if="description" class="w-full py-2">
           <div ref="descriptionEl" class="default-style less-spacing text-sm text-justify whitespace-pre-line font-light" :class="{ 'line-clamp-4': !showFullDescription }" style="hyphens: auto" v-html="description" />
 
-          <div v-if="descriptionClamped" class="text-fg text-sm py-2" @click="showFullDescription = !showFullDescription">
+          <div v-if="descriptionClamped" class="text-md-on-surface text-sm py-2" @click="showFullDescription = !showFullDescription">
             {{ showFullDescription ? $strings.ButtonReadLess : $strings.ButtonReadMore }}
             <span class="material-symbols !align-middle text-base -mt-px">{{ showFullDescription ? 'arrow_drop_up' : 'arrow_drop_down' }}</span>
           </div>
@@ -600,7 +600,8 @@ function newLocalLibraryItem(item: any) {
 }
 
 function libraryChanged(changedLibraryId: string) {
-  if (libraryItem.value?.libraryId !== changedLibraryId) {
+  const itemLibraryId = libraryItem.value?.libraryId
+  if (itemLibraryId !== changedLibraryId) {
     router.replace('/bookshelf')
   }
 }
@@ -662,12 +663,11 @@ function init() {
 }
 
 async function loadServerLibraryItem() {
-  console.log(`Fetching library item "${libraryItemId}" from server`)
   let fetchedItem = null
 
   if (appStore.networkConnected && userStore.serverConnectionConfig) {
-    fetchedItem = await nativeHttp.get(`/api/items/${libraryItemId}?expanded=1&include=rssfeed`, { connectTimeout: 5000 }).catch((error: any) => {
-      console.error('Failed', error)
+    fetchedItem = await nativeHttp.get(`/api/items/${libraryItemId}?expanded=1&include=rssfeed`, { connectTimeout: 10000 }).catch((error: any) => {
+      console.error('Failed to fetch library item', error)
       return null
     })
 
@@ -688,7 +688,7 @@ async function loadServerLibraryItem() {
   }
 
   if (!fetchedItem) {
-    const fallbackLocal = await db.getLocalLibraryItemByLId(libraryItemId) as any
+    const fallbackLocal = await db.getLocalLibraryItemByLId(libraryItemId).catch(() => null) as any
     if (fallbackLocal) {
       fetchedItem = fallbackLocal
       loadedFromCache.value = true
@@ -700,17 +700,19 @@ async function loadServerLibraryItem() {
     return router.replace('/bookshelf')
   }
 
-  const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libraryItemId) as any
-  if (localLibraryItemCheck) {
-    console.log('Library item has local library item also', localLibraryItemCheck.id)
-    fetchedItem.localLibraryItem = localLibraryItemCheck
+  try {
+    const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libraryItemId) as any
+    if (localLibraryItemCheck) {
+      fetchedItem.localLibraryItem = localLibraryItemCheck
+    }
+  } catch (e: any) {
+    console.error('Failed to get local library item', e)
   }
 
   libraryItem.value = fetchedItem
 }
 
 onMounted(async () => {
-  // Handle asyncData-like logic for local items
   const query = route.query
   const libItemId = libraryItemId
 
@@ -791,6 +793,7 @@ onBeforeUnmount(() => {
     appStore.setLastItemScrollData({ scrollTop: (window as any)['item-page'].scrollTop || 0, id: libraryItemId })
   }
 })
+
 </script>
 
 <style>

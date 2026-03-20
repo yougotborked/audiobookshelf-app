@@ -40,7 +40,7 @@ async function fetchServerEpisodesInBatches(
   for (let i = 0; i < contexts.length; i += batchSize) {
     const batch = contexts.slice(i, i + batchSize)
     const responses = await Promise.allSettled(
-      batch.map((context) => nativeHttp.get(`/api/items/${context.libraryId}?expanded=1`))
+      batch.map((context) => nativeHttp.get(`/api/items/${context.libraryId}?expanded=1`, { connectTimeout: 10000 }))
     )
     responses.forEach((result, index) => {
       const context = batch[index]

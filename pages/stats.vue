@@ -97,7 +97,7 @@ watch(currentLibraryId, (newVal) => {
 })
 
 async function init() {
-  listeningStats.value = (await nativeHttp.get(`/api/me/listening-stats`).catch((err: Error) => {
+  listeningStats.value = (await nativeHttp.get(`/api/me/listening-stats`, { connectTimeout: 10000 }).catch((err: Error) => {
     console.error('Failed to load listening sesions', err)
     return []
   })) as ListeningStats | null

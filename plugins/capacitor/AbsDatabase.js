@@ -59,7 +59,7 @@ class AbsDatabaseWeb extends WebPlugin {
       localStorage.setItem('device', JSON.stringify(deviceData))
     } else {
       ssc = {
-        id: encodeURIComponent(Buffer.from(`${serverConnectionConfig.address}@${serverConnectionConfig.username}`).toString('base64')),
+        id: encodeURIComponent(btoa(`${serverConnectionConfig.address}@${serverConnectionConfig.username}`)),
         index: deviceData.serverConnectionConfigs.length,
         name: `${serverConnectionConfig.address} (${serverConnectionConfig.username})`,
         userId: serverConnectionConfig.userId,
