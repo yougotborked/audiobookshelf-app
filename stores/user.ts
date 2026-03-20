@@ -150,6 +150,10 @@ export const useUserStore = defineStore('user', {
       useSocket().logout()
       const localStore = useLocalStore()
       localStore.removeLastLibraryId()
+      await localStore.setPlaybackSession(null)
+      await localStore.setPlayQueue([])
+      await localStore.setQueueIndex(null)
+      localStore.setUserId(null)
       this.user = null
       this.accessToken = null
       const serverName = this.serverConnectionConfig?.name || 'Not connected'

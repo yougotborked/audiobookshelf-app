@@ -939,6 +939,9 @@ async function setUserAndConnection({ user, userDefaultLibraryId, serverSettings
   userStore.accessToken = (serverConnectionConfig as Record<string, any>).token
   userStore.serverConnectionConfig = serverConnectionConfig as any
 
+  useLocalStore().setUserId((user as Record<string, any>).id)
+  await userStore.loadUserSettings()
+
   socket.connect(serverConfig.value.address, serverConfig.value.token)
   router.replace('/bookshelf')
 }

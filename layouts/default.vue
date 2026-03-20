@@ -167,6 +167,9 @@ async function attemptConnection() {
   userStore.accessToken = (savedServerConnectionConfig.token || serverConfig.token) as string
   userStore.serverConnectionConfig = savedServerConnectionConfig as import('~/types').ServerConnectionConfig
 
+  useLocalStore().setUserId((userObj as Record<string, unknown>).id as string)
+  await userStore.loadUserSettings()
+
   useSocket().connect(savedServerConnectionConfig.address as string, savedServerConnectionConfig.token as string)
 
   await AbsLogger.info({ tag: 'default', message: `attemptConnection: Successful connection (${savedServerConnectionConfig.name})` })
