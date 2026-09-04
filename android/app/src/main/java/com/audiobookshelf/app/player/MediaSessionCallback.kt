@@ -85,8 +85,16 @@ class MediaSessionCallback(var playerNotificationService:PlayerNotificationServi
   }
 
   override fun onSeekTo(pos: Long) {
-    val currentTrackStartOffset = playerNotificationService.getCurrentTrackStartOffsetMs()
-    playerNotificationService.seekPlayer(currentTrackStartOffset + pos)
+    // Controllers scrub against the session metadata duration, which covers the whole book, and
+    // the published playback position is whole-book too - so pos is already an absolute time.
+    playerNotificationService.seekPlayer(pos)
+  }
+
+  override fun onSetPlaybackSpeed(speed: Float) {
+    Log.d(tag, "ON SET PLAYBACK SPEED $speed")
+    playerNotificationService.mediaManager.setSavedPlaybackRate(speed)
+    playerNotificationService.setPlaybackSpeed(speed)
+    playerNotificationService.clientEventEmitter?.onPlaybackSpeedChanged(speed)
   }
 
   private fun onChangeSpeed() {

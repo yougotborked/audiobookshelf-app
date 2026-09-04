@@ -28,16 +28,21 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
   override fun createCurrentContentIntent(player: Player): PendingIntent? =
     controller.sessionActivity
 
-  override fun getCurrentContentText(player: Player) = controller.metadata.description.subtitle.toString()
+  // The session metadata is null until a playback session is prepared, and its fields are
+  // individually nullable - an NPE here aborts the notification, which in turn prevents the
+  // foreground service (and every system media control) from coming up.
+  override fun getCurrentContentText(player: Player) =
+    controller.metadata?.description?.subtitle?.toString() ?: ""
 
-  override fun getCurrentContentTitle(player: Player) = controller.metadata.description.title.toString()
+  override fun getCurrentContentTitle(player: Player) =
+    controller.metadata?.description?.title?.toString() ?: ""
 
   override fun getCurrentLargeIcon(
     player: Player,
     callback: PlayerNotificationManager.BitmapCallback
   ): Bitmap? {
-    val albumArtUri = controller.metadata.description.iconUri
-    val albumBitmap = controller.metadata.description.iconBitmap
+    val albumArtUri = controller.metadata?.description?.iconUri
+    val albumBitmap = controller.metadata?.description?.iconBitmap
 
     // For local cover images, bitmap is set in PlayerNotificationService TimelineQueueNavigator.getMediaDescription
     if (albumBitmap != null) {

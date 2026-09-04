@@ -387,6 +387,17 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               }
             }
 
+    // Report whole-book positions to media controllers - a book is loaded as one media item per
+    // audio track, but the session metadata duration covers the whole book.
+    mediaSessionConnector.positionProvider =
+            object : MediaSessionConnector.PositionProvider {
+              override fun getSessionPositionMs(player: Player): Long =
+                      if (isCurrentPlayer(player)) getCurrentTime() else player.currentPosition
+
+              override fun getSessionBufferedPositionMs(player: Player): Long =
+                      if (isCurrentPlayer(player)) getBufferedTime() else player.bufferedPosition
+            }
+
     setMediaSessionConnectorPlaybackActions()
     mediaSessionConnector.setQueueNavigator(queueNavigator)
     mediaSessionConnector.setPlaybackPreparer(MediaSessionPlaybackPreparer(this))
@@ -459,6 +470,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     val metadata = playbackSession.getMediaMetadataCompat(ctx)
     mediaSession.setMetadata(metadata)
+    // An inactive session is ignored by Android Auto, Wear OS and the system media controls
+    mediaSession.isActive = true
     val mediaItems = playbackSession.getMediaItems(ctx)
     val playbackRateToUse = playbackRate ?: initialPlaybackRate ?: 1f
     initialPlaybackRate = playbackRate
@@ -615,7 +628,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.ACTION_REWIND or
                     PlaybackStateCompat.ACTION_STOP or
                     PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                    PlaybackStateCompat.ACTION_SET_PLAYBACK_SPEED
     if (DeviceManager.deviceData.deviceSettings?.allowSeekingOnMediaControls == true) {
       playbackActions = playbackActions or PlaybackStateCompat.ACTION_SEEK_TO
     }
@@ -795,6 +809,16 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     remoteVolumeProvider = null
   }
 
+  /**
+   * Whether [player] is the player the service is currently tracking.
+   *
+   * [currentPlayer] is assigned after the connector is handed a player (during onCreate and when
+   * switching between the local and cast players), so the whole-book position helpers below are
+   * only valid once the two agree.
+   */
+  private fun isCurrentPlayer(player: Player): Boolean =
+          this::currentPlayer.isInitialized && currentPlayer === player
+
   fun getCurrentTrackStartOffsetMs(): Long {
     return if (currentPlayer.mediaItemCount > 1) {
       val windowIndex = currentPlayer.currentMediaItemIndex
@@ -813,7 +837,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     return getCurrentTime() / 1000.0
   }
 
-  private fun getBufferedTime(): Long {
+  fun getBufferedTime(): Long {
     return if (currentPlayer.mediaItemCount > 1) {
       val windowIndex = currentPlayer.currentMediaItemIndex
       val currentTrackStartOffset = currentPlaybackSession?.getTrackStartOffsetMs(windowIndex) ?: 0L
@@ -1055,7 +1079,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     currentPlayer.setPlaybackSpeed(speed)
 
     // Refresh Android Auto actions
-    mediaProgressSyncer.currentPlaybackSession?.let { setMediaSessionConnectorCustomActions(it) }
+    val sessionForActions = mediaProgressSyncer.currentPlaybackSession ?: currentPlaybackSession
+    sessionForActions?.let { setMediaSessionConnectorCustomActions(it) }
+    mediaSessionConnector.invalidateMediaSessionPlaybackState()
   }
 
   fun setPlayQueue(queue: MutableList<PlayQueueItem>, index: Int) {
@@ -1163,6 +1189,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     PlayerListener.lastPauseTime = 0
     isClosed = true
+    mediaSession.isActive = false
+    mediaSessionConnector.invalidateMediaSessionPlaybackState()
     DeviceManager.widgetUpdater?.onPlayerClosed()
     stopForeground(Service.STOP_FOREGROUND_REMOVE)
     stopSelf()
