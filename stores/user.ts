@@ -75,7 +75,7 @@ export const useUserStore = defineStore('user', {
       if (!state.user?.bookmarks) return []
       return (state.user.bookmarks as Record<string, unknown>[]).filter((bm) => bm.libraryItemId === libraryItemId)
     },
-    getUserSetting: (state) => (key: keyof UserSettings) => state.settings?.[key] || null,
+    getUserSetting: (state) => (key: keyof UserSettings) => state.settings?.[key] ?? null,
     getUserCanUpdate: (state) => !!(state.user?.permissions as Record<string, unknown>)?.update,
     getUserCanDelete: (state) => !!(state.user?.permissions as Record<string, unknown>)?.delete,
     getUserCanDownload: (state) => !!(state.user?.permissions as Record<string, unknown>)?.download,

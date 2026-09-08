@@ -4,7 +4,9 @@ import enUsStrings from '~/strings/en-us.json'
 const defaultCode = 'en-us'
 
 export const languageCodeMap: Record<string, { label: string; dateFnsLocale: string }> = {
+  be: { label: 'Беларуская', dateFnsLocale: 'be' },
   bn: { label: 'বাংলা', dateFnsLocale: 'bn' },
+  bg: { label: 'Български', dateFnsLocale: 'bg' },
   ca: { label: 'Català', dateFnsLocale: 'ca' },
   cs: { label: 'Čeština', dateFnsLocale: 'cs' },
   da: { label: 'Dansk', dateFnsLocale: 'da' },

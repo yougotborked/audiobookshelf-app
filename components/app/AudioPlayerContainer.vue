@@ -574,7 +574,7 @@ export default {
         })
         if (startTime !== undefined && startTime !== null) {
           // seek to start time
-          AbsAudioPlayer.seek({ value: Math.floor(startTime) })
+          AbsAudioPlayer.seek({ value: startTime })
         } else if (this.$refs.audioPlayer) {
           this.$refs.audioPlayer.play()
         }

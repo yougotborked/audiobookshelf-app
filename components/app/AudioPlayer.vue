@@ -735,7 +735,8 @@ function seek(time: number) {
   seekedTime.value = time
   seekLoading.value = true
 
-  AbsAudioPlayer.seek({ value: Math.floor(time) })
+  // Pass fractional seconds so seeks to non-integer chapter starts don't truncate
+  AbsAudioPlayer.seek({ value: time })
 
   if (playedTrack.value) {
     const perc = time / totalDuration.value
