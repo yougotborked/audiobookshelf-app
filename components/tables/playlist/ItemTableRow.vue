@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full px-1.5 pb-1.5">
+  <div data-playlist-row class="w-full px-1.5 pb-1.5">
     <div class="w-full h-full p-2 rounded-lg relative bg-md-surface-1 overflow-hidden">
       <nuxt-link v-if="libraryItem" :to="itemUrl" class="flex items-center w-full">
         <div class="h-full relative" :style="{ width: '50px' }">

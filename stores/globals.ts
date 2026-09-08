@@ -29,6 +29,13 @@ interface LocalMediaProgress {
   [key: string]: unknown
 }
 
+interface LocalMediaProgressIndex {
+  byLocalItem: Map<string, LocalMediaProgress>
+  byLocalEpisode: Map<string, LocalMediaProgress>
+  byServerItem: Map<string, LocalMediaProgress>
+  byServerEpisode: Map<string, LocalMediaProgress>
+}
+
 interface GlobalsState {
   isModalOpen: boolean
   itemDownloads: DownloadItem[]
@@ -110,17 +117,54 @@ export const useGlobalsStore = defineStore('globals', {
       }
       return url.toString()
     },
-    getLocalMediaProgressById: (state) => (localLibraryItemId: string, episodeId: string | null = null) => {
-      return state.localMediaProgress.find((lmp) => {
-        if (episodeId != null && lmp.localEpisodeId != episodeId) return false
-        return lmp.localLibraryItemId == localLibraryItemId
-      })
+    /**
+     * Lookup indexes over localMediaProgress.
+     *
+     * Long lists (the auto playlist runs to hundreds of rows) look progress up once per row, so a
+     * linear scan per row makes rendering O(rows x progress entries).  The maps are rebuilt once
+     * whenever localMediaProgress changes and every row lookup is then O(1).
+     */
+    localMediaProgressIndex: (state): LocalMediaProgressIndex => {
+      const byLocalItem = new Map<string, LocalMediaProgress>()
+      const byLocalEpisode = new Map<string, LocalMediaProgress>()
+      const byServerItem = new Map<string, LocalMediaProgress>()
+      const byServerEpisode = new Map<string, LocalMediaProgress>()
+
+      for (const lmp of state.localMediaProgress) {
+        // `find` returns the first match, so earlier entries win here too
+        if (lmp.localLibraryItemId) {
+          if (!byLocalItem.has(lmp.localLibraryItemId)) byLocalItem.set(lmp.localLibraryItemId, lmp)
+          if (lmp.localEpisodeId != null) {
+            const key = `${lmp.localLibraryItemId}|${lmp.localEpisodeId}`
+            if (!byLocalEpisode.has(key)) byLocalEpisode.set(key, lmp)
+          }
+        }
+        if (lmp.libraryItemId) {
+          if (!byServerItem.has(lmp.libraryItemId)) byServerItem.set(lmp.libraryItemId, lmp)
+          if (lmp.episodeId != null) {
+            const key = `${lmp.libraryItemId}|${lmp.episodeId}`
+            if (!byServerEpisode.has(key)) byServerEpisode.set(key, lmp)
+          }
+        }
+      }
+
+      return { byLocalItem, byLocalEpisode, byServerItem, byServerEpisode }
     },
-    getLocalMediaProgressByServerItemId: (state) => (libraryItemId: string, episodeId: string | null = null) => {
-      return state.localMediaProgress.find((lmp) => {
-        if (episodeId != null && lmp.episodeId != episodeId) return false
-        return lmp.libraryItemId == libraryItemId
-      })
+    getLocalMediaProgressById(): (localLibraryItemId: string, episodeId?: string | null) => LocalMediaProgress | undefined {
+      const { byLocalItem, byLocalEpisode } = this.localMediaProgressIndex
+      return (localLibraryItemId: string, episodeId: string | null = null) => {
+        if (!localLibraryItemId) return undefined
+        if (episodeId != null) return byLocalEpisode.get(`${localLibraryItemId}|${episodeId}`)
+        return byLocalItem.get(localLibraryItemId)
+      }
+    },
+    getLocalMediaProgressByServerItemId(): (libraryItemId: string, episodeId?: string | null) => LocalMediaProgress | undefined {
+      const { byServerItem, byServerEpisode } = this.localMediaProgressIndex
+      return (libraryItemId: string, episodeId: string | null = null) => {
+        if (!libraryItemId) return undefined
+        if (episodeId != null) return byServerEpisode.get(`${libraryItemId}|${episodeId}`)
+        return byServerItem.get(libraryItemId)
+      }
     },
     getBookCoverAspectRatio: () => {
       const librariesStore = useLibrariesStore()

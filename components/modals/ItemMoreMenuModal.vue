@@ -3,11 +3,18 @@
     <modals-dialog v-model="show" :items="moreMenuItems" @action="moreMenuAction" />
     <modals-item-details-modal v-model="showDetailsModal" :library-item="libraryItem" />
     <modals-dialog v-model="showSendEbookDevicesModal" :title="strings.LabelSelectADevice" :items="ereaderDeviceItems" @action="sendEbookToDeviceAction" />
+    <modals-dialog
+      v-model="showAutoPlaylistRuleModal"
+      :title="strings.HeaderAutoPlaylistPodcast"
+      :items="autoPlaylistRuleItems"
+      :selected="autoPlaylistRuleValue"
+      @action="autoPlaylistRuleAction"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { Dialog } from '@capacitor/dialog'
 import { AbsFileSystem, AbsLogger } from '@/plugins/capacitor'
 import { useStrings, getString } from '~/composables/useStrings'
@@ -19,7 +26,15 @@ import { usePlatform } from '~/composables/usePlatform'
 import { useUserStore } from '~/stores/user'
 import { useGlobalsStore } from '~/stores/globals'
 import { useLibrariesStore } from '~/stores/libraries'
+import { useAppStore } from '~/stores/app'
 import { useRouter } from 'vue-router'
+import {
+  AUTO_PLAYLIST_LATEST_LIMITS,
+  getAutoPlaylistPodcastRule,
+  refreshAutoPlaylistPodcastRules,
+  setAutoPlaylistPodcastRule,
+  type AutoPlaylistPodcastRule
+} from '~/composables/useAutoPlaylist'
 
 const props = defineProps<{
   modelValue: boolean
@@ -34,6 +49,7 @@ const emit = defineEmits<{
   'update:modelValue': [val: boolean]
   'update:processing': [val: boolean]
   'removed-from-auto-playlist': [payload?: { refresh: boolean }]
+  'auto-playlist-rule-changed': []
 }>()
 
 const strings = useStrings()
@@ -45,10 +61,13 @@ const platform = usePlatform()
 const userStore = useUserStore()
 const globalsStore = useGlobalsStore()
 const librariesStore = useLibrariesStore()
+const appStore = useAppStore()
 const router = useRouter()
 
 const showDetailsModal = ref(false)
 const showSendEbookDevicesModal = ref(false)
+const showAutoPlaylistRuleModal = ref(false)
+const autoPlaylistRule = ref<AutoPlaylistPodcastRule>({ mode: 'include' })
 
 const show = computed({
   get() { return props.modelValue },
@@ -160,6 +179,74 @@ const mediaId = computed(() => {
   return serverLibraryItemId.value || localLibraryItemId.value
 })
 
+/**
+ * Per-podcast auto playlist rule.
+ *
+ * Shown on the podcast itself (including from an episode row in the auto playlist), so a show
+ * whose backlog is not worth listening to can be capped or dropped without marking every old
+ * episode finished.
+ */
+const autoPlaylistEnabled = computed(() => !!appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes)
+const showAutoPlaylistRuleOption = computed(() => autoPlaylistEnabled.value && isPodcast.value && !!serverLibraryItemId.value)
+
+const autoPlaylistRuleValue = computed(() => {
+  if (autoPlaylistRule.value.mode === 'exclude') return 'exclude'
+  if (autoPlaylistRule.value.mode === 'latest') return `latest:${autoPlaylistRule.value.limit}`
+  return 'include'
+})
+
+const autoPlaylistRuleLabel = computed(() => {
+  if (autoPlaylistRule.value.mode === 'exclude') return strings.LabelAutoPlaylistExclude
+  if (autoPlaylistRule.value.mode === 'latest') {
+    return getString('LabelAutoPlaylistNewestOnly', [autoPlaylistRule.value.limit as number])
+  }
+  return strings.LabelAutoPlaylistIncludeAll
+})
+
+const autoPlaylistRuleItems = computed(() => [
+  { text: strings.LabelAutoPlaylistIncludeAll, value: 'include', icon: 'playlist_add' },
+  ...AUTO_PLAYLIST_LATEST_LIMITS.map((limit) => ({
+    text: getString('LabelAutoPlaylistNewestOnly', [limit]),
+    value: `latest:${limit}`,
+    icon: 'filter_list'
+  })),
+  { text: strings.LabelAutoPlaylistExclude, value: 'exclude', icon: 'playlist_remove' }
+])
+
+async function loadAutoPlaylistRule() {
+  if (!showAutoPlaylistRuleOption.value) {
+    autoPlaylistRule.value = { mode: 'include' }
+    return
+  }
+  const rules = await refreshAutoPlaylistPodcastRules()
+  autoPlaylistRule.value = getAutoPlaylistPodcastRule(rules, serverLibraryItemId.value as string)
+}
+
+async function autoPlaylistRuleAction(value: string) {
+  showAutoPlaylistRuleModal.value = false
+  const libraryItemId = serverLibraryItemId.value
+  if (!libraryItemId) return
+
+  let rule: AutoPlaylistPodcastRule
+  if (value === 'exclude') rule = { mode: 'exclude' }
+  else if (value.startsWith('latest:')) rule = { mode: 'latest', limit: Number(value.split(':')[1]) }
+  else rule = { mode: 'include' }
+
+  await setAutoPlaylistPodcastRule(libraryItemId, rule)
+  autoPlaylistRule.value = rule
+  toast.success(strings.ToastAutoPlaylistPodcastRuleUpdated)
+  emit('auto-playlist-rule-changed')
+}
+
+// The menu is rendered from a prop-driven item, so refresh whenever it is opened for a podcast
+watch(
+  () => [props.modelValue, serverLibraryItemId.value] as const,
+  ([isShown]) => {
+    if (isShown) loadAutoPlaylistRule()
+  },
+  { immediate: true }
+)
+
 const moreMenuItems = computed(() => {
   const items: { text: string; value: string; icon: string }[] = []
 
@@ -187,6 +274,14 @@ const moreMenuItems = computed(() => {
 
   if (props.playlist) {
     items.push({ text: strings.LabelRemoveFromPlaylist, value: 'removeFromPlaylist', icon: 'playlist_remove' })
+  }
+
+  if (showAutoPlaylistRuleOption.value) {
+    items.push({
+      text: `${strings.LabelAutoPlaylistPodcastRule}: ${autoPlaylistRuleLabel.value}`,
+      value: 'autoPlaylistRule',
+      icon: 'playlist_play'
+    })
   }
 
   if (showRSSFeedOption.value) {
@@ -231,6 +326,10 @@ function moreMenuAction(action: string) {
     globalsStore.showPlaylistsAddCreateModal = true
   } else if (action === 'removeFromPlaylist') {
     removeFromPlaylistClick()
+  } else if (action === 'autoPlaylistRule') {
+    nextTick(() => {
+      showAutoPlaylistRuleModal.value = true
+    })
   } else if (action === 'markFinished') {
     AbsLogger.info({
       tag: 'ItemMoreMenuModal',
