@@ -1133,7 +1133,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
           val podcastMedia = localItem.media as Podcast
           episode = podcastMedia.episodes?.find { it.id == item.episodeId }
         }
-        if (!localItem.hasTracks(episode)) {
+        if (!localItem.hasTracks(ctx, episode)) {
           clientEventEmitter?.onPlaybackFailed("No audio files found on device. Download book again to fix.")
         } else {
           mediaProgressSyncer.reset()

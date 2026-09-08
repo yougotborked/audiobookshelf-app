@@ -211,6 +211,10 @@ export const useGlobalsStore = defineStore('globals', {
       }
     },
 
+    /** Drops every tracked download, e.g. after the queue is cancelled from the notification. */
+    clearItemDownloads() {
+      this.itemDownloads = []
+    },
     removeItemDownload(id: string) {
       this.itemDownloads = this.itemDownloads.filter((i) => i.id != id)
     },

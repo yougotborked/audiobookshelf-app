@@ -106,6 +106,9 @@ dependencies {
 
   implementation "androidx.media:media:$androidx_media_version"
 
+  // WorkManager - schedules the incomplete-download cleanup pass
+  implementation "androidx.work:work-runtime-ktx:$androidx_work_version"
+
   // Media3 (replaces ExoPlayer 2 — see android/media3-migration branch)
   implementation "androidx.media3:media3-exoplayer:$media3_version"
   implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
