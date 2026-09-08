@@ -61,6 +61,51 @@ export function getAutoPlaylistPodcastRule(
   return normalizeRule(rules?.[libraryItemId])
 }
 
+/**
+ * Applies the per-podcast rules to a flat list of episodes.
+ *
+ * Episodes from an excluded podcast are dropped; a podcast with a `latest` rule keeps only its
+ * newest N. Items with no podcast id pass through untouched.
+ *
+ * Capped podcasts are appended after the rest, so the caller re-sorts.
+ */
+export function applyPodcastRules<T>(
+  items: T[],
+  rules: Record<string, AutoPlaylistPodcastRule>,
+  getPodcastId: (item: T) => string | undefined | null,
+  getSortDate: (item: T) => number
+): T[] {
+  const kept: T[] = []
+  const cappedByPodcast = new Map<string, { limit: number; items: T[] }>()
+
+  for (const item of items) {
+    const podcastId = getPodcastId(item)
+    if (!podcastId) {
+      kept.push(item)
+      continue
+    }
+    const rule = getAutoPlaylistPodcastRule(rules, podcastId)
+    if (rule.mode === 'exclude') continue
+    if (rule.mode !== 'latest' || !rule.limit) {
+      kept.push(item)
+      continue
+    }
+    const existing = cappedByPodcast.get(podcastId)
+    if (existing) existing.items.push(item)
+    else cappedByPodcast.set(podcastId, { limit: rule.limit, items: [item] })
+  }
+
+  for (const { limit, items: podcastItems } of cappedByPodcast.values()) {
+    if (podcastItems.length > limit) {
+      podcastItems.sort((a, b) => getSortDate(b) - getSortDate(a))
+      podcastItems.length = limit
+    }
+    for (const item of podcastItems) kept.push(item)
+  }
+
+  return kept
+}
+
 export function useAutoPlaylistPodcastRules() {
   return {
     rules: podcastRules,
@@ -349,7 +394,7 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
   if (contextsNeedingServerData.length) await fetchServerEpisodesInBatches(contextsNeedingServerData, nativeHttp, localStore)
 
   libraryContexts.forEach((context) => {
-    const { libraryItem, libraryId, localEpisodeMap, rule } = context
+    const { libraryItem, libraryId, localEpisodeMap } = context
     // Built per podcast so a `latest` rule can cap this show without affecting the others
     const podcastItems: Array<Record<string, unknown> & { sortDate: number }> = []
     // One sanitized copy per podcast rather than one per episode
@@ -377,13 +422,15 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
       })
     })
 
-    if (rule.mode === 'latest' && rule.limit && podcastItems.length > rule.limit) {
-      podcastItems.sort((a, b) => b.sortDate - a.sortDate)
-      podcastItems.length = rule.limit
-    }
+    const keptItems = applyPodcastRules(
+      podcastItems,
+      podcastRuleMap,
+      () => libraryId,
+      (item) => item.sortDate
+    )
 
     // Avoid spreading into push - these arrays can be long enough to blow the argument limit
-    for (const item of podcastItems) playlistItems.push(item)
+    for (const item of keptItems) playlistItems.push(item)
   })
 
   playlistItems.sort((a, b) => a.sortDate - b.sortDate)
@@ -403,6 +450,7 @@ export function useAutoPlaylist() {
     collectDownloadedEpisodeKeys,
     refreshAutoPlaylistPodcastRules,
     setAutoPlaylistPodcastRule,
-    getAutoPlaylistPodcastRule
+    getAutoPlaylistPodcastRule,
+    applyPodcastRules
   }
 }
