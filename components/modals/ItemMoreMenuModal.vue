@@ -26,7 +26,6 @@ import { usePlatform } from '~/composables/usePlatform'
 import { useUserStore } from '~/stores/user'
 import { useGlobalsStore } from '~/stores/globals'
 import { useLibrariesStore } from '~/stores/libraries'
-import { useAppStore } from '~/stores/app'
 import { useRouter } from 'vue-router'
 import {
   AUTO_PLAYLIST_LATEST_LIMITS,
@@ -61,7 +60,6 @@ const platform = usePlatform()
 const userStore = useUserStore()
 const globalsStore = useGlobalsStore()
 const librariesStore = useLibrariesStore()
-const appStore = useAppStore()
 const router = useRouter()
 
 const showDetailsModal = ref(false)
@@ -180,14 +178,14 @@ const mediaId = computed(() => {
 })
 
 /**
- * Per-podcast auto playlist rule.
+ * Per-podcast catch up rule.
  *
  * Shown on the podcast itself (including from an episode row in the auto playlist), so a show
  * whose backlog is not worth listening to can be capped or dropped without marking every old
- * episode finished.
+ * episode finished. The rule drives the Catch up feed, the auto playlist and the auto-download
+ * passes, so it is offered whether or not auto-caching is switched on.
  */
-const autoPlaylistEnabled = computed(() => !!appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes)
-const showAutoPlaylistRuleOption = computed(() => autoPlaylistEnabled.value && isPodcast.value && !!serverLibraryItemId.value)
+const showAutoPlaylistRuleOption = computed(() => isPodcast.value && !!serverLibraryItemId.value)
 
 const autoPlaylistRuleValue = computed(() => {
   if (autoPlaylistRule.value.mode === 'exclude') return 'exclude'
