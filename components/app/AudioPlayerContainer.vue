@@ -70,7 +70,8 @@ export default {
     const toast = useToast()
     const nativeHttp = useNativeHttp()
     const platform = usePlatform()
-    return { checkCellularPermission, appStore, userStore, globalsStore, eventBus, toast, nativeHttp, platform }
+    const db = useDb()
+    return { checkCellularPermission, appStore, userStore, globalsStore, eventBus, toast, nativeHttp, platform, db }
   },
   computed: {
     bookmarks() {
@@ -737,72 +738,145 @@ export default {
       this.$refs.audioPlayer?.seek(currentTime)
     },
     /**
-     * When device gains focus then refresh the timestamps in the audio player
+     * Current user's progress for an item from the server, or null if the request fails, times
+     * out, or answers about a different item.
+     *
+     * The player is put into its loading state for the duration so the user cannot hit play
+     * against a position that is about to change. The timeout is short so an unresponsive server
+     * does not lock the controls for long.
      */
-    deviceFocused(hasFocus) {
-      if (!this.appStore.currentPlaybackSession) return
+    async getServerMediaProgress({ libraryItemId, episodeId }) {
+      if (!libraryItemId) return null
 
-      if (hasFocus) {
-        if (!this.$refs.audioPlayer?.isPlaying) {
-          const playbackSession = this.appStore.currentPlaybackSession
-          if (this.$refs.audioPlayer.isLocalPlayMethod) {
-            const localLibraryItemId = playbackSession.localLibraryItem?.id
-            const localEpisodeId = playbackSession.localEpisodeId
-            if (!localLibraryItemId) {
-              AbsLogger.error({
-                tag: 'AudioPlayerContainer',
-                message: `[AudioPlayerContainer] device visibility: no local library item for session ${formatForLog(playbackSession)}`
-              })
-              return
-            }
-            const localMediaProgress = this.globalsStore.localMediaProgress.find((mp) => {
-              if (localEpisodeId) return mp.localEpisodeId === localEpisodeId
-              return mp.localLibraryItemId === localLibraryItemId
-            })
-            if (localMediaProgress) {
-              AbsLogger.info({
-                tag: 'AudioPlayerContainer',
-                message: `[AudioPlayerContainer] device visibility: found local media progress: ${formatForLog({
-                  currentTime: localMediaProgress.currentTime,
-                  playerCurrentTime: this.currentTime
-                })}`
-              })
-              this.$refs.audioPlayer.currentTime = localMediaProgress.currentTime
-              this.$refs.audioPlayer.timeupdate()
-            } else {
-              AbsLogger.error({
-                tag: 'AudioPlayerContainer',
-                message: '[AudioPlayerContainer] device visibility: Local media progress not found'
-              })
-            }
-          } else {
-            const libraryItemId = playbackSession.libraryItemId
-            const episodeId = playbackSession.episodeId
-            const url = episodeId ? `/api/me/progress/${libraryItemId}/${episodeId}` : `/api/me/progress/${libraryItemId}`
-            this.nativeHttp
-              .get(url)
-              .then((data) => {
-                if (!this.$refs.audioPlayer?.isPlaying && data.libraryItemId === libraryItemId) {
-                  AbsLogger.info({
-                    tag: 'AudioPlayerContainer',
-                    message: `[AudioPlayerContainer] device visibility: got server media progress: ${formatForLog({
-                      currentTime: data.currentTime,
-                      playerCurrentTime: this.currentTime
-                    })}`
-                  })
-                  this.$refs.audioPlayer.currentTime = data.currentTime
-                  this.$refs.audioPlayer.timeupdate()
-                }
-              })
-              .catch((error) => {
-                AbsLogger.error({
-                  tag: 'AudioPlayerContainer',
-                  message: `[AudioPlayerContainer] device visibility: Failed to get progress ${formatForLog(error)}`
-                })
-              })
+      // Focus and socket reconnect can both fire at once; one check at a time is enough
+      if (this.$refs.audioPlayer?.isCheckingServerProgress) {
+        console.log('[AudioPlayerContainer] getServerMediaProgress: already checking server progress')
+        return null
+      }
+
+      const url = episodeId ? `/api/me/progress/${libraryItemId}/${episodeId}` : `/api/me/progress/${libraryItemId}`
+      this.$refs.audioPlayer?.setIsCheckingServerProgress(true)
+      try {
+        const data = await this.nativeHttp.get(url, { connectTimeout: 7000, readTimeout: 7000 })
+        if (!data || data.libraryItemId !== libraryItemId) return null
+        return data
+      } catch (error) {
+        AbsLogger.error({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] Failed to get server media progress ${formatForLog(error)}`
+        })
+        return null
+      } finally {
+        this.$refs.audioPlayer?.setIsCheckingServerProgress(false)
+      }
+    },
+    /**
+     * Refreshes the player timestamps when the device regains focus, and picks up progress made
+     * elsewhere: for a downloaded item the server copy wins when it is more recent, so listening
+     * on another device carries over.
+     */
+    async deviceFocused(hasFocus) {
+      if (!this.appStore.currentPlaybackSession) return
+      if (!hasFocus) return
+      // Don't move the position out from under playback that is already running
+      if (this.$refs.audioPlayer?.isPlaying) return
+
+      const playbackSession = this.appStore.currentPlaybackSession
+      if (this.$refs.audioPlayer.isLocalPlayMethod) {
+        const localLibraryItemId = playbackSession.localLibraryItem?.id
+        const localEpisodeId = playbackSession.localEpisodeId
+        if (!localLibraryItemId) {
+          AbsLogger.error({
+            tag: 'AudioPlayerContainer',
+            message: `[AudioPlayerContainer] device visibility: no local library item for session ${formatForLog(playbackSession)}`
+          })
+          return
+        }
+        const localMediaProgress = this.globalsStore.localMediaProgress.find((mp) => {
+          if (localEpisodeId) return mp.localEpisodeId === localEpisodeId
+          return mp.localLibraryItemId === localLibraryItemId
+        })
+        if (!localMediaProgress) {
+          AbsLogger.error({
+            tag: 'AudioPlayerContainer',
+            message: '[AudioPlayerContainer] device visibility: Local media progress not found'
+          })
+          return
+        }
+
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] device visibility: found local media progress: ${formatForLog({
+            currentTime: localMediaProgress.currentTime,
+            playerCurrentTime: this.currentTime
+          })}`
+        })
+        this.$refs.audioPlayer.currentTime = localMediaProgress.currentTime
+        this.$refs.audioPlayer.timeupdate()
+
+        // The item came from a server, so check whether it was listened to elsewhere since
+        const serverLibraryItemId = playbackSession.libraryItemId
+        const serverEpisodeId = playbackSession.episodeId
+        if (!serverLibraryItemId || !this.userStore.user || !this.appStore.networkConnected) return
+
+        const data = await this.getServerMediaProgress({ libraryItemId: serverLibraryItemId, episodeId: serverEpisodeId })
+        if (!data || !data.lastUpdate || data.lastUpdate <= localMediaProgress.lastUpdate) return
+
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] device visibility: server progress is more recent: ${formatForLog({
+            serverCurrentTime: data.currentTime,
+            localCurrentTime: localMediaProgress.currentTime,
+            serverLastUpdate: data.lastUpdate,
+            localLastUpdate: localMediaProgress.lastUpdate
+          })}`
+        })
+        if (!this.$refs.audioPlayer?.isPlaying && data.currentTime !== localMediaProgress.currentTime) {
+          // seek() rather than assigning currentTime, so the native session moves too
+          this.$refs.audioPlayer.seek(data.currentTime)
+        }
+
+        try {
+          const newLocalMediaProgress = await this.db.syncServerMediaProgressWithLocalMediaProgress({
+            localMediaProgressId: localMediaProgress.id,
+            mediaProgress: data
+          })
+          if (newLocalMediaProgress?.id) {
+            this.globalsStore.updateLocalMediaProgress(newLocalMediaProgress)
           }
+        } catch (error) {
+          AbsLogger.error({
+            tag: 'AudioPlayerContainer',
+            message: `[AudioPlayerContainer] device visibility: Failed to sync server progress to local ${formatForLog(error)}`
+          })
+        }
+      } else {
+        const data = await this.getServerMediaProgress({
+          libraryItemId: playbackSession.libraryItemId,
+          episodeId: playbackSession.episodeId
+        })
+        if (!data) return
+        if (this.$refs.audioPlayer?.isPlaying) return
+
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] device visibility: got server media progress: ${formatForLog({
+            currentTime: data.currentTime,
+            playerCurrentTime: this.currentTime
+          })}`
+        })
+        // Only move if it actually differs, so a rounding difference does not cause a seek
+        if (Math.abs(data.currentTime - this.currentTime) > 1) {
+          this.$refs.audioPlayer.seek(data.currentTime)
+        } else {
+          this.$refs.audioPlayer.currentTime = data.currentTime
+          this.$refs.audioPlayer.timeupdate()
         }
       }
+    },
+    /** Socket was down long enough that progress updates from elsewhere may have been missed. */
+    onSocketReconnected() {
+      this.deviceFocused(true)
     },
 
     onSkipNextRequest() {
@@ -897,6 +971,7 @@ export default {
     this.eventBus.on('user-settings', this.settingsUpdated)
     this.eventBus.on('playback-time-update', this.playbackTimeUpdate)
     this.eventBus.on('device-focus-update', this.deviceFocused)
+    this.eventBus.on('socket-reconnected', this.onSocketReconnected)
     this.eventBus.on('playback-ended', this.onPlaybackEnded)
 
     if (
@@ -932,6 +1007,7 @@ export default {
     this.eventBus.off('user-settings', this.settingsUpdated)
     this.eventBus.off('playback-time-update', this.playbackTimeUpdate)
     this.eventBus.off('device-focus-update', this.deviceFocused)
+    this.eventBus.off('socket-reconnected', this.onSocketReconnected)
     this.eventBus.off('playback-ended', this.onPlaybackEnded)
   }
 }

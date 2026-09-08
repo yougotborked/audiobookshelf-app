@@ -95,22 +95,22 @@
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
             <span class="material-symbols text-3xl leading-none">replay</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpBackwardsLabel }}</span>
           </div>
           <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
             <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white/20 pointer-events-none" />
 
-            <span v-if="!isLoading" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
+            <span v-if="!showLoadingState" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
             <span class="material-symbols text-3xl leading-none">forward_media</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpForwardLabel }}</span>
           </div>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !isLoading ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !showLoadingState ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
         </div>
       </div>
 
@@ -120,7 +120,7 @@
           <div class="flex-grow" />
           <p class="font-mono text-md-on-surface" style="font-size: 0.8rem">{{ timeRemainingPretty }}</p>
         </div>
-        <div ref="track" class="h-1.5 w-full bg-track/50 relative rounded-full" :class="{ 'animate-pulse': isLoading }" @click.stop>
+        <div ref="track" class="h-1.5 w-full bg-track/50 relative rounded-full" :class="{ 'animate-pulse': showLoadingState }" @click.stop>
           <div ref="readyTrack" class="h-full bg-track-buffered absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="bufferedTrack" class="h-full bg-track absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="playedTrack" class="h-full bg-track-cursor absolute top-0 left-0 rounded-full pointer-events-none" />
@@ -221,6 +221,14 @@ const playerSettings = ref({
   lockUi: false
 })
 const isLoading = ref(false)
+// Set by the container while it checks the server for more recent progress, so the controls stay
+// disabled until the timestamps settle and the user cannot seek against a stale position
+const isCheckingServerProgress = ref(false)
+const showLoadingState = computed(() => isLoading.value || isCheckingServerProgress.value)
+
+function setIsCheckingServerProgress(value: boolean) {
+  isCheckingServerProgress.value = !!value
+}
 const isDraggingCursor = ref(false)
 const draggingTouchStartX = ref(0)
 const draggingTouchStartTime = ref(0)
@@ -551,14 +559,14 @@ function collapseFullscreen() {
 
 async function jumpNextChapter() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (!nextChapter.value) return
   seek((nextChapter.value as Record<string, unknown>).start as number)
 }
 
 async function jumpNextChapterOrQueue() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (nextChapter.value) {
     seek((nextChapter.value as Record<string, unknown>).start as number)
   } else if (nextQueueItem.value) {
@@ -568,7 +576,7 @@ async function jumpNextChapterOrQueue() {
 
 async function jumpChapterStart() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (!currentChapter.value) {
     return restart()
   }
@@ -602,13 +610,13 @@ function restart() {
 
 async function jumpBackwards() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   AbsAudioPlayer.seekBackward({ value: jumpBackwardsTime.value })
 }
 
 async function jumpForward() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   AbsAudioPlayer.seekForward({ value: jumpForwardTime.value })
 }
 
@@ -719,7 +727,7 @@ function updateTrack() {
 }
 
 function seek(time: number) {
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (seekLoading.value) {
     console.error('Already seek loading', seekedTime.value)
     return
@@ -754,7 +762,7 @@ async function touchstartCursor(e: TouchEvent) {
 
 async function playPauseClick() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
 
   isPlaying.value = !!((await AbsAudioPlayer.playPause()) || {}).playing
   isEnded.value = false
@@ -1271,7 +1279,28 @@ onBeforeUnmount(() => {
 
 // ── Expose public interface ───────────────────────────────────────────────────
 const audioPlayerReady = computed(() => true)
-defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed, setStreamReady, setChunksReady, currentPlaybackRate })
+// The container drives the player through this template ref, so everything it touches has to be
+// listed here - under <script setup> anything left out silently reads back as undefined
+defineExpose({
+  audioPlayerReady,
+  streamOpen: onPlaybackSession,
+  setPlaybackSpeed,
+  setStreamReady,
+  setChunksReady,
+  currentPlaybackRate,
+  closePlayback,
+  currentChapter,
+  currentTime,
+  isCheckingServerProgress,
+  isLocalPlayMethod,
+  isPlaying,
+  pause,
+  play,
+  resetStream,
+  seek,
+  setIsCheckingServerProgress,
+  timeupdate
+})
 </script>
 
 <style>

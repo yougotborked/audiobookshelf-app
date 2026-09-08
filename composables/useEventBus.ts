@@ -14,6 +14,7 @@ export type AppEvents = {
   'playback-time-update': { currentTime: number; duration: number }
   'playback-ended': void
   'device-focus-update': boolean
+  'socket-reconnected': void
   'url-open': string
   'library-changed': string
   'change-lang': string
