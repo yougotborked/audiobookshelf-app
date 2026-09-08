@@ -35,7 +35,7 @@
         <p class="font-mono text-md-on-surface" style="font-size: 0.8rem">{{ totalTimeRemainingPretty }}</p>
       </div>
       <div class="w-full">
-        <div class="h-1 w-full bg-track/50 relative rounded-full">
+        <div class="h-1 w-full bg-track/50 relative rounded-full overflow-hidden">
           <div ref="totalReadyTrack" class="h-full bg-track-buffered absolute top-0 left-0 pointer-events-none rounded-full" />
           <div ref="totalBufferedTrack" class="h-full bg-track absolute top-0 left-0 pointer-events-none rounded-full" />
           <div ref="totalPlayedTrack" class="h-full bg-track-cursor absolute top-0 left-0 pointer-events-none rounded-full" />
@@ -120,7 +120,7 @@
           <div class="flex-grow" />
           <p class="font-mono text-md-on-surface" style="font-size: 0.8rem">{{ timeRemainingPretty }}</p>
         </div>
-        <div ref="track" class="h-1.5 w-full bg-track/50 relative rounded-full" :class="{ 'animate-pulse': showLoadingState }" @click.stop>
+        <div ref="track" class="h-1.5 w-full bg-track/50 relative rounded-full overflow-hidden" :class="{ 'animate-pulse': showLoadingState }" @click.stop>
           <div ref="readyTrack" class="h-full bg-track-buffered absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="bufferedTrack" class="h-full bg-track absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="playedTrack" class="h-full bg-track-cursor absolute top-0 left-0 rounded-full pointer-events-none" />
@@ -544,9 +544,10 @@ function expandToFullscreen() {
   showFullscreen.value = true
   if (titleMarquee.value) titleMarquee.value.reset()
 
-  // Update track for total time bar if useChapterTrack is set
+  // The track is a different width in fullscreen, so remeasure rather than repaint against the
+  // collapsed width
   nextTick(() => {
-    updateTrack()
+    measureAndUpdateTrackWidth()
   })
 }
 
@@ -647,13 +648,15 @@ function setChunksReady(chunks: (string | number)[], numSegments: number) {
 }
 
 function updateReadyTrack() {
+  if (!readyTrack.value) return
+
   if (playerSettings.value.useChapterTrack) {
-    if (totalReadyTrack.value) {
-      totalReadyTrack.value.style.width = readyTrackWidth.value + 'px'
+    if (totalReadyTrack.value && trackWidth.value) {
+      totalReadyTrack.value.style.width = (readyTrackWidth.value / trackWidth.value) * 100 + '%'
     }
-    if (readyTrack.value) readyTrack.value.style.width = trackWidth.value + 'px'
-  } else {
-    if (readyTrack.value) readyTrack.value.style.width = readyTrackWidth.value + 'px'
+    readyTrack.value.style.width = '100%'
+  } else if (trackWidth.value) {
+    readyTrack.value.style.width = (readyTrackWidth.value / trackWidth.value) * 100 + '%'
   }
 }
 
@@ -708,21 +711,21 @@ function updateTrack() {
     bufferedPercent = Math.max(0, Math.min(1, (bufferedTime.value - (currentChapter.value.start as number)) / currentChapterDuration.value))
   }
 
-  const ptWidth = Math.round(percentDone * trackWidth.value)
   if (playedTrack.value) {
-    playedTrack.value.style.width = ptWidth + 'px'
+    playedTrack.value.style.width = percentDone * 100 + '%'
   }
   if (bufferedTrack.value) {
-    bufferedTrack.value.style.width = Math.round(bufferedPercent * trackWidth.value) + 'px'
+    bufferedTrack.value.style.width = bufferedPercent * 100 + '%'
   }
 
-  if (trackCursor.value) {
-    trackCursor.value.style.left = ptWidth - 14 + 'px'
+  if (trackCursor.value && track.value) {
+    // The cursor is positioned in pixels, so measure rather than trust the cached width
+    trackCursor.value.style.left = Math.round(percentDone * track.value.clientWidth) - 14 + 'px'
   }
 
   if (playerSettings.value.useChapterTrack) {
-    if (totalPlayedTrack.value) totalPlayedTrack.value.style.width = Math.round(totalPercentDone * trackWidth.value) + 'px'
-    if (totalBufferedTrack.value) totalBufferedTrack.value.style.width = Math.round(totalBufferedPercent * trackWidth.value) + 'px'
+    if (totalPlayedTrack.value) totalPlayedTrack.value.style.width = totalPercentDone * 100 + '%'
+    if (totalBufferedTrack.value) totalBufferedTrack.value.style.width = totalBufferedPercent * 100 + '%'
   }
 }
 
@@ -741,8 +744,7 @@ function seek(time: number) {
 
   if (playedTrack.value) {
     const perc = time / totalDuration.value
-    const ptWidth = Math.round(perc * trackWidth.value)
-    playedTrack.value.style.width = ptWidth + 'px'
+    playedTrack.value.style.width = perc * 100 + '%'
 
     playedTrack.value.classList.remove('bg-gray-200')
     playedTrack.value.classList.add('bg-yellow-300')
@@ -858,7 +860,7 @@ function touchmove(e: TouchEvent) {
     maxTime = minTime + duration
   }
 
-  const timePerPixel = duration / trackWidth.value
+  const timePerPixel = duration / (track.value?.clientWidth || trackWidth.value)
   const newTime = draggingTouchStartTime.value + timePerPixel * distanceMoved
   draggingCurrentTime.value = Math.min(maxTime, Math.max(minTime, newTime))
 
@@ -1010,11 +1012,7 @@ function onPlaybackSession(ps: Record<string, unknown>, opts?: { isLoading?: boo
       titleMarquee.value.init(title.value)
     }
 
-    if (track.value) {
-      trackWidth.value = track.value.clientWidth
-    } else {
-      console.error('Track not loaded')
-    }
+    measureAndUpdateTrackWidth()
   })
 }
 
@@ -1066,13 +1064,21 @@ async function screenOrientationChange() {
   isRefreshingUI.value = false
 }
 
+function measureAndUpdateTrackWidth() {
+  if (!track.value) {
+    console.error('Track not loaded')
+    return
+  }
+  trackWidth.value = track.value.clientWidth
+  updateTrack()
+  updateReadyTrack()
+}
+
 function refreshUI() {
   updateScreenSize()
-  if (track.value) {
-    trackWidth.value = track.value.clientWidth
-    updateTrack()
-    updateReadyTrack()
-  }
+  nextTick(() => {
+    measureAndUpdateTrackWidth()
+  })
 }
 
 function updateScreenSize() {
