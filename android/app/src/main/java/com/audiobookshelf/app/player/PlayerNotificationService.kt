@@ -63,6 +63,11 @@ import androidx.media3.ui.PlayerNotificationManager
 // MediaSession rewrite is deferred.
 import java.util.*
 import kotlin.concurrent.schedule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 
 const val SLEEP_TIMER_WAKE_UP_EXPIRATION = 120000L // 2m
@@ -127,6 +132,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
   var currentPlaybackSession: PlaybackSession? = null
   private var initialPlaybackRate: Float? = null
+
+  private val metadataScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+  private var metadataArtJob: Job? = null
 
   private var playQueue: MutableList<PlayQueueItem> = mutableListOf()
   private var queueIndex: Int = 0
@@ -212,6 +220,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     castPlayer?.release()
     mediaSession.release()
     mediaProgressSyncer.reset()
+    metadataScope.cancel()
 
     super.onDestroy()
   }
@@ -468,10 +477,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     isClosed = false
 
-    val metadata = playbackSession.getMediaMetadataCompat(ctx)
-    mediaSession.setMetadata(metadata)
     // An inactive session is ignored by Android Auto, Wear OS and the system media controls
     mediaSession.isActive = true
+    // Publish straight away so a notification posted while switching players has a title and
+    // cover uri to draw; the bitmap is filled in below once it resolves
+    mediaSession.setMetadata(playbackSession.getMediaMetadataCompat(ctx))
     val mediaItems = playbackSession.getMediaItems(ctx)
     val playbackRateToUse = playbackRate ?: initialPlaybackRate ?: 1f
     initialPlaybackRate = playbackRate
@@ -498,6 +508,14 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     DeviceManager.setLastPlaybackSession(
             playbackSession
     ) // Save playback session to use when app is closed
+
+    // Publish metadata now with the cover uri, then again once the full-resolution bitmap lands
+    metadataArtJob?.cancel()
+    metadataArtJob =
+            playbackSession.resolveCoverBitmapAsync(ctx, metadataScope) {
+              invalidateMediaSessionMetadata()
+            }
+    invalidateMediaSessionMetadata()
 
     AbsLogger.info("PlayerNotificationService", "preparePlayer: Started playback session for item ${currentPlaybackSession?.mediaItemId}. MediaPlayer ${currentPlaybackSession?.mediaPlayer}")
     // Notify client
@@ -598,6 +616,12 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               mediaType
       )
     }
+  }
+
+  /** Republishes the session metadata, picking up the cover art bitmap once it has resolved. */
+  private fun invalidateMediaSessionMetadata() {
+    val playbackSession = currentPlaybackSession ?: return
+    mediaSession.setMetadata(playbackSession.getMediaMetadataCompat(ctx))
   }
 
   private fun setMediaSessionConnectorCustomActions(playbackSession: PlaybackSession) {
