@@ -753,6 +753,13 @@ async function onAutoPlaylistRuleChanged() {
   await fetchPlaylist()
 }
 
+function libraryChanged() {
+  // The auto playlist is built from every podcast library, so it is not tied to the selection
+  if (playlist.value.id === 'unfinished') return
+  // A server playlist's contents are shown in the context of its library
+  router.replace('/bookshelf/playlists')
+}
+
 function playlistRemoved(removedPlaylist: any) {
   if (playlist.value.id === removedPlaylist.id) {
     localStore.removeCachedPlaylist(removedPlaylist.id)
@@ -811,6 +818,7 @@ onMounted(async () => {
   socket.$on('playlist_updated', playlistUpdated)
   socket.$on('playlist_removed', playlistRemoved)
   eventBus.on('playback-ended', onPlaybackEnded)
+  eventBus.on('library-changed', libraryChanged)
   fetchPlaylist()
 })
 
@@ -818,5 +826,6 @@ onBeforeUnmount(() => {
   socket.$off('playlist_updated', playlistUpdated)
   socket.$off('playlist_removed', playlistRemoved)
   eventBus.off('playback-ended', onPlaybackEnded)
+  eventBus.off('library-changed', libraryChanged)
 })
 </script>

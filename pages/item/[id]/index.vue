@@ -173,7 +173,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Dialog } from '@capacitor/dialog'
 import { AbsFileSystem, AbsDownloader } from '@/plugins/capacitor'
-import { FastAverageColor } from 'fast-average-color'
 import { useCellularPermission } from '~/composables/useCellularPermission'
 
 const route = useRoute()
@@ -378,15 +377,10 @@ function clickMissingButton() {
 
 async function coverImageLoaded(fullCoverUrl: string) {
   if (!fullCoverUrl) return
-  const fac = new FastAverageColor()
-  fac.getColorAsync(fullCoverUrl)
-    .then((color) => {
-      coverRgb.value = color.rgba
-      coverBgIsLight.value = color.isLight
-    })
-    .catch((e) => {
-      console.log(e)
-    })
+  const color = await getAverageColorFromCoverUrl(fullCoverUrl)
+  if (!color) return
+  coverRgb.value = color.rgba
+  coverBgIsLight.value = color.isLight
 }
 
 function moreButtonPress() {

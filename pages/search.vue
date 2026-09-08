@@ -28,6 +28,15 @@
         </div>
       </template>
 
+      <p v-if="episodeResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.HeaderEpisodes }}</p>
+      <template v-for="item in episodeResults" :key="item.libraryItem.recentEpisode.id">
+        <div class="text-fg select-none relative py-1">
+          <nuxt-link :to="`/item/${item.libraryItem.id}/${item.libraryItem.recentEpisode.id}`">
+            <cards-episode-search-card :episode="item.libraryItem.recentEpisode" :library-item="item.libraryItem" />
+          </nuxt-link>
+        </div>
+      </template>
+
       <p v-if="seriesResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.LabelSeries }}</p>
       <template v-for="seriesResult in seriesResults" :key="seriesResult.series.id">
         <div class="w-full h-16 py-1">
@@ -81,6 +90,7 @@ const lastSearch = ref<string | null>(null)
 const isFetching = ref(false)
 const bookResults = ref<Array<{ libraryItem: { id: string; [key: string]: unknown }; [key: string]: unknown }>>([])
 const podcastResults = ref<Array<{ libraryItem: { id: string; [key: string]: unknown }; [key: string]: unknown }>>([])
+const episodeResults = ref<Array<{ libraryItem: { id: string; recentEpisode: { id: string; [key: string]: unknown }; [key: string]: unknown }; [key: string]: unknown }>>([])
 const seriesResults = ref<Array<{ series: { id: string; [key: string]: unknown }; books?: unknown[]; [key: string]: unknown }>>([])
 const authorResults = ref<Array<{ id: string; name?: string; [key: string]: unknown }>>([])
 const narratorResults = ref<Array<{ name: string; [key: string]: unknown }>>([])
@@ -90,7 +100,14 @@ const inputRef = ref<{ focus: () => void } | null>(null)
 
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const totalResults = computed(
-  () => bookResults.value.length + seriesResults.value.length + authorResults.value.length + podcastResults.value.length + narratorResults.value.length + tagResults.value.length
+  () =>
+    bookResults.value.length +
+    seriesResults.value.length +
+    authorResults.value.length +
+    podcastResults.value.length +
+    episodeResults.value.length +
+    narratorResults.value.length +
+    tagResults.value.length
 )
 
 async function runSearch(value: string | null) {
@@ -102,6 +119,7 @@ async function runSearch(value: string | null) {
   if (!lastSearch.value) {
     bookResults.value = []
     podcastResults.value = []
+    episodeResults.value = []
     seriesResults.value = []
     authorResults.value = []
     narratorResults.value = []
@@ -109,7 +127,7 @@ async function runSearch(value: string | null) {
     return
   }
   isFetching.value = true
-  const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}&limit=5`, { connectTimeout: 10000 }).catch((error: Error) => {
+  const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}`, { connectTimeout: 10000 }).catch((error: Error) => {
     console.error('Search error', error)
     return null
   })) as Record<string, Record<string, unknown>[]> | null
@@ -123,6 +141,7 @@ async function runSearch(value: string | null) {
 
   bookResults.value = (results?.book || []) as typeof bookResults.value
   podcastResults.value = (results?.podcast || []) as typeof podcastResults.value
+  episodeResults.value = (results?.episodes || []) as typeof episodeResults.value
   seriesResults.value = (results?.series || []) as typeof seriesResults.value
   authorResults.value = (results?.authors || []) as typeof authorResults.value
   narratorResults.value = (results?.narrators || []) as typeof narratorResults.value

@@ -141,7 +141,6 @@ import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
 import { AbsAudioPlayer } from '~/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
-import { FastAverageColor } from 'fast-average-color'
 import WrappingMarquee from '~/assets/WrappingMarquee.js'
 import { SyncStatus, PlayMethod } from '~/constants'
 import { getString } from '~/composables/useStrings'
@@ -499,16 +498,10 @@ function clickChaptersBtn() {
 async function coverImageLoaded(fullCoverUrl: string) {
   if (!fullCoverUrl) return
 
-  const fac = new FastAverageColor()
-  fac
-    .getColorAsync(fullCoverUrl)
-    .then((color) => {
-      coverRgb.value = color.rgba
-      coverBgIsLight.value = color.isLight
-    })
-    .catch((e) => {
-      console.log(e)
-    })
+  const color = await getAverageColorFromCoverUrl(fullCoverUrl)
+  if (!color) return
+  coverRgb.value = color.rgba
+  coverBgIsLight.value = color.isLight
 }
 
 function clickTitleAndAuthor() {

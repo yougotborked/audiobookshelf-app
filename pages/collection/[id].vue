@@ -121,6 +121,13 @@ function onPlaybackEnded() {
   }
 }
 
+// A collection belongs to a single library, so leave rather than show one that is not in it
+function libraryChanged(libraryId: string) {
+  if (!libraryId || libraryId !== collection.value?.libraryId) {
+    navigateTo('/bookshelf/collections')
+  }
+}
+
 onMounted(async () => {
   const user = userStore.user
   const networkConnected = appStore.networkConnected
@@ -182,9 +189,11 @@ onMounted(async () => {
   }
 
   eventBus.on('playback-ended', onPlaybackEnded)
+  eventBus.on('library-changed', libraryChanged)
 })
 
 onBeforeUnmount(() => {
   eventBus.off('playback-ended', onPlaybackEnded)
+  eventBus.off('library-changed', libraryChanged)
 })
 </script>
