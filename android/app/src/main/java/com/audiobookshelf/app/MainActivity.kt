@@ -46,9 +46,6 @@ class MainActivity : BridgeActivity() {
   val storage = SimpleStorage(this)
 
   val REQUEST_PERMISSIONS = 1
-  var PERMISSIONS_ALL = arrayOf(
-    PermissionHelper.requiredAudioPermission()
-  )
 
   public override fun onCreate(savedInstanceState: Bundle?) {
     DbManager.initialize(applicationContext)
@@ -119,20 +116,28 @@ class MainActivity : BridgeActivity() {
       }
     }
 
-    val permission = ActivityCompat.checkSelfPermission(this, PermissionHelper.requiredAudioPermission())
-    if (permission != PackageManager.PERMISSION_GRANTED) {
-      ActivityCompat.requestPermissions(this,
-        PERMISSIONS_ALL,
-        REQUEST_PERMISSIONS)
-    }
+    requestNeededPermissions()
+  }
 
-    // Request POST_NOTIFICATIONS permission on Android 13+ for media notification
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_PERMISSIONS)
-      }
+  /**
+   * Requests the permissions the app needs but does not yet hold.
+   *
+   * POST_NOTIFICATIONS is required from Android 13 for the download progress notification, which
+   * is also what keeps the download foreground service alive.
+   */
+  private fun requestNeededPermissions() {
+    val needed = mutableListOf<String>()
+    val audioPermission = PermissionHelper.requiredAudioPermission()
+    if (ActivityCompat.checkSelfPermission(this, audioPermission) != PackageManager.PERMISSION_GRANTED) {
+      needed.add(audioPermission)
     }
-
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+      needed.add(Manifest.permission.POST_NOTIFICATIONS)
+    }
+    if (needed.isNotEmpty()) {
+      ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS)
+    }
   }
 
   override fun onDestroy() {

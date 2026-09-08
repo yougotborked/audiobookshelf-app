@@ -8,10 +8,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.core.net.toUri
 import android.os.Build
+import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
-import com.audiobookshelf.app.BuildConfig
-import com.audiobookshelf.app.R
-import com.bumptech.glide.Glide
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerNotificationManager
 import kotlinx.coroutines.*
@@ -42,7 +40,10 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
     callback: PlayerNotificationManager.BitmapCallback
   ): Bitmap? {
     val albumArtUri = controller.metadata?.description?.iconUri
+    // Reuse the bitmap from the queue navigator (local covers) or from
+    // PlaybackSession.resolveCoverBitmapAsync (server covers) rather than loading a second copy
     val albumBitmap = controller.metadata?.description?.iconBitmap
+      ?: controller.metadata?.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART)
 
     // For local cover images, bitmap is set in PlayerNotificationService TimelineQueueNavigator.getMediaDescription
     if (albumBitmap != null) {
@@ -67,7 +68,7 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
       } else {
         serviceScope.launch {
           currentBitmap = albumArtUri?.let {
-            resolveUriAsBitmap(it)
+            resolveUriAsBitmap(playerNotificationService, it)
           }
           currentBitmap?.let { callback.onBitmap(it) }
         }
@@ -78,25 +79,4 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
     }
   }
 
-  private suspend fun resolveUriAsBitmap(uri: Uri): Bitmap? {
-    return withContext(Dispatchers.IO) {
-      try {
-        Glide.with(playerNotificationService)
-          .asBitmap()
-          .load(uri)
-          .placeholder(R.drawable.icon)
-          .error(R.drawable.icon)
-          .submit()
-          .get()
-      } catch (e: Exception) {
-        e.printStackTrace()
-
-        Glide.with(playerNotificationService)
-          .asBitmap()
-          .load(("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon).toUri())
-          .submit()
-          .get()
-      }
-    }
-  }
 }

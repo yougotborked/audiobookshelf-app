@@ -3,6 +3,7 @@ import { Network } from '@capacitor/network'
 import { AbsAudioPlayer, AbsDownloader, AbsLogger } from '~/plugins/capacitor'
 import { PlayMethod } from '~/constants'
 import type { PlaybackSession, DeviceData, QueueItem } from '~/types'
+import { getAutoPlaylistPodcastRule, refreshAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
 
 // Helper functions (copy from store/index.js)
 function resolveQueueItemIds(item: Record<string, unknown>): { libraryItemId: string | null; episodeId: string | null } {
@@ -256,6 +257,12 @@ export const useAppStore = defineStore('app', {
         }
       }
 
+      // A podcast the user excluded from the auto playlist should not be auto-downloaded either
+      const podcastRules = await refreshAutoPlaylistPodcastRules()
+
+      // Unfinished episodes seen per podcast so far, used to honour a `latest` rule
+      const unfinishedSeenByPodcast: Record<string, number> = {}
+
       const librariesStore = useLibrariesStore()
       const nativeHttp = useNativeHttp()
       for (const lib of librariesStore.libraries) {
@@ -268,8 +275,17 @@ export const useAppStore = defineStore('app', {
             const serverId = ep.id as string
             const liId = ep.libraryItemId as string
             if (!serverId || !liId) continue
+            const rule = getAutoPlaylistPodcastRule(podcastRules, liId)
+            if (rule.mode === 'exclude') continue
             const prog = progressMap[serverId] as Record<string, unknown>
             if (prog && prog.isFinished) continue
+
+            // recent-episodes comes back newest first, so counting unfinished episodes as we go
+            // gives the same set the auto playlist shows for a `latest` rule. Counted before the
+            // already-downloaded check so a downloaded episode still uses up one of the slots.
+            const seen = (unfinishedSeenByPodcast[liId] = (unfinishedSeenByPodcast[liId] || 0) + 1)
+            if (rule.mode === 'latest' && rule.limit && seen > rule.limit) continue
+
             if (downloadedMap[`${liId}_${serverId}`]) continue
             AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: serverId })
             downloadedMap[`${liId}_${serverId}`] = true

@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences'
+import type { AutoPlaylistPodcastRule } from '~/composables/useAutoPlaylist'
 
 class LocalStorage {
   private _userId: string | null = null
@@ -377,6 +378,31 @@ class LocalStorage {
     } catch (error) {
       console.error('[LocalStorage] Failed to get playback session', error)
       return null
+    }
+  }
+
+  /**
+   * Per-podcast auto playlist rules, keyed by server library item id.
+   *
+   * Stored per user: a shared account can have shows one person never wants in their auto
+   * playlist, and a different login on the same device should not inherit that.
+   */
+  async setAutoPlaylistPodcastRules(rules: Record<string, AutoPlaylistPodcastRule>): Promise<void> {
+    try {
+      await Preferences.set({ key: this.ukey('autoPlaylistPodcastRules'), value: JSON.stringify(rules) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set auto playlist podcast rules', error)
+    }
+  }
+
+  async getAutoPlaylistPodcastRules(): Promise<Record<string, AutoPlaylistPodcastRule>> {
+    try {
+      const obj = (await Preferences.get({ key: this.ukey('autoPlaylistPodcastRules') })) || {}
+      const parsed = obj.value ? JSON.parse(obj.value) : null
+      return parsed && typeof parsed === 'object' ? parsed : {}
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get auto playlist podcast rules', error)
+      return {}
     }
   }
 

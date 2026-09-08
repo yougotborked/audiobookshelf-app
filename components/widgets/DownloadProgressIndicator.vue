@@ -24,6 +24,7 @@ const platform = usePlatform()
 let downloadItemListener: { remove: () => void } | null = null
 let completeListener: { remove: () => void } | null = null
 let itemPartUpdateListener: { remove: () => void } | null = null
+let queueChangedListener: { remove: () => void } | null = null
 
 const downloadItems = computed(() => globalsStore.itemDownloads)
 
@@ -86,6 +87,11 @@ function onDownloadItemPartUpdate(itemPart: Record<string, unknown>) {
   globalsStore.updateDownloadItemPart(itemPart as Parameters<typeof globalsStore.updateDownloadItemPart>[0])
 }
 
+// The download queue can be cancelled from the notification, outside the webview
+function onQueueChanged(data: Record<string, unknown>) {
+  if (!data.hasWork) globalsStore.clearItemDownloads()
+}
+
 onMounted(async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   downloadItemListener = await AbsDownloader.addListener('onDownloadItem', (data: any) => onDownloadItem(data as Record<string, unknown>))
@@ -93,11 +99,14 @@ onMounted(async () => {
   itemPartUpdateListener = await AbsDownloader.addListener('onDownloadItemPartUpdate', (data: any) => onDownloadItemPartUpdate(data as Record<string, unknown>))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   completeListener = await AbsDownloader.addListener('onItemDownloadComplete', (data: any) => onItemDownloadComplete(data as Record<string, unknown>))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queueChangedListener = await AbsDownloader.addListener('onQueueChanged', (data: any) => onQueueChanged(data as Record<string, unknown>))
 })
 
 onBeforeUnmount(() => {
   downloadItemListener?.remove()
   completeListener?.remove()
   itemPartUpdateListener?.remove()
+  queueChangedListener?.remove()
 })
 </script>

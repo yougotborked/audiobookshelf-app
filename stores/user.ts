@@ -11,6 +11,11 @@ interface UserState {
   settings: UserSettings
 }
 
+interface UserMediaProgressIndex {
+  byItem: Map<string, Record<string, unknown>>
+  byEpisode: Map<string, Record<string, unknown>>
+}
+
 export const useUserStore = defineStore('user', {
   state: (): UserState => ({
     user: null,
@@ -33,18 +38,44 @@ export const useUserStore = defineStore('user', {
     getServerConnectionConfigId: (state) => state.serverConnectionConfig?.id || null,
     getServerAddress: (state) => state.serverConnectionConfig?.address || null,
     getServerConfigName: (state) => state.serverConnectionConfig?.name || null,
-    getUserMediaProgress: (state) => (libraryItemId: string, episodeId: string | null = null) => {
-      if (!state.user?.mediaProgress) return null
-      return (state.user.mediaProgress as Record<string, unknown>[]).find((li) => {
-        if (episodeId && li.episodeId !== episodeId) return false
-        return li.libraryItemId == libraryItemId
-      })
+    /**
+     * Lookup indexes over the user's media progress.
+     *
+     * Long lists (the auto playlist runs to hundreds of rows) look progress up once per row, so a
+     * linear scan per row makes rendering O(rows x progress entries).  The maps are rebuilt once
+     * whenever mediaProgress changes and every row lookup is then O(1).
+     */
+    userMediaProgressIndex: (state): UserMediaProgressIndex => {
+      const byItem = new Map<string, Record<string, unknown>>()
+      const byEpisode = new Map<string, Record<string, unknown>>()
+      const mediaProgress = (state.user?.mediaProgress as Record<string, unknown>[]) || []
+
+      for (const mp of mediaProgress) {
+        const libraryItemId = mp.libraryItemId as string | undefined
+        if (!libraryItemId) continue
+        // `find` returns the first match, so earlier entries win here too
+        if (!byItem.has(libraryItemId)) byItem.set(libraryItemId, mp)
+        if (mp.episodeId) {
+          const key = `${libraryItemId}|${mp.episodeId as string}`
+          if (!byEpisode.has(key)) byEpisode.set(key, mp)
+        }
+      }
+
+      return { byItem, byEpisode }
+    },
+    getUserMediaProgress(): (libraryItemId: string, episodeId?: string | null) => Record<string, unknown> | null {
+      const { byItem, byEpisode } = this.userMediaProgressIndex
+      return (libraryItemId: string, episodeId: string | null = null) => {
+        if (!libraryItemId) return null
+        if (episodeId) return byEpisode.get(`${libraryItemId}|${episodeId}`) || null
+        return byItem.get(libraryItemId) || null
+      }
     },
     getUserBookmarksForItem: (state) => (libraryItemId: string) => {
       if (!state.user?.bookmarks) return []
       return (state.user.bookmarks as Record<string, unknown>[]).filter((bm) => bm.libraryItemId === libraryItemId)
     },
-    getUserSetting: (state) => (key: keyof UserSettings) => state.settings?.[key] || null,
+    getUserSetting: (state) => (key: keyof UserSettings) => state.settings?.[key] ?? null,
     getUserCanUpdate: (state) => !!(state.user?.permissions as Record<string, unknown>)?.update,
     getUserCanDelete: (state) => !!(state.user?.permissions as Record<string, unknown>)?.delete,
     getUserCanDownload: (state) => !!(state.user?.permissions as Record<string, unknown>)?.download,

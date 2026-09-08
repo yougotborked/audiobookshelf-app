@@ -3,6 +3,8 @@ package com.audiobookshelf.app.data
 import android.content.Context
 import android.support.v4.media.MediaDescriptionCompat
 import android.util.Log
+import androidx.core.net.toUri
+import java.io.File
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonSubTypes
@@ -53,10 +55,23 @@ data class LocalFile(
   var contentUrl:String,
   var basePath:String,
   var absolutePath:String,
-  var simplePath:String,
   var mimeType:String?,
   var size:Long
 ) {
+  /** Whether the file is still present, resolving SAF content uris without a full scan. */
+  @JsonIgnore
+  fun exists(ctx: Context): Boolean {
+    if (contentUrl.startsWith("content:")) {
+      return try {
+        ctx.contentResolver.openFileDescriptor(contentUrl.toUri(), "r")?.use { true } ?: false
+      } catch (e: Exception) {
+        Log.w("LocalFile", "Cannot access SAF file $contentUrl", e)
+        false
+      }
+    }
+    return File(absolutePath).exists()
+  }
+
   @JsonIgnore
   fun isAudioFile():Boolean {
     if (mimeType == "application/octet-stream") return true
@@ -86,7 +101,6 @@ data class LocalFolder(
   var contentUrl:String,
   var basePath:String,
   var absolutePath:String,
-  var simplePath:String,
   var storageType:String,
   var mediaType:String
 )

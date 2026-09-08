@@ -35,7 +35,7 @@
         <p class="font-mono text-md-on-surface" style="font-size: 0.8rem">{{ totalTimeRemainingPretty }}</p>
       </div>
       <div class="w-full">
-        <div class="h-1 w-full bg-track/50 relative rounded-full">
+        <div class="h-1 w-full bg-track/50 relative rounded-full overflow-hidden">
           <div ref="totalReadyTrack" class="h-full bg-track-buffered absolute top-0 left-0 pointer-events-none rounded-full" />
           <div ref="totalBufferedTrack" class="h-full bg-track absolute top-0 left-0 pointer-events-none rounded-full" />
           <div ref="totalPlayedTrack" class="h-full bg-track-cursor absolute top-0 left-0 pointer-events-none rounded-full" />
@@ -95,22 +95,22 @@
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
             <span class="material-symbols text-3xl leading-none">replay</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpBackwardsLabel }}</span>
           </div>
           <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
             <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white/20 pointer-events-none" />
 
-            <span v-if="!isLoading" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
+            <span v-if="!showLoadingState" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="isLoading ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
             <span class="material-symbols text-3xl leading-none">forward_media</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpForwardLabel }}</span>
           </div>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !isLoading ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !showLoadingState ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
         </div>
       </div>
 
@@ -120,7 +120,7 @@
           <div class="flex-grow" />
           <p class="font-mono text-md-on-surface" style="font-size: 0.8rem">{{ timeRemainingPretty }}</p>
         </div>
-        <div ref="track" class="h-1.5 w-full bg-track/50 relative rounded-full" :class="{ 'animate-pulse': isLoading }" @click.stop>
+        <div ref="track" class="h-1.5 w-full bg-track/50 relative rounded-full overflow-hidden" :class="{ 'animate-pulse': showLoadingState }" @click.stop>
           <div ref="readyTrack" class="h-full bg-track-buffered absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="bufferedTrack" class="h-full bg-track absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="playedTrack" class="h-full bg-track-cursor absolute top-0 left-0 rounded-full pointer-events-none" />
@@ -141,7 +141,6 @@ import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
 import { AbsAudioPlayer } from '~/plugins/capacitor'
 import { Dialog } from '@capacitor/dialog'
-import { FastAverageColor } from 'fast-average-color'
 import WrappingMarquee from '~/assets/WrappingMarquee.js'
 import { SyncStatus, PlayMethod } from '~/constants'
 import { getString } from '~/composables/useStrings'
@@ -222,6 +221,14 @@ const playerSettings = ref({
   lockUi: false
 })
 const isLoading = ref(false)
+// Set by the container while it checks the server for more recent progress, so the controls stay
+// disabled until the timestamps settle and the user cannot seek against a stale position
+const isCheckingServerProgress = ref(false)
+const showLoadingState = computed(() => isLoading.value || isCheckingServerProgress.value)
+
+function setIsCheckingServerProgress(value: boolean) {
+  isCheckingServerProgress.value = !!value
+}
 const isDraggingCursor = ref(false)
 const draggingTouchStartX = ref(0)
 const draggingTouchStartTime = ref(0)
@@ -499,16 +506,10 @@ function clickChaptersBtn() {
 async function coverImageLoaded(fullCoverUrl: string) {
   if (!fullCoverUrl) return
 
-  const fac = new FastAverageColor()
-  fac
-    .getColorAsync(fullCoverUrl)
-    .then((color) => {
-      coverRgb.value = color.rgba
-      coverBgIsLight.value = color.isLight
-    })
-    .catch((e) => {
-      console.log(e)
-    })
+  const color = await getAverageColorFromCoverUrl(fullCoverUrl)
+  if (!color) return
+  coverRgb.value = color.rgba
+  coverBgIsLight.value = color.isLight
 }
 
 function clickTitleAndAuthor() {
@@ -543,9 +544,10 @@ function expandToFullscreen() {
   showFullscreen.value = true
   if (titleMarquee.value) titleMarquee.value.reset()
 
-  // Update track for total time bar if useChapterTrack is set
+  // The track is a different width in fullscreen, so remeasure rather than repaint against the
+  // collapsed width
   nextTick(() => {
-    updateTrack()
+    measureAndUpdateTrackWidth()
   })
 }
 
@@ -558,14 +560,14 @@ function collapseFullscreen() {
 
 async function jumpNextChapter() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (!nextChapter.value) return
   seek((nextChapter.value as Record<string, unknown>).start as number)
 }
 
 async function jumpNextChapterOrQueue() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (nextChapter.value) {
     seek((nextChapter.value as Record<string, unknown>).start as number)
   } else if (nextQueueItem.value) {
@@ -575,7 +577,7 @@ async function jumpNextChapterOrQueue() {
 
 async function jumpChapterStart() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (!currentChapter.value) {
     return restart()
   }
@@ -609,13 +611,13 @@ function restart() {
 
 async function jumpBackwards() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   AbsAudioPlayer.seekBackward({ value: jumpBackwardsTime.value })
 }
 
 async function jumpForward() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   AbsAudioPlayer.seekForward({ value: jumpForwardTime.value })
 }
 
@@ -646,13 +648,15 @@ function setChunksReady(chunks: (string | number)[], numSegments: number) {
 }
 
 function updateReadyTrack() {
+  if (!readyTrack.value) return
+
   if (playerSettings.value.useChapterTrack) {
-    if (totalReadyTrack.value) {
-      totalReadyTrack.value.style.width = readyTrackWidth.value + 'px'
+    if (totalReadyTrack.value && trackWidth.value) {
+      totalReadyTrack.value.style.width = (readyTrackWidth.value / trackWidth.value) * 100 + '%'
     }
-    if (readyTrack.value) readyTrack.value.style.width = trackWidth.value + 'px'
-  } else {
-    if (readyTrack.value) readyTrack.value.style.width = readyTrackWidth.value + 'px'
+    readyTrack.value.style.width = '100%'
+  } else if (trackWidth.value) {
+    readyTrack.value.style.width = (readyTrackWidth.value / trackWidth.value) * 100 + '%'
   }
 }
 
@@ -707,26 +711,26 @@ function updateTrack() {
     bufferedPercent = Math.max(0, Math.min(1, (bufferedTime.value - (currentChapter.value.start as number)) / currentChapterDuration.value))
   }
 
-  const ptWidth = Math.round(percentDone * trackWidth.value)
   if (playedTrack.value) {
-    playedTrack.value.style.width = ptWidth + 'px'
+    playedTrack.value.style.width = percentDone * 100 + '%'
   }
   if (bufferedTrack.value) {
-    bufferedTrack.value.style.width = Math.round(bufferedPercent * trackWidth.value) + 'px'
+    bufferedTrack.value.style.width = bufferedPercent * 100 + '%'
   }
 
-  if (trackCursor.value) {
-    trackCursor.value.style.left = ptWidth - 14 + 'px'
+  if (trackCursor.value && track.value) {
+    // The cursor is positioned in pixels, so measure rather than trust the cached width
+    trackCursor.value.style.left = Math.round(percentDone * track.value.clientWidth) - 14 + 'px'
   }
 
   if (playerSettings.value.useChapterTrack) {
-    if (totalPlayedTrack.value) totalPlayedTrack.value.style.width = Math.round(totalPercentDone * trackWidth.value) + 'px'
-    if (totalBufferedTrack.value) totalBufferedTrack.value.style.width = Math.round(totalBufferedPercent * trackWidth.value) + 'px'
+    if (totalPlayedTrack.value) totalPlayedTrack.value.style.width = totalPercentDone * 100 + '%'
+    if (totalBufferedTrack.value) totalBufferedTrack.value.style.width = totalBufferedPercent * 100 + '%'
   }
 }
 
 function seek(time: number) {
-  if (isLoading.value) return
+  if (showLoadingState.value) return
   if (seekLoading.value) {
     console.error('Already seek loading', seekedTime.value)
     return
@@ -735,12 +739,12 @@ function seek(time: number) {
   seekedTime.value = time
   seekLoading.value = true
 
-  AbsAudioPlayer.seek({ value: Math.floor(time) })
+  // Pass fractional seconds so seeks to non-integer chapter starts don't truncate
+  AbsAudioPlayer.seek({ value: time })
 
   if (playedTrack.value) {
     const perc = time / totalDuration.value
-    const ptWidth = Math.round(perc * trackWidth.value)
-    playedTrack.value.style.width = ptWidth + 'px'
+    playedTrack.value.style.width = perc * 100 + '%'
 
     playedTrack.value.classList.remove('bg-gray-200')
     playedTrack.value.classList.add('bg-yellow-300')
@@ -760,7 +764,7 @@ async function touchstartCursor(e: TouchEvent) {
 
 async function playPauseClick() {
   await hapticsImpact()
-  if (isLoading.value) return
+  if (showLoadingState.value) return
 
   isPlaying.value = !!((await AbsAudioPlayer.playPause()) || {}).playing
   isEnded.value = false
@@ -856,7 +860,7 @@ function touchmove(e: TouchEvent) {
     maxTime = minTime + duration
   }
 
-  const timePerPixel = duration / trackWidth.value
+  const timePerPixel = duration / (track.value?.clientWidth || trackWidth.value)
   const newTime = draggingTouchStartTime.value + timePerPixel * distanceMoved
   draggingCurrentTime.value = Math.min(maxTime, Math.max(minTime, newTime))
 
@@ -1008,11 +1012,7 @@ function onPlaybackSession(ps: Record<string, unknown>, opts?: { isLoading?: boo
       titleMarquee.value.init(title.value)
     }
 
-    if (track.value) {
-      trackWidth.value = track.value.clientWidth
-    } else {
-      console.error('Track not loaded')
-    }
+    measureAndUpdateTrackWidth()
   })
 }
 
@@ -1064,13 +1064,21 @@ async function screenOrientationChange() {
   isRefreshingUI.value = false
 }
 
+function measureAndUpdateTrackWidth() {
+  if (!track.value) {
+    console.error('Track not loaded')
+    return
+  }
+  trackWidth.value = track.value.clientWidth
+  updateTrack()
+  updateReadyTrack()
+}
+
 function refreshUI() {
   updateScreenSize()
-  if (track.value) {
-    trackWidth.value = track.value.clientWidth
-    updateTrack()
-    updateReadyTrack()
-  }
+  nextTick(() => {
+    measureAndUpdateTrackWidth()
+  })
 }
 
 function updateScreenSize() {
@@ -1277,7 +1285,28 @@ onBeforeUnmount(() => {
 
 // ── Expose public interface ───────────────────────────────────────────────────
 const audioPlayerReady = computed(() => true)
-defineExpose({ audioPlayerReady, streamOpen: onPlaybackSession, setPlaybackSpeed, setStreamReady, setChunksReady, currentPlaybackRate })
+// The container drives the player through this template ref, so everything it touches has to be
+// listed here - under <script setup> anything left out silently reads back as undefined
+defineExpose({
+  audioPlayerReady,
+  streamOpen: onPlaybackSession,
+  setPlaybackSpeed,
+  setStreamReady,
+  setChunksReady,
+  currentPlaybackRate,
+  closePlayback,
+  currentChapter,
+  currentTime,
+  isCheckingServerProgress,
+  isLocalPlayMethod,
+  isPlaying,
+  pause,
+  play,
+  resetStream,
+  seek,
+  setIsCheckingServerProgress,
+  timeupdate
+})
 </script>
 
 <style>

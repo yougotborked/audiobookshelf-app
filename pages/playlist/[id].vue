@@ -45,6 +45,7 @@
       hide-rss-feed-option
       v-model:processing="processing"
       @removed-from-auto-playlist="onAutoPlaylistItemRemoved"
+      @auto-playlist-rule-changed="onAutoPlaylistRuleChanged"
     />
     <div v-show="processing" class="fixed top-0 left-0 w-screen h-screen flex items-center justify-center bg-black/50 z-50">
       <ui-loading-indicator />
@@ -53,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { AbsDownloader, AbsLogger } from '@/plugins/capacitor'
 import {
   buildUnfinishedAutoPlaylist,
@@ -93,7 +94,10 @@ const userStore = useUserStore()
 const id = route.params.id as string
 
 // State
-const playlist = ref<any>({ id, name: '', description: '', items: [], totalItems: 0 })
+// shallowRef: the auto playlist holds hundreds of items, each with a nested library item and
+// episode. Deep reactivity would proxy every one of those objects on assignment for no benefit -
+// the list is always replaced wholesale, never mutated in place.
+const playlist = shallowRef<any>({ id, name: '', description: '', items: [], totalItems: 0 })
 const showMoreMenu = ref(false)
 const processing = ref(false)
 const selectedLibraryItem = ref<any>(null)
@@ -726,8 +730,13 @@ async function onAutoPlaylistItemRemoved(options: any = {}) {
   })
 
   if (index >= 0) {
-    playlist.value.items.splice(index, 1)
-    playlist.value.totalItems = Math.max(0, (playlist.value.totalItems || 0) - 1)
+    const items = playlist.value.items.slice()
+    items.splice(index, 1)
+    playlist.value = {
+      ...playlist.value,
+      items,
+      totalItems: Math.max(0, (playlist.value.totalItems || 0) - 1)
+    }
     localStore.setCachedPlaylist(toCacheablePlaylist(playlist.value))
   }
 
@@ -736,6 +745,19 @@ async function onAutoPlaylistItemRemoved(options: any = {}) {
   if (options.refresh) {
     await fetchPlaylist()
   }
+}
+
+async function onAutoPlaylistRuleChanged() {
+  showMoreMenu.value = false
+  if (playlist.value.id !== 'unfinished') return
+  await fetchPlaylist()
+}
+
+function libraryChanged() {
+  // The auto playlist is built from every podcast library, so it is not tied to the selection
+  if (playlist.value.id === 'unfinished') return
+  // A server playlist's contents are shown in the context of its library
+  router.replace('/bookshelf/playlists')
 }
 
 function playlistRemoved(removedPlaylist: any) {
@@ -796,6 +818,7 @@ onMounted(async () => {
   socket.$on('playlist_updated', playlistUpdated)
   socket.$on('playlist_removed', playlistRemoved)
   eventBus.on('playback-ended', onPlaybackEnded)
+  eventBus.on('library-changed', libraryChanged)
   fetchPlaylist()
 })
 
@@ -803,5 +826,6 @@ onBeforeUnmount(() => {
   socket.$off('playlist_updated', playlistUpdated)
   socket.$off('playlist_removed', playlistRemoved)
   eventBus.off('playback-ended', onPlaybackEnded)
+  eventBus.off('library-changed', libraryChanged)
 })
 </script>

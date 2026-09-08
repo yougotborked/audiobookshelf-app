@@ -92,7 +92,9 @@ async function handleTokenRefresh(
       headers: { ...headers, Authorization: `Bearer ${newTokens.accessToken}` },
       ...options
     })
-    if (retryResponse.status >= 400) throw new Error(String(retryResponse.data))
+    if (retryResponse.status >= 400) {
+      throw new Error(typeof retryResponse.data === 'string' ? retryResponse.data : `HTTP ${retryResponse.status}`)
+    }
     return retryResponse.data
   } catch (error) {
     const err = error as HttpError
@@ -135,7 +137,7 @@ async function request(method: string, _url: string, data: unknown, options: Req
       return handleTokenRefresh(method, url, data, headers, options, serverConnectionConfig as { id: string; address: string })
     }
     if (res.status >= 400) {
-      const error: HttpError = new Error(String(res.data))
+      const error: HttpError = new Error(typeof res.data === 'string' ? res.data : `HTTP ${res.status}`)
       error.status = res.status
       error.url = url
       throw error

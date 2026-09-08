@@ -1,4 +1,74 @@
 // Utility functions ported from mixins/autoPlaylistHelpers.js
+import { ref } from 'vue'
+
+/**
+ * How a single podcast feeds the auto playlist.
+ *
+ * - `include` (the default) - every unplayed episode
+ * - `latest`  - only the newest `limit` unplayed episodes, so one show with a long backlog cannot
+ *               flood the list
+ * - `exclude` - nothing at all
+ */
+export type AutoPlaylistPodcastMode = 'include' | 'latest' | 'exclude'
+
+export interface AutoPlaylistPodcastRule {
+  mode: AutoPlaylistPodcastMode
+  limit?: number
+}
+
+export const AUTO_PLAYLIST_LATEST_LIMITS = [1, 3, 5, 10]
+
+const DEFAULT_RULE: AutoPlaylistPodcastRule = { mode: 'include' }
+
+// Mirrors what is on disk so menus can render the active rule without re-reading Preferences.
+const podcastRules = ref<Record<string, AutoPlaylistPodcastRule>>({})
+
+function normalizeRule(rule: AutoPlaylistPodcastRule | undefined | null): AutoPlaylistPodcastRule {
+  if (!rule || rule.mode === 'include') return DEFAULT_RULE
+  if (rule.mode === 'exclude') return { mode: 'exclude' }
+  const limit = Number(rule.limit)
+  // A `latest` rule without a usable limit would silently drop every episode
+  if (!Number.isFinite(limit) || limit < 1) return DEFAULT_RULE
+  return { mode: 'latest', limit: Math.floor(limit) }
+}
+
+/** Reads the stored rules from disk. Always hits Preferences so a user switch cannot go stale. */
+export async function refreshAutoPlaylistPodcastRules(): Promise<Record<string, AutoPlaylistPodcastRule>> {
+  const localStore = useLocalStore()
+  podcastRules.value = await localStore.getAutoPlaylistPodcastRules()
+  return podcastRules.value
+}
+
+export async function setAutoPlaylistPodcastRule(
+  libraryItemId: string,
+  rule: AutoPlaylistPodcastRule | null
+): Promise<void> {
+  if (!libraryItemId) return
+  const localStore = useLocalStore()
+  const rules = { ...(await localStore.getAutoPlaylistPodcastRules()) }
+  const normalized = normalizeRule(rule)
+  // The default is represented by the absence of an entry, keeping the stored object small
+  if (normalized.mode === 'include') delete rules[libraryItemId]
+  else rules[libraryItemId] = normalized
+  await localStore.setAutoPlaylistPodcastRules(rules)
+  podcastRules.value = rules
+}
+
+export function getAutoPlaylistPodcastRule(
+  rules: Record<string, AutoPlaylistPodcastRule>,
+  libraryItemId: string
+): AutoPlaylistPodcastRule {
+  return normalizeRule(rules?.[libraryItemId])
+}
+
+export function useAutoPlaylistPodcastRules() {
+  return {
+    rules: podcastRules,
+    refresh: refreshAutoPlaylistPodcastRules,
+    setRule: setAutoPlaylistPodcastRule,
+    getRule: getAutoPlaylistPodcastRule
+  }
+}
 
 function toEpisodeMetadataMap(metadataEntries: Record<string, unknown>[] = []): Map<string, Record<string, unknown>> {
   const map = new Map<string, Record<string, unknown>>()
@@ -96,9 +166,23 @@ function createPlaylistLibraryItem(libraryItem: Record<string, unknown> | null, 
   if (sanitizedMedia) {
     delete sanitizedMedia.episodes
     delete sanitizedMedia.chapters
+    // A podcast description is several KB of HTML and nothing in the playlist renders it
+    if (sanitizedMedia.metadata) sanitizedMedia.metadata = stripDescriptions(sanitizedMedia.metadata as Record<string, unknown>)
     if (sanitizedMedia.tracks) sanitizedMedia.tracks = sanitizeTracks(sanitizedMedia.tracks as Record<string, unknown>[])
   }
   return { ...rest, id: resolvedLibraryId, libraryItemId: resolvedLibraryId, media: sanitizedMedia }
+}
+
+/**
+ * Drops the description fields.
+ *
+ * These are the single largest part of a playlist item - several KB of HTML per episode, times
+ * hundreds of episodes - and the whole playlist is JSON-stringified into Preferences on every
+ * refresh.  Nothing in the playlist UI reads them; the item page fetches its own copy.
+ */
+function stripDescriptions(source: Record<string, unknown>): Record<string, unknown> {
+  const { description: _description, descriptionPlain: _descriptionPlain, ...rest } = source
+  return rest
 }
 
 function createPlaylistEpisode(episode: Record<string, unknown>): Record<string, unknown> | null {
@@ -106,7 +190,7 @@ function createPlaylistEpisode(episode: Record<string, unknown>): Record<string,
   const { localEpisode: _localEpisode, chapters: _chapters, waveform: _waveform, ...rest } = episode as {
     localEpisode?: unknown; chapters?: unknown; waveform?: unknown; [k: string]: unknown
   }
-  return { ...rest }
+  return stripDescriptions(rest)
 }
 
 function sanitizeLocalEpisode(localEpisode: Record<string, unknown> | null): Record<string, unknown> | null {
@@ -127,6 +211,17 @@ export function toCacheablePlaylist(playlist: Record<string, unknown>): Record<s
         localLibraryItem?: Record<string, unknown>; localEpisode?: Record<string, unknown>; [k: string]: unknown
       }
       const sanitized: Record<string, unknown> = { ...rest }
+      // Server playlists arrive with full descriptions attached; they are never rendered here and
+      // the whole playlist is stringified into Preferences on every refresh
+      if (sanitized.libraryItem) {
+        sanitized.libraryItem = createPlaylistLibraryItem(
+          sanitized.libraryItem as Record<string, unknown>,
+          ((sanitized.libraryItem as Record<string, unknown>).libraryItemId ||
+            (sanitized.libraryItem as Record<string, unknown>).id ||
+            rest.libraryItemId) as string
+        )
+      }
+      if (sanitized.episode) sanitized.episode = createPlaylistEpisode(sanitized.episode as Record<string, unknown>)
       if (localLibraryItem) {
         sanitized.localLibraryItem = createPlaylistLibraryItem(
           localLibraryItem,
@@ -178,6 +273,9 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
   const localLibraries = await db.getLocalLibraryItems('podcast') as Record<string, unknown>[]
   const downloadedEpisodeKeys = collectDownloadedEpisodeKeys(localLibraries)
 
+  // Read from disk rather than the cached ref so a user switch cannot leave stale rules applied
+  const podcastRuleMap = await refreshAutoPlaylistPodcastRules()
+
   const hasServerConnection = !!(userStore.serverConnectionConfig?.address && userStore.accessToken)
   const canFetchServerEpisodes = networkConnected && hasServerConnection
 
@@ -203,6 +301,7 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
   const libraryContexts: Array<{
     libraryItem: Record<string, unknown>
     libraryId: string
+    rule: AutoPlaylistPodcastRule
     localEpisodeMap: Map<string, Record<string, unknown>>
     episodes: Record<string, unknown>[]
     needsServerDates: boolean
@@ -211,6 +310,9 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
 
   localLibraries.forEach((libraryItem) => {
     const libraryId = (libraryItem.libraryItemId || libraryItem.id) as string
+    const rule = getAutoPlaylistPodcastRule(podcastRuleMap, libraryId)
+    // Skip before the server round-trip below - an excluded podcast costs nothing
+    if (rule.mode === 'exclude') return
     const localEpisodes = ((libraryItem?.media as Record<string, unknown>)?.episodes as Record<string, unknown>[]) || []
     const metadataMap = metadataByLibraryId.get(libraryId)
 
@@ -223,6 +325,7 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
     const context = {
       libraryItem,
       libraryId,
+      rule,
       localEpisodeMap,
       episodes: mergeEpisodeMetadata(localEpisodes, metadataMap),
       needsServerDates: false,
@@ -246,7 +349,12 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
   if (contextsNeedingServerData.length) await fetchServerEpisodesInBatches(contextsNeedingServerData, nativeHttp, localStore)
 
   libraryContexts.forEach((context) => {
-    const { libraryItem, libraryId, localEpisodeMap } = context
+    const { libraryItem, libraryId, localEpisodeMap, rule } = context
+    // Built per podcast so a `latest` rule can cap this show without affecting the others
+    const podcastItems: Array<Record<string, unknown> & { sortDate: number }> = []
+    // One sanitized copy per podcast rather than one per episode
+    const playlistLibraryItem = createPlaylistLibraryItem(libraryItem, libraryId)
+
     context.episodes.forEach((episode) => {
       const serverId = (episode?.serverEpisodeId || episode?.id) as string
       if (!serverId) return
@@ -257,9 +365,9 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
       seen.add(key)
       const sortDate = getEpisodeSortDate(episode)
       const sanitizedEpisode = createPlaylistEpisode(episode)
-      playlistItems.push({
+      podcastItems.push({
         id: key,
-        libraryItem: createPlaylistLibraryItem(libraryItem, libraryId),
+        libraryItem: playlistLibraryItem,
         episode: sanitizedEpisode,
         libraryItemId: libraryId,
         episodeId: serverId,
@@ -268,6 +376,14 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
         sortDate
       })
     })
+
+    if (rule.mode === 'latest' && rule.limit && podcastItems.length > rule.limit) {
+      podcastItems.sort((a, b) => b.sortDate - a.sortDate)
+      podcastItems.length = rule.limit
+    }
+
+    // Avoid spreading into push - these arrays can be long enough to blow the argument limit
+    for (const item of podcastItems) playlistItems.push(item)
   })
 
   playlistItems.sort((a, b) => a.sortDate - b.sortDate)
@@ -281,5 +397,12 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
 }
 
 export function useAutoPlaylist() {
-  return { buildUnfinishedAutoPlaylist, toCacheablePlaylist, collectDownloadedEpisodeKeys }
+  return {
+    buildUnfinishedAutoPlaylist,
+    toCacheablePlaylist,
+    collectDownloadedEpisodeKeys,
+    refreshAutoPlaylistPodcastRules,
+    setAutoPlaylistPodcastRule,
+    getAutoPlaylistPodcastRule
+  }
 }

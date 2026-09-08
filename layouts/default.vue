@@ -32,6 +32,7 @@ const inittingLibraries = ref(false)
 const hasMounted = ref(false)
 const disconnectTime = ref(0)
 const timeLostFocus = ref(0)
+const socketDisconnectedTime = ref(0)
 const connectionRetryTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const streamContainer = ref<{ audioPlayerReady: boolean; streamOpen: (stream: unknown) => void } | null>(null)
@@ -65,7 +66,18 @@ watch(() => appStore.networkConnected, (newVal, oldVal) => {
 watch(() => appStore.socketConnected, (newVal) => {
   if (newVal) {
     clearConnectionRetry()
+    // While the socket was down, progress updates made elsewhere were not delivered. After a long
+    // outage the item open in the player may have moved on, so ask for a fresh check.
+    const timeSinceDisconnect = Date.now() - socketDisconnectedTime.value
+    if (socketDisconnectedTime.value && timeSinceDisconnect > 30000 && appStore.currentPlaybackSession) {
+      console.log(`[default] socket reconnected after ${timeSinceDisconnect}ms with the player open, checking server media progress`)
+      bus.emit('socket-reconnected')
+    } else {
+      console.log(`[default] socket reconnected after ${timeSinceDisconnect}ms`)
+    }
   } else {
+    console.log('[default] socket disconnected')
+    socketDisconnectedTime.value = Date.now()
     scheduleConnectionRetry(1200)
   }
 })

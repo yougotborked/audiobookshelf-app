@@ -1,10 +1,14 @@
 import { ref, readonly } from 'vue'
+import { Capacitor } from '@capacitor/core'
+import { AbsDownloader, AbsFileSystem } from '@/plugins/capacitor'
 import enUsStrings from '~/strings/en-us.json'
 
 const defaultCode = 'en-us'
 
 export const languageCodeMap: Record<string, { label: string; dateFnsLocale: string }> = {
+  be: { label: 'Беларуская', dateFnsLocale: 'be' },
   bn: { label: 'বাংলা', dateFnsLocale: 'bn' },
+  bg: { label: 'Български', dateFnsLocale: 'bg' },
   ca: { label: 'Català', dateFnsLocale: 'ca' },
   cs: { label: 'Čeština', dateFnsLocale: 'cs' },
   da: { label: 'Dansk', dateFnsLocale: 'da' },
@@ -104,8 +108,36 @@ export async function setLanguageCode(code: string): Promise<boolean> {
   const { setDateFnsLocale } = useUtils()
   setDateFnsLocale(languageCodeMap[code]?.dateFnsLocale || 'enUS')
 
+  syncNativeStrings()
   useEventBus().emit('change-lang', code)
   return true
+}
+
+/**
+ * Pushes translated strings into the native layer.
+ *
+ * The download notification and the folder picker are built in Kotlin, outside the webview, so
+ * they cannot read the string table directly - the current translations are handed over instead,
+ * and refreshed whenever the language changes.
+ */
+function syncNativeStrings(): void {
+  if (Capacitor.getPlatform() !== 'android') return
+
+  AbsDownloader.setDownloadNotificationStrings({
+    preparing: _strings.value.MessagePreparingDownloads,
+    downloadingFile: _strings.value.MessageDownloadingFile,
+    waitingForStorage: _strings.value.MessageWaitingForAvailableStorage,
+    downloads: _strings.value.HeaderDownloads,
+    cancel: _strings.value.ButtonCancel
+  }).catch((error: unknown) => console.warn('Failed to update download notification strings', error))
+
+  AbsFileSystem.setFolderPickerStrings({
+    writeAccessRequired: _strings.value.MessageStorageWriteAccessRequired,
+    allow: _strings.value.ButtonAllow,
+    cancel: _strings.value.ButtonCancel,
+    accessDenied: _strings.value.MessageStorageAccessDenied,
+    permissionDenied: _strings.value.MessageStoragePermissionDenied
+  }).catch((error: unknown) => console.warn('Failed to update folder picker strings', error))
 }
 
 export function setServerLanguageCode(code: string): void {
@@ -121,14 +153,20 @@ export function setServerLanguageCode(code: string): void {
 }
 
 export async function initializeI18n(): Promise<void> {
-  const localStore = useLocalStore()
-  const localLanguage = await localStore.getLanguage()
-  if (!localLanguage) return
-  if (!languageCodeMap[localLanguage]) {
-    console.warn('Invalid local language code', localLanguage)
-    await localStore.setLanguage(defaultCode)
-    return
+  try {
+    const localStore = useLocalStore()
+    const localLanguage = await localStore.getLanguage()
+    if (!localLanguage) return
+    if (!languageCodeMap[localLanguage]) {
+      console.warn('Invalid local language code', localLanguage)
+      await localStore.setLanguage(defaultCode)
+      return
+    }
+    languageCodes.local = localLanguage
+    await setLanguageCode(localLanguage)
+  } finally {
+    // Runs even when the language was left at the default, which does not go through
+    // setLanguageCode - the native side still needs the English strings
+    syncNativeStrings()
   }
-  languageCodes.local = localLanguage
-  await setLanguageCode(localLanguage)
 }
