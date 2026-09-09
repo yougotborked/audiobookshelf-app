@@ -360,6 +360,9 @@ class AbsAudioPlayer : Plugin() {
       val ret = JSObject()
       ret.put("value", currentTime)
       ret.put("bufferedTime", bufferedTime)
+      // Reported so the webview can reconcile on resume by asking rather than by watching
+      // whether the position moved, which mistakes a buffering or stalled player for a paused one
+      ret.put("isPlaying", playerNotificationService.isPlayerPlaying())
       call.resolve(ret)
     }
   }

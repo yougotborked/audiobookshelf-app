@@ -229,6 +229,47 @@ const showLoadingState = computed(() => isLoading.value || isCheckingServerProgr
 function setIsCheckingServerProgress(value: boolean) {
   isCheckingServerProgress.value = !!value
 }
+
+/**
+ * Watchdogs for the two loading flags.
+ *
+ * Both are cleared by an event coming back from the native player - metadata for isLoading, a time
+ * update for seekLoading. If that event never arrives, because connectivity dropped or the player
+ * was torn down while the app was backgrounded, the flag sticks: the play button spins and, for
+ * isLoading, taps on it are swallowed, leaving the player unusable until the page is remounted.
+ * These make the flags self-clearing so the controls always come back.
+ */
+const LOADING_WATCHDOG_MS = 20000
+const SEEK_WATCHDOG_MS = 10000
+
+let loadingWatchdog: ReturnType<typeof setTimeout> | null = null
+let seekWatchdog: ReturnType<typeof setTimeout> | null = null
+
+function setIsLoading(value: boolean) {
+  isLoading.value = !!value
+  if (loadingWatchdog) clearTimeout(loadingWatchdog)
+  loadingWatchdog = null
+  if (!value) return
+  loadingWatchdog = setTimeout(() => {
+    loadingWatchdog = null
+    if (!isLoading.value) return
+    console.warn('[AudioPlayer] No metadata from the native player, clearing the loading state')
+    isLoading.value = false
+  }, LOADING_WATCHDOG_MS)
+}
+
+function setSeekLoading(value: boolean) {
+  seekLoading.value = !!value
+  if (seekWatchdog) clearTimeout(seekWatchdog)
+  seekWatchdog = null
+  if (!value) return
+  seekWatchdog = setTimeout(() => {
+    seekWatchdog = null
+    if (!seekLoading.value) return
+    console.warn('[AudioPlayer] Seek was not acknowledged, clearing the seek state')
+    seekLoading.value = false
+  }, SEEK_WATCHDOG_MS)
+}
 const isDraggingCursor = ref(false)
 const draggingTouchStartX = ref(0)
 const draggingTouchStartTime = ref(0)
@@ -686,7 +727,7 @@ function timeupdate() {
   emit('updateTime', currentTime.value)
 
   if (seekLoading.value) {
-    seekLoading.value = false
+    setSeekLoading(false)
     if (playedTrack.value) {
       playedTrack.value.classList.remove('bg-yellow-300')
       playedTrack.value.classList.add('bg-gray-200')
@@ -737,7 +778,7 @@ function seek(time: number) {
   }
 
   seekedTime.value = time
-  seekLoading.value = true
+  setSeekLoading(true)
 
   // Pass fractional seconds so seeks to non-integer chapter starts don't truncate
   AbsAudioPlayer.seek({ value: time })
@@ -926,7 +967,7 @@ function endPlayback() {
   appStore.setPlaybackSession(null)
   showFullscreen.value = false
   isEnded.value = false
-  isLoading.value = false
+  setIsLoading(false)
   playbackSession.value = null
   lastNativeCurrentTime.value = null
 }
@@ -978,13 +1019,16 @@ function onMetadata(data: { duration: number; currentTime: number; playerState: 
 
   // Done loading
   if (data.playerState !== 'BUFFERING' && data.playerState !== 'IDLE') {
-    isLoading.value = false
+    setIsLoading(false)
   }
 
-  if (data.playerState === 'ENDED') {
+  const hasEnded = data.playerState === 'ENDED'
+  const justEnded = hasEnded && !isEnded.value
+  isEnded.value = hasEnded
+  if (justEnded) {
     console.log('[AudioPlayer] Playback ended')
+    bus.emit('playback-ended')
   }
-  isEnded.value = data.playerState === 'ENDED'
 
   console.log('received metadata update', data)
 
@@ -999,7 +1043,7 @@ function onPlaybackSession(ps: Record<string, unknown>, opts?: { isLoading?: boo
 
   isEnded.value = false
   // Don't flash the loading spinner when the same session is resent on app resume
-  isLoading.value = isResync ? false : (opts?.isLoading !== undefined ? opts.isLoading : true)
+  setIsLoading(isResync ? false : (opts?.isLoading !== undefined ? opts.isLoading : true))
   syncStatus.value = 0
   lastNativeCurrentTime.value = null
   appStore.setPlaybackSession(ps as unknown as import('~/types').PlaybackSession)
@@ -1164,12 +1208,11 @@ async function refreshCurrentPlaybackPosition() {
 
     const observedChange =
       previousNativeTime !== null && rawCurrentTime !== null ? rawCurrentTime - previousNativeTime : 0
-    const resumedProgress = observedChange > 0.25
 
-    let nativePlaybackState: boolean | null = resumedProgress ? true : null
-    if (!resumedProgress && !isPlaying.value && !appStore.playerIsPlaying) {
-      nativePlaybackState = await determineNativePlaybackState(rawCurrentTime)
-    }
+    // The native player reports this directly. Watching whether the position moved cannot tell a
+    // paused player from one that is buffering or stalled, which left the mini player and the
+    // per-episode rows disagreeing about what was playing.
+    const nativePlaybackState: boolean | null = typeof data.isPlaying === 'boolean' ? data.isPlaying : null
 
     if (nativePlaybackState === true) {
       isPlaying.value = true
@@ -1205,23 +1248,6 @@ function maybeRestartPolling() {
   startPlayInterval()
 }
 
-async function determineNativePlaybackState(baselineTime: number | null): Promise<boolean | null> {
-  if (platform === 'web') return null
-  if (typeof baselineTime !== 'number') return null
-  if (typeof AbsAudioPlayer?.getCurrentTime !== 'function') return null
-
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 750))
-    if (!playbackSession.value) return null
-    const followUp = await AbsAudioPlayer.getCurrentTime()
-    if (!followUp || typeof followUp.value !== 'number') return null
-    const followUpTime = followUp.value
-    return followUpTime - baselineTime > 0.1
-  } catch (error) {
-    console.error('[AudioPlayer] Failed to evaluate native playback state', error)
-    return null
-  }
-}
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(() => {
@@ -1261,6 +1287,9 @@ onBeforeUnmount(() => {
     document.removeEventListener('orientationchange', screenOrientationChange)
   }
   window.removeEventListener('resize', screenOrientationChange)
+
+  if (loadingWatchdog) clearTimeout(loadingWatchdog)
+  if (seekWatchdog) clearTimeout(seekWatchdog)
 
   if (playbackSession.value) {
     console.log('[AudioPlayer] Before destroy closing playback')

@@ -15,6 +15,10 @@ import { Dialog } from '@capacitor/dialog'
 import { useCellularPermission } from '@/composables/useCellularPermission'
 
 const MAX_LOG_LENGTH = 2000
+// Long enough for the native player's closing progress sync to finish and start the next item
+const QUEUE_ADVANCE_FALLBACK_MS = 4000
+// A hung progress check must not leave the transport controls disabled
+const SERVER_PROGRESS_TIMEOUT_MS = 8000
 
 function formatForLog(payload) {
   try {
@@ -53,6 +57,7 @@ export default {
       onCastAvailableUpdateListener: null,
       onCastSupportUpdateListener: null,
       onSkipNextRequestListener: null,
+      queueAdvanceFallbackTimeout: null,
       onSkipPreviousRequestListener: null,
       onQueueIndexUpdateListener: null,
       sleepInterval: null,
@@ -757,7 +762,12 @@ export default {
       const url = episodeId ? `/api/me/progress/${libraryItemId}/${episodeId}` : `/api/me/progress/${libraryItemId}`
       this.$refs.audioPlayer?.setIsCheckingServerProgress(true)
       try {
-        const data = await this.nativeHttp.get(url, { connectTimeout: 7000, readTimeout: 7000 })
+        const data = await Promise.race([
+          this.nativeHttp.get(url, { connectTimeout: 7000, readTimeout: 7000 }),
+          new Promise((_resolve, reject) =>
+            setTimeout(() => reject(new Error('Timed out checking server media progress')), SERVER_PROGRESS_TIMEOUT_MS)
+          )
+        ])
         if (!data || data.libraryItemId !== libraryItemId) return null
         return data
       } catch (error) {
@@ -928,11 +938,32 @@ export default {
       })
       this.showQueueModal = false
     },
+    /**
+     * Advances the queue when an item finishes, as a fallback.
+     *
+     * The native player advances the queue itself once its final progress sync completes, so this
+     * waits to see whether that happened and only steps in if it did not - otherwise both would
+     * fire and an episode would be skipped.
+     */
     onPlaybackEnded() {
-      const nextItem = this.appStore.getNextQueueItem
-      if (nextItem) {
+      if (!this.appStore.getNextQueueItem) return
+
+      const endedSessionId = this.appStore.currentPlaybackSession?.id || null
+      clearTimeout(this.queueAdvanceFallbackTimeout)
+      this.queueAdvanceFallbackTimeout = setTimeout(() => {
+        const sessionId = this.appStore.currentPlaybackSession?.id || null
+        if (sessionId !== endedSessionId) return // native already moved on
+        if (this.appStore.playerIsPlaying) return
+        if (!this.appStore.getNextQueueItem) return
+
+        AbsLogger.info({
+          tag: 'AudioPlayerContainer',
+          message: `[AudioPlayerContainer] Playback ended and the native queue did not advance, advancing from the client: ${formatForLog(
+            { endedSessionId, queueIndex: this.appStore.queueIndex, queueLength: this.appStore.playQueue.length }
+          )}`
+        })
         this.onSkipNextRequest()
-      }
+      }, QUEUE_ADVANCE_FALLBACK_MS)
     }
   },
   async mounted() {
@@ -1009,6 +1040,7 @@ export default {
     this.eventBus.off('device-focus-update', this.deviceFocused)
     this.eventBus.off('socket-reconnected', this.onSocketReconnected)
     this.eventBus.off('playback-ended', this.onPlaybackEnded)
+    clearTimeout(this.queueAdvanceFallbackTimeout)
   }
 }
 </script>

@@ -706,6 +706,9 @@ function playNextItem() {
 }
 
 function onPlaybackEnded() {
+  // Matches the collection page. Until now nothing emitted playback-ended, so this never ran and
+  // the setting it declares was never consulted.
+  if (!autoContinuePlaylists.value) return
   playNextItem()
 }
 
