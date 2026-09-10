@@ -92,12 +92,18 @@
             </intent-filter>
         </receiver>
 
+        <!--
+            Must stay exported with no android:permission. This is how Android Auto, Wear OS and
+            the Assistant discover the app: they bind the media browser service directly. Guarding
+            it with a permission stops that bind and the app disappears from the Android Auto
+            launcher entirely. There is no BIND_ permission for media browser services to use here.
+        -->
         <service
             android:name=".player.PlayerNotificationService"
             android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.BIND_MEDIA_BROWSER_SERVICE"
-            android:foregroundServiceType="mediaPlayback">
+            android:foregroundServiceType="mediaPlayback"
+            tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
