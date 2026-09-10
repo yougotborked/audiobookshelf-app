@@ -266,8 +266,15 @@ class MediaProgressSyncer(
     currentPlaybackSession?.let { DeviceManager.dbManager.savePlaybackSession(it) }
 
     if (currentIsLocal) {
+      val localSession = currentPlaybackSession
+      if (localSession == null) {
+        // Callers chain off this callback (handlePlaybackEnded advances the play queue from it),
+        // so it has to fire even when there is nothing to save
+        Log.e(tag, "sync: No current playback session to save local progress for")
+        return cb(null)
+      }
       // Save local progress sync
-      currentPlaybackSession?.let {
+      localSession.let {
         saveLocalProgress(it)
         lastSyncTime = System.currentTimeMillis()
 

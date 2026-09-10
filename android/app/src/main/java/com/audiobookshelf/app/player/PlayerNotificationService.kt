@@ -853,6 +853,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
   }
 
+  /** Whether the player is actually producing audio right now. */
+  fun isPlayerPlaying(): Boolean {
+    return this::currentPlayer.isInitialized && currentPlayer.isPlaying
+  }
+
   fun getCurrentTime(): Long {
     return currentPlayer.currentPosition + getCurrentTrackStartOffsetMs()
   }
