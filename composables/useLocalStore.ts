@@ -85,6 +85,24 @@ class LocalStorage {
     }
   }
 
+  async setOfflineMode(enabled: boolean): Promise<void> {
+    try {
+      await Preferences.set({ key: 'offlineMode', value: enabled ? '1' : '0' })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set offline mode', error)
+    }
+  }
+
+  async getOfflineMode(): Promise<boolean> {
+    try {
+      const obj = (await Preferences.get({ key: 'offlineMode' })) || {}
+      return obj.value === '1'
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get offline mode', error)
+      return false
+    }
+  }
+
   async setLastLibraryId(libraryId: string): Promise<void> {
     try {
       await Preferences.set({ key: this.ukey('lastLibraryId'), value: libraryId })

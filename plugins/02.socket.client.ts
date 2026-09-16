@@ -39,6 +39,22 @@ class ServerSocket extends EventEmitter {
     this.removeListeners()
   }
 
+  /**
+   * Deliberate offline mode. Unlike logout() this keeps the socket and its listeners, so coming
+   * back online is just a reconnect - no need to rebuild the connection or re-register handlers.
+   */
+  goOffline(): void {
+    if (this.socket) this.socket.disconnect()
+  }
+
+  goOnline(): void {
+    if (this.socket) this.socket.connect()
+  }
+
+  hasSocket(): boolean {
+    return !!this.socket
+  }
+
   setSocketListeners(): void {
     if (!this.socket) return
     this.socket.on('connect', this.onConnect.bind(this))

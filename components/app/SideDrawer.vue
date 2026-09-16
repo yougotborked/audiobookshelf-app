@@ -25,9 +25,9 @@
         <div class="flex items-center">
           <p class="text-xs">{{ config.public.version }}</p>
           <div class="flex-grow" />
-          <div v-if="user" class="flex items-center" @click="disconnect">
-            <p class="text-xs pr-2">{{ getStrings().ButtonDisconnect }}</p>
-            <i class="material-symbols text-sm -mb-0.5">cloud_off</i>
+          <div v-if="user" class="flex items-center" @click="toggleOfflineMode">
+            <p class="text-xs pr-2">{{ offlineModeEnabled ? getStrings().ButtonConnect : getStrings().ButtonDisconnect }}</p>
+            <i class="material-symbols text-sm -mb-0.5">{{ offlineModeEnabled ? 'cloud' : 'cloud_off' }}</i>
           </div>
         </div>
       </div>
@@ -90,6 +90,7 @@ const navItems = computed(() => {
 })
 
 const currentRoutePath = computed(() => route.path)
+const offlineModeEnabled = computed(() => appStore.offlineModeEnabled)
 
 async function clickAction(action: string) {
   await hapticsImpact()
@@ -107,16 +108,24 @@ function clickBackground() {
   show.value = false
 }
 
-async function disconnect() {
+/**
+ * Go offline, or come back online. This used to log out, which cleared the user id the local
+ * caches are keyed by and so left the app with no libraries - the podcast home collapsed to a
+ * generic bookshelf. Offline mode keeps the session and the caches and just stops talking to
+ * the server; "Switch Server/User" in the menu above is still the real logout.
+ */
+async function toggleOfflineMode() {
   await hapticsImpact()
-  await userStore.logout()
+  const goingOffline = !appStore.offlineModeEnabled
+  await appStore.setOfflineMode(goingOffline)
 
-  if (route.name !== 'bookshelf') {
-    router.replace('/bookshelf')
-  }
-
-  if (appStore.getIsPlayerOpen) {
-    bus.emit('close-stream')
+  if (goingOffline) {
+    if (appStore.getIsPlayerOpen && !appStore.getIsCurrentSessionLocal) {
+      // Nothing to stream from anymore, but a downloaded item keeps playing
+      bus.emit('close-stream')
+    }
+  } else {
+    bus.emit('go-online')
   }
 
   show.value = false
