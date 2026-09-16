@@ -11,7 +11,11 @@
       </a>
     </div>
 
-    <div v-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-red-100" :style="{ padding: placeholderCoverPadding + 'rem' }">
+    <div v-if="imageFailed && appStore.isOffline" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-md-surface-3 flex items-center justify-center">
+      <span class="material-symbols text-md-on-surface-variant/50" :style="{ fontSize: 1.5 * sizeMultiplier + 'rem' }">cloud_off</span>
+    </div>
+
+    <div v-else-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-red-100" :style="{ padding: placeholderCoverPadding + 'rem' }">
       <div class="w-full h-full border-2 border-error flex flex-col items-center justify-center">
         <img src="/Logo.png" class="mb-2" :style="{ height: 64 * sizeMultiplier + 'px' }" />
         <p class="text-centertext-error" :style="{ fontSize: sizeMultiplier + 'rem' }">Invalid Cover</p>
@@ -43,6 +47,7 @@ const coverImg = ref<HTMLImageElement | null>(null)
 const coverBg = ref<HTMLElement | null>(null)
 
 // Computed
+const appStore = useAppStore()
 const coverSrc = computed(() => props.src)
 const sizeMultiplier = computed(() => (props.width || 120) / 120)
 const placeholderCoverPadding = computed(() => 0.8 * sizeMultiplier.value)

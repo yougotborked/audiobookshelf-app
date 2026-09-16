@@ -107,6 +107,11 @@ async function loadSavedSettings() {
 
 async function attemptConnection() {
   console.warn('[default] attemptConnection')
+  if (appStore.offlineModeEnabled) {
+    console.warn('[default] Offline mode enabled, not connecting')
+    await AbsLogger.info({ tag: 'default', message: 'attemptConnection: Offline mode enabled' })
+    return
+  }
   if (!appStore.networkConnected) {
     console.warn('[default] No network connection')
     await AbsLogger.info({ tag: 'default', message: 'attemptConnection: No network connection' })
@@ -302,6 +307,7 @@ function changeLanguage(code: string) {
 
 function scheduleConnectionRetry(delay = 2000) {
   if (connectionRetryTimeout.value) return
+  if (appStore.offlineModeEnabled) return
   if (!appStore.networkConnected) return
   if (!userStore.user && !userStore.serverConnectionConfig) return
 
@@ -322,6 +328,7 @@ function clearConnectionRetry() {
 }
 
 async function retryConnectionIfNeeded() {
+  if (appStore.offlineModeEnabled) return
   if (!appStore.networkConnected) return
   if (appStore.attemptingConnection) return
 
@@ -363,9 +370,22 @@ async function retryConnectionIfNeeded() {
   }
 }
 
+/** Leaving deliberate offline mode: reconnect and flush anything listened to while away. */
+async function goOnline() {
+  const socket = useSocket()
+  if (userStore.user && socket.hasSocket()) {
+    // Session survived offline mode, so just bring the socket back up
+    socket.goOnline()
+  } else {
+    await attemptConnection()
+  }
+  await syncLocalSessions(false)
+}
+
 // Lifecycle
 onMounted(async () => {
   bus.on('change-lang', changeLanguage)
+  bus.on('go-online', goOnline)
   document.addEventListener('visibilitychange', visibilityChanged)
 
   const socket = useSocket()
@@ -377,6 +397,7 @@ onMounted(async () => {
     appStore.isFirstLoad = false
 
     await loadSavedSettings()
+    await appStore.loadOfflineMode()
 
     const deviceData = await useDb().getDeviceData() as Record<string, unknown> | null
     appStore.setDeviceData(deviceData)
@@ -401,11 +422,29 @@ onMounted(async () => {
       await AbsLogger.info({ tag: 'default', message: `mounted: Server connected, init libraries (${userStore.getServerConfigName})` })
       await initLibraries()
     } else if (serverConfig) {
+      // Bring the cached library list up first so the home screen renders its normal layout
+      // straight away. Without this the app has no idea the current library is a podcast library
+      // until the server answers, and shows the empty-bookshelf view instead - or stays on it
+      // permanently when there is no connection at all.
+      if (await librariesStore.loadCachedLibraries()) {
+        await AbsLogger.info({ tag: 'default', message: `mounted: Restored ${librariesStore.libraries.length} cached libraries` })
+        bus.emit('library-changed', librariesStore.currentLibraryId)
+      }
       await AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempting connection (${userStore.getServerConfigName})` })
       await attemptConnection()
     } else {
-      await AbsLogger.info({ tag: 'default', message: 'mounted: No server config, redirecting to connect' })
-      router.push('/connect')
+      // No server session. Offline that is a dead end - the connect form cannot be completed -
+      // so send anyone with downloaded content to their downloads instead of trapping them on
+      // a screen they have no way to leave.
+      const localItems = (await useDb().getLocalLibraryItems().catch(() => [])) as unknown[]
+      if (localItems?.length && appStore.isOffline) {
+        await AbsLogger.info({ tag: 'default', message: 'mounted: No server config and offline, showing downloads' })
+        if (route.path !== '/downloads') router.replace('/downloads')
+      } else {
+        await AbsLogger.info({ tag: 'default', message: 'mounted: No server config, redirecting to connect' })
+        router.push('/connect')
+      }
+      hasMounted.value = true
       return
     }
 
@@ -418,6 +457,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  bus.off('go-online', goOnline)
   bus.off('change-lang', changeLanguage)
   document.removeEventListener('visibilitychange', visibilityChanged)
   const socket = useSocket()

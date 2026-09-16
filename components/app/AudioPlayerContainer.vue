@@ -214,7 +214,7 @@ export default {
     resolvePlaybackTarget({ ids, preferServerIds, forceLocal }) {
       const hasServerTarget = !!ids.serverLibraryItemId && !this.isLocalId(ids.serverLibraryItemId)
       const hasLocalTarget = !!ids.localLibraryItemId
-      const isOffline = !this.appStore.networkConnected || !this.appStore.serverReachable
+      const isOffline = this.appStore.isOffline
 
       if (forceLocal && hasLocalTarget) {
         return {
@@ -827,7 +827,7 @@ export default {
         // The item came from a server, so check whether it was listened to elsewhere since
         const serverLibraryItemId = playbackSession.libraryItemId
         const serverEpisodeId = playbackSession.episodeId
-        if (!serverLibraryItemId || !this.userStore.user || !this.appStore.networkConnected) return
+        if (!serverLibraryItemId || !this.userStore.user || this.appStore.isOffline) return
 
         const data = await this.getServerMediaProgress({ libraryItemId: serverLibraryItemId, episodeId: serverEpisodeId })
         if (!data || !data.lastUpdate || data.lastUpdate <= localMediaProgress.lastUpdate) return

@@ -27,7 +27,7 @@ const params = route.params
 const seriesId = params.id as string
 
 // asyncData equivalent: fetch series at setup time
-const isNetworkAvailable = appStore.networkConnected && !!userStore.user
+const isNetworkAvailable = !appStore.isOffline && !!userStore.user
 let series: any = null
 let loadedFromCache = false
 
@@ -64,7 +64,7 @@ const libraryIds = ref<string[]>([])
 const isLoadedFromCache = ref(loadedFromCache)
 
 const isIos = computed(() => platform === 'ios')
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 
 async function downloadSeriesClick() {
   console.log('Download Series clicked')

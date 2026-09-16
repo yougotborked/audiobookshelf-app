@@ -1156,6 +1156,9 @@ function minimizePlayerEvt() {
 }
 
 function showProgressSyncIsFailing() {
+  // Offline a failed sync is expected, not a problem worth flagging - progress is saved
+  // locally and sent when the server is reachable again
+  if (appStore.isOffline) return
   syncStatus.value = SyncStatus.FAILED
 }
 

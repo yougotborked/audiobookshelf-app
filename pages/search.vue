@@ -82,6 +82,8 @@ import { useGlobalsStore } from '~/stores/globals'
 
 const librariesStore = useLibrariesStore()
 const globalsStore = useGlobalsStore()
+const appStore = useAppStore()
+const db = useDb()
 const nativeHttp = useNativeHttp()
 
 const search = ref<string | null>(null)
@@ -127,12 +129,17 @@ async function runSearch(value: string | null) {
     return
   }
   isFetching.value = true
-  const results = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}`, { connectTimeout: 10000 }).catch((error: Error) => {
-    console.error('Search error', error)
-    return null
-  })) as Record<string, Record<string, unknown>[]> | null
+
+  // Offline the server search can only time out, so go straight to what is on the device.
+  const results = appStore.isOffline
+    ? await searchDownloaded(value)
+    : ((await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/search?q=${value}`, { connectTimeout: 10000 }).catch((error: Error) => {
+        console.error('Search error', error)
+        return null
+      })) as Record<string, Record<string, unknown>[]> | null) || (await searchDownloaded(value))
   if (value !== lastSearch.value) {
     console.log(`runSearch: New search was made for ${lastSearch.value} - results are from ${value}`)
+    isFetching.value = false
     return
   }
   console.log('RESULTS', results)
@@ -146,6 +153,46 @@ async function runSearch(value: string | null) {
   authorResults.value = (results?.authors || []) as typeof authorResults.value
   narratorResults.value = (results?.narrators || []) as typeof narratorResults.value
   tagResults.value = (results?.tags || []) as typeof tagResults.value
+}
+
+/**
+ * Search the items already downloaded to the device. Used whenever the server is out of
+ * reach so that search still finds the content you can actually play.
+ */
+async function searchDownloaded(value: string | null): Promise<Record<string, Record<string, unknown>[]>> {
+  const query = (value || '').trim().toLowerCase()
+  const empty = { book: [], podcast: [], episodes: [], series: [], authors: [], narrators: [], tags: [] }
+  if (!query) return empty
+
+  const localItems = [
+    ...((await db.getLocalLibraryItems('book').catch(() => [])) as Record<string, any>[]),
+    ...((await db.getLocalLibraryItems('podcast').catch(() => [])) as Record<string, any>[])
+  ]
+
+  const books: Record<string, unknown>[] = []
+  const podcasts: Record<string, unknown>[] = []
+  const episodes: Record<string, unknown>[] = []
+
+  for (const li of localItems) {
+    const metadata = li.media?.metadata || {}
+    const haystack = [metadata.title, metadata.authorName, metadata.author, metadata.narratorName, metadata.seriesName]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    if (haystack.includes(query)) {
+      if (li.mediaType === 'podcast') podcasts.push({ libraryItem: li })
+      else books.push({ libraryItem: li })
+    }
+
+    for (const ep of (li.media?.episodes || []) as Record<string, any>[]) {
+      if (`${ep.title || ''}`.toLowerCase().includes(query)) {
+        episodes.push({ libraryItem: { ...li, recentEpisode: ep } })
+      }
+    }
+  }
+
+  return { ...empty, book: books, podcast: podcasts, episodes }
 }
 
 function updateSearch(val: string) {

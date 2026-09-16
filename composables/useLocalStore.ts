@@ -85,6 +85,24 @@ class LocalStorage {
     }
   }
 
+  async setOfflineMode(enabled: boolean): Promise<void> {
+    try {
+      await Preferences.set({ key: 'offlineMode', value: enabled ? '1' : '0' })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set offline mode', error)
+    }
+  }
+
+  async getOfflineMode(): Promise<boolean> {
+    try {
+      const obj = (await Preferences.get({ key: 'offlineMode' })) || {}
+      return obj.value === '1'
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get offline mode', error)
+      return false
+    }
+  }
+
   async setLastLibraryId(libraryId: string): Promise<void> {
     try {
       await Preferences.set({ key: this.ukey('lastLibraryId'), value: libraryId })
@@ -403,6 +421,30 @@ class LocalStorage {
     } catch (error) {
       console.error('[LocalStorage] Failed to get auto playlist podcast rules', error)
       return {}
+    }
+  }
+
+  /**
+   * The library list, cached so the app still knows which libraries exist and what kind they are
+   * when the server cannot be reached. The home screen decides its whole layout from the current
+   * library's media type, so without this the podcast view disappears offline.
+   */
+  async setCachedLibraries(libraries: unknown[]): Promise<void> {
+    try {
+      await Preferences.set({ key: this.ukey('libraries'), value: JSON.stringify(libraries) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache libraries', error)
+    }
+  }
+
+  async getCachedLibraries(): Promise<unknown[]> {
+    try {
+      const obj = (await Preferences.get({ key: this.ukey('libraries') })) || {}
+      const parsed = obj.value ? JSON.parse(obj.value) : null
+      return Array.isArray(parsed) ? parsed : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached libraries', error)
+      return []
     }
   }
 

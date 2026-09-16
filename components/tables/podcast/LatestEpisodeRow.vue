@@ -3,7 +3,7 @@
     <div v-if="episode" class="w-full px-1">
       <div class="flex mb-2">
         <div class="w-10 min-w-10">
-          <covers-preview-cover :src="globalsStore.getLibraryItemCoverSrcById(libraryItemId || '')" :width="40" :book-cover-aspect-ratio="bookCoverAspectRatio" :show-resolution="false" class="md:hidden" />
+          <covers-preview-cover :src="coverSrc" :width="40" :book-cover-aspect-ratio="bookCoverAspectRatio" :show-resolution="false" class="md:hidden" />
         </div>
         <div class="flex-grow px-2">
           <div class="flex items-center">
@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
 import { AbsDownloader } from '@/plugins/capacitor'
 
 const props = defineProps<{
@@ -76,6 +77,7 @@ const props = defineProps<{
   episode: Record<string, unknown>
   localLibraryItemId?: string
   localEpisode?: Record<string, unknown>
+  localCoverUrl?: string | null
   isLocal?: boolean
 }>()
 
@@ -93,6 +95,13 @@ const { impact } = useHaptics()
 const eventBus = useEventBus()
 const db = useDb()
 const nativeHttp = useNativeHttp()
+
+// A downloaded episode has its cover on disk; using it keeps the list looking the same with no
+// server, and avoids a doomed request per row
+const coverSrc = computed(() => {
+  if (props.localCoverUrl) return Capacitor.convertFileSrc(props.localCoverUrl)
+  return globalsStore.getLibraryItemCoverSrcById(props.libraryItemId || '')
+})
 const toast = useToast()
 const router = useRouter()
 const { checkCellularPermission } = useCellularPermission()

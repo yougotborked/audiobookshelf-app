@@ -64,7 +64,7 @@ const localLibraryItems = ref<any[]>([])
 const isLoading = ref(false)
 
 const user = computed(() => userStore.user)
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const currentLibraryMediaType = computed(() => librariesStore.getCurrentLibraryMediaType)
 const currentLibraryIsPodcast = computed(() => currentLibraryMediaType.value === 'podcast')
@@ -193,7 +193,7 @@ function getLocalMediaItemCategories() {
 async function fetchCategories() {
   console.log(`[categories] fetchCategories networkConnected=${networkConnected.value}, lastServerFetch=${lastServerFetch.value}, lastLocalFetch=${lastLocalFetch.value}`)
 
-  const isConnectedToServerWithInternet = user.value && currentLibraryId.value && networkConnected.value
+  const isConnectedToServerWithInternet = user.value && currentLibraryId.value && !appStore.isOffline
   if (isConnectedToServerWithInternet) {
     if (lastServerFetch.value && Date.now() - lastServerFetch.value < 5000 && lastServerFetchLibraryId.value == currentLibraryId.value) {
       console.log(`[categories] fetchCategories server fetch was ${Date.now() - lastServerFetch.value}ms ago so not doing it.`)

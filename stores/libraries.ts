@@ -86,11 +86,41 @@ export const useLibrariesStore = defineStore('libraries', {
       }
     },
 
+    /**
+     * Restores the library list from the on-device cache.
+     *
+     * The home screen picks its layout from the current library's media type, so with no
+     * libraries the podcast view - Catch up feed and all - simply does not render. Falling back
+     * to the cache keeps the app looking and working the same when the server is unreachable.
+     */
+    async loadCachedLibraries() {
+      if (this.libraries.length) {
+        await this.restoreCurrentLibraryId()
+        return true
+      }
+      const cached = (await useLocalStore().getCachedLibraries()) as Library[]
+      if (!cached.length) return false
+      this.libraries = cached
+      await this.restoreCurrentLibraryId()
+      return true
+    },
+
+    /** Picks the selected library, preferring the one the user last had open. */
+    async restoreCurrentLibraryId() {
+      if (this.currentLibraryId && this.libraries.some((li) => li.id === this.currentLibraryId)) return
+      const lastLibraryId = await useLocalStore().getLastLibraryId()
+      if (lastLibraryId && this.libraries.some((li) => li.id === lastLibraryId)) {
+        this.currentLibraryId = lastLibraryId
+      } else if (this.libraries.length) {
+        this.currentLibraryId = this.libraries[0].id
+      }
+    },
+
     async load() {
       const userStore = useUserStore()
       if (!userStore.user) {
-        console.error('libraries/load - User not set')
-        return false
+        // Not signed in to the server yet - offline, or still connecting
+        return this.loadCachedLibraries()
       }
       const lastLoadDiff = Date.now() - this.lastLoad
       if (lastLoadDiff < 5 * 60 * 1000) return false
@@ -104,11 +134,12 @@ export const useLibrariesStore = defineStore('libraries', {
         }
         this.libraries = libraries
         this.lastLoad = Date.now()
+        await useLocalStore().setCachedLibraries(libraries)
         return true
       } catch (error) {
         console.error('Failed', error)
-        this.libraries = []
-        return false
+        // Keep whatever is known rather than emptying the list - wiping it collapses the layout
+        return this.loadCachedLibraries()
       }
     },
 

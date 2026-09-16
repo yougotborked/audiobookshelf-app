@@ -20,6 +20,13 @@
 
     <connection-server-connect-form v-if="deviceData" />
 
+    <!-- Without this, arriving here with no server reachable is a dead end: the form cannot be
+         completed offline and the back arrow routes straight back to this page. -->
+    <nuxt-link v-if="hasDownloads" to="/downloads" class="flex items-center gap-2 mt-6 text-md-on-surface-variant">
+      <span class="material-symbols text-lg">download_done</span>
+      <p class="text-md-label-l underline">{{ $strings.HeaderDownloads }}</p>
+    </nuxt-link>
+
     <!-- Footer -->
     <div class="flex items-center gap-2 mt-8 opacity-60">
       <a href="https://github.com/advplyr/audiobookshelf-app" target="_blank" class="text-md-label-m text-md-on-surface-variant">{{ $strings.MessageFollowTheProjectOnGithub }}</a>
@@ -42,6 +49,7 @@ const appStore = useAppStore()
 const librariesStore = useLibrariesStore()
 
 const deviceData = ref<unknown>(null)
+const hasDownloads = ref(false)
 
 async function init() {
   await appStore.setupNetworkListener()
@@ -50,6 +58,9 @@ async function init() {
   appStore.setDeviceData(deviceData.value as Parameters<typeof appStore.setDeviceData>[0])
   await appStore.init()
   await appStore.setupNetworkListener()
+
+  const localItems = (await db.getLocalLibraryItems().catch(() => [])) as unknown[]
+  hasDownloads.value = !!localItems?.length
 }
 
 onMounted(() => {

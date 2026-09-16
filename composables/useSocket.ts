@@ -7,6 +7,9 @@ export interface ServerSocketInterface {
   connected: boolean
   isAuthenticated?: boolean
   logout(): void
+  goOffline(): void
+  goOnline(): void
+  hasSocket(): boolean
   sendAuthenticate(): void
   on(event: string, callback: AnyCallback): this
   off(event: string, callback: AnyCallback): this
@@ -20,6 +23,9 @@ const noOp = () => { console.warn('[useSocket] Socket not initialized') }
 const _noOpSocket: ServerSocketInterface = {
   connected: false,
   logout: noOp,
+  goOffline: noOp,
+  goOnline: noOp,
+  hasSocket: () => false,
   sendAuthenticate: noOp,
   on(_event: string, _callback: AnyCallback) { noOp(); return this },
   off(_event: string, _callback: AnyCallback) { noOp(); return this },

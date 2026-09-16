@@ -565,7 +565,7 @@ onMounted(async () => {
     fetchedLibraryItem = await db.getLocalLibraryItem(libItemId)
     console.log('Got lli', libItemId)
   } else {
-    const canRequest = appStore.networkConnected && userStore.serverConnectionConfig
+    const canRequest = !appStore.isOffline && userStore.serverConnectionConfig
 
     if (canRequest) {
       fetchedLibraryItem = await nativeHttp.get(`/api/items/${libItemId}?expanded=1`, { connectTimeout: 10000 }).catch((error: any) => {

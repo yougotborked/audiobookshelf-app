@@ -15,6 +15,7 @@ export type AppEvents = {
   'playback-ended': void
   'device-focus-update': boolean
   'socket-reconnected': void
+  'go-online': void
   'url-open': string
   'library-changed': string
   'change-lang': string

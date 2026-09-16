@@ -61,6 +61,7 @@ interface AppState {
   networkConnected: boolean
   networkConnectionType: string | null
   serverReachable: boolean
+  offlineModeEnabled: boolean
   isNetworkUnmetered: boolean
   isFirstLoad: boolean
   isFirstAudioLoad: boolean
@@ -95,6 +96,7 @@ export const useAppStore = defineStore('app', {
     networkConnected: false,
     networkConnectionType: null,
     serverReachable: true,
+    offlineModeEnabled: false,
     isNetworkUnmetered: true,
     isFirstLoad: true,
     isFirstAudioLoad: true,
@@ -151,6 +153,13 @@ export const useAppStore = defineStore('app', {
       const [major, minor] = serverVersion.split('.').map(Number)
       return major < 2 || (major === 2 && minor < 17)
     },
+    /**
+     * Whether we should be working from the on-device copy rather than the server. Either the
+     * user chose to go offline, or the server is out of reach. networkConnected alone is not
+     * enough for the latter: plane wifi and captive portals both look like a working network
+     * while nothing can actually reach the server.
+     */
+    isOffline: (state) => state.offlineModeEnabled || !state.networkConnected || !state.serverReachable,
     getPlayQueue: (state) => state.playQueue,
     getQueueIndex: (state) => state.queueIndex,
     getNextQueueItem: (state) => {
@@ -229,7 +238,7 @@ export const useAppStore = defineStore('app', {
 
     async autoDownloadCheck() {
       if (!this.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
-      if (!this.networkConnected) return
+      if (this.isOffline) return
       const userStore = useUserStore()
       if (!userStore.user) return
 
@@ -349,11 +358,41 @@ export const useAppStore = defineStore('app', {
       }
     },
 
+    /**
+     * Deliberate offline mode, from the Disconnect button. Unlike logging out this keeps the
+     * session, the cached libraries and the downloaded content addressable, so the app keeps
+     * the same shape - it just stops talking to the server.
+     */
+    async setOfflineMode(enabled: boolean) {
+      this.offlineModeEnabled = enabled
+      await useLocalStore().setOfflineMode(enabled)
+      const socket = useSocket()
+      if (enabled) {
+        socket.goOffline()
+        this.socketConnected = false
+      } else {
+        // Assume the server is back and let the next request say otherwise
+        this.serverReachable = true
+      }
+      await AbsLogger.info({ tag: 'Store', message: `[Store] Offline mode ${enabled ? 'enabled' : 'disabled'}` })
+    },
+
+    async loadOfflineMode() {
+      this.offlineModeEnabled = await useLocalStore().getOfflineMode()
+    },
+
     setNetworkStatus(val: { connected: boolean; connectionType: string }) {
+      const wasConnected = this.networkConnected
       if (val.connectionType !== 'none') {
         this.networkConnected = true
       } else {
         this.networkConnected = false
+      }
+      // Regaining the radio invalidates a stale "unreachable" verdict: assume the server
+      // is back and let the next request prove otherwise, rather than staying offline
+      // until the connection-retry loop happens to come around.
+      if (this.networkConnected && !wasConnected) {
+        this.serverReachable = true
       }
       const platform = usePlatform()
       if (platform === 'ios') {

@@ -1,4 +1,5 @@
 import { CapacitorHttp } from '@capacitor/core'
+import { isTransportFailure } from '~/composables/useNetworkError'
 
 interface RequestOptions {
   headers?: Record<string, string>
@@ -144,21 +145,8 @@ async function request(method: string, _url: string, data: unknown, options: Req
     }
     return res.data
   } catch (error) {
-    const err = error as HttpError
-    const status = err.status ?? err.response?.status
-    const errorCode = (err.code || '').toString().toUpperCase()
-    const message = (err.message || '').toLowerCase()
-    const isLikelyNetworkError =
-      status === 0 ||
-      ['ERR_NETWORK', 'ECONNABORTED', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(errorCode) ||
-      message.includes('network') || message.includes('connection') ||
-      message.includes('timed out') || message.includes('offline')
-    const appStore = useAppStore()
-    if (typeof status === 'number' && status >= 400 && !isLikelyNetworkError) {
-      appStore.serverReachable = true
-    } else if (isLikelyNetworkError) {
-      appStore.serverReachable = false
-    }
+    // Reached the server iff it answered with a status; anything else died in transport
+    useAppStore().serverReachable = !isTransportFailure(error as HttpError)
     throw error
   }
 }
