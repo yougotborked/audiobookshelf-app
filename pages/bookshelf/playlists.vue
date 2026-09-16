@@ -30,7 +30,7 @@ const nativeHttp = useNativeHttp()
 
 const appStore = useAppStore()
 
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 const autoCacheUnplayedEpisodes = computed(() => appStore.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes)
 
 const defaultAutoPlaylist = { id: 'unfinished', name: strings.LabelAutoUnfinishedPodcasts, items: [], totalItems: 0 }

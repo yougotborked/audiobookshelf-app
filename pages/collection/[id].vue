@@ -130,7 +130,7 @@ function libraryChanged(libraryId: string) {
 
 onMounted(async () => {
   const user = userStore.user
-  const networkConnected = appStore.networkConnected
+  const networkConnected = !appStore.isOffline
 
   if (!user && !networkConnected) {
     const cachedOfflineCollection = await localStore.getCachedCollection(id)

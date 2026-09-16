@@ -27,7 +27,7 @@ const loadedLibraryId = ref<string | null>(null)
 const cardWidth = ref(200)
 
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 const cardHeight = computed(() => cardWidth.value * 1.25)
 
 async function buildLocalAuthors() {

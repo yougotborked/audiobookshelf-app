@@ -118,7 +118,7 @@ const entityHeight = computed(() => {
 })
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const currentLibraryMediaType = computed(() => librariesStore.getCurrentLibraryMediaType)
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 const altViewEnabled = computed(() => appStore.getAltViewEnabled)
 const sizeMultiplier = computed(() => {
   const baseSize = isCoverSquareAspectRatio.value ? 192 : 120
@@ -197,7 +197,7 @@ async function fetchEntities(page: number) {
   const fullQueryString = `?${sfQueryString}limit=${booksPerFetch.value}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
 
   let payload: { results: Record<string, unknown>[]; total: number } | null
-  if (!networkConnected.value) {
+  if (appStore.isOffline) {
     if (entityName.value === 'playlists') {
       const cached = await localStore.getCachedPlaylists(currentLibraryId.value)
       payload = { results: (cached as Record<string, unknown>[]).slice(startIndex, startIndex + booksPerFetch.value), total: cached.length }

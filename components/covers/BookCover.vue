@@ -15,7 +15,12 @@
       </div>
     </div>
 
-    <div v-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-red-100" :style="{ padding: placeholderCoverPadding + 'rem' }">
+    <div v-if="imageFailed && appStore.isOffline" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-md-surface-3 flex flex-col items-center justify-center gap-1" :style="{ padding: placeholderCoverPadding + 'rem' }">
+      <span class="material-symbols text-md-on-surface-variant/50" :style="{ fontSize: 1.5 * sizeMultiplier + 'rem' }">cloud_off</span>
+      <p class="text-center text-md-on-surface-variant/70 line-clamp-2" :style="{ fontSize: 0.6 * sizeMultiplier + 'rem' }">{{ title }}</p>
+    </div>
+
+    <div v-else-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-red-100" :style="{ padding: placeholderCoverPadding + 'rem' }">
       <div class="w-full h-full border-2 border-error flex flex-col items-center justify-center">
         <img src="/Logo.png" loading="lazy" class="mb-2" :style="{ height: 64 * sizeMultiplier + 'px' }" />
         <p class="text-centertext-error" :style="{ fontSize: titleFontSize + 'rem' }">Invalid Cover</p>
@@ -49,6 +54,7 @@ const emit = defineEmits<{
   imageLoaded: [src: string]
 }>()
 
+const appStore = useAppStore()
 const globalsStore = useGlobalsStore()
 
 // State

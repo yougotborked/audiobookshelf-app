@@ -659,7 +659,7 @@ function init() {
 async function loadServerLibraryItem() {
   let fetchedItem = null
 
-  if (appStore.networkConnected && userStore.serverConnectionConfig) {
+  if (!appStore.isOffline && userStore.serverConnectionConfig) {
     fetchedItem = await nativeHttp.get(`/api/items/${libraryItemId}?expanded=1&include=rssfeed`, { connectTimeout: 10000 }).catch((error: any) => {
       console.error('Failed to fetch library item', error)
       return null
@@ -762,7 +762,7 @@ onMounted(async () => {
     libraryItem.value = cachedItem
   }
 
-  if (!libraryItemId.startsWith('local') && libraryItem.value && appStore.networkConnected && userStore.serverConnectionConfig) {
+  if (!libraryItemId.startsWith('local') && libraryItem.value && !appStore.isOffline && userStore.serverConnectionConfig) {
     await localStore.setCachedLibraryItem(libraryItem.value)
   }
 

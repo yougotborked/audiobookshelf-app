@@ -108,7 +108,7 @@ const mediaIdStartingPlayback = ref<string | null>(null)
 const downloadedEpisodeKeys = ref<Set<string> | null>(null)
 
 // Computed
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 const bookCoverAspectRatio = computed(() => globalsStore.getBookCoverAspectRatio)
 const playlistItems = computed(() => playlist.value.items || [])
 const playlistTotalItems = computed(() => playlist.value.totalItems || playlistItems.value.length)
@@ -419,7 +419,7 @@ async function fetchPlaylist() {
       downloadedEpisodeKeys.value = depKeys
     }
   } else {
-    if (!appStore.networkConnected) {
+    if (appStore.isOffline) {
       AbsLogger.info({
         tag: 'PlaylistPage',
         message: `Not connected, skip fetching remote playlist: ${formatForLog({ id: playlistId })}`

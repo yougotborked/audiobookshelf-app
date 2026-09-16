@@ -406,6 +406,30 @@ class LocalStorage {
     }
   }
 
+  /**
+   * The library list, cached so the app still knows which libraries exist and what kind they are
+   * when the server cannot be reached. The home screen decides its whole layout from the current
+   * library's media type, so without this the podcast view disappears offline.
+   */
+  async setCachedLibraries(libraries: unknown[]): Promise<void> {
+    try {
+      await Preferences.set({ key: this.ukey('libraries'), value: JSON.stringify(libraries) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to cache libraries', error)
+    }
+  }
+
+  async getCachedLibraries(): Promise<unknown[]> {
+    try {
+      const obj = (await Preferences.get({ key: this.ukey('libraries') })) || {}
+      const parsed = obj.value ? JSON.parse(obj.value) : null
+      return Array.isArray(parsed) ? parsed : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get cached libraries', error)
+      return []
+    }
+  }
+
   async getPreferenceByKey(key: string): Promise<string | null> {
     try {
       const obj = (await Preferences.get({ key })) || {}

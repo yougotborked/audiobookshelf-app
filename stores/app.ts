@@ -151,6 +151,12 @@ export const useAppStore = defineStore('app', {
       const [major, minor] = serverVersion.split('.').map(Number)
       return major < 2 || (major === 2 && minor < 17)
     },
+    /**
+     * Whether the server is out of reach, for deciding between server data and the on-device
+     * copy. networkConnected alone is not enough: plane wifi and captive portals both look like
+     * a working network while nothing can reach the server.
+     */
+    isOffline: (state) => !state.networkConnected || !state.serverReachable,
     getPlayQueue: (state) => state.playQueue,
     getQueueIndex: (state) => state.queueIndex,
     getNextQueueItem: (state) => {
@@ -229,7 +235,7 @@ export const useAppStore = defineStore('app', {
 
     async autoDownloadCheck() {
       if (!this.deviceData?.deviceSettings?.autoCacheUnplayedEpisodes) return
-      if (!this.networkConnected) return
+      if (this.isOffline) return
       const userStore = useUserStore()
       if (!userStore.user) return
 
@@ -350,10 +356,17 @@ export const useAppStore = defineStore('app', {
     },
 
     setNetworkStatus(val: { connected: boolean; connectionType: string }) {
+      const wasConnected = this.networkConnected
       if (val.connectionType !== 'none') {
         this.networkConnected = true
       } else {
         this.networkConnected = false
+      }
+      // Regaining the radio invalidates a stale "unreachable" verdict: assume the server
+      // is back and let the next request prove otherwise, rather than staying offline
+      // until the connection-retry loop happens to come around.
+      if (this.networkConnected && !wasConnected) {
+        this.serverReachable = true
       }
       const platform = usePlatform()
       if (platform === 'ios') {

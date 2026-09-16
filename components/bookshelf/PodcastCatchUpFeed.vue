@@ -38,6 +38,7 @@
         :local-episode="localEpisodeMap[episode.id]"
         :library-item-id="episode.libraryItemId"
         :local-library-item-id="localEpisodeMap[episode.id] && localEpisodeMap[episode.id].localLibraryItemId"
+        :local-cover-url="localCoverMap[episode.libraryItemId]"
         @addToPlaylist="addEpisodeToPlaylist"
       />
     </div>
@@ -104,6 +105,14 @@ export default {
         }
       })
       return episodes
+    },
+    localCoverMap() {
+      // Keyed by server library item id, which is what the episode rows carry
+      const map = {}
+      this.localLibraryItems.forEach((li) => {
+        if (li.libraryItemId && li.coverContentUrl) map[li.libraryItemId] = li.coverContentUrl
+      })
+      return map
     },
     localEpisodeMap() {
       var epmap = {}
@@ -194,7 +203,7 @@ export default {
 
       this.isLoading = true
 
-      const shouldUseOffline = !this.networkConnected || !this.socketConnected || !this.serverReachable
+      const shouldUseOffline = this.appStore.isOffline || !this.socketConnected
 
       try {
         if (shouldUseOffline) {

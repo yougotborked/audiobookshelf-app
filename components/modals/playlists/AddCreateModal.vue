@@ -81,7 +81,7 @@ const show = computed({
 
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const selectedPlaylistItems = computed(() => globalsStore.selectedPlaylistItems || [])
-const networkConnected = computed(() => appStore.networkConnected)
+const networkConnected = computed(() => !appStore.isOffline)
 
 const sortedPlaylists = computed(() => {
   return (playlists.value

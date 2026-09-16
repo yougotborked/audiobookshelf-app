@@ -401,6 +401,14 @@ onMounted(async () => {
       await AbsLogger.info({ tag: 'default', message: `mounted: Server connected, init libraries (${userStore.getServerConfigName})` })
       await initLibraries()
     } else if (serverConfig) {
+      // Bring the cached library list up first so the home screen renders its normal layout
+      // straight away. Without this the app has no idea the current library is a podcast library
+      // until the server answers, and shows the empty-bookshelf view instead - or stays on it
+      // permanently when there is no connection at all.
+      if (await librariesStore.loadCachedLibraries()) {
+        await AbsLogger.info({ tag: 'default', message: `mounted: Restored ${librariesStore.libraries.length} cached libraries` })
+        bus.emit('library-changed', librariesStore.currentLibraryId)
+      }
       await AbsLogger.info({ tag: 'default', message: `mounted: Server config found, attempting connection (${userStore.getServerConfigName})` })
       await attemptConnection()
     } else {
