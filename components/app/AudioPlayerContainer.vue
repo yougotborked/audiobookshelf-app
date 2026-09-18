@@ -563,8 +563,14 @@ export default {
       }
 
       // if already playing this item then jump to start time
+      //
+      // Only the store's flag counts here: it is driven by the native player's own playing
+      // updates. The AudioPlayer component's copy survives a webview reload with whatever value
+      // it last had, so after the app is reopened it can claim to be playing an item the native
+      // player no longer has loaded. Taking the shortcut then calls play() on an empty player and
+      // nothing happens - the item is unplayable until you start something else first.
       const isAlreadyStreaming = this.appStore.getIsMediaStreaming(libraryItemId, episodeId)
-      const isCurrentlyPlaying = this.appStore.playerIsPlaying || this.$refs.audioPlayer?.isPlaying
+      const isCurrentlyPlaying = this.appStore.playerIsPlaying
 
       if (isAlreadyStreaming && isCurrentlyPlaying) {
         AbsLogger.info({

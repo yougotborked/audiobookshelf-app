@@ -81,6 +81,21 @@ class MediaProgressSyncer(
             Timer("ListeningTimer", false).schedule(15000L, 15000L) {
               Handler(Looper.getMainLooper()).post() {
                 if (playerNotificationService.currentPlayer.isPlaying) {
+                  // Never sync a session the player has already moved off. The server closes the
+                  // old session, so every attempt fails, and the position being reported belongs
+                  // to the item now playing - which lands on the wrong item's progress.
+                  val playingSessionId = playerNotificationService.currentPlaybackSession?.id
+                  if (playingSessionId != null && playingSessionId != currentSessionId) {
+                    AbsLogger.info(
+                            "MediaProgressSyncer",
+                            "Playback moved to session $playingSessionId while syncing $currentSessionId (title: \"$currentDisplayTitle\"), stopping this timer"
+                    )
+                    listeningTimerTask?.cancel()
+                    listeningTimerTask = null
+                    listeningTimerRunning = false
+                    return@post
+                  }
+
                   // Set auto sleep timer if enabled and within start/end time
                   playerNotificationService.sleepTimerManager.checkAutoSleepTimer()
 
