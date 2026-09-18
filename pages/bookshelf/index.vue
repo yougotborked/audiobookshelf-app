@@ -4,7 +4,7 @@
       <widgets-loading-spinner />
       <p class="pl-4">{{ strings.MessageAttemptingServerConnection }}</p>
     </div>
-    <div v-if="shelves.length && isLoading" class="w-full pt-4 flex items-center justify-center">
+    <div v-if="shelves.length && isLoading && !appStore.isOffline" class="w-full pt-4 flex items-center justify-center">
       <widgets-loading-spinner />
       <p class="pl-4">{{ strings.MessageLoadingServerData }}</p>
     </div>

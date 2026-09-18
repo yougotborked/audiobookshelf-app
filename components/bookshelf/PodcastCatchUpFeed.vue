@@ -203,13 +203,16 @@ export default {
 
       this.isLoading = true
 
-      const shouldUseOffline = this.appStore.isOffline || !this.socketConnected
+      // A dropped socket is not an unreachable server - HTTP has its own timeout and sets
+      // reachability itself, so only a known-offline state skips the fetch. And when we already
+      // know we are offline there is nothing to report: the connection indicator says so, and
+      // complaining about a request we chose not to make is just noise.
+      if (this.appStore.isOffline) {
+        await this.useOfflineEpisodes({ showToast: false })
+        return
+      }
 
       try {
-        if (shouldUseOffline) {
-          await this.useOfflineEpisodes({ showToast: this.networkConnected })
-          return
-        }
 
         const episodePayload = await this.nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200`, { connectTimeout: 10000 })
 
@@ -222,7 +225,7 @@ export default {
         this.localStore.setCachedLatestEpisodes(this.currentLibraryId, this.episodes)
       } catch (error) {
         console.error('[PodcastCatchUpFeed] Failed to get recent episodes', error)
-        await this.useOfflineEpisodes({ showToast: true })
+        await this.useOfflineEpisodes({ showToast: !this.appStore.offlineModeEnabled })
       } finally {
         this.isLoading = false
       }

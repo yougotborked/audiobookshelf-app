@@ -148,6 +148,9 @@ const timeRemaining = computed(() => {
   if (userIsFinished.value) return 'Finished'
   const prog = itemProgress.value as Record<string, unknown>
   const remaining = Math.floor((prog.duration as number) - (prog.currentTime as number))
+  // A played position at or past the end means finished, whatever isFinished says. Without this
+  // a rounding overshoot renders as "-1 sec left".
+  if (!(remaining > 0)) return 'Finished'
   return `${utils.elapsedPretty(remaining)} left`
 })
 const publishedAt = computed(() => props.episode.publishedAt as number | null)

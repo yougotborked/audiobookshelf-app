@@ -457,6 +457,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
           playWhenReady: Boolean,
           playbackRate: Float?
   ) {
+    // Playback must run in a *started* service. MainActivity only binds (BIND_AUTO_CREATE), and a
+    // bound-only service is destroyed as soon as its last client goes away - so swiping the app
+    // out of the recents list would kill playback before onTaskRemoved could keep it alive.
     if (!isStarted) {
       Log.i(tag, "preparePlayer: foreground service not started - Starting service --")
       Intent(ctx, PlayerNotificationService::class.java).also { intent ->
@@ -771,11 +774,12 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
 
     // Playback session in progress syncer is a copy that is up-to-date so replace current here with
-    // that
-    //  TODO: bad design here implemented to prevent the session in MediaProgressSyncer from
-    // changing while syncing
-    if (mediaProgressSyncer.currentPlaybackSession != null) {
-      currentPlaybackSession = mediaProgressSyncer.currentPlaybackSession?.clone()
+    // that - but only when it is the same session, otherwise a stale copy from the previous item
+    // would overwrite the session we just prepared.
+    mediaProgressSyncer.currentPlaybackSession?.let { syncerSession ->
+      if (currentPlaybackSession == null || syncerSession.id == currentPlaybackSession?.id) {
+        currentPlaybackSession = syncerSession.clone()
+      }
     }
 
     currentPlayer =
@@ -903,6 +907,22 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   fun getEndTimeOfNextChapterOrTrack(): Long? {
     return getNextBookChapter()?.endMs ?: currentPlaybackSession?.getNextTrackEndTime()
   }
+
+  /**
+   * The session for whatever is actually loaded in the player.
+   *
+   * MediaProgressSyncer holds a clone with a live currentTime, so it is the better source - but
+   * only while it is the same session. When playback moves to another item the syncer has not
+   * caught up yet and its copy is stale; handing that copy back to the syncer pins it to a
+   * session the server has already closed, so every sync fails and the new item's position gets
+   * written onto the old item's progress.
+   */
+  val activePlaybackSession: PlaybackSession?
+    get() {
+      val syncerSession = mediaProgressSyncer.currentPlaybackSession
+      return if (shouldPreferSyncerSession(currentPlaybackSession?.id, syncerSession?.id)) syncerSession
+      else currentPlaybackSession
+    }
 
   // Called from PlayerListener play event
   // check with server if progress has updated since last play and sync progress update
@@ -1108,7 +1128,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     currentPlayer.setPlaybackSpeed(speed)
 
     // Refresh Android Auto actions
-    val sessionForActions = mediaProgressSyncer.currentPlaybackSession ?: currentPlaybackSession
+    val sessionForActions = activePlaybackSession
     sessionForActions?.let { setMediaSessionConnectorCustomActions(it) }
     mediaSessionConnector.invalidateMediaSessionPlaybackState()
   }
@@ -1340,7 +1360,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       null
     } else {
       AbsLogger.info(tag, "onGetRoot: clientPackageName: $clientPackageName, clientUid: $clientUid")
-      isStarted = true
 
       // Reset cache if no longer connected to server or server changed
       if (mediaManager.checkResetServerItems()) {

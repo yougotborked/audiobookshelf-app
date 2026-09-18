@@ -71,6 +71,7 @@ export function useUtils() {
   }
 
   const elapsedPretty = (seconds: number, useFullNames = false): string => {
+    if (!(seconds > 0)) seconds = 0
     if (seconds < 60) {
       return `${Math.floor(seconds)} sec${useFullNames ? 'onds' : ''}`
     }
