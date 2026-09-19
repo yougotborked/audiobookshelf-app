@@ -6,6 +6,30 @@ class LocalStorage {
 
   setUserId(id: string | null) {
     this._userId = id
+    // Remember it so the caches stay addressable without a server. Everything below is keyed by
+    // user, but setUserId is only reached after a *successful* connection - so on a cold start
+    // with no connectivity every read used to land on the bare key and miss, and the app came up
+    // with no libraries. Deliberately not cleared on logout: this is a cache namespace, not a
+    // credential, and dropping it is what makes going offline afterwards lose everything. The
+    // next successful connection overwrites it.
+    if (id) {
+      Preferences.set({ key: 'lastUserId', value: id }).catch((error) => {
+        console.error('[LocalStorage] Failed to persist user id', error)
+      })
+    }
+  }
+
+  /** Re-point the caches at the last signed-in user, for use before any server connection. */
+  async restoreUserId(): Promise<string | null> {
+    if (this._userId) return this._userId
+    try {
+      const obj = (await Preferences.get({ key: 'lastUserId' })) || {}
+      if (obj.value) this._userId = obj.value
+      return this._userId
+    } catch (error) {
+      console.error('[LocalStorage] Failed to restore user id', error)
+      return null
+    }
   }
 
   /** Returns a user-namespaced key when a user is active, otherwise the bare key. */

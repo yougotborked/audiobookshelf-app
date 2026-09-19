@@ -34,6 +34,8 @@ const disconnectTime = ref(0)
 const timeLostFocus = ref(0)
 const socketDisconnectedTime = ref(0)
 const connectionRetryTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+// Reset the moment the server answers; see useReconnectBackoff for why it backs off at all.
+const reconnectAttempts = ref(0)
 
 const streamContainer = ref<{ audioPlayerReady: boolean; streamOpen: (stream: unknown) => void } | null>(null)
 
@@ -42,16 +44,20 @@ watch(() => appStore.networkConnected, (newVal, oldVal) => {
   if (!hasMounted.value) return
   if (newVal) {
     console.log(`[default] network connected changed ${oldVal} -> ${newVal}`)
+    // The radio came back, which says nothing about the server. Probe from a clean slate
+    // rather than assuming, so a flapping link cannot bounce the whole UI online and back.
+    reconnectAttempts.value = 0
     if (!userStore.user) {
       attemptConnection()
     } else if (!librariesStore.currentLibraryId) {
       initLibraries()
     } else {
+      // Syncing straight away would spend its timeouts discovering the link is still dead, and
+      // it cannot tell us whether the server is back. The scheduled retry probes first and syncs
+      // once the server has actually answered.
       const timeSinceDisconnect = Date.now() - disconnectTime.value
-      if (timeSinceDisconnect > 5000) {
-        console.log('Time since disconnect was', timeSinceDisconnect, 'sync with server')
-        setTimeout(() => { syncLocalSessions(false) }, 4000)
-      }
+      console.log(`[default] network back after ${timeSinceDisconnect}ms, probing server`)
+      scheduleConnectionRetry(reconnectDelayMs(0))
     }
     if (userStore.user && librariesStore.currentLibraryId) {
       appStore.autoDownloadCheck()
@@ -84,9 +90,10 @@ watch(() => appStore.socketConnected, (newVal) => {
 
 watch(() => appStore.serverReachable, (newVal) => {
   if (newVal) {
+    reconnectAttempts.value = 0
     clearConnectionRetry()
   } else {
-    scheduleConnectionRetry(2000)
+    scheduleConnectionRetry()
   }
 })
 
@@ -293,6 +300,14 @@ async function visibilityChanged() {
       await globalsStore.loadLocalMediaProgress()
     }
     bus.emit('device-focus-update', true)
+
+    // Coverage can come and go while the screen is off. Settle the question before the first
+    // screen the user opens spends a ten second timeout discovering it for them.
+    if (elapsed > 30000 && !appStore.offlineModeEnabled && appStore.networkConnected && userStore.serverConnectionConfig) {
+      const reachable = await appStore.probeServerReachable()
+      console.log(`✅ [default] resume probe: server ${reachable ? 'reachable' : 'unreachable'}`)
+      if (!reachable) scheduleConnectionRetry()
+    }
   } else {
     console.log('⛔️ [default] device visibility: does NOT have focus')
     timeLostFocus.value = Date.now()
@@ -305,19 +320,20 @@ function changeLanguage(code: string) {
   document.documentElement.lang = code
 }
 
-function scheduleConnectionRetry(delay = 2000) {
+function scheduleConnectionRetry(delay?: number) {
   if (connectionRetryTimeout.value) return
   if (appStore.offlineModeEnabled) return
   if (!appStore.networkConnected) return
   if (!userStore.user && !userStore.serverConnectionConfig) return
 
-  console.log(`[default] scheduling connection retry in ${delay}ms`)
+  const delayMs = Math.max(delay ?? reconnectDelayMs(reconnectAttempts.value), 0)
+  console.log(`[default] scheduling connection retry in ${delayMs}ms (attempt ${reconnectAttempts.value + 1})`)
   connectionRetryTimeout.value = setTimeout(() => {
     connectionRetryTimeout.value = null
     retryConnectionIfNeeded().catch((error) => {
       console.error('[default] retryConnectionIfNeeded failed', error)
     })
-  }, Math.max(delay, 0))
+  }, delayMs)
 }
 
 function clearConnectionRetry() {
@@ -325,6 +341,17 @@ function clearConnectionRetry() {
     clearTimeout(connectionRetryTimeout.value)
     connectionRetryTimeout.value = null
   }
+}
+
+/** True once the server has answered; leaves the app offline and reschedules if it has not. */
+async function serverAnsweredProbe(): Promise<boolean> {
+  if (await appStore.probeServerReachable()) {
+    reconnectAttempts.value = 0
+    return true
+  }
+  reconnectAttempts.value += 1
+  scheduleConnectionRetry()
+  return false
 }
 
 async function retryConnectionIfNeeded() {
@@ -342,6 +369,13 @@ async function retryConnectionIfNeeded() {
 
   if (!serverConfig?.address || !serverConfig?.token) {
     console.warn('[default] No server config available for retry connection')
+    return
+  }
+
+  // Reconnecting the socket and syncing are expensive and slow against a dead link, and neither
+  // reports back whether the server is there. Ask first, cheaply.
+  if (!(await serverAnsweredProbe())) {
+    console.log('[default] server still unreachable, staying offline')
     return
   }
 
@@ -365,7 +399,8 @@ async function retryConnectionIfNeeded() {
     console.error('[default] retryConnectionIfNeeded sync failed', error)
   } finally {
     if (!appStore.serverReachable) {
-      scheduleConnectionRetry(5000)
+      reconnectAttempts.value += 1
+      scheduleConnectionRetry()
     }
   }
 }
@@ -396,6 +431,9 @@ onMounted(async () => {
     await AbsLogger.info({ tag: 'default', message: `mounted: initializing first load (${usePlatform()} v${config.public.version})` })
     appStore.isFirstLoad = false
 
+    // Before any cached read: without this the caches are keyed by a user id we do not have
+    // until a connection succeeds, so an offline start finds nothing.
+    await useLocalStore().restoreUserId()
     await loadSavedSettings()
     await appStore.loadOfflineMode()
 

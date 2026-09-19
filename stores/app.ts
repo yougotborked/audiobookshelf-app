@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { Network } from '@capacitor/network'
 import { AbsAudioPlayer, AbsDownloader, AbsLogger } from '~/plugins/capacitor'
+
+// Long enough for a working link to answer, short enough that a dead one is obvious fast
+const SERVER_PROBE_TIMEOUT_MS = 4000
 import { PlayMethod } from '~/constants'
 import type { PlaybackSession, DeviceData, QueueItem } from '~/types'
 import { getAutoPlaylistPodcastRule, refreshAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
@@ -359,6 +362,37 @@ export const useAppStore = defineStore('app', {
     },
 
     /**
+     * Ask the server whether it is actually there.
+     *
+     * A connected radio is not a reachable server - driving through patchy coverage, the radio
+     * reports cellular while nothing can get out. Assuming the server is back on every radio
+     * transition made the app flip online, fire real requests, stall on their timeouts and fall
+     * back offline, over and over. So reachability is only ever restored by evidence: this
+     * probe, a request that actually succeeded, or the socket connecting.
+     *
+     * Deliberately short: this is a question about whether the link works at all, and waiting
+     * ten seconds for the answer is the problem it exists to avoid. useNativeHttp records
+     * reachability from the outcome, including the case where the server answers an error (it
+     * answered, so it is reachable).
+     */
+    async probeServerReachable(): Promise<boolean> {
+      if (this.offlineModeEnabled) return false
+      if (!this.networkConnected) {
+        this.serverReachable = false
+        return false
+      }
+      if (!useUserStore().serverConnectionConfig?.address) return false
+
+      try {
+        await useNativeHttp().get('/ping', { connectTimeout: SERVER_PROBE_TIMEOUT_MS, readTimeout: SERVER_PROBE_TIMEOUT_MS })
+        this.serverReachable = true
+      } catch (error) {
+        // useNativeHttp already classified the failure; trust its verdict
+      }
+      return this.serverReachable
+    },
+
+    /**
      * Deliberate offline mode, from the Disconnect button. Unlike logging out this keeps the
      * session, the cached libraries and the downloaded content addressable, so the app keeps
      * the same shape - it just stops talking to the server.
@@ -382,17 +416,12 @@ export const useAppStore = defineStore('app', {
     },
 
     setNetworkStatus(val: { connected: boolean; connectionType: string }) {
-      const wasConnected = this.networkConnected
       if (val.connectionType !== 'none') {
         this.networkConnected = true
       } else {
         this.networkConnected = false
-      }
-      // Regaining the radio invalidates a stale "unreachable" verdict: assume the server
-      // is back and let the next request prove otherwise, rather than staying offline
-      // until the connection-retry loop happens to come around.
-      if (this.networkConnected && !wasConnected) {
-        this.serverReachable = true
+        // No radio, no server. Recorded now so nothing spends a timeout finding out.
+        this.serverReachable = false
       }
       const platform = usePlatform()
       if (platform === 'ios') {

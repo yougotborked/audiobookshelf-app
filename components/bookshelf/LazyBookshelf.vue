@@ -196,17 +196,21 @@ async function fetchEntities(page: number) {
   const sfQueryString = currentSFQueryString.value ? currentSFQueryString.value + '&' : ''
   const fullQueryString = `?${sfQueryString}limit=${booksPerFetch.value}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
 
+  async function fetchFromDevice(): Promise<{ results: Record<string, unknown>[]; total: number }> {
+    if (entityName.value === 'playlists') {
+      const cached = (await localStore.getCachedPlaylists(currentLibraryId.value)) as Record<string, unknown>[]
+      return { results: cached.slice(startIndex, startIndex + booksPerFetch.value), total: cached.length }
+    }
+    if (entityName.value === 'books' || entityName.value === 'series-books') {
+      const results = localLibraryItems.value.slice(startIndex, startIndex + booksPerFetch.value)
+      return { results, total: localLibraryItems.value.length }
+    }
+    return { results: [], total: 0 }
+  }
+
   let payload: { results: Record<string, unknown>[]; total: number } | null
   if (appStore.isOffline) {
-    if (entityName.value === 'playlists') {
-      const cached = await localStore.getCachedPlaylists(currentLibraryId.value)
-      payload = { results: (cached as Record<string, unknown>[]).slice(startIndex, startIndex + booksPerFetch.value), total: cached.length }
-    } else if (entityName.value === 'books' || entityName.value === 'series-books') {
-      const results = localLibraryItems.value.slice(startIndex, startIndex + booksPerFetch.value)
-      payload = { results, total: localLibraryItems.value.length }
-    } else {
-      payload = { results: [], total: 0 }
-    }
+    payload = await fetchFromDevice()
   } else {
     payload = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/${entityPath}${fullQueryString}`, { connectTimeout: 10000 }).catch((error: unknown) => {
       console.error('failed to fetch books', error)
@@ -214,6 +218,12 @@ async function fetchEntities(page: number) {
     })) as { results: Record<string, unknown>[]; total: number } | null
     if (payload && entityName.value === 'playlists' && payload.results) {
       localStore.setCachedPlaylists(currentLibraryId.value, payload.results)
+    }
+    if (!payload) {
+      // Losing the connection mid-browse used to leave the shelf blank, because a failed fetch
+      // returned null and nothing rendered. Show what is on the device instead.
+      console.log('[LazyBookshelf] server fetch failed, falling back to downloaded items')
+      payload = await fetchFromDevice()
     }
   }
 
@@ -385,8 +395,10 @@ function initSizeData() {
 
 async function init() {
   if (isFirstInit.value) return
-  if (!user.value) {
-    // Offline support not available
+  // No user and online means there is genuinely nothing to show. Offline is different: the
+  // downloaded items are right there, and refusing to list them is what made continuing offline
+  // against a saved server look like an empty app.
+  if (!user.value && !appStore.isOffline) {
     await resetEntities()
     eventBus.emit('bookshelf-total-entities', 0)
     return
