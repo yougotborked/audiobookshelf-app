@@ -20,12 +20,22 @@
 
     <connection-server-connect-form v-if="deviceData" />
 
-    <!-- Without this, arriving here with no server reachable is a dead end: the form cannot be
-         completed offline and the back arrow routes straight back to this page. -->
-    <nuxt-link v-if="hasDownloads" to="/downloads" class="flex items-center gap-2 mt-6 text-md-on-surface-variant">
-      <span class="material-symbols text-lg">download_done</span>
-      <p class="text-md-label-l underline">{{ $strings.HeaderDownloads }}</p>
-    </nuxt-link>
+    <!-- Arriving here with no server reachable would otherwise be a dead end: the form cannot be
+         completed offline and the back arrow routes straight back to this page. Continuing
+         offline opens the app proper against a saved server, so the normal library layout and
+         everything cached from it is available - not just the flat downloads list. -->
+    <div v-if="offlineServer || hasDownloads" class="flex flex-col items-center gap-3 mt-6">
+      <ui-btn v-if="offlineServer" :disabled="enteringOfflineMode" :padding-x="4" class="h-10" @click="continueOffline">
+        <span class="flex items-center gap-2">
+          <span class="material-symbols text-lg">cloud_off</span>
+          {{ $strings.ButtonContinueOffline }}
+        </span>
+      </ui-btn>
+      <nuxt-link v-if="hasDownloads" to="/downloads" class="flex items-center gap-2 text-md-on-surface-variant">
+        <span class="material-symbols text-lg">download_done</span>
+        <p class="text-md-label-l underline">{{ $strings.HeaderDownloads }}</p>
+      </nuxt-link>
+    </div>
 
     <!-- Footer -->
     <div class="flex items-center gap-2 mt-8 opacity-60">
@@ -48,8 +58,14 @@ definePageMeta({ layout: 'blank' })
 const appStore = useAppStore()
 const librariesStore = useLibrariesStore()
 
+const userStore = useUserStore()
+const localStore = useLocalStore()
+const router = useRouter()
+
 const deviceData = ref<unknown>(null)
 const hasDownloads = ref(false)
+const offlineServer = ref<Record<string, unknown> | null>(null)
+const enteringOfflineMode = ref(false)
 
 async function init() {
   await appStore.setupNetworkListener()
@@ -61,6 +77,31 @@ async function init() {
 
   const localItems = (await db.getLocalLibraryItems().catch(() => [])) as unknown[]
   hasDownloads.value = !!localItems?.length
+
+  // A saved server is enough to work offline against: its cached libraries and downloads are
+  // already on the device. Prefer the one last used, otherwise the only one there is.
+  const dd = deviceData.value as Record<string, unknown> | null
+  const configs = (dd?.serverConnectionConfigs as Record<string, unknown>[]) || []
+  offlineServer.value = configs.find((c) => c.id === dd?.lastServerConnectionConfigId) || configs[0] || null
+}
+
+/** Open the app offline against a saved server, rather than only its downloads. */
+async function continueOffline() {
+  const serverConfig = offlineServer.value
+  if (!serverConfig || enteringOfflineMode.value) return
+  enteringOfflineMode.value = true
+
+  try {
+    // Point the caches back at the last signed-in user before anything reads them
+    await localStore.restoreUserId()
+    userStore.serverConnectionConfig = serverConfig as unknown as import('~/types').ServerConnectionConfig
+    userStore.accessToken = (serverConfig.token as string) || null
+    await appStore.setOfflineMode(true)
+    await router.replace('/bookshelf')
+  } catch (error) {
+    console.error('[connect] Failed to continue offline', error)
+    enteringOfflineMode.value = false
+  }
 }
 
 onMounted(() => {

@@ -395,8 +395,10 @@ function initSizeData() {
 
 async function init() {
   if (isFirstInit.value) return
-  if (!user.value) {
-    // Offline support not available
+  // No user and online means there is genuinely nothing to show. Offline is different: the
+  // downloaded items are right there, and refusing to list them is what made continuing offline
+  // against a saved server look like an empty app.
+  if (!user.value && !appStore.isOffline) {
     await resetEntities()
     eventBus.emit('bookshelf-total-entities', 0)
     return

@@ -431,6 +431,9 @@ onMounted(async () => {
     await AbsLogger.info({ tag: 'default', message: `mounted: initializing first load (${usePlatform()} v${config.public.version})` })
     appStore.isFirstLoad = false
 
+    // Before any cached read: without this the caches are keyed by a user id we do not have
+    // until a connection succeeds, so an offline start finds nothing.
+    await useLocalStore().restoreUserId()
     await loadSavedSettings()
     await appStore.loadOfflineMode()
 
