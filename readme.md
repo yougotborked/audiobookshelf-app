@@ -103,8 +103,9 @@ cd android && ./gradlew testDebugUnitTest     # Android unit tests
 Note: the repo carries a number of pre-existing type errors from the Nuxt 2 → 3 migration. Compare
 against `master` rather than expecting a clean run.
 
-CI builds an APK on every push and runs the Android unit tests. `strings/*.json` must stay
-alphabetized — a separate workflow enforces it.
+On every push CI runs Android lint and builds the APK (`staticAnalysis assembleDebug`). It does
+**not** run the unit tests, so run `testDebugUnitTest` yourself before pushing. `strings/*.json`
+must stay alphabetized — a separate workflow enforces that one.
 
 ---
 
