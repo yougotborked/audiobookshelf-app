@@ -13,13 +13,17 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.audiobookshelf.app.R
 import com.audiobookshelf.app.models.DownloadItemPart
+import com.audiobookshelf.app.plugins.AbsLogger
 
 /** Android-owned foreground lifecycle for transfers that must outlive the WebView and Activity. */
 class DownloadService : Service() {
   override fun onCreate() {
     super.onCreate()
     createChannel()
-    startForegroundWithType(DownloadServiceHost.notificationStrings(this).preparing)
+    if (!startForegroundWithType(DownloadServiceHost.notificationStrings(this).preparing)) {
+      stopSelf()
+      return
+    }
     DownloadServiceHost.attachService(this)
   }
 
@@ -27,11 +31,29 @@ class DownloadService : Service() {
     when (intent?.action) {
       ACTION_CANCEL -> DownloadServiceHost.cancelAll(this)
       else -> {
-        startForegroundWithType(DownloadServiceHost.notificationStrings(this).preparing)
+        if (!startForegroundWithType(DownloadServiceHost.notificationStrings(this).preparing)) {
+          stopSelf()
+          return START_NOT_STICKY
+        }
         DownloadServiceHost.startWork(this)
       }
     }
-    return START_STICKY
+    // Deliberately not START_STICKY. The system restarts a sticky service after it dies, which
+    // runs onCreate and startForeground again - and when the reason it died was the platform
+    // refusing that very call, the restart crashes the same way, on a loop. Downloads survive
+    // without it: parts resume from their byte offset and DownloadServiceHost restarts the
+    // service when there is work and the app is able to.
+    return START_NOT_STICKY
+  }
+
+  /**
+   * Android 15+ caps how long a dataSync foreground service may run per day. When the system
+   * times it out we must stand down promptly; ignoring it gets the app killed.
+   */
+  override fun onTimeout(startId: Int, fgsType: Int) {
+    AbsLogger.error(TAG, "Download foreground service timed out (type $fgsType), stopping")
+    stopForeground(STOP_FOREGROUND_REMOVE)
+    stopSelf()
   }
 
   override fun onDestroy() {
@@ -58,12 +80,26 @@ class DownloadService : Service() {
     }
   }
 
-  private fun startForegroundWithType(text: String) {
-    val notification = notification(text)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-    } else {
-      startForeground(NOTIFICATION_ID, notification)
+  /**
+   * Returns whether the service is now in the foreground.
+   *
+   * startForeground is not safe to call unguarded: from Android 12 the platform throws when the
+   * app may not start a foreground service from the background, and later versions add type and
+   * quota failures on top. Thrown from onCreate that takes the whole app down, so a background
+   * auto-download could crash the app instead of just failing to download.
+   */
+  private fun startForegroundWithType(text: String): Boolean {
+    return try {
+      val notification = notification(text)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+      } else {
+        startForeground(NOTIFICATION_ID, notification)
+      }
+      true
+    } catch (e: Exception) {
+      AbsLogger.error(TAG, "Could not move download service to the foreground: ${e.message}")
+      false
     }
   }
 
@@ -94,6 +130,7 @@ class DownloadService : Service() {
   private fun pendingIntentFlags(): Int = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 
   companion object {
+    private const val TAG = "DownloadService"
     private const val CHANNEL_ID = "downloads"
     private const val NOTIFICATION_ID = 11
     private const val ACTION_CANCEL = "com.audiobookshelf.app.download.CANCEL"
