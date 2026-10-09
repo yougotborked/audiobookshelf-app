@@ -1,227 +1,122 @@
-# Audiobookshelf Mobile App
+# Audiobookshelf for Podcasts
 
-Audiobookshelf is a self-hosted audiobook and podcast server.
+A fork of the [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) mobile app, reworked
+around **podcast listening** — catching up on new episodes, queueing them, and having them available
+offline — with Android Auto and offline use treated as primary cases rather than extras.
 
-### Android (beta)
-
-Get the Android app on the [Google Play Store](https://play.google.com/store/apps/details?id=com.audiobookshelf.app)
-
-### iOS (early beta)
-
-**Beta is currently full. Apple has a hard limit of 10k beta testers. Updates will be posted in Discord.**
-
-Using Test Flight: https://testflight.apple.com/join/wiic7QIW **_(beta is full)_**
+**Requires an [Audiobookshelf](https://www.audiobookshelf.org) server to connect to.**
 
 ---
 
-[Go to the main project repo github.com/advplyr/audiobookshelf](https://github.com/advplyr/audiobookshelf) or the project site [audiobookshelf.org](https://audiobookshelf.org)
+## 📲 Download the app
 
-Join us on [discord](https://discord.gg/pJsjuNCKRq)
+### **[→ Get the latest APK from the Releases page](https://github.com/yougotborked/audiobookshelf-app/releases/latest)**
 
-**Requires an Audiobookshelf server to connect with**
+Every push to `master` publishes a fresh debug APK to the rolling
+[`latest` release](https://github.com/yougotborked/audiobookshelf-app/releases/latest). Download the
+`audiobookshelf-*.apk` asset and install it.
 
-<img alt="Screenshot" src="https://github.com/advplyr/audiobookshelf-app/raw/master/screenshots/DeviceDemoScreens.png" />
+Notes on installing:
+
+- Android will ask you to allow installing from an unknown source the first time.
+- These are **debug** builds, signed with the repo's debug key. The package id is
+  `com.audiobookshelf.app.debug`, so it installs alongside the Play Store app rather than replacing it.
+- Because the signing key differs from the Play build, you cannot upgrade from the Play version in
+  place — install this as a separate app.
+- Android only. iOS is not built or released here.
+
+## What's different from upstream
+
+Podcast workflow:
+
+- **Catch up home screen** — a feed of unplayed episodes across your podcast libraries, front and
+  centre on the home screen for podcast libraries.
+- **Unfinished Podcasts playlist** — an automatic playlist of everything you haven't finished, built
+  on the device.
+- **Per-podcast rules** — exclude a podcast from the auto playlist entirely, or keep only its latest
+  *N* unplayed episodes. Useful when one show's back catalogue would otherwise bury everything else.
+- **Auto cache unplayed episodes** (Settings) — downloads unplayed episodes in the background so
+  they're ready to play without a connection.
+- **Auto continue playlists** (Settings) — rolls on to the next episode automatically.
+
+Android Auto and system media integration:
+
+- Browse and play from Android Auto, with a working queue, skip/seek actions and playback speed.
+- Proper media session so lock screen, notification, watch and headset controls all work.
+
+Offline:
+
+- **Disconnect / Continue Offline** — go offline deliberately and keep the normal app around you
+  (library layout, Catch up feed, your downloads), rather than dropping to a bare file list.
+- Reachability is judged by whether the server actually answered, not by whether the radio is up —
+  so plane wifi, captive portals and patchy coverage behave sensibly instead of stalling on timeouts.
+- Libraries, playlists and episode lists are cached on the device and used when the server is out of
+  reach.
+
+Under the hood this fork has also moved to Nuxt 3 + Pinia and ExoPlayer2 → Media3.
 
 ## Contributing
 
-This application is built using [NuxtJS](https://nuxtjs.org/) and [Capacitor](https://capacitorjs.com/) in order to run on both iOS and Android on the same code base.
+Built with [Nuxt](https://nuxt.com/) and [Capacitor](https://capacitorjs.com/).
 
-### Localization
+See [CLAUDE.md](CLAUDE.md) for the project's build commands and the constraints that matter when
+working in this codebase (Pinia-only state, which directories are auto-imported, which legacy files
+not to touch).
 
-Thank you to [Weblate](https://hosted.weblate.org/engage/audiobookshelf/) for hosting our localization infrastructure pro-bono. If you want to see Audiobookshelf in your language, please help us localize. Additional information on helping with the translations [here](https://www.audiobookshelf.org/faq#how-do-i-help-with-translations). <a href="https://hosted.weblate.org/engage/audiobookshelf/"> <img src="https://hosted.weblate.org/widget/audiobookshelf/abs-mobile-app/horizontal-auto.svg" alt="Translation status" /> </a>
+### Requirements
 
-### Windows Environment Setup for Android
+- [Node.js](https://nodejs.org/en/) — the repo declares 20 (`.nvmrc`, `package.json` engines); CI
+  builds on 24, and both work
+- Java 21 (Temurin) — required by the Android build (`jvmToolchain(21)`)
+- [Android Studio](https://developer.android.com/studio) and the Android SDK
 
-Required Software:
-
-- [Git](https://git-scm.com/downloads)
-- [Node.js](https://nodejs.org/en/) (version 20)
-- Code editor of choice([VSCode](https://code.visualstudio.com/download), etc)
-- [Android Studio](https://developer.android.com/studio)
-- [Android SDK](https://developer.android.com/studio)
-
-<details>
-<summary>Install the required software with <a href=(https://docs.microsoft.com/en-us/windows/package-manager/winget/#production-recommended)>winget</a></summary>
-
-<p>
-Note: This requires a PowerShell prompt with winget installed.  You should be able to copy and paste the code block to install.  If you use an elevated PowerShell prompt, UAC will not pop up during the installs.
-
-```PowerShell
-winget install -e --id Git.Git; `
-winget install -e --id Microsoft.VisualStudioCode; `
-winget install -e --id  Google.AndroidStudio; `
-winget install -e --id OpenJS.NodeJS --version 20.11.0;
-```
-
-![](/screenshots/dev_setup_windows_winget.png)
-
-</p>
-</details>
-<br>
-
-Your Windows environment should now be set up and ready to proceed!
-
-### Mac Environment Setup for Android
-
-Required Software:
-
-- [Android Studio](https://developer.android.com/studio)
-- [Node.js](https://nodejs.org/en/) (version 20)
-- [Cocoapods](https://guides.cocoapods.org/using/getting-started.html#installation)
-- [Android SDK](https://developer.android.com/studio)
-
-<details>
-<summary>Install the required software with <a href=(https://brew.sh/)>homebrew</a></summary>
-
-<p>
-
-```zsh
-brew install android-studio node cocoapods
-```
-
-</p>
-</details>
-
-### Start working on the Android app
-
-Clone or fork the project from terminal or powershell and `cd` into the project directory.
-
-Install the required node packages:
+### Build
 
 ```shell
-npm install
+npm ci                     # install dependencies
+npm run generate           # build the static web app
+npx cap sync android       # copy it into the Android project
+cd android && ./gradlew assembleDebug
 ```
 
-<details>
-<summary>Expand for screenshot</summary>
+The APK lands in `android/app/build/outputs/apk/debug/`.
 
-![](/screenshots/dev_setup_android_npm_install.png)
-
-</details>
-<br>
-
-Generate static web app:
-
-```shell
-npm run generate
-```
-
-<details>
-<summary>Expand for screenshot</summary>
-
-![](/screenshots/dev_setup_android_npm_run.png)
-
-</details>
-<br>
-
-Copy web app into native android/ios folders:
-
-```shell
-npx cap sync
-```
-
-<details>
-<summary>Expand for screenshot</summary>
-
-![](/screenshots/dev_setup_android_cap_sync.png)
-
-</details>
-<br>
-
-Open Android Studio:
+To open the project in Android Studio instead:
 
 ```shell
 npx cap open android
 ```
 
-<details>
-<summary>Expand for screenshot</summary>
-
-![](/screenshots/dev_setup_cap_android.png)
-
-</details>
-<br>
-
-Start coding!
-
-After making changes to the JS layer you need to rebuild the nuxt pages and sync them to the native shells:
+After changing anything in the JS layer, rebuild and re-sync:
 
 ```shell
 npm run sync
 ```
 
-### Mac Environment Setup for iOS
-
-Required Software:
-
-- [Xcode](https://developer.apple.com/xcode/)
-- [Node.js](https://nodejs.org/en/)
-- [Cocoapods](https://guides.cocoapods.org/using/getting-started.html#installation)
-
-### Start working on the iOS app
-
-Clone or fork the project in the terminal and `cd` into the project directory.
-
-Install the required node packages:
+### Checks
 
 ```shell
-npm install
+npx vue-tsc --noEmit -p .nuxt/tsconfig.json   # typecheck
+cd android && ./gradlew testDebugUnitTest     # Android unit tests
 ```
 
-<details>
-<summary>Expand for screenshot</summary>
+Note: the repo carries a number of pre-existing type errors from the Nuxt 2 → 3 migration. Compare
+against `master` rather than expecting a clean run.
 
-![](/screenshots/dev_setup_ios_npm_install.png)
+CI builds an APK on every push and runs the Android unit tests. `strings/*.json` must stay
+alphabetized — a separate workflow enforces it.
 
-</details>
-<br>
+---
 
-Generate static web app:
+## Credits
 
-```shell
-npm run generate
-```
+All of the hard work belongs to [advplyr](https://github.com/advplyr) and the Audiobookshelf
+contributors. This is a personal fork tuned to one podcast-heavy listening habit; if you want the
+supported app, use upstream:
 
-<details>
-<summary>Expand for screenshot</summary>
+- Upstream app: [github.com/advplyr/audiobookshelf-app](https://github.com/advplyr/audiobookshelf-app)
+- Server: [github.com/advplyr/audiobookshelf](https://github.com/advplyr/audiobookshelf)
+- Project site: [audiobookshelf.org](https://www.audiobookshelf.org)
+- Discord: [discord.gg/pJsjuNCKRq](https://discord.gg/pJsjuNCKRq)
 
-![](/screenshots/dev_setup_ios_npm_generate.png)
-
-</details>
-<br>
-
-Copy web app into native android/ios folders:
-
-```shell
-npx cap sync
-```
-
-<details>
-<summary>Expand for screenshot</summary>
-
-![](/screenshots/dev_setup_ios_cap_sync.png)
-
-</details>
-<br>
-
-Open Xcode:
-
-```shell
-npx cap open ios
-```
-
-<details>
-<summary>Expand for screenshot</summary>
-
-![](/screenshots/dev_setup_ios_cap_open.png)
-
-</details>
-<br>
-
-Start coding!
-
-After making changes to the JS layer you need to rebuild the nuxt pages and sync them to the native shells:
-
-```shell
-npm run sync
-```
+Licensed under the same terms as upstream — see [LICENSE](LICENSE).
