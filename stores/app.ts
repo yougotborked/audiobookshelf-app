@@ -4,6 +4,17 @@ import { AbsAudioPlayer, AbsDownloader, AbsLogger } from '~/plugins/capacitor'
 
 // Long enough for a working link to answer, short enough that a dead one is obvious fast
 const SERVER_PROBE_TIMEOUT_MS = 4000
+
+/**
+ * How many episodes one auto-download pass may queue.
+ *
+ * Without a cap the pass walks every unfinished episode in every podcast library and queues the
+ * lot. On a device with nothing downloaded yet - a new phone, or the setting just switched on -
+ * that is the entire backlog at once: hundreds of plugin calls, database writes and foreground
+ * service starts in a tight loop. The timer comes back every 30 minutes, so a cap still works
+ * through the backlog; it just stops trying to do it in one go.
+ */
+const AUTO_DOWNLOAD_MAX_PER_PASS = 25
 import { PlayMethod } from '~/constants'
 import type { PlaybackSession, DeviceData, QueueItem } from '~/types'
 import { getAutoPlaylistPodcastRule, refreshAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
@@ -277,7 +288,8 @@ export const useAppStore = defineStore('app', {
 
       const librariesStore = useLibrariesStore()
       const nativeHttp = useNativeHttp()
-      for (const lib of librariesStore.libraries) {
+      let queued = 0
+      libraries: for (const lib of librariesStore.libraries) {
         if ((lib as Record<string, unknown>).mediaType !== 'podcast') continue
         let page = 0
         while (true) {
@@ -301,6 +313,11 @@ export const useAppStore = defineStore('app', {
             if (downloadedMap[`${liId}_${serverId}`]) continue
             AbsDownloader.downloadLibraryItem({ libraryItemId: liId, episodeId: serverId })
             downloadedMap[`${liId}_${serverId}`] = true
+
+            if (++queued >= AUTO_DOWNLOAD_MAX_PER_PASS) {
+              AbsLogger.info({ tag: 'Store', message: `[Store] autoDownloadCheck queued ${queued} episodes, stopping this pass` })
+              break libraries
+            }
           }
           if (episodes.length < 200) break
           page++
