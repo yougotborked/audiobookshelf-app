@@ -14,16 +14,16 @@
       </div>
       <div
         v-show="showCastBtn"
-        class="top-6 right-16 absolute cursor-pointer pointer-events-auto"
+        class="top-6 right-20 absolute cursor-pointer pointer-events-auto"
         :class="{ 'opacity-60': !castAvailable && !isCasting }"
       >
         <span
-          class="material-symbols text-3xl"
+          class="material-symbols text-3xl tap-area"
           @click="castClick"
         >{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
       <div class="top-6 right-4 absolute cursor-pointer pointer-events-auto">
-        <span class="material-symbols text-3xl" @click="showMoreMenuDialog = true">more_vert</span>
+        <span class="material-symbols text-3xl tap-area" @click="showMoreMenuDialog = true">more_vert</span>
       </div>
       <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-white/75 pointer-events-none" style="font-size: 10px">{{ isDirectPlayMethod ? getString('LabelPlaybackDirect') : isLocalPlayMethod ? getString('LabelPlaybackLocal') : getString('LabelPlaybackTranscode') }}</p>
     </div>
@@ -65,27 +65,27 @@
          :class="{ 'bg-md-surface-4': !showFullscreen }"
          :style="showFullscreen ? { background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 60%, transparent 100%)' } : {}"
          @click="clickContainer">
-      <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-6" style="max-width: 414px">
+      <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-5" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
-          <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
+          <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer tap-area" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
           <!-- hidden for podcasts but still using this as a placeholder -->
           <span v-else class="material-symbols text-3xl text-transparent">bookmark</span>
 
-          <span class="font-mono text-md-on-surface-variant cursor-pointer" style="font-size: 1.35rem" @click="$emit('selectPlaybackSpeed')">{{ currentPlaybackRate }}x</span>
-          <svg v-if="!sleepTimerRunning" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-md-on-surface-variant cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" @click.stop="$emit('showSleepTimer')">
+          <span class="font-mono text-md-on-surface-variant cursor-pointer tap-area" style="font-size: 1.35rem" @click="$emit('selectPlaybackSpeed')">{{ currentPlaybackRate }}x</span>
+          <svg v-if="!sleepTimerRunning" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-md-on-surface-variant cursor-pointer tap-area" fill="none" viewBox="0 0 24 24" stroke="currentColor" @click.stop="$emit('showSleepTimer')">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
-          <div v-else class="h-7 w-7 flex items-center justify-around cursor-pointer" @click.stop="$emit('showSleepTimer')">
+          <div v-else class="h-7 w-7 flex items-center justify-around cursor-pointer tap-area" @click.stop="$emit('showSleepTimer')">
             <p class="text-xl font-mono text-md-primary">{{ sleepTimeRemainingPretty }}</p>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-7">
             <span
-              class="material-symbols text-3xl text-md-on-surface cursor-pointer"
+              class="material-symbols text-3xl text-md-on-surface cursor-pointer tap-area"
               :class="playQueueAvailable ? 'opacity-75' : 'opacity-10'"
               @click.stop="clickQueueBtn"
             >playlist_play</span>
-            <span v-show="chapters.length > 0" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer" @click="clickChaptersBtn">format_list_bulleted</span>
+            <span v-show="chapters.length > 0" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer tap-area" @click="clickChaptersBtn">format_list_bulleted</span>
           </div>
         </div>
       </div>
@@ -95,8 +95,8 @@
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer tap-area" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpChapterStart">first_page</span>
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center tap-area" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpBackwards">
             <span class="material-symbols text-3xl leading-none">replay</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpBackwardsLabel }}</span>
           </div>
@@ -106,11 +106,11 @@
             <span v-if="!showLoadingState" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
             <widgets-spinner-icon v-else class="h-8 w-8" />
           </div>
-          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
+          <div v-show="!playerSettings.lockUi" class="jump-icon text-md-on-surface cursor-pointer flex flex-col items-center tap-area" :class="showLoadingState ? 'opacity-10' : 'opacity-75'" @click.stop="jumpForward">
             <span class="material-symbols text-3xl leading-none">forward_media</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpForwardLabel }}</span>
           </div>
-          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer" :class="(nextChapter || nextQueueItem) && !showLoadingState ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
+          <span v-show="showFullscreen && !playerSettings.lockUi" class="material-symbols next-icon text-md-on-surface cursor-pointer tap-area" :class="(nextChapter || nextQueueItem) && !showLoadingState ? 'opacity-75' : 'opacity-10'" @click.stop="jumpNextChapterOrQueue">last_page</span>
         </div>
       </div>
 
@@ -124,7 +124,7 @@
           <div ref="readyTrack" class="h-full bg-track-buffered absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="bufferedTrack" class="h-full bg-track absolute top-0 left-0 rounded-full pointer-events-none" />
           <div ref="playedTrack" class="h-full bg-track-cursor absolute top-0 left-0 rounded-full pointer-events-none" />
-          <div ref="trackCursor" class="h-7 w-7 rounded-full absolute pointer-events-auto flex items-center justify-center" :style="{ top: '-11px' }" :class="{ 'opacity-0': playerSettings.lockUi || !showFullscreen }" @touchstart="touchstartCursor">
+          <div ref="trackCursor" class="h-7 w-7 rounded-full absolute pointer-events-auto flex items-center justify-center seek-handle" :style="{ top: '-11px' }" :class="{ 'opacity-0': playerSettings.lockUi || !showFullscreen }" @touchstart="touchstartCursor">
             <div class="bg-track-cursor rounded-full w-3.5 h-3.5 pointer-events-none" />
           </div>
         </div>
@@ -1365,6 +1365,67 @@ defineExpose({
   box-shadow: none;
 }
 
+/* Small glyph controls are 28-32px, well under the 48px minimum touch target. This grows the
+   tappable box around the glyph without changing its size or the layout: the pseudo-element is
+   part of the control's own box, so taps on it count as taps on the control. */
+.tap-area {
+  position: relative;
+}
+.tap-area::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+}
+/* The seek handle keeps its 14px dot and 28px box for layout, but grabs from a 48px area */
+.fullscreen #playerTrack .seek-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+}
+/* The transport row is a different problem: its controls are spread with justify-between, so a
+   fixed-width box would overlap its neighbour - worse than a small target, because the tap
+   becomes ambiguous. Instead each control takes an equal share of the row, so the hit areas
+   tile it exactly: no overlap, no dead space, every tap lands on the nearest control. The
+   pseudo-element is suppressed here since the element's own box is now big enough. */
+#playerControls .tap-area::after {
+  display: none;
+}
+#playerControls .tap-area {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+/* Equal shares only in fullscreen. The mini player's control strip is 128px wide, so sharing it
+   between three controls shrinks each to ~13px - narrower than leaving them at natural width. */
+.fullscreen #playerControls .tap-area {
+  flex: 1 1 0;
+  min-width: 0;
+}
+#playerControls .play-btn {
+  flex: 0 0 auto;
+}
+
+/* Landscape has ~390px of height to work with, so targets there are the 44px iOS minimum */
+@media (orientation: landscape) {
+  .tap-area::after {
+    width: 44px;
+    height: 44px;
+  }
+  #playerControls .tap-area {
+    min-height: 44px;
+  }
+}
+
 #playerTrack {
   transition: all 0.15s cubic-bezier(0.39, 0.575, 0.565, 1);
   transition-property: margin;
@@ -1475,6 +1536,10 @@ defineExpose({
   min-height: 40px;
   margin: 0px 7px;
 }
+/* Keeps the 48px jump areas clear of the play button's edge */
+.fullscreen #playerControls .play-btn {
+  margin: 0px 14px;
+}
 #playerControls .play-btn .material-symbols {
   transition: all 0.15s cubic-bezier(0.39, 0.575, 0.565, 1);
   transition-property: font-size;
@@ -1496,9 +1561,20 @@ defineExpose({
   width: 100%;
   padding-left: 24px;
   padding-right: 24px;
-  bottom: 78px;
+  /* Clears the toolbar row above the seek track; see the bottom-row spacing note below */
+  bottom: 112px;
   left: 0;
 }
+/* Bottom-row spacing, measured from the bottom of #playerContent upwards:
+     seek bar      22..32px   (drag handle 28px tall, so it reaches 4..32px)
+     toolbar       44..92px   (48px hit areas, clearing the handle by 12px)
+     transport    112..177px  (65px play button, clearing the toolbar's hit area by 12px)
+   Before this the toolbar's hit area ended exactly where the seek bar began, which is why the
+   speed button was hard to hit without grabbing the seek handle instead. */
+.fullscreen #playerContent > div.absolute.bottom-4 {
+  bottom: 44px;
+}
+
 .fullscreen #playerControls .jump-icon {
   font-size: 2.4rem;
 }
@@ -1542,16 +1618,17 @@ defineExpose({
     width: 44%;
     padding-left: 0;
     padding-right: 0;
-    bottom: 82px !important;
+    bottom: 114px !important;
   }
 
-  /* Track bar to right column, above toolbar */
+  /* Track bar to right column, above toolbar. Raised so the 28px drag handle clears the
+     toolbar's hit area below it - at the old 50px they overlapped. */
   .fullscreen #playerTrack {
     left: 52%;
     width: 44%;
     padding-left: 0;
     padding-right: 0;
-    bottom: 50px !important;
+    bottom: 84px !important;
   }
 
   /* In landscape, the playerContent bar stays full-width but transparent
@@ -1561,11 +1638,11 @@ defineExpose({
     background-color: transparent !important;
   }
 
-  /* Total track bar to right column */
+  /* Total track bar to right column, above the raised transport row */
   .fullscreen .total-track {
     left: 52%;
     right: 4%;
-    bottom: 125px;
+    bottom: 172px;
     padding-left: 0;
     padding-right: 0;
   }
@@ -1577,7 +1654,7 @@ defineExpose({
 
   /* Fullscreen bottom toolbar (bookmark/speed/sleep/queue/chapters):
      move to right column, above the seek track */
-  .fullscreen #playerContent .absolute.bottom-4 {
+  .fullscreen #playerContent > div.absolute.bottom-4 {
     left: 52%;
     width: 44%;
     bottom: 8px;
