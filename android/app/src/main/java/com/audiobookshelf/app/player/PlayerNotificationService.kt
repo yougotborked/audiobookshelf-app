@@ -457,6 +457,18 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
           playWhenReady: Boolean,
           playbackRate: Float?
   ) {
+    // Bail before anything is published or mutated. This check used to sit near the end, after the
+    // new title had already gone out to the media session and the webview - so a session with no
+    // playable tracks left every media controller (Android Auto, the car over Bluetooth, the lock
+    // screen) showing an item that never started, while the player carried on with the previous
+    // one. Nothing to play means leave the current session, and what it is displaying, alone.
+    val mediaItems = playbackSession.getMediaItems(ctx)
+    if (mediaItems.isEmpty()) {
+      AbsLogger.error("PlayerNotificationService", "preparePlayer: No playable tracks for ${playbackSession.mediaItemId} (\"${playbackSession.displayTitle}\") - keeping the current session")
+      clientEventEmitter?.onPlaybackFailed("This item has no playable audio tracks")
+      return
+    }
+
     // Playback must run in a *started* service. MainActivity only binds (BIND_AUTO_CREATE), and a
     // bound-only service is destroyed as soon as its last client goes away - so swiping the app
     // out of the recents list would kill playback before onTaskRemoved could keep it alive.
@@ -485,7 +497,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     // Publish straight away so a notification posted while switching players has a title and
     // cover uri to draw; the bitmap is filled in below once it resolves
     mediaSession.setMetadata(playbackSession.getMediaMetadataCompat(ctx))
-    val mediaItems = playbackSession.getMediaItems(ctx)
     val playbackRateToUse = playbackRate ?: initialPlaybackRate ?: 1f
     initialPlaybackRate = playbackRate
 
@@ -527,11 +538,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     // Update widget
     DeviceManager.widgetUpdater?.onPlayerChanged(this)
 
-    if (mediaItems.isEmpty()) {
-      Log.e(tag, "Invalid playback session no media items to play")
-      currentPlaybackSession = null
-      return
-    }
 
     if (mPlayer == currentPlayer) {
       val mediaSource: MediaSource
