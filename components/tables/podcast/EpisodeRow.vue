@@ -141,7 +141,7 @@ const itemProgress = computed(() => {
   return localUpdate > serverUpdate ? localProg : serverProg
 })
 const itemProgressPercent = computed(() => (itemProgress.value as Record<string, unknown>)?.progress as number || 0)
-const userIsFinished = computed(() => !!(itemProgress.value as Record<string, unknown>)?.isFinished)
+const userIsFinished = computed(() => isProgressFinished(itemProgress.value as MaybeProgress))
 const timeRemaining = computed(() => {
   if (streamIsPlaying.value) return 'Playing'
   if (!itemProgressPercent.value) return utils.elapsedPretty(props.episode.duration as number)

@@ -114,7 +114,7 @@ const userItemProgress = computed(() =>
 const progressPercent = computed(() => Math.max(Math.min(1, (userItemProgress.value as Record<string, unknown>)?.progress as number || 0), 0))
 const userIsFinished = computed(() => {
   if ((userItemProgress.value as Record<string, unknown>)?.isFinished) return true
-  return progressPercent.value >= 0.97
+  return progressPercent.value >= FINISHED_PROGRESS_THRESHOLD
 })
 
 function showMoreMenu() {

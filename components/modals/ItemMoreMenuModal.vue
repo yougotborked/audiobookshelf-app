@@ -144,7 +144,7 @@ const userItemProgress = computed(() => {
 
 const userIsFinished = computed(() => {
   if ((userItemProgress.value as Record<string, unknown>)?.isFinished) return true
-  return progressPercent.value >= 0.97
+  return progressPercent.value >= FINISHED_PROGRESS_THRESHOLD
 })
 
 const useEBookProgress = computed(() => {
