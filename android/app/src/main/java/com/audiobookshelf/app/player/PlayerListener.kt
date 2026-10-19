@@ -42,10 +42,11 @@ class PlayerListener(var playerNotificationService:PlayerNotificationService) : 
 
     val player = playerNotificationService.currentPlayer
 
-    // Goal of these 2 if statements and the lazyIsPlaying is to ignore this event when it is triggered by a seek
-    //  When a seek occurs the player is paused and buffering, then plays again right afterwards.
-    if (!isPlaying && player.playbackState == Player.STATE_BUFFERING) {
-      Log.d(tag, "onIsPlayingChanged: Pause event when buffering is ignored")
+    // A seek stops playback for a moment while the player rebuffers, and that is not a pause.
+    // See shouldIgnorePauseWhileBuffering: playWhenReady is what separates a seek from a real
+    // pause, and without it this dropped genuine pauses that happened to land while buffering.
+    if (shouldIgnorePauseWhileBuffering(isPlaying, player.playbackState, player.playWhenReady)) {
+      Log.d(tag, "onIsPlayingChanged: Pause event while buffering with playWhenReady is ignored")
       return
     }
     // Update widget
