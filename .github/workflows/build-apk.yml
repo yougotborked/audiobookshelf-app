@@ -20,6 +20,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Fast feedback on the Nuxt side. Runs in parallel with the Android build because none of
+  # these checks need Java, the Android SDK, or a Capacitor sync.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      - name: Use Node.js 24.x with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Compares against scripts/typecheck-baseline.json: fails on a NEW type error, not on
+      # the type errors the Nuxt 2 -> 3 migration has not got to yet.
+      - name: Typecheck (vs. baseline)
+        run: npm run typecheck
+
+      - name: Check i18n files are alphabetized
+        run: npm run check:i18n
+
+      - name: Unit tests
+        run: npm run test:unit
+
   main:
     runs-on: ubuntu-latest
     defaults:
@@ -70,11 +106,24 @@ jobs:
           mkdir -p "$HOME/.android"
           cp android/debug.keystore "$HOME/.android/debug.keystore"
 
-      # Run both tasks in one Gradle invocation so task outputs/configuration state can be reused
+      # Run the tasks in one Gradle invocation so task outputs/configuration state can be reused
       # within the same build execution instead of crossing invocation boundaries.
-      - name: Run static analysis + build Android app (Debug)
+      # testDebugUnitTest comes before assembleDebug so a failing test fails the job rather
+      # than producing an APK nobody should install.
+      - name: Run static analysis + unit tests + build Android app (Debug)
         working-directory: android
-        run: ./gradlew --no-daemon --build-cache --configuration-cache staticAnalysis assembleDebug
+        run: ./gradlew --no-daemon --build-cache --configuration-cache staticAnalysis testDebugUnitTest assembleDebug
+
+      - name: Upload unit test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-test-report
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest/**
+            android/app/build/test-results/testDebugUnitTest/**
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Rename APK with timestamp + short SHA
         working-directory: android/app/build/outputs/apk/debug/

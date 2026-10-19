@@ -17,7 +17,10 @@ if [[ "${1:-}" == "--help" ]]; then
   cat <<'USAGE'
 Usage: scripts/local-ci.sh [--fresh]
 
-Runs the same steps as the Build APK GitHub Action, plus local linting.
+Runs the same steps as the Build APK GitHub Action (both the web and main jobs).
+
+For a quicker loop that skips the Nuxt build, the Capacitor sync and the APK, use
+scripts/verify.sh — see `scripts/verify.sh --list`.
 
 Options:
   --fresh   Run npm ci before executing the rest of the pipeline.
@@ -30,10 +33,13 @@ if [[ "${1:-}" == "--fresh" ]]; then
 fi
 
 run_step "Running ESLint" npm run lint
+run_step "Typechecking against the baseline" npm run typecheck
+run_step "Checking i18n files are alphabetized" npm run check:i18n
+run_step "Running unit tests" npm run test:unit
 run_step "Generating static Nuxt bundle" npm run generate
 run_step "Synchronising Capacitor project" npx cap sync
 run_step "Installing Android SDK" scripts/install-android-sdk.sh
-run_step "Running Android static analysis" codex_run_with_java21 ./android/gradlew staticAnalysis -p android --no-daemon
+run_step "Running Android static analysis + unit tests" codex_run_with_java21 ./android/gradlew staticAnalysis testDebugUnitTest -p android --no-daemon
 
 if [[ -f "android/debug.keystore" ]]; then
   printf '\n▶ Ensuring Android debug keystore is available\n'

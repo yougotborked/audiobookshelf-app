@@ -1,0 +1,50 @@
+// Dependency-resolution fallback for sandboxed/agent environments.
+//
+// Maven Central (repo.maven.apache.org / repo1.maven.org) intermittently answers 429
+// behind shared outbound proxies. Gradle treats a 429 as a hard repository failure and
+// disables the repository for the rest of the build, so a single throttled request fails
+// the whole run even though every artifact is available elsewhere.
+//
+// Google mirrors Maven Central at maven-central.storage-download.googleapis.com. Putting
+// that mirror ahead of mavenCentral() makes resolution survive the throttling.
+//
+// This file is applied explicitly (scripts/verify-android.sh, or
+// `./gradlew --init-script ../scripts/gradle-mirror.init.gradle ...`). It is NOT wired into
+// the build, so CI keeps resolving straight from the canonical repositories.
+
+def mirrorUrl = 'https://maven-central.storage-download.googleapis.com/maven2'
+
+settingsEvaluated { settings ->
+  settings.pluginManagement.repositories {
+    maven {
+      name = 'MavenCentralMirror'
+      url = mirrorUrl
+    }
+  }
+
+  settings.dependencyResolutionManagement {
+    // PREFER_SETTINGS makes this list win over the per-project `allprojects { repositories }`
+    // in android/build.gradle, which would otherwise leave the mirror last in the lookup
+    // order — after the mavenCentral() entry that throttles.
+    repositoriesMode.set(org.gradle.api.initialization.resolve.RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+      maven {
+        name = 'MavenCentralMirror'
+        url = mirrorUrl
+      }
+      google()
+      mavenCentral()
+    }
+  }
+}
+
+// buildscript{} classpath resolution does not go through dependencyResolutionManagement.
+// beforeProject runs before each project's script body, so the mirror lands first.
+beforeProject { project ->
+  project.buildscript.repositories {
+    maven {
+      name = 'MavenCentralMirror'
+      url = mirrorUrl
+    }
+  }
+}
