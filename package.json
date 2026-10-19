@@ -15,6 +15,13 @@
     "lint:fix": "npm run lint -- --fix",
     "sync": "nuxt generate && npx cap sync",
     "ci:android": "bash scripts/local-ci.sh",
+    "verify": "bash scripts/verify.sh",
+    "typecheck": "node scripts/typecheck.mjs",
+    "typecheck:update": "node scripts/typecheck.mjs --update",
+    "check:i18n": "node scripts/check-i18n-sorted.mjs",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:android": "bash scripts/test-android.sh",
     "icons-android": "cordova-res android --skip-config --copy",
     "ionic:build": "npm run build",
     "ionic:serve": "npm run dev",
@@ -61,6 +68,9 @@
     "autoprefixer": "^10.4.17",
     "eslint": "^8.57.1",
     "eslint-plugin-nuxt": "^4.0.0",
-    "postcss": "^8.4.33"
+    "postcss": "^8.4.33",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.4",
+    "vue-tsc": "2.2.10"
   }
 }
