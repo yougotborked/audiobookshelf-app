@@ -302,7 +302,7 @@ export const useAppStore = defineStore('app', {
             const rule = getAutoPlaylistPodcastRule(podcastRules, liId)
             if (rule.mode === 'exclude') continue
             const prog = progressMap[serverId] as Record<string, unknown>
-            if (prog && prog.isFinished) continue
+            if (isProgressFinished(prog as MaybeProgress)) continue
 
             // recent-episodes comes back newest first, so counting unfinished episodes as we go
             // gives the same set the auto playlist shows for a `latest` rule. Counted before the

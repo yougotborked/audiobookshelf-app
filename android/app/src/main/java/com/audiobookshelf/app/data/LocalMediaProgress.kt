@@ -55,12 +55,22 @@ class LocalMediaProgress(
     finishedAt = if (isFinished) lastUpdate else null
   }
 
+  companion object {
+    /**
+     * Progress at or past this counts as finished. Kept in step with the web layer's
+     * FINISHED_PROGRESS_THRESHOLD (composables/useMediaProgress.ts) so what is stored here and
+     * what the UI shows agree - they used to differ, and an episode seconds from the end could
+     * read as finished on one screen and unfinished on another.
+     */
+    const val FINISHED_PROGRESS_THRESHOLD = 0.99
+  }
+
   @JsonIgnore
   fun updateFromPlaybackSession(playbackSession:PlaybackSession) {
     currentTime = playbackSession.currentTime
     progress = playbackSession.progress
     lastUpdate = playbackSession.updatedAt
-    isFinished = playbackSession.progress >= 0.99
+    isFinished = playbackSession.progress >= FINISHED_PROGRESS_THRESHOLD
     finishedAt = if (isFinished) lastUpdate else null
   }
 

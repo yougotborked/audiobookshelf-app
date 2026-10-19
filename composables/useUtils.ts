@@ -111,6 +111,10 @@ export function useUtils() {
   }
 
   const secondsToTimestamp = (seconds: number): string => {
+    // A negative or NaN duration is meaningless, and the arithmetic below turns it into a
+    // nonsense timestamp rather than something obviously wrong: -0.001 comes out as "-1:59:59",
+    // which is what the player showed for elapsed time when its position briefly went negative.
+    if (!(seconds > 0)) seconds = 0
     let _seconds = seconds
     let _minutes = Math.floor(seconds / 60)
     _seconds -= _minutes * 60
@@ -124,6 +128,7 @@ export function useUtils() {
   }
 
   const secondsToTimestampFull = (seconds: number): string => {
+    if (!(seconds > 0)) seconds = 0
     let _seconds = Math.round(seconds)
     let _minutes = Math.floor(seconds / 60)
     _seconds -= _minutes * 60

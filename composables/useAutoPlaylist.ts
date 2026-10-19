@@ -404,7 +404,7 @@ export async function buildUnfinishedAutoPlaylist(networkConnected: boolean): Pr
       const serverId = (episode?.serverEpisodeId || episode?.id) as string
       if (!serverId) return
       const progress = progressMap.get(serverId)
-      if ((progress as Record<string, unknown>)?.isFinished) return
+      if (isProgressFinished(progress as MaybeProgress)) return
       const key = `${libraryId}_${serverId}`
       if (seen.has(key)) return
       seen.add(key)
