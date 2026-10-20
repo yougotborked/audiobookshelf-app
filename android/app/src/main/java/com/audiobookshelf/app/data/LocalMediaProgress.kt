@@ -1,5 +1,6 @@
 package com.audiobookshelf.app.data
 
+import com.audiobookshelf.app.media.ProgressSyncRules
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import kotlin.math.roundToInt
@@ -83,7 +84,11 @@ class LocalMediaProgress(
 
   @JsonIgnore
   fun updateFromServerMediaProgress(serverMediaProgress:MediaProgress) {
-    isFinished = serverMediaProgress.isFinished
+    isFinished = ProgressSyncRules.resolveIsFinished(
+      serverIsFinished = serverMediaProgress.isFinished,
+      serverProgress = serverMediaProgress.progress,
+      localIsFinished = isFinished
+    )
     progress = serverMediaProgress.progress
     currentTime = serverMediaProgress.currentTime
     ebookProgress = serverMediaProgress.ebookProgress

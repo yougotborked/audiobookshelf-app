@@ -280,6 +280,15 @@ class MediaProgressSyncer(
     //   Sessions are removed once successfully synced with the server
     currentPlaybackSession?.let { DeviceManager.dbManager.savePlaybackSession(it) }
 
+    // Bind this sync to the session it was started for. The callbacks below run after the HTTP
+    // round trip, and by then the queue may have advanced: an episode that reaches its end syncs
+    // its final position while handlePlaybackEnded is already preparing the next item, so
+    // currentPlaybackSession is the next item or null. Re-reading it in the callback logged the
+    // wrong title ("Unset") and an empty session id, and removed the wrong row from the session
+    // db - which left the finished episode's session queued to be replayed later.
+    val syncingSessionId = currentSessionId
+    val syncingTitle = currentDisplayTitle
+
     if (currentIsLocal) {
       val localSession = currentPlaybackSession
       if (localSession == null) {
@@ -309,18 +318,24 @@ class MediaProgressSyncer(
                         isConnectedToSameServer
         ) {
           apiHandler.sendLocalProgressSync(it) { syncSuccess, errorMsg ->
+            val stillCurrent = currentSessionId == it.id
+
             if (syncSuccess) {
-              failedSyncs = 0
-              playerNotificationService.alertSyncSuccess()
-              DeviceManager.dbManager.removePlaybackSession(it.id) // Remove session from db
-              AbsLogger.info("MediaProgressSyncer", "sync: Successfully synced local progress (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${it.id})")
-            } else {
-              failedSyncs++
-              if (failedSyncs == 2) {
-                playerNotificationService.alertSyncFailing() // Show alert in client
+              if (stillCurrent) {
                 failedSyncs = 0
+                playerNotificationService.alertSyncSuccess()
               }
-              AbsLogger.error("MediaProgressSyncer", "sync: Local progress sync failed (count: $failedSyncs) (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${it.id}) (${DeviceManager.serverConnectionConfigName})")
+              DeviceManager.dbManager.removePlaybackSession(it.id) // Remove session from db
+              AbsLogger.info("MediaProgressSyncer", "sync: Successfully synced local progress (title: \"$syncingTitle\") (currentTime: $currentTime) (session id: ${it.id})")
+            } else {
+              if (stillCurrent) {
+                failedSyncs++
+                if (failedSyncs == 2) {
+                  playerNotificationService.alertSyncFailing() // Show alert in client
+                  failedSyncs = 0
+                }
+              }
+              AbsLogger.error("MediaProgressSyncer", "sync: Local progress sync failed (count: $failedSyncs) (title: \"$syncingTitle\") (currentTime: $currentTime) (session id: ${it.id}) (${DeviceManager.serverConnectionConfigName})")
             }
 
             cb(SyncResult(true, syncSuccess, errorMsg))
@@ -333,21 +348,31 @@ class MediaProgressSyncer(
     } else if (hasNetworkConnection && shouldSyncServer) {
       AbsLogger.info("MediaProgressSyncer", "sync: Sending progress sync to server (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${currentSessionId}) (${DeviceManager.serverConnectionConfigName})")
 
-      apiHandler.sendProgressSync(currentSessionId, syncData) { syncSuccess, errorMsg ->
-        if (syncSuccess) {
-          AbsLogger.info("MediaProgressSyncer", "sync: Successfully synced progress (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: ${currentSessionId}) (${DeviceManager.serverConnectionConfigName})")
+      apiHandler.sendProgressSync(syncingSessionId, syncData) { syncSuccess, errorMsg ->
+        // Whether the syncer is still on this session. The counters, the sync alerts and
+        // lastSyncTime describe what is playing now, so they must not be rewritten on behalf of a
+        // session the player has already left.
+        val stillCurrent = currentSessionId == syncingSessionId
 
-          failedSyncs = 0
-          playerNotificationService.alertSyncSuccess()
-          lastSyncTime = System.currentTimeMillis()
-          DeviceManager.dbManager.removePlaybackSession(currentSessionId) // Remove session from db
-        } else {
-          failedSyncs++
-          if (failedSyncs == 2) {
-            playerNotificationService.alertSyncFailing() // Show alert in client
+        if (syncSuccess) {
+          AbsLogger.info("MediaProgressSyncer", "sync: Successfully synced progress (title: \"$syncingTitle\") (currentTime: $currentTime) (session id: $syncingSessionId) (${DeviceManager.serverConnectionConfigName})")
+
+          if (stillCurrent) {
             failedSyncs = 0
+            playerNotificationService.alertSyncSuccess()
+            lastSyncTime = System.currentTimeMillis()
           }
-          AbsLogger.error("MediaProgressSyncer", "sync: Progress sync failed (count: $failedSyncs) (title: \"$currentDisplayTitle\") (currentTime: $currentTime) (session id: $currentSessionId) (${DeviceManager.serverConnectionConfigName})")
+          // Always the session that was just synced, never whatever is current now
+          DeviceManager.dbManager.removePlaybackSession(syncingSessionId)
+        } else {
+          if (stillCurrent) {
+            failedSyncs++
+            if (failedSyncs == 2) {
+              playerNotificationService.alertSyncFailing() // Show alert in client
+              failedSyncs = 0
+            }
+          }
+          AbsLogger.error("MediaProgressSyncer", "sync: Progress sync failed (count: $failedSyncs) (title: \"$syncingTitle\") (currentTime: $currentTime) (session id: $syncingSessionId) (${DeviceManager.serverConnectionConfigName})")
         }
         cb(SyncResult(true, syncSuccess, errorMsg))
       }
