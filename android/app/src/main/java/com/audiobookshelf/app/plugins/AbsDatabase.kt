@@ -6,6 +6,7 @@ import android.util.Log
 import com.audiobookshelf.app.MainActivity
 import com.audiobookshelf.app.data.*
 import com.audiobookshelf.app.device.DeviceManager
+import com.audiobookshelf.app.media.ProgressSyncRules
 import com.audiobookshelf.app.media.MediaEventManager
 import com.audiobookshelf.app.server.ApiHandler
 import com.audiobookshelf.app.managers.SecureStorage
@@ -292,7 +293,12 @@ class AbsDatabase : Plugin() {
     }
 
     apiHandler.syncLocalMediaProgressForUser {
-      val savedSessions = DeviceManager.dbManager.getPlaybackSessions().filter { it.serverConnectionConfigId == DeviceManager.serverConnectionConfigId }
+      // The server applies a batch of sessions in array order, so the last one for an item sets
+      // its progress. Database order is arbitrary, which let an older session for an episode
+      // overwrite a newer one and move its progress backwards.
+      val savedSessions = ProgressSyncRules.orderSessionsForReplay(
+        DeviceManager.dbManager.getPlaybackSessions().filter { it.serverConnectionConfigId == DeviceManager.serverConnectionConfigId }
+      ) { it.updatedAt }
 
       if (savedSessions.isNotEmpty()) {
         apiHandler.sendSyncLocalSessions(savedSessions) { success, errorMsg ->
