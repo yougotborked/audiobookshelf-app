@@ -244,6 +244,20 @@ export const useUserStore = defineStore('user', {
       this.user.mediaProgress = (this.user.mediaProgress as Record<string, unknown>[]).filter((mp) => mp.id != id)
     },
 
+    /**
+     * Replaces the user's media progress with the server's current set.
+     *
+     * Used on resume: while the app is backgrounded the device reports progress straight to the
+     * server, and neither the native progress events nor the socket deliver that to the webview,
+     * so what is held here can be an hour behind what the server knows. The server is the
+     * authority for server progress, so its set replaces this one wholesale — the same thing
+     * attemptConnection does with the user object at startup.
+     */
+    setUserMediaProgress(mediaProgress: Record<string, unknown>[]) {
+      if (!this.user || !Array.isArray(mediaProgress)) return
+      this.user.mediaProgress = mediaProgress
+    },
+
     updateUserMediaProgress(data: Record<string, unknown>) {
       if (!data || !this.user) return
       const progress = this.user.mediaProgress as Record<string, unknown>[]
