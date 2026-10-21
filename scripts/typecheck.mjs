@@ -51,9 +51,11 @@ function assertUsableVueTsc() {
   return version
 }
 
+// Always regenerate, never just when .nuxt is missing. Nuxt writes the auto-import declarations
+// for composables/, stores/ and constants/ into .nuxt, so a stale copy reports a brand new
+// composable as "Cannot find name" — a failure in the checker, not in the code.
 function ensureNuxtTypes() {
-  if (existsSync(resolve(ROOT, '.nuxt/tsconfig.json'))) return
-  console.log('• .nuxt types missing — running nuxi prepare')
+  console.log('• running nuxi prepare to refresh auto-import types')
   execFileSync('npx', ['nuxi', 'prepare'], { cwd: ROOT, stdio: 'inherit' })
 }
 

@@ -291,11 +291,38 @@ async function userMediaProgressUpdated(payload: Record<string, unknown>) {
   }
 }
 
+/**
+ * Re-reads the user's media progress from the server after time out of focus.
+ *
+ * The device keeps playing and reporting progress while backgrounded, but the webview hears
+ * none of it, so this is the only thing that brings its copy back in step before Catch up and
+ * the auto playlist are read again.
+ */
+async function refreshUserMediaProgress() {
+  if (!userStore.user) return
+
+  const me = (await useNativeHttp()
+    .get('/api/me', { connectTimeout: 10000 })
+    .catch((error: unknown) => {
+      console.error('[default] resume: failed to refresh user media progress', error)
+      return null
+    })) as Record<string, unknown> | null
+
+  const mediaProgress = me?.mediaProgress as Record<string, unknown>[] | undefined
+  if (!Array.isArray(mediaProgress)) return
+
+  userStore.setUserMediaProgress(mediaProgress)
+  await AbsLogger.info({
+    tag: 'default',
+    message: `resume: refreshed user media progress (${mediaProgress.length} entries)`
+  })
+}
+
 async function visibilityChanged() {
   if (document.visibilityState === 'visible') {
     const elapsed = Date.now() - timeLostFocus.value
     console.log(`✅ [default] device visibility: has focus (${elapsed}ms out of focus)`)
-    if (elapsed > 30000) {
+    if (isResumeStale(elapsed)) {
       console.log('✅ [default] reloading local media progress')
       await globalsStore.loadLocalMediaProgress()
     }
@@ -303,10 +330,18 @@ async function visibilityChanged() {
 
     // Coverage can come and go while the screen is off. Settle the question before the first
     // screen the user opens spends a ten second timeout discovering it for them.
-    if (elapsed > 30000 && !appStore.offlineModeEnabled && appStore.networkConnected && userStore.serverConnectionConfig) {
+    if (
+      shouldCheckServerOnResume({
+        elapsedMs: elapsed,
+        offlineModeEnabled: appStore.offlineModeEnabled,
+        networkConnected: appStore.networkConnected,
+        hasServerConnectionConfig: !!userStore.serverConnectionConfig
+      })
+    ) {
       const reachable = await appStore.probeServerReachable()
       console.log(`✅ [default] resume probe: server ${reachable ? 'reachable' : 'unreachable'}`)
       if (!reachable) scheduleConnectionRetry()
+      else await refreshUserMediaProgress()
     }
   } else {
     console.log('⛔️ [default] device visibility: does NOT have focus')
