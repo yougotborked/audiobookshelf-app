@@ -14,7 +14,6 @@ import android.os.IBinder
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
-import androidx.activity.OnBackPressedCallback
 import androidx.core.app.ActivityCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -62,20 +61,16 @@ class MainActivity : BridgeActivity() {
     // 4.2 — Edge-to-edge: allow content to draw behind status/nav bars
     WindowCompat.setDecorFitsSystemWindows(window, false)
 
-    // 4.1 — Replace deprecated onBackPressed() with OnBackPressedDispatcher API
-    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-      override fun handleOnBackPressed() {
-        // Delegate back navigation to the WebView if it can go back,
-        // otherwise finish the activity.
-        val webView: WebView? = findViewById(R.id.webview)
-        if (webView != null && webView.canGoBack()) {
-          webView.goBack()
-        } else {
-          isEnabled = false
-          onBackPressedDispatcher.onBackPressed()
-        }
-      }
-    })
+    // Back navigation is Capacitor's. AppPlugin registers its own OnBackPressedCallback during
+    // super.onCreate above, and the dispatcher runs callbacks last-registered-first, so anything
+    // added here would be invoked instead of it and the webview would never receive the
+    // backButton event. That is what used to happen: a callback here called webView.goBack()
+    // directly, which bypassed the app's own handling - closing a modal, closing the reader,
+    // minimizing the fullscreen player, confirming an exit - and popped the webview's history
+    // instead, which can navigate off the app's first entry and reload the whole thing.
+    //
+    // With nothing registered here, AppPlugin notifies the webview, and falls back to
+    // goBack() itself only when the webview has no listener (before its JS has loaded).
 
     // Update the margins to handle edge-to-edge enforced in SDK 35
     // See: https://developer.android.com/develop/ui/views/layout/edge-to-edge
