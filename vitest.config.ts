@@ -28,8 +28,12 @@ export default defineConfig({
       '@capacitor/core': capacitorStub,
       '@capacitor/status-bar': capacitorStub,
       '@capacitor/clipboard': capacitorStub,
+      '@capacitor/dialog': capacitorStub,
+      // Both import prefixes are in use across the components.
       '~/plugins/capacitor': capacitorStub,
-      '~': fileURLToPath(new URL('./', import.meta.url))
+      '@/plugins/capacitor': capacitorStub,
+      '~': fileURLToPath(new URL('./', import.meta.url)),
+      '@': fileURLToPath(new URL('./', import.meta.url))
     }
   }
 })

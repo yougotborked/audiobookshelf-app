@@ -361,6 +361,22 @@ export const useAppStore = defineStore('app', {
       this.lastItemScrollData = data
     },
 
+    /**
+     * Records which player the native layer switched to.
+     *
+     * This is its own action because the native `onMediaPlayerChanged` event carries a plain
+     * string ("cast-player" / "exo-player"), not a session. It used to be handed to
+     * setPlaybackSession, which replaced currentPlaybackSession with that string: the player
+     * went blank, and `isCasting` evaluated `"cast-player".mediaPlayer === 'cast-player'` —
+     * undefined, so false — leaving the cast icon unfilled the whole time a cast was connected.
+     */
+    setMediaPlayer(mediaPlayer: string) {
+      this.isCasting = mediaPlayer === 'cast-player'
+      if (this.currentPlaybackSession) {
+        this.currentPlaybackSession.mediaPlayer = mediaPlayer
+      }
+    },
+
     setPlaybackSession(playbackSession: PlaybackSession | null) {
       this.currentPlaybackSession = playbackSession
       this.isCasting = playbackSession?.mediaPlayer === 'cast-player'
