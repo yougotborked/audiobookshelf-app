@@ -35,19 +35,25 @@ export default defineNuxtPlugin(async () => {
   App.addListener('backButton', async ({ canGoBack }) => {
     const globalsStore = useGlobalsStore()
     const appStore = useAppStore()
-    if (globalsStore.isModalOpen) { bus.emit('close-modal'); return }
-    if (appStore.showReader) { bus.emit('close-ebook'); return }
-    if (appStore.playerIsFullscreen) { bus.emit('minimize-player'); return }
-    if (!canGoBack) {
-      const strings = useStrings()
-      const { value } = await Dialog.confirm({
-        title: strings.HeaderConfirm || 'Confirm',
-        message: strings.MessageConfirmAppExit || 'Exit app?'
-      })
-      if (value) App.exitApp()
-    } else {
-      window.history.back()
-    }
+
+    const action = resolveBackAction({
+      isModalOpen: globalsStore.isModalOpen,
+      showReader: appStore.showReader,
+      playerIsFullscreen: appStore.playerIsFullscreen,
+      canGoBack
+    })
+
+    if (action === 'close-modal') return bus.emit('close-modal')
+    if (action === 'close-ebook') return bus.emit('close-ebook')
+    if (action === 'minimize-player') return bus.emit('minimize-player')
+    if (action === 'history-back') return window.history.back()
+
+    const strings = useStrings()
+    const { value } = await Dialog.confirm({
+      title: strings.HeaderConfirm || 'Confirm',
+      message: strings.MessageConfirmAppExit || 'Exit app?'
+    })
+    if (value) App.exitApp()
   })
 
   // Deep links
