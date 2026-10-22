@@ -724,7 +724,8 @@ export default {
       this.globalsStore.updateLocalMediaProgress(localMediaProgress)
     },
     onMediaPlayerChanged(data) {
-      this.appStore.setPlaybackSession(data.value)
+      // data.value is the player name, not a session - see appStore.setMediaPlayer
+      this.appStore.setMediaPlayer(data.value)
     },
     onReady() {
       // The UI is reporting elsewhere we are ready

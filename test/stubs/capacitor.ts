@@ -29,4 +29,27 @@ export const AbsFileSystem = {
   checkFolderPermission: async () => ({ value: false })
 }
 
-export default { Capacitor, StatusBar, Style, Clipboard, AbsFileSystem }
+// The native plugin bridge (plugins/capacitor). Methods are inert: a test that needs one to do
+// something mocks it on the instance under test rather than teaching this stub behaviour.
+export const AbsAudioPlayer = {
+  addListener: async () => ({ remove: () => undefined }),
+  prepareLibraryItem: async () => undefined,
+  requestSession: async () => undefined,
+  seek: async () => undefined,
+  setPlaybackSpeed: async () => undefined
+}
+
+export const AbsLogger = {
+  info: async () => undefined,
+  error: async () => undefined
+}
+
+export const AbsDatabase = {}
+export const AbsDownloader = {}
+
+export const Dialog = {
+  confirm: async () => ({ value: false }),
+  alert: async () => undefined
+}
+
+export default { Capacitor, StatusBar, Style, Clipboard, AbsFileSystem, AbsAudioPlayer, AbsLogger }

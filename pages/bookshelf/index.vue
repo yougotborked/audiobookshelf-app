@@ -13,7 +13,7 @@
       <bookshelf-podcast-catch-up-feed :current-library-id="currentLibraryId" />
     </div>
     <div v-if="currentLibraryIsPodcast && shelves.length" class="w-full h-px bg-md-outline-variant/30 my-1" />
-    <div class="w-full" :class="{ 'py-6': altViewEnabled }">
+    <div class="w-full" :class="shelvesSpacingClass">
       <template v-for="(shelf, index) in shelves" :key="shelf.id">
         <bookshelf-shelf :label="getShelfLabel(shelf)" :entities="shelf.entities" :type="shelf.type" :style="{ zIndex: shelves.length - index }" />
       </template>
@@ -69,6 +69,20 @@ const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const currentLibraryMediaType = computed(() => librariesStore.getCurrentLibraryMediaType)
 const currentLibraryIsPodcast = computed(() => currentLibraryMediaType.value === 'podcast')
 const altViewEnabled = computed(() => appStore.getAltViewEnabled)
+
+/**
+ * Padding around the shelves.
+ *
+ * Each shelf heading already carries its own pt-4, and in a podcast library the catch-up feed
+ * above ends in a separator. Adding the container's own top padding on top of both left a wide
+ * empty band above the first heading - 24px of it on top of the heading's 16px and the
+ * separator's margins. Below the separator only the bottom padding is kept; a library with no
+ * feed above it still needs the top padding to clear the app bar.
+ */
+const shelvesSpacingClass = computed(() => {
+  if (!altViewEnabled.value) return ''
+  return currentLibraryIsPodcast.value ? 'pb-6' : 'py-6'
+})
 const attemptingConnection = computed(() => appStore.attemptingConnection)
 
 watch(networkConnected, (newVal) => {
