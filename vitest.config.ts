@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
 
 // Unit tests for the pure logic under composables/ and constants/.
@@ -13,6 +14,10 @@ import { defineConfig } from 'vitest/config'
 const capacitorStub = fileURLToPath(new URL('./test/stubs/capacitor.ts', import.meta.url))
 
 export default defineConfig({
+  // Lets a test import a .vue file for the plain functions on its `methods` object. This is not
+  // a component harness - nothing is mounted and `setup()` never runs - but it does let a
+  // control-flow bug inside a method be pinned down, which is what a stuck loading flag is.
+  plugins: [vue()],
   test: {
     environment: 'node',
     include: ['test/**/*.test.ts'],

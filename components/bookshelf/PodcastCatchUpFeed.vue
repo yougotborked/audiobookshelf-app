@@ -208,7 +208,14 @@ export default {
       // know we are offline there is nothing to report: the connection indicator says so, and
       // complaining about a request we chose not to make is just noise.
       if (this.appStore.isOffline) {
-        await this.useOfflineEpisodes({ showToast: false })
+        // This return skips the finally below, so the spinner has to be cleared here too.
+        // Without it the feed spins forever the moment you disconnect: the episodes load, but
+        // isLoading stays true and the template never gets past the spinner.
+        try {
+          await this.useOfflineEpisodes({ showToast: false })
+        } finally {
+          this.isLoading = false
+        }
         return
       }
 
