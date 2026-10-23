@@ -1294,10 +1294,14 @@ onBeforeUnmount(() => {
   if (loadingWatchdog) clearTimeout(loadingWatchdog)
   if (seekWatchdog) clearTimeout(seekWatchdog)
 
-  if (playbackSession.value) {
-    console.log('[AudioPlayer] Before destroy closing playback')
-    closePlayback()
-  }
+  // Unmounting is a UI event, not a decision to stop listening. This component unmounts on a
+  // webview reload and on any navigation that tears down the layout, and closing playback here
+  // stopped the audio each time: pressing back from the home screen with something playing cut
+  // it off, because back popped the webview's history and the document reloaded.
+  //
+  // Playback is owned by the foreground service and outlives the webview, which is what lets it
+  // keep going when the app is swiped away. Closing it is deliberate elsewhere - the player's
+  // own close action, and closeStreamOnly when the user logs out or disconnects.
 
   forceCloseDropdownMenu()
   bus.off('minimize-player', minimizePlayerEvt)
