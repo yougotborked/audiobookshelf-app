@@ -14,7 +14,7 @@
   --color-track-cursor: rgb(var(--color-track-cursor));
   --color-track: rgb(var(--color-track));
   --color-track-buffered: rgb(var(--color-track-buffered));
-  --color-accent: #1ad691;
+  --color-accent: #F0B457;
   --color-error: #FF5252;
   --color-info: #2196F3;
   --color-success: #4CAF50;
@@ -84,37 +84,53 @@
 
 @layer base {
   :root {
-    /* ── M3 Surface Elevation (dark theme tinting model) ── */
-    --md-surface-0: 18 18 18;        /* base bg */
-    --md-surface-1: 30 30 30;        /* cards at rest, +5% tint */
-    --md-surface-2: 34 34 34;        /* FAB, chips, +8% tint */
-    --md-surface-3: 39 39 39;        /* modals, drawers, +11% tint */
-    --md-surface-4: 40 40 40;        /* nav bar, app bar, +12% tint */
-    --md-surface-5: 44 44 44;        /* tooltips, +14% tint */
+    /* ──────────────────────────────────────────────────────────────────────────
+       Podshelf palette - "lamplight"
+
+       The app is a self-hosted podcast library: the whole point is that these are
+       your files, kept because you chose to keep them. Every other podcast player
+       is a saturated accent on a cool near-black - Spotify green, Overcast and
+       Pocket Casts orange-red, Apple purple - and the mint green this fork started
+       with is Audiobookshelf's own. None of that says "archive".
+
+       So: warm neutrals, amber rather than orange, and surfaces tinted toward
+       paper instead of toward blue. The accent carries one meaning - where you
+       are in something - and is not spent on decoration, which is why progress
+       bars, the current item and the play control are the only places it appears
+       at full strength.
+       ────────────────────────────────────────────────────────────────────────── */
+
+    /* ── M3 Surface Elevation (warm-tinted dark) ── */
+    --md-surface-0: 20 18 16;        /* base bg */
+    --md-surface-1: 31 28 25;        /* cards at rest */
+    --md-surface-2: 36 32 28;        /* FAB, chips */
+    --md-surface-3: 42 37 32;        /* modals, drawers */
+    --md-surface-4: 44 39 34;        /* nav bar, app bar */
+    --md-surface-5: 48 42 37;        /* tooltips */
 
     /* ── M3 Colour Roles ── */
-    --md-primary:              26 214 145;   /* #1ad691 — keep existing accent */
-    --md-on-primary:           0 56 40;
-    --md-primary-container:    0 81 61;
-    --md-on-primary-container: 110 245 195;
-    --md-secondary:            178 204 192;
-    --md-on-secondary:         29 53 44;
-    --md-secondary-container:  52 75 67;
-    --md-on-secondary-container: 204 228 218;
+    --md-primary:              240 180 87;   /* #F0B457 - lamplight amber */
+    --md-on-primary:           69 43 0;
+    --md-primary-container:    99 65 0;
+    --md-on-primary-container: 255 221 174;
+    --md-secondary:            220 196 160;  /* warm sand */
+    --md-on-secondary:         61 46 22;
+    --md-secondary-container:  86 67 38;
+    --md-on-secondary-container: 250 223 188;
     --md-error:                255 180 171;
     --md-on-error:             105 0 5;
     --md-error-container:      147 0 10;
     --md-on-error-container:   255 218 214;
-    --md-outline:              142 153 148;
-    --md-outline-variant:      63 73 69;
+    --md-outline:              154 142 128;
+    --md-outline-variant:      74 67 59;
 
     /* ── M3 Text Roles ── */
-    --md-on-surface:           226 232 229;  /* primary text */
-    --md-on-surface-variant:   178 204 192;  /* secondary text */
+    --md-on-surface:           236 228 218;  /* primary text, warm off-white */
+    --md-on-surface-variant:   208 195 180;  /* secondary text */
 
     /* ── Dynamic colour (set by fast-average-color on Now Playing) ── */
-    --dynamic-primary:         26 214 145;
-    --dynamic-surface:         18 18 18;
+    --dynamic-primary:         240 180 87;
+    --dynamic-surface:         20 18 16;
 
     /* ── M3 Shape ── */
     --md-shape-xs:   4px;
@@ -131,64 +147,102 @@
     --md-motion-accelerate: 200ms cubic-bezier(0.3, 0, 1, 1);
 
     /* ── Backward-compat aliases (keep until Phase 2 replaces usages) ── */
-    --color-bg:             18 18 18;
-    --color-bg-hover:       34 34 34;
-    --color-fg:             226 232 229;
-    --color-fg-muted:       178 204 192;
-    --color-primary:        30 30 30;
-    --color-secondary:      34 34 34;
-    --color-border:         63 73 69;
-    --color-bg-toggle:      30 30 30;
-    --color-bg-toggle-selected: 39 39 39;
-    --color-track-cursor:   26 214 145;   /* md-primary */
-    --color-track:          178 204 192;  /* md-on-surface-variant */
-    --color-track-buffered: 30 30 30;
-    --gradient-item-page:   linear-gradient(rgb(18 18 18) 0%, rgb(34 34 34) 100%);
-    --gradient-audio-player: linear-gradient(0deg, rgb(18 18 18) 0%, transparent 100%);
-    --gradient-minimized-audio-player: linear-gradient(180deg, transparent 0%, rgb(40 40 40) 100%);
+    --color-bg:             20 18 16;
+    --color-bg-hover:       36 32 28;
+    --color-fg:             236 228 218;
+    --color-fg-muted:       208 195 180;
+    --color-primary:        31 28 25;
+    --color-secondary:      36 32 28;
+    --color-border:         74 67 59;
+    --color-bg-toggle:      31 28 25;
+    --color-bg-toggle-selected: 42 37 32;
+    --color-track-cursor:   240 180 87;   /* md-primary */
+    --color-track:          208 195 180;  /* md-on-surface-variant */
+    --color-track-buffered: 31 28 25;
+    --gradient-item-page:   linear-gradient(rgb(20 18 16) 0%, rgb(36 32 28) 100%);
+    --gradient-audio-player: linear-gradient(0deg, rgb(20 18 16) 0%, transparent 100%);
+    --gradient-minimized-audio-player: linear-gradient(180deg, transparent 0%, rgb(44 39 34) 100%);
   }
 
-  /* Black theme overrides */
+  /* Black theme overrides - for OLED. Same hues, surfaces pulled to zero. */
   html[data-theme='black'] {
     --md-surface-0: 0 0 0;
-    --md-surface-1: 12 12 12;
-    --md-surface-2: 18 18 18;
-    --md-surface-3: 22 22 22;
-    --md-surface-4: 24 24 24;
-    --md-surface-5: 28 28 28;
-    --md-on-surface: 230 237 243;
-    --md-on-surface-variant: 120 126 132;
+    --md-surface-1: 12 11 10;
+    --md-surface-2: 18 17 15;
+    --md-surface-3: 23 21 19;
+    --md-surface-4: 25 23 21;
+    --md-surface-5: 29 27 24;
+    --md-on-surface: 240 234 226;
+    --md-on-surface-variant: 168 158 146;
+    --md-outline: 128 118 106;
+    --md-outline-variant: 58 53 47;
     --color-bg:             0 0 0;
-    --color-fg:             230 237 243;
-    --color-fg-muted:       120 126 132;
-    --color-primary:        12 12 12;
-    --color-secondary:      18 18 18;
+    --color-fg:             240 234 226;
+    --color-fg-muted:       168 158 146;
+    --color-primary:        12 11 10;
+    --color-secondary:      18 17 15;
+    --color-border:         58 53 47;
+    --color-bg-toggle:      12 11 10;
+    --color-bg-toggle-selected: 23 21 19;
+    --color-track-buffered: 18 17 15;
+    --dynamic-surface:      0 0 0;
     --gradient-item-page:   rgb(0, 0, 0);
     --gradient-audio-player: rgb(0, 0, 0);
     --gradient-minimized-audio-player: rgb(0, 0, 0);
   }
 
-  /* Light theme overrides */
+  /*
+    Light theme overrides.
+
+    This block used to redefine surfaces and text only, so every primary role kept
+    its dark-theme value: the nav pill rendered as dark green on near-white and the
+    mark-as-finished control all but vanished. A theme has to restate the whole
+    tonal set, not the half of it that happens to be background.
+  */
   html[data-theme='light'] {
-    --md-surface-0: 254 247 255;
-    --md-surface-1: 243 238 247;
-    --md-surface-2: 237 232 241;
-    --md-surface-3: 231 226 235;
-    --md-surface-4: 229 224 233;
-    --md-surface-5: 225 220 230;
-    --md-on-surface: 29 27 32;
-    --md-on-surface-variant: 74 68 78;
-    --md-outline: 124 117 126;
-    --md-outline-variant: 204 196 206;
-    --color-bg:             254 247 255;
-    --color-fg:             29 27 32;
-    --color-fg-muted:       74 68 78;
-    --color-border:         204 196 206;
-    --color-primary:        243 238 247;
-    --color-secondary:      237 232 241;
-    --gradient-item-page:   linear-gradient(rgba(255,255,255,0.4) 0%, rgba(255,255,255,1) 80%);
-    --gradient-audio-player: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 80%);
-    --gradient-minimized-audio-player: linear-gradient(145deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.9) 20%, rgb(255,255,255) 60%);
+    --md-surface-0: 255 251 245;     /* warm paper, not blue-white */
+    --md-surface-1: 248 242 233;
+    --md-surface-2: 244 237 226;
+    --md-surface-3: 240 232 219;
+    --md-surface-4: 238 230 216;
+    --md-surface-5: 235 226 211;
+
+    --md-primary:              125 87 0;      /* amber at a tone that passes on paper */
+    --md-on-primary:           255 255 255;
+    --md-primary-container:    255 221 174;
+    --md-on-primary-container: 40 25 0;
+    --md-secondary:            110 92 66;
+    --md-on-secondary:         255 255 255;
+    --md-secondary-container:  250 223 188;
+    --md-on-secondary-container: 38 26 10;
+    --md-error:                186 26 26;
+    --md-on-error:             255 255 255;
+    --md-error-container:      255 218 214;
+    --md-on-error-container:   65 0 2;
+
+    --md-on-surface:         31 27 22;
+    --md-on-surface-variant: 82 73 62;
+    --md-outline:            132 122 108;
+    --md-outline-variant:    215 203 188;
+
+    --dynamic-primary:       125 87 0;
+    --dynamic-surface:       255 251 245;
+
+    --color-bg:             255 251 245;
+    --color-bg-hover:       244 237 226;
+    --color-fg:             31 27 22;
+    --color-fg-muted:       82 73 62;
+    --color-border:         215 203 188;
+    --color-primary:        248 242 233;
+    --color-secondary:      244 237 226;
+    --color-bg-toggle:      248 242 233;
+    --color-bg-toggle-selected: 240 232 219;
+    --color-track-cursor:   125 87 0;
+    --color-track:          82 73 62;
+    --color-track-buffered: 240 232 219;
+    --gradient-item-page:   linear-gradient(rgba(255,251,245,0.4) 0%, rgba(255,251,245,1) 80%);
+    --gradient-audio-player: linear-gradient(180deg, rgba(255,251,245,0) 0%, rgba(255,251,245,1) 80%);
+    --gradient-minimized-audio-player: linear-gradient(145deg, rgba(255,251,245,0.5) 0%, rgba(255,251,245,0.9) 20%, rgb(255,251,245) 60%);
   }
 
   body {

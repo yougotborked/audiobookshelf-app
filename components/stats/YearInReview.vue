@@ -149,7 +149,7 @@ async function initCanvas() {
   ctx.fillText('\ue900', 15, 36)
 
   // Top text
-  addText('audiobookshelf', '28px', 'normal', tanColor, '0px', 65, 28)
+  addText('podshelf', '28px', 'normal', tanColor, '0px', 65, 28)
   addText(`${props.year} YEAR IN REVIEW`, '18px', 'bold', 'white', '1px', 65, 51)
 
   // Top left box
@@ -255,7 +255,7 @@ function share() {
   if (!dataUrl.value) return
   const base64Data = dataUrl.value.split(';base64,').pop()!
   FileSharer.share({
-    filename: `audiobookshelf_my_${props.year}.png`,
+    filename: `podshelf_my_${props.year}.png`,
     contentType: 'image/png',
     base64Data
   }).catch((error: Error) => {

@@ -27,7 +27,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       version: '0.12.0-beta',
-      ANDROID_APP_URL: 'https://play.google.com/store/apps/details?id=com.audiobookshelf.app',
+      ANDROID_APP_URL: 'https://play.google.com/store/apps/details?id=com.podshelf.app',
       IOS_APP_URL: '',
       PODCAST_INDEX_KEY: process.env.PODCAST_INDEX_KEY || '',
       PODCAST_INDEX_SECRET: process.env.PODCAST_INDEX_SECRET || '',
@@ -36,7 +36,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Audiobookshelf',
+      title: 'Podshelf',
       htmlAttrs: { lang: 'en' },
       meta: [
         { charset: 'utf-8' },

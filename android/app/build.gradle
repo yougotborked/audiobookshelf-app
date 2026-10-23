@@ -38,14 +38,14 @@ android {
     }
   }
   defaultConfig {
-    applicationId "com.audiobookshelf.app"
+    applicationId "com.podshelf.app"
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion
     versionCode 116
     versionName "0.12.0-beta"
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders = [
-      "appAuthRedirectScheme": "com.audiobookshelf.app"
+      "appAuthRedirectScheme": "com.podshelf.app"
     ]
   }
   androidResources {

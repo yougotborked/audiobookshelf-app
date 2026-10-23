@@ -7,15 +7,15 @@
     <!-- Branding -->
     <div class="flex flex-col items-center mb-8 short:hidden">
       <div class="h-20 w-20 rounded-md-2xl bg-md-surface-2 flex items-center justify-center mb-4 elevation-1">
-        <img src="/Logo.png" class="h-14 w-14" />
+        <ui-podshelf-mark class="h-14 w-14 text-md-primary" />
       </div>
-      <h1 class="text-md-headline-s text-md-on-surface">audiobookshelf</h1>
+      <h1 class="text-md-headline-s text-md-on-surface">Podshelf</h1>
     </div>
     <div class="hidden short:flex items-center gap-3 mb-6">
       <div class="h-10 w-10 rounded-md-lg bg-md-surface-2 flex items-center justify-center">
-        <img src="/Logo.png" class="h-7 w-7" />
+        <ui-podshelf-mark class="h-7 w-7 text-md-primary" />
       </div>
-      <p class="text-md-title-l text-md-on-surface">audiobookshelf</p>
+      <p class="text-md-title-l text-md-on-surface">Podshelf</p>
     </div>
 
     <connection-server-connect-form v-if="deviceData" />
