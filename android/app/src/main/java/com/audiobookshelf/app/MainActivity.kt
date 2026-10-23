@@ -21,6 +21,14 @@ import androidx.core.view.updateLayoutParams
 import android.view.WindowInsets
 import com.anggrayudi.storage.SimpleStorage
 import com.anggrayudi.storage.SimpleStorageHelper
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import androidx.window.layout.WindowMetricsCalculator
+import com.audiobookshelf.app.device.FoldPostureRules
+import com.audiobookshelf.app.device.FoldState
 import com.audiobookshelf.app.device.PermissionHelper
 import com.audiobookshelf.app.managers.DbManager
 import com.audiobookshelf.app.player.PlayerNotificationService
@@ -28,8 +36,10 @@ import com.audiobookshelf.app.plugins.AbsAudioPlayer
 import com.audiobookshelf.app.plugins.AbsDatabase
 import com.audiobookshelf.app.plugins.AbsDownloader
 import com.audiobookshelf.app.plugins.AbsFileSystem
+import com.audiobookshelf.app.plugins.AbsFoldPosture
 import com.audiobookshelf.app.plugins.AbsLogger
 import com.getcapacitor.BridgeActivity
+import kotlinx.coroutines.launch
 
 
 class MainActivity : BridgeActivity() {
@@ -52,6 +62,7 @@ class MainActivity : BridgeActivity() {
     registerPlugin(AbsAudioPlayer::class.java)
     registerPlugin(AbsDownloader::class.java)
     registerPlugin(AbsFileSystem::class.java)
+    registerPlugin(AbsFoldPosture::class.java)
     registerPlugin(AbsDatabase::class.java)
     registerPlugin(AbsLogger::class.java)
 
@@ -107,6 +118,8 @@ class MainActivity : BridgeActivity() {
       }
     }
 
+    observeFoldPosture()
+
     requestNeededPermissions()
   }
 
@@ -116,6 +129,56 @@ class MainActivity : BridgeActivity() {
    * POST_NOTIFICATIONS is required from Android 13 for the download progress notification, which
    * is also what keeps the download foreground service alive.
    */
+  /**
+   * Watches the hinge and reports the posture to the webview.
+   *
+   * WindowManager publishes folding features per activity and only as a Flow, so the collecting
+   * has to live here; the decision it feeds does not, and is in FoldPostureRules where it can be
+   * tested without a foldable. repeatOnLifecycle(STARTED) keeps the collection off a backgrounded
+   * activity - a device folded in a pocket would otherwise wake this for nothing.
+   */
+  private fun observeFoldPosture() {
+    lifecycleScope.launch {
+      repeatOnLifecycle(Lifecycle.State.STARTED) {
+        WindowInfoTracker.getOrCreate(this@MainActivity)
+                .windowLayoutInfo(this@MainActivity)
+                .collect { layoutInfo ->
+                  val bounds =
+                          WindowMetricsCalculator.getOrCreate()
+                                  .computeCurrentWindowMetrics(this@MainActivity)
+                                  .bounds
+
+                  // Only one folding feature on every shipping device; if that ever stops being
+                  // true, the first is still a better answer than none.
+                  val fold =
+                          layoutInfo.displayFeatures.filterIsInstance<FoldingFeature>()
+                                  .firstOrNull()
+
+                  val state =
+                          if (fold == null) {
+                            FoldState.FLAT
+                          } else {
+                            val horizontal =
+                                    fold.orientation == FoldingFeature.Orientation.HORIZONTAL
+                            FoldPostureRules.resolve(
+                                    isHalfOpened =
+                                            fold.state == FoldingFeature.State.HALF_OPENED,
+                                    isHorizontalHinge = horizontal,
+                                    hingeStart =
+                                            if (horizontal) fold.bounds.top else fold.bounds.left,
+                                    hingeEnd =
+                                            if (horizontal) fold.bounds.bottom
+                                            else fold.bounds.right,
+                                    windowExtent =
+                                            if (horizontal) bounds.height() else bounds.width())
+                          }
+
+                  AbsFoldPosture.update(state)
+                }
+      }
+    }
+  }
+
   private fun requestNeededPermissions() {
     val needed = mutableListOf<String>()
     val audioPermission = PermissionHelper.requiredAudioPermission()

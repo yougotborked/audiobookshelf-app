@@ -109,6 +109,9 @@ dependencies {
   // WorkManager - schedules the incomplete-download cleanup pass
   implementation "androidx.work:work-runtime-ktx:$androidx_work_version"
 
+  // WindowManager - reports the hinge on a foldable, for tabletop and book postures
+  implementation "androidx.window:window:$androidx_window_version"
+
   // Media3 (replaces ExoPlayer 2 — see android/media3-migration branch)
   implementation "androidx.media3:media3-exoplayer:$media3_version"
   implementation "androidx.media3:media3-exoplayer-hls:$media3_version"

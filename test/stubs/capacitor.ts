@@ -19,6 +19,11 @@ export const StatusBar = {
 
 export const Style = { Dark: 'DARK', Light: 'LIGHT', Default: 'DEFAULT' }
 
+// Composables that register their own plugin call this. Inert, like everything else here: the
+// pure exports are what the tests import, and they do not reach the bridge.
+export const registerPlugin = <T,>(_name: string, impl?: { web?: () => T }): T =>
+  (impl?.web?.() ?? ({} as T))
+
 export const Clipboard = {
   write: async () => undefined,
   read: async () => ({ value: '', type: 'text/plain' })
