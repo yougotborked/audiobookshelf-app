@@ -1,0 +1,183 @@
+name: Publish to Play
+
+# Deliberately on tags, not on every push to master.
+#
+# master already ships a debug APK to the Releases page and the test page on every commit, which
+# is the right cadence for "is this fixed yet". Putting something in front of Play testers is a
+# different decision and should be a deliberate one, so it takes a tag.
+#
+#   git tag v0.13.0 && git push origin v0.13.0
+#
+# The tag is also where the version comes from: v1.2.3 becomes versionName 1.2.3 and versionCode
+# 10203. Play rejects a versionCode it has seen before, so it has to move forward every time, and
+# deriving it from the tag keeps it monotonic and reproducible rather than depending on a counter
+# that resets when a workflow is renamed.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play track to publish to'
+        required: true
+        default: internal
+        type: choice
+        options: [internal, alpha, beta, production]
+      version:
+        description: 'Version, without the leading v (e.g. 0.13.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-play
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: play
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      # Fail here rather than three minutes into a Gradle build with an opaque signing error,
+      # or - worse - succeed and upload something unsigned.
+      - name: Check required secrets are present
+        env:
+          KEYSTORE: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PLAY_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PLAY_KEY_PASSWORD }}
+          SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          missing=()
+          [ -n "$KEYSTORE" ]          || missing+=(PLAY_UPLOAD_KEYSTORE_BASE64)
+          [ -n "$KEYSTORE_PASSWORD" ] || missing+=(PLAY_KEYSTORE_PASSWORD)
+          [ -n "$KEY_ALIAS" ]         || missing+=(PLAY_KEY_ALIAS)
+          [ -n "$KEY_PASSWORD" ]      || missing+=(PLAY_KEY_PASSWORD)
+          [ -n "$SERVICE_ACCOUNT" ]   || missing+=(PLAY_SERVICE_ACCOUNT_JSON)
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing secrets: ${missing[*]}. See docs/PLAY_STORE.md for how to create them."
+            exit 1
+          fi
+
+      - name: Derive version from the tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+
+          # Reject anything that is not major.minor.patch - a malformed tag would otherwise
+          # produce a nonsense versionCode that Play would accept and then never let us go below.
+          if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Version '$version' is not major.minor.patch (tag should look like v0.13.0)"
+            exit 1
+          fi
+          major="${BASH_REMATCH[1]}"; minor="${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
+
+          # Two digits each for minor and patch, so 1.2.3 -> 10203 and ordering follows semver.
+          if [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ]; then
+            echo "::error::minor and patch must each be <= 99 for the versionCode scheme"
+            exit 1
+          fi
+          code=$(( major * 10000 + minor * 100 + patch ))
+
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code"    >> "$GITHUB_OUTPUT"
+          echo "Publishing $version as versionCode $code"
+
+      - name: Use Node.js 24.x with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Set up Java 21 (Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Nuxt project (static)
+        run: npm run generate
+        env:
+          PODCAST_INDEX_KEY: ${{ secrets.PODCAST_INDEX_KEY }}
+          PODCAST_INDEX_SECRET: ${{ secrets.PODCAST_INDEX_SECRET }}
+
+      - name: Copy web to Android (Capacitor)
+        run: npx cap sync android
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      # Written outside the workspace so it cannot be picked up by anything that archives the
+      # checkout, and removed again in the always() step at the end.
+      - name: Decode the upload keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          keystore="${RUNNER_TEMP}/podshelf-upload.jks"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          echo "path=$keystore" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed AAB
+        working-directory: android
+        env:
+          PODSHELF_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          PODSHELF_KEYSTORE_PASSWORD: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
+          PODSHELF_KEY_ALIAS: ${{ secrets.PLAY_KEY_ALIAS }}
+          PODSHELF_KEY_PASSWORD: ${{ secrets.PLAY_KEY_PASSWORD }}
+          PODSHELF_VERSION_CODE: ${{ steps.version.outputs.code }}
+          PODSHELF_VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: ./gradlew --no-daemon --build-cache bundleRelease
+
+      # An unsigned bundle is accepted by Gradle and rejected by Play with a far less obvious
+      # message, so confirm the signature exists before uploading.
+      - name: Verify the bundle is signed
+        run: |
+          aab=android/app/build/outputs/bundle/release/app-release.aab
+          test -f "$aab" || { echo "::error::No bundle at $aab"; exit 1; }
+          if ! unzip -l "$aab" | grep -q 'META-INF/.*\.RSA\|META-INF/.*\.EC\|META-INF/MANIFEST.MF'; then
+            echo "::error::$aab does not look signed"
+            exit 1
+          fi
+          ls -la "$aab"
+
+      - name: Upload to Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.podshelf.app
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track || 'internal' }}
+          status: completed
+          releaseName: ${{ steps.version.outputs.name }}
+
+      - name: Keep the bundle with the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: podshelf-aab-${{ steps.version.outputs.name }}
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/podshelf-upload.jks"

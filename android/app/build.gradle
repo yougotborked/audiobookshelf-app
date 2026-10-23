@@ -7,6 +7,15 @@ kotlin {
   jvmToolchain(21)
 }
 
+// Version identity for the build.
+//
+// Play rejects a versionCode it has already seen and will not accept one lower than the track's
+// current release, so it has to move forward on every upload. The publish workflow derives both
+// of these from the git tag that triggered it (v1.2.3 -> 10203 / "1.2.3"): monotonic, and
+// reproducible from the tag alone. A local build or a debug CI build keeps the checked-in values.
+def podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '116') as Integer
+def podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.12.0-beta') as String
+
 android {
   namespace = 'com.audiobookshelf.app'
   buildFeatures {
@@ -36,13 +45,30 @@ android {
       keyAlias 'androiddebugkey'
       keyPassword 'android'
     }
+    // The upload key for Play. Populated from the environment by
+    // .github/workflows/publish-play.yml, which decodes it from a secret; left empty on a
+    // laptop, where a release build still configures and simply comes out unsigned. Nothing
+    // about the key is in the repository.
+    release {
+      def keystorePath = System.getenv('PODSHELF_KEYSTORE_PATH')
+      if (keystorePath) {
+        storeFile file(keystorePath)
+        storePassword System.getenv('PODSHELF_KEYSTORE_PASSWORD')
+        keyAlias System.getenv('PODSHELF_KEY_ALIAS')
+        keyPassword System.getenv('PODSHELF_KEY_PASSWORD')
+      }
+    }
   }
   defaultConfig {
     applicationId "com.podshelf.app"
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 116
-    versionName "0.12.0-beta"
+
+    // Resolved above, into locals, because `versionCode (a ?: b).toInteger()` is parsed by
+    // Groovy as `versionCode(a ?: b).toInteger()` - the method call binds tighter than the
+    // elvis - which hands AGP a String and fails the whole evaluation with "Value is null".
+    versionCode podshelfVersionCode
+    versionName podshelfVersionName
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders = [
       "appAuthRedirectScheme": "com.podshelf.app"
@@ -62,6 +88,12 @@ android {
       proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
     }
     release {
+      // Only attached when the key is actually present. Wiring it unconditionally would make
+      // every release build fail on a machine without the secrets, including a plain
+      // `./gradlew assembleRelease` someone runs to check something compiles.
+      if (System.getenv('PODSHELF_KEYSTORE_PATH')) {
+        signingConfig signingConfigs.release
+      }
       minifyEnabled false
       proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
     }
