@@ -24,6 +24,7 @@
     "test:android": "bash scripts/test-android.sh",
     "screenshots": "playwright test",
     "store:assets": "node scripts/store-assets.mjs",
+    "store:listing": "node scripts/sync-play-listing.mjs",
     "icons-android": "cordova-res android --skip-config --copy",
     "ionic:build": "npm run build",
     "ionic:serve": "npm run dev",

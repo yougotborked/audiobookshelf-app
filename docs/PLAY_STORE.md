@@ -2,11 +2,29 @@
 
 What the repository already does, and what only a human with the Play Console can do.
 
-**Automated** (`.github/workflows/publish-play.yml`, triggered by a `v*` tag): builds a signed
-AAB, derives the version from the tag, uploads it to a Play track.
+**Automated:**
 
-**Not automated, and not automatable**: registering the account, creating the app, filling in the
-listing and the policy forms, and generating the signing key. Those are below.
+- `.github/workflows/publish-play.yml` — on a `v*` tag, builds a signed AAB, derives the version
+  from the tag, uploads it to a Play track.
+- `.github/workflows/sync-play-listing.yml` — pushes the title, descriptions, icon, feature
+  graphic and screenshots from `docs/store/` whenever that content changes on master. The
+  listing lives in the repo and is reviewable in a diff rather than typed into the Console.
+
+**Not automatable, because Google exposes no API for it:**
+
+- Registering the developer account — it is identity verification, deliberately human.
+- **Creating the app record.** The Publishing API only operates on apps that already exist;
+  there is no create method for a public app. (`playcustomapp.accounts.customApps.create` exists
+  but is for private enterprise apps.)
+- The content rating questionnaire and the data safety form — legal declarations.
+- Granting the service account permission in Play Console.
+
+**Not automated on purpose:** generating the upload key. A private key that passes through a
+terminal, a chat window or a CI log is a key you have to treat as compromised. Step 3 is one
+command you run yourself.
+
+Everything below is one-time. After it, releases and listing updates are a `git tag` and a
+`git push`.
 
 ---
 
@@ -84,15 +102,26 @@ before anything reaches Play.
 
 ## 5. Service account, so CI can upload
 
-1. In [Google Cloud Console](https://console.cloud.google.com), create (or pick) a project.
-2. Enable the **Google Play Android Developer API**.
-3. Create a **service account**, then create a **JSON key** for it and download it.
-4. In Play Console → **Users and permissions** → **Invite new users**, invite the service
-   account's email address.
-5. Grant it, for this app: *Release to testing tracks*, *Release to production* (only if you want
-   that), and *View app information*.
+Most of this is scripted. Run it signed in as yourself — it needs your Google credentials, which
+is why it is a script you run rather than something done for you:
 
-Paste the JSON into `PLAY_SERVICE_ACCOUNT_JSON`.
+```shell
+gcloud auth login
+bash scripts/setup-play-service-account.sh
+```
+
+It creates the project, enables the Google Play Android Developer API, creates the service
+account and writes a key file. It grants no project-level IAM role on purpose: publishing rights
+come from Play Console, and a role here would widen what the key reaches without helping.
+
+Two steps it cannot do, and prints instructions for:
+
+1. **Invite the service account in Play Console** → *Users and permissions* → *Invite new user*,
+   with *Release to testing tracks* and *View app information* for this app (add *Release to
+   production* only if you want tagged builds to go live). There is no API for granting Play
+   Console access.
+2. **Add the key as `PLAY_SERVICE_ACCOUNT_JSON`**, then delete the local copy. A key file left in
+   a working tree is a key that eventually gets committed.
 
 ## 6. Store listing assets
 
@@ -109,6 +138,17 @@ test harness against mock data, so they carry two artifacts: the home screen sho
 "Test Book" placeholder from the web database stub, and every screen shows the offline badge
 because the harness never connects a socket. They are a usable starting point and the right
 sizes; they are not a good listing.
+
+The listing copy lives in `docs/store/listing.en-US.json` and is pushed by
+`npm run store:listing` (or the sync workflow). Validate it without sending anything:
+
+```shell
+node scripts/sync-play-listing.mjs --dry-run
+```
+
+That checks Play's length limits — title 30, short description 80, full description 4000 — which
+otherwise fail the commit with a message that does not say which field. Adding another language
+is another `listing.<language>.json` beside it.
 
 **Privacy policy URL** — required, even though the app collects nothing:
 
