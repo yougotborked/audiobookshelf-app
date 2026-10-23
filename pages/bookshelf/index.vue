@@ -1,5 +1,13 @@
 <template>
-  <div class="w-full h-full min-h-full relative">
+  <!--
+    600dp is where Android's medium window size class starts, and where a foldable's inner screen
+    lands. Past it the content column stops growing and centres instead: a podcast description set
+    across an eight-inch screen is a line of text nobody wants to read, and the shelves below would
+    otherwise stretch with it.
+
+    https://developer.android.com/develop/ui/views/layout/use-window-size-classes
+  -->
+  <div class="w-full h-full min-h-full relative min-[600px]:max-w-3xl min-[600px]:mx-auto">
     <div v-if="attemptingConnection" class="w-full pt-4 flex items-center justify-center">
       <widgets-loading-spinner />
       <p class="pl-4">{{ strings.MessageAttemptingServerConnection }}</p>
