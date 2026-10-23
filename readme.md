@@ -1,10 +1,11 @@
-# Audiobookshelf for Podcasts
+# Podshelf
 
 A fork of the [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) mobile app, reworked
 around **podcast listening** — catching up on new episodes, queueing them, and having them available
 offline — with Android Auto and offline use treated as primary cases rather than extras.
 
-**Requires an [Audiobookshelf](https://www.audiobookshelf.org) server to connect to.**
+**Requires an [Audiobookshelf](https://www.audiobookshelf.org) server to connect to.** Podshelf is a
+client; it does not provide any content of its own.
 
 ---
 
@@ -12,17 +13,24 @@ offline — with Android Auto and offline use treated as primary cases rather th
 
 ### **[→ Get the latest APK from the Releases page](https://github.com/yougotborked/audiobookshelf-app/releases/latest)**
 
-Every push to `master` publishes a fresh debug APK to the rolling
-[`latest` release](https://github.com/yougotborked/audiobookshelf-app/releases/latest). Download the
-`audiobookshelf-*.apk` asset and install it.
+### **[→ Or from the test page](https://yougotborked.github.io/audiobookshelf-app/)**
+
+Every push to `master` publishes a fresh debug APK two ways: to the rolling
+[`latest` release](https://github.com/yougotborked/audiobookshelf-app/releases/latest), and to a
+[test page](https://yougotborked.github.io/audiobookshelf-app/) on GitHub Pages that shows the build
+date and commit. Either way, download the `podshelf-*.apk` asset and install it.
 
 Notes on installing:
 
 - Android will ask you to allow installing from an unknown source the first time.
-- These are **debug** builds, signed with the repo's debug key. The package id is
-  `com.audiobookshelf.app.debug`, so it installs alongside the Play Store app rather than replacing it.
-- Because the signing key differs from the Play build, you cannot upgrade from the Play version in
-  place — install this as a separate app.
+- These are **debug** builds, signed with the repo's debug key, with the package id
+  `com.podshelf.app.debug`.
+- **Coming from a build before the rename:** Podshelf's application id is `com.podshelf.app`, where
+  it used to be `com.audiobookshelf.app`. Android treats a new application id as a different app, so
+  this installs alongside the old one rather than upgrading it, and app-private storage does not
+  carry over — downloaded episodes have to come down again. Listening progress lives on your server,
+  so that survives.
+- It also installs alongside upstream's Play Store app rather than replacing it.
 - Android only. iOS is not built or released here.
 
 ## What's different from upstream
@@ -52,6 +60,14 @@ Offline:
   so plane wifi, captive portals and patchy coverage behave sensibly instead of stalling on timeouts.
 - Libraries, playlists and episode lists are cached on the device and used when the server is out of
   reach.
+
+Large screens and foldables:
+
+- Content stops stretching past 600dp, where Android's medium window size class begins.
+- **Tabletop posture** — with a foldable propped open and the hinge across the screen, the player
+  lays the artwork out in the pane above the hinge instead of centring it across the hinge.
+- The orientation-lock setting disables itself with an explanation on screens where Android 16
+  ignores orientation locks, rather than silently doing nothing.
 
 Under the hood this fork has also moved to Nuxt 3 + Pinia and ExoPlayer2 → Media3.
 
@@ -95,17 +111,57 @@ npm run sync
 
 ### Checks
 
+One command runs everything CI runs:
+
 ```shell
-npx vue-tsc --noEmit -p .nuxt/tsconfig.json   # typecheck
-cd android && ./gradlew testDebugUnitTest     # Android unit tests
+npm run verify             # lint, typecheck, i18n order, JS unit tests, Kotlin unit tests
+npm run verify -- --list   # what the steps are
+npm run verify all         # the above plus a debug APK
 ```
 
-Note: the repo carries a number of pre-existing type errors from the Nuxt 2 → 3 migration. Compare
-against `master` rather than expecting a clean run.
+Each step also stands alone:
 
-On every push CI runs Android lint and builds the APK (`staticAnalysis assembleDebug`). It does
-**not** run the unit tests, so run `testDebugUnitTest` yourself before pushing. `strings/*.json`
-must stay alphabetized — a separate workflow enforces that one.
+```shell
+npm run lint
+npm run typecheck          # NOT `npx vue-tsc` — see below
+npm run check:i18n         # strings/*.json must stay alphabetized
+npm run test:unit          # vitest, plain Node
+npm run test:android       # JUnit via Gradle; installs the Android SDK on first run
+```
+
+Two things worth knowing:
+
+- **Do not run `npx vue-tsc` or `npx nuxi typecheck`.** Both resolve the latest release, and
+  vue-tsc 3.x aborts partway through this project while still printing `Found 0 errors` — a false
+  pass that reads exactly like success. `npm run typecheck` pins 2.2.10 and refuses any other major.
+- Typecheck runs against a baseline. The Nuxt 2 → 3 migration left pre-existing type errors, so
+  `scripts/typecheck.mjs` compares against `scripts/typecheck-baseline.json` and fails only on a
+  **new** one. After fixing baselined errors, tighten it with `npm run typecheck:update`.
+
+`npm run verify` works in a bare container — no Android Studio, no preinstalled SDK — so an agent
+session or a fresh clone can check its own work rather than pushing to find out.
+
+### Screenshots
+
+```shell
+npm run screenshots        # writes docs/screenshots/
+```
+
+Boots the app in a headless browser against a fake Audiobookshelf server and captures the main
+screens at four widths either side of the 600dp boundary, plus all three themes. It is for looking
+at design changes, not a visual-regression suite — nothing is compared against a baseline — but it
+does fail if the app did not render, so a blank page is a red test rather than a blank PNG.
+
+### CI
+
+`.github/workflows/build-apk.yml` runs the same checks on every push and pull request:
+
+- **web** — lint, typecheck, i18n order, vitest
+- **main** — `staticAnalysis testDebugUnitTest assembleDebug`, and uploads the APK
+
+Two more jobs, **publish** and **release**, are gated to `refs/heads/master` and show as *skipped*
+on any other branch. That is expected, not a failure. They deploy the test page and overwrite the
+rolling `latest` release.
 
 ---
 

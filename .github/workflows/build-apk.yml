@@ -129,13 +129,13 @@ jobs:
         working-directory: android/app/build/outputs/apk/debug/
         run: |
           build="$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
-          name="audiobookshelf-${build}.apk"
+          name="podshelf-${build}.apk"
           mv -v app-debug.apk "${name}"
 
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: audiobookshelf-apk
+          name: podshelf-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
@@ -157,14 +157,14 @@ jobs:
       - name: Download APK artifact
         uses: actions/download-artifact@v4
         with:
-          name: audiobookshelf-apk
+          name: podshelf-apk
           path: ./ghpages
 
       - name: Prepare test page resources
         run: |
           mkdir -p ghpages
           # copy logo + template from the repo into the ghpages folder
-          cp static/Logo.png ghpages/logo.png || true
+          cp static/logo.svg ghpages/logo.svg || true
           cp .github/testing-page-template.html ghpages/index.html
 
       - name: Build test page
@@ -199,7 +199,7 @@ jobs:
       - name: Download APK artifact
         uses: actions/download-artifact@v4
         with:
-          name: audiobookshelf-apk
+          name: podshelf-apk
           path: ./apk
 
       - name: Get APK filename and commit info
