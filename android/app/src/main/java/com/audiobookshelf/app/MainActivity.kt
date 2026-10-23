@@ -86,16 +86,12 @@ class MainActivity : BridgeActivity() {
         sysInsets.bottom
       )
 
-      // Inject as CSS variables
-      // NOTE: Possibly able to use in the future to support edge-to-edge better.
-       val js = """
-       document.documentElement.style.setProperty('--safe-area-inset-top', '${top}px');
-       document.documentElement.style.setProperty('--safe-area-inset-bottom', '${bottom}px');
-       document.documentElement.style.setProperty('--safe-area-inset-left', '${left}px');
-       document.documentElement.style.setProperty('--safe-area-inset-right', '${right}px');
-      """.trimIndent()
-      webView.evaluateJavascript(js, null)
-
+      // The webview is inset by the margins below rather than drawing under the system bars, so
+      // it has no safe area of its own to report and the app's CSS uses the browser's own
+      // env(safe-area-inset-*) - which is what iOS needs. This used to also push the same
+      // numbers in as --safe-area-inset-* custom properties; nothing ever read them, so they
+      // were evaluated into the page on every inset change for nothing.
+      //
       // Set margins
       v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
         leftMargin = left

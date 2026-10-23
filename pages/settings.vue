@@ -9,11 +9,14 @@
       <p class="pl-4">{{ $strings.LabelUseBookshelfView }}</p>
     </div>
     <!-- screen.orientation.lock not supported on iOS webview -->
-    <div v-if="!isiOS" class="flex items-center py-3">
-      <div class="w-10 flex justify-center" @click.stop="toggleLockOrientation">
-        <ui-toggle-switch v-model="lockCurrentOrientation" class="pointer-events-none" />
+    <div v-if="!isiOS" class="py-3">
+      <div class="flex items-center">
+        <div class="w-10 flex justify-center" @click.stop="toggleLockOrientation">
+          <ui-toggle-switch v-model="lockCurrentOrientation" class="pointer-events-none" :disabled="!orientationLockHonored" />
+        </div>
+        <p class="pl-4" :class="{ 'opacity-40': !orientationLockHonored }">{{ $strings.LabelLockOrientation }}</p>
       </div>
-      <p class="pl-4">{{ $strings.LabelLockOrientation }}</p>
+      <p v-if="!orientationLockHonored" class="pl-14 pr-4 pt-1 text-md-body-s text-md-on-surface-variant">{{ $strings.MessageOrientationLockLargeScreen }}</p>
     </div>
     <div class="py-3 flex items-center">
       <p class="pr-4 w-36">{{ $strings.LabelHapticFeedback }}</p>
@@ -215,6 +218,17 @@ const showAutoSleepTimerRewindLengthModal = ref(false)
 const moreMenuSetting = ref('')
 const theme = ref('dark')
 const lockCurrentOrientation = ref(false)
+
+/**
+ * Whether a lock would actually be applied at the current window size.
+ *
+ * Recomputed on resize because folding the device changes the answer - the cover screen honors
+ * a lock and the inner screen does not.
+ */
+const orientationLockHonored = ref(isOrientationLockHonored(windowShortestSideDp()))
+function updateOrientationLockHonored() {
+  orientationLockHonored.value = isOrientationLockHonored(windowShortestSideDp())
+}
 
 const settings = reactive({
   disableAutoRewind: false,
@@ -620,6 +634,8 @@ function getCurrentOrientation(): string {
 }
 
 function toggleLockOrientation() {
+  if (!orientationLockHonored.value) return
+
   lockCurrentOrientation.value = !lockCurrentOrientation.value
   if (lockCurrentOrientation.value) {
     settings.lockOrientation = getCurrentOrientation()
@@ -693,5 +709,10 @@ async function init() {
 
 onMounted(() => {
   init()
+  window.addEventListener('resize', updateOrientationLockHonored)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateOrientationLockHonored)
 })
 </script>

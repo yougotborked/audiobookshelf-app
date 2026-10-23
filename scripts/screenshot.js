@@ -1,7 +1,10 @@
 // scripts/screenshot.js
-const { test } = require('@playwright/test')
-const path = require('path')
-const fs = require('fs')
+import { test } from '@playwright/test'
+import path from 'node:path'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const SERVER_URL = process.env.ABS_SERVER_URL
 const API_TOKEN = process.env.ABS_API_TOKEN
