@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Audiobookshelf</string>
-    <string name="title_activity_main">Audiobookshelf</string>
-    <string name="custom_url_scheme">audiobookshelf</string>
-    <string name="app_widget_description">Simple widget for audiobookshelf playback</string>
+    <string name="app_name">Podshelf</string>
+    <string name="title_activity_main">Podshelf</string>
+    <string name="custom_url_scheme">podshelf</string>
+    <string name="app_widget_description">Simple widget for Podshelf playback</string>
     <string name="action_jump_forward">Jump Forward</string>
     <string name="action_jump_backward">Jump Backward</string>
     <string name="action_skip_forward">Skip Forward</string>

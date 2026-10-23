@@ -38,14 +38,14 @@ android {
     }
   }
   defaultConfig {
-    applicationId "com.audiobookshelf.app"
+    applicationId "com.podshelf.app"
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion
     versionCode 116
     versionName "0.12.0-beta"
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders = [
-      "appAuthRedirectScheme": "com.audiobookshelf.app"
+      "appAuthRedirectScheme": "com.podshelf.app"
     ]
   }
   androidResources {
@@ -108,6 +108,9 @@ dependencies {
 
   // WorkManager - schedules the incomplete-download cleanup pass
   implementation "androidx.work:work-runtime-ktx:$androidx_work_version"
+
+  // WindowManager - reports the hinge on a foldable, for tabletop and book postures
+  implementation "androidx.window:window:$androidx_window_version"
 
   // Media3 (replaces ExoPlayer 2 — see android/media3-migration branch)
   implementation "androidx.media3:media3-exoplayer:$media3_version"

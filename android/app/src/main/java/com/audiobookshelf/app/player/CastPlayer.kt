@@ -37,6 +37,7 @@ import androidx.media3.common.util.ListenerSet
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.Util
 import androidx.media3.common.util.Util.castNonNull
+import com.audiobookshelf.app.plugins.AbsLogger
 import com.google.android.gms.cast.*
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
@@ -317,17 +318,14 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
       newPlayWhenReadyValue, playWhenReadyChangeReason, fetchPlaybackState(remoteMediaClient))
   }
 
-  private fun fetchPlaybackState(remoteMediaClient: RemoteMediaClient?): Int {
-    return when (remoteMediaClient?.playerState) {
-      MediaStatus.PLAYER_STATE_BUFFERING -> STATE_BUFFERING
-      MediaStatus.PLAYER_STATE_PLAYING, MediaStatus.PLAYER_STATE_PAUSED -> STATE_READY
-      MediaStatus.PLAYER_STATE_IDLE, MediaStatus.PLAYER_STATE_UNKNOWN -> STATE_IDLE
-      else -> STATE_IDLE
-    }
-  }
+  private fun fetchPlaybackState(remoteMediaClient: RemoteMediaClient?): Int =
+          CastPlaybackState.fromCastPlayerState(remoteMediaClient?.playerState)
 
   private fun updatePlaybackRateAndNotifyIfChanged() {
-     val mediaStatus = remoteMediaClient!!.mediaStatus
+      // Nullable: this runs from the status callbacks, which keep firing while a session is being
+      // torn down. The line below already allowed for a null mediaStatus; the client itself was
+      // the one dereference that assumed a session was still there.
+      val mediaStatus = remoteMediaClient?.mediaStatus
       val speed = mediaStatus?.playbackRate?.toFloat() ?: PlaybackParameters.DEFAULT.speed
       if (speed > 0.0f) {
         // Set the speed if not paused.
@@ -676,11 +674,27 @@ class CastPlayer(var castContext: CastContext) : BasePlayer() {
   }
 
   override fun setPlayWhenReady(playWhenReady: Boolean) {
+    // The remote client is null whenever there is no cast session, and this is the play button:
+    // it is reached from the UI, the notification, the media session and Android Auto, none of
+    // which know whether the receiver is still there. Dereferencing it here took the process
+    // down - pressing play after a session dropped was an uncaught NullPointerException.
+    val client = remoteMediaClient
+    if (client == null) {
+      AbsLogger.error(
+              "CastPlayer",
+              "setPlayWhenReady: No cast session to ${if (playWhenReady) "play" else "pause"} on, ignoring"
+      )
+      return
+    }
+
+    // Announced only once the command has somewhere to go. Claiming playWhenReady for a receiver
+    // that is not there leaves the UI showing playback that cannot start.
     setPlayerStateAndNotifyIfChanged(
       playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST, playbackState)
 
     listeners.flushEvents()
-    val pendingResult: PendingResult<RemoteMediaClient.MediaChannelResult> = if (playWhenReady) remoteMediaClient!!.play() else remoteMediaClient!!.pause()
+    val pendingResult: PendingResult<RemoteMediaClient.MediaChannelResult> =
+            if (playWhenReady) client.play() else client.pause()
 
     val resultCb = ResultCallback<RemoteMediaClient.MediaChannelResult?> {
       updatePlayerStateAndNotifyIfChanged()

@@ -104,3 +104,4 @@ android/app/*.jks
 mock/
 docs/screenshots/
 playwright-report/
+test-results/

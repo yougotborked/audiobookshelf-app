@@ -16,6 +16,7 @@ distrobox enter audiobookshelf-dev -- bash -c "cd ~/workspace/audiobookshelf-app
 | TypeScript check | `npm run typecheck` — **not** `npx nuxi typecheck` or `npx vue-tsc` |
 | JS unit tests | `npm run test:unit` (`test:unit:watch` to watch) |
 | Kotlin unit tests | `npm run test:android` |
+| Screenshots of the app | `npm run screenshots` → `docs/screenshots/` |
 | Full Android debug APK | `npm run generate && npx cap sync android && cd android && ./gradlew assembleDebug --no-daemon` |
 
 Java 21 (Temurin) is required for Android builds (`jvmToolchain(21)` in `build.gradle`).
@@ -30,7 +31,30 @@ instead of pushing to find out.
 
 **Run it before pushing.** CI (`.github/workflows/build-apk.yml`) runs the same checks: the
 `web` job does lint + typecheck + i18n + vitest, the `main` job does `staticAnalysis
-testDebugUnitTest assembleDebug`.
+testDebugUnitTest assembleDebug`. Its `publish` and `release` jobs are gated to
+`refs/heads/master` and show as **skipped** on every other branch — that is the gate, not a
+failure.
+
+### Seeing the app
+
+`npm run screenshots` boots the real app in headless Chromium against a fake Audiobookshelf
+server (`test/e2e/fixtures/`) and captures the main screens at four widths either side of the
+600dp boundary plus all three themes. Use it before claiming a layout or theming change works.
+
+It is not a visual-regression suite — nothing is compared against a baseline — but
+`expectAppRendered` fails on an empty body or any uncaught exception, so a boot failure is a red
+test instead of a blank PNG. That assertion is the whole point: the previous harness wrote an
+image whether or not anything had rendered, which let it sit broken for months.
+
+Two things that bit before and will again:
+
+- The fake server lives on **its own origin** (`http://abs-mock.test`). Matching API calls with
+  `**/api/**` also matches the dev server's own modules — one of them is
+  `/_nuxt/node_modules/@vue/devtools-api/lib/esm/api/index.js` — and serving that as JSON kills
+  the module graph, blanking every screenshot.
+- Shots are **viewport-sized, not `fullPage`**. The shelves window their rows, so `fullPage`
+  stretches past anything that was ever rendered and writes out half-built rows below the fold:
+  an image that reads as a layout bug and is not one.
 
 ### Where tests go
 
@@ -38,6 +62,10 @@ testDebugUnitTest assembleDebug`.
 |------|----------|--------|
 | Pure TS logic | `test/*.test.ts` | vitest, plain Node |
 | Kotlin / Android | `android/app/src/test/java/...` | JUnit via Gradle |
+| Screenshots | `test/e2e/*.spec.ts` | Playwright, `npm run screenshots` |
+
+The extensions matter: `vitest.config.ts` includes `test/**/*.test.ts`, so a Playwright spec must
+be `.spec.ts` or vitest will try to run it without a browser.
 
 `vitest.config.ts` aliases the Capacitor modules to `test/stubs/capacitor.ts`, so a composable
 can be imported for its pure exports without a native bridge. There is deliberately no
@@ -83,6 +111,37 @@ After fixing baselined errors, tighten the baseline with `npm run typecheck:upda
 vue-tsc 3.x aborts partway through this project and still prints `Found 0 errors` — a false
 pass that reads exactly like success. `vue-tsc` is pinned to 2.2.10 in `devDependencies`,
 and `scripts/typecheck.mjs` refuses to run on any other major.
+
+## App identity
+
+The app is **Podshelf**; the server it talks to is **Audiobookshelf**. Keep that distinction when
+touching strings: every user-facing string mentioning Audiobookshelf is about the *server* and
+should stay.
+
+- `applicationId` is `com.podshelf.app` (`.debug` suffix on debug builds). This is permanent once
+  anything is published.
+- The **Kotlin package and the gradle `namespace` are still `com.audiobookshelf.app`** on purpose.
+  Nothing outside the build sees them, and renaming a hundred source files is a large risky diff
+  for no visible gain. Do not "fix" this.
+- The mark lives in `design/podshelf-mark.svg` (master, with the reasoning and the two joint
+  alignments that are wrong if you redraw it carelessly), `components/ui/PodshelfMark.vue` (in-app,
+  takes `currentColor`), `static/logo.svg` (for anything that can only load a file) and
+  `android/app/src/main/res/drawable/ic_launcher_foreground.xml` (the adaptive icon). Change one,
+  change all four.
+
+## Theming
+
+Colour lives in `assets/tailwind.css` as Material 3 token sets: a `:root` default (dark) plus
+`html[data-theme='black']` and `html[data-theme='light']` overrides.
+
+**A theme must restate the whole tonal set, not just the backgrounds.** The light theme used to
+override surfaces and text but no primary role, so `--md-primary-container` and friends kept their
+dark-theme values — the nav pill rendered dark green on near-white and the mark-as-finished
+control was invisible. Nothing catches this but looking at it, which is what
+`npm run screenshots` is for.
+
+The accent carries one meaning — where you are in something — so it belongs on progress, the
+current item and the play control, and not on decoration.
 
 ## Critical Constraints
 

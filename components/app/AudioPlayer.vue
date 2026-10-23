@@ -196,6 +196,18 @@ const trackCursor = ref<HTMLElement | null>(null)
 
 // ── Reactive state ────────────────────────────────────────────────────────────
 const windowHeight = ref(0)
+
+// Fold posture. In tabletop - a foldable propped open with the hinge across the screen - the
+// artwork used to centre on the window, which is exactly where the hinge is, so the cover was
+// bisected by it. Everything above the hinge is laid out against the top pane instead.
+const { foldState } = useFoldPosture()
+const hingePanes = computed(() => hingeSplit(foldState.value))
+
+/** Height available to the artwork and text: the top pane when split across a hinge. */
+const layoutHeight = computed(() => {
+  const panes = hingePanes.value
+  return panes ? windowHeight.value * (panes.topPercent / 100) : windowHeight.value
+})
 const windowWidth = ref(0)
 const playbackSession = ref<Record<string, unknown> | null>(null)
 const showChapterModal = ref(false)
@@ -345,7 +357,9 @@ const fullscreenBookCoverWidth = computed(() => {
     let sideSpace = 20
     if (bookCoverAspectRatio.value === 1.6) sideSpace += (windowWidth.value - sideSpace) * 0.375
 
-    const availableHeight = windowHeight.value - 400
+    // 400 is the controls and text below the cover. Split across a hinge there are no controls
+    // in this pane, only the text block, so less has to be held back.
+    const availableHeight = hingePanes.value ? layoutHeight.value - 180 : layoutHeight.value - 400
     let width = windowWidth.value - sideSpace
     const totalHeight = width * bookCoverAspectRatio.value
     if (totalHeight > availableHeight) {
@@ -355,7 +369,7 @@ const fullscreenBookCoverWidth = computed(() => {
   } else {
     // Landscape: cover becomes square (CSS uses --cover-image-height for both dimensions).
     // Compute width so that coverHeight = width * aspectRatio fits in the left column.
-    const maxSquareSize = Math.min(windowHeight.value * 0.65, windowWidth.value * 0.38)
+    const maxSquareSize = Math.min(layoutHeight.value * 0.65, windowWidth.value * 0.38)
     return maxSquareSize / bookCoverAspectRatio.value
   }
 })
@@ -515,6 +529,12 @@ watch(() => appStore.playerIsPlaying, async (isPlayingVal) => {
   } else {
     stopPlayInterval()
   }
+})
+
+// Folding changes the pane the artwork has to fit, and nothing else triggers a re-measure:
+// unfolding a device does not always change window size enough to fire a resize.
+watch(hingePanes, () => {
+  refreshUI()
 })
 
 watch(bookCoverAspectRatio, () => {
@@ -1144,10 +1164,22 @@ function updateScreenSize() {
   document.documentElement.style.setProperty('--title-author-left-offset-collapsed', titleAuthorLeftOffsetCollapsed + 'px')
   document.documentElement.style.setProperty('--title-author-width-collapsed', titleAuthorWidthCollapsed + 'px')
 
-  // Portrait fullscreen: position title/author block below cover with a fixed gap,
-  // ensuring it never overlaps the cover or the player controls area (min 220px keeps it above controls).
-  const coverBottomFromScreenBottom = (windowHeight.value / 2) + 120 - (coverHeight / 2)
-  const textBlockBottom = Math.max(coverBottomFromScreenBottom - 90, 220)
+  // Where the artwork and text centre, measured up from the bottom of the window. Normally the
+  // middle of the screen, lifted 120px to clear the controls; in tabletop posture the middle of
+  // the pane above the hinge, with no lift because the controls are in the other pane.
+  const panes = hingePanes.value
+  const centerFromBottomPercent = panes ? 100 - panes.topPercent / 2 : 50
+  const centerOffset = panes ? 0 : 120
+  document.documentElement.style.setProperty('--player-content-center', centerFromBottomPercent + '%')
+  document.documentElement.style.setProperty('--player-content-offset', centerOffset + 'px')
+
+  // Portrait fullscreen: position title/author block below cover with a fixed gap, so it never
+  // overlaps the cover or the controls. The floor is the top of the controls normally, and the
+  // hinge when split - text must not run into either.
+  const coverBottomFromScreenBottom =
+    (windowHeight.value * centerFromBottomPercent) / 100 + centerOffset - coverHeight / 2
+  const textFloor = panes ? (windowHeight.value * (panes.bottomPercent + panes.hingePercent)) / 100 : 220
+  const textBlockBottom = Math.max(coverBottomFromScreenBottom - 90, textFloor)
   document.documentElement.style.setProperty('--fullscreen-text-bottom', textBlockBottom + 'px')
 }
 
@@ -1354,6 +1386,10 @@ defineExpose({
   --title-author-left-offset-collapsed: 80px;
   --title-author-width-collapsed: 40%;
   --fullscreen-text-bottom: 240px;
+  /* Centre of the area the artwork sits in, measured up from the bottom of the window, and how
+     far it is lifted from there. Overridden when a fold splits the screen - see updateScreenSize. */
+  --player-content-center: 50%;
+  --player-content-offset: 120px;
 }
 
 .playerContainer {
@@ -1556,7 +1592,7 @@ defineExpose({
   height: var(--cover-image-height);
   width: var(--cover-image-width);
   left: calc(50% - (calc(var(--cover-image-width)) / 2));
-  bottom: calc(50% + 120px - (calc(var(--cover-image-height)) / 2));
+  bottom: calc(var(--player-content-center) + var(--player-content-offset) - (calc(var(--cover-image-height)) / 2));
   border-radius: 16px;
   overflow: hidden;
 }
@@ -1602,7 +1638,7 @@ defineExpose({
     left: 5%;
     width: var(--cover-image-height); /* square-ish in landscape */
     height: var(--cover-image-height);
-    bottom: 50%;
+    bottom: var(--player-content-center);
     transform: translateY(50%);
   }
 

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Podshelf">
+  <!--
+    The Podshelf mark: headphones around a microphone built from shelf rails.
+
+    Audiobookshelf's own mark is headphones around a stack of books. Keeping the headphones and
+    swapping what they surround says what this fork is in one move - same family, different
+    subject - which is more useful than a mark that pretends to no ancestry.
+
+    What they surround is a condenser mic, drawn as three tapered rails on a stand. The rails
+    double as rows and the bar under them as the shelf they sit on, so the second half of the
+    name is in the figure rather than only in the wordmark.
+
+    Monoline, stroke 5.5 on a 64 grid, round caps. Checked down to 36px and on dark, paper and
+    solid-amber grounds; a single colour throughout, so it reduces to the adaptive icon's
+    monochrome layer unchanged.
+
+    Two joints are load-bearing and were wrong at first:
+
+      - The headband is a true semicircle whose endpoints ARE the earcup apexes (10.5,31) and
+        (53.5,31). End it anywhere else and its round cap lands off-centre inside the cup's
+        curve and bites a notch out of the outline.
+      - The mic stand runs to the shelf bar's centreline at y=51, not to its upper edge. Stopping
+        short leaves the two round caps grazing and pinches the join into an hourglass.
+
+    Both only show up when zoomed, which is exactly why they are written down.
+  -->
+  <g fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round">
+    <!-- headband -->
+    <path d="M10.5 31 A21.5 21.5 0 0 1 53.5 31" />
+    <!-- earcups -->
+    <rect x="5" y="31" width="11" height="17" rx="5.5" />
+    <rect x="48" y="31" width="11" height="17" rx="5.5" />
+    <!-- mic capsule, as shelf rails -->
+    <path d="M28 22 H36" />
+    <path d="M25 31 H39" />
+    <path d="M28 40 H36" />
+    <!-- stand, and the shelf it stands on -->
+    <path d="M32 40 V51" />
+    <path d="M22 51 H42" />
+  </g>
+</svg>

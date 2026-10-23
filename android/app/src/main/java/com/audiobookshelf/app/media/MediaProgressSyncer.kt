@@ -43,6 +43,13 @@ class MediaProgressSyncer(
   var currentPlaybackSession: PlaybackSession? = null // copy of pb session currently syncing
   var currentLocalMediaProgress: LocalMediaProgress? = null
 
+  // The download's progress row for a session that is streaming from the server, so a streamed
+  // play keeps the downloaded copy current. Resolved once per session: the lookup reads every
+  // local progress row, and sync runs on a timer. linkedLocalLookupDone separates "no row for
+  // this item" from "not looked yet", so a miss is not retried on every tick.
+  private var linkedLocalMediaProgress: LocalMediaProgress? = null
+  private var linkedLocalLookupDone: Boolean = false
+
   private val currentDisplayTitle
     get() = currentPlaybackSession?.displayTitle ?: "Unset"
   val currentIsLocal
@@ -58,6 +65,7 @@ class MediaProgressSyncer(
       if (playbackSession.id != currentSessionId) {
         Log.d(tag, "Playback session changed, reset timer")
         currentLocalMediaProgress = null
+        resetLinkedLocalProgress()
         listeningTimerTask?.cancel()
         lastSyncTime = 0L
         Log.d(tag, "start: Set last sync time 0 $lastSyncTime")
@@ -67,6 +75,7 @@ class MediaProgressSyncer(
       }
     } else if (playbackSession.id != currentSessionId) {
       currentLocalMediaProgress = null
+      resetLinkedLocalProgress()
     }
 
     listeningTimerRunning = true
@@ -280,6 +289,13 @@ class MediaProgressSyncer(
     //   Sessions are removed once successfully synced with the server
     currentPlaybackSession?.let { DeviceManager.dbManager.savePlaybackSession(it) }
 
+    // Keep a downloaded copy of this item in step with what is being streamed. Deliberately
+    // before the network branches below: the point is that the device's own record is right even
+    // when the server sync does not happen or fails.
+    if (!currentIsLocal) {
+      currentPlaybackSession?.let { saveLinkedLocalProgress(it) }
+    }
+
     // Bind this sync to the session it was started for. The callbacks below run after the HTTP
     // round trip, and by then the queue may have advanced: an episode that reaches its end syncs
     // its final position while handlePlaybackEnded is already preparing the next item, so
@@ -410,9 +426,48 @@ class MediaProgressSyncer(
     }
   }
 
+  private fun resetLinkedLocalProgress() {
+    linkedLocalMediaProgress = null
+    linkedLocalLookupDone = false
+  }
+
+  /**
+   * Writes a streamed session's position onto the downloaded copy's progress row, when there is
+   * one. Does nothing for an item that was never downloaded - see
+   * ProgressSyncRules.findLocalProgressForServerPlay.
+   */
+  private fun saveLinkedLocalProgress(playbackSession: PlaybackSession) {
+    if (!linkedLocalLookupDone) {
+      linkedLocalLookupDone = true
+      linkedLocalMediaProgress =
+              ProgressSyncRules.findLocalProgressForServerPlay(
+                      DeviceManager.dbManager.getAllLocalMediaProgress(),
+                      playbackSession.serverConnectionConfigId,
+                      playbackSession.libraryItemId,
+                      playbackSession.episodeId
+              )
+      if (linkedLocalMediaProgress != null) {
+        AbsLogger.info(
+                "MediaProgressSyncer",
+                "saveLinkedLocalProgress: Streaming an item that is also downloaded, will keep its local progress in step (title: \"$currentDisplayTitle\") (local progress id: ${linkedLocalMediaProgress?.id})"
+        )
+      }
+    }
+
+    val linked = linkedLocalMediaProgress ?: return
+    linked.updateFromPlaybackSession(playbackSession)
+    if (linked.progress.isNaN()) {
+      Log.e(tag, "saveLinkedLocalProgress: Invalid progress on linked local media progress")
+      return
+    }
+    DeviceManager.dbManager.saveLocalMediaProgress(linked)
+    playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(linked)
+  }
+
   fun reset() {
     currentPlaybackSession = null
     currentLocalMediaProgress = null
+    resetLinkedLocalProgress()
     lastSyncTime = 0L
     Log.d(tag, "reset: Set last sync time 0 $lastSyncTime")
     failedSyncs = 0
