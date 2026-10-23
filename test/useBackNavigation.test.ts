@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveBackAction } from '~/composables/useBackNavigation'
 
-const open = { isModalOpen: false, showReader: false, playerIsFullscreen: false, canGoBack: true }
+const open = { isModalOpen: false, showReader: false, playerIsFullscreen: false, hasInAppHistory: true }
 
 // The bug this guards: none of this ran. MainActivity registered a back callback after
 // Capacitor's AppPlugin had registered its own, and the dispatcher runs them
@@ -13,7 +13,15 @@ describe('resolveBackAction', () => {
   })
 
   it('confirms before leaving the app when there is nowhere back to go', () => {
-    expect(resolveBackAction({ ...open, canGoBack: false })).toBe('confirm-exit')
+    expect(resolveBackAction({ ...open, hasInAppHistory: false })).toBe('confirm-exit')
+  })
+
+  // The reported case: Catch up starts playback and leaves the mini player up, so nothing is
+  // covering the page. Going back from the app's first screen used to pop the webview's own
+  // history, which reloads the document - and the player component unmounting with it stopped
+  // the audio.
+  it('does not navigate off the first screen', () => {
+    expect(resolveBackAction({ ...open, hasInAppHistory: false })).not.toBe('history-back')
   })
 
   it('minimizes the fullscreen player rather than navigating', () => {
@@ -22,7 +30,7 @@ describe('resolveBackAction', () => {
   })
 
   it('minimizes the player rather than leaving the app', () => {
-    expect(resolveBackAction({ ...open, playerIsFullscreen: true, canGoBack: false })).toBe('minimize-player')
+    expect(resolveBackAction({ ...open, playerIsFullscreen: true, hasInAppHistory: false })).toBe('minimize-player')
   })
 
   it('closes the reader before the player', () => {
@@ -31,7 +39,7 @@ describe('resolveBackAction', () => {
 
   it('closes a modal before anything else', () => {
     expect(
-      resolveBackAction({ isModalOpen: true, showReader: true, playerIsFullscreen: true, canGoBack: false })
+      resolveBackAction({ isModalOpen: true, showReader: true, playerIsFullscreen: true, hasInAppHistory: false })
     ).toBe('close-modal')
   })
 

@@ -32,7 +32,7 @@ export default defineNuxtPlugin(async () => {
   }
 
   // Android: hardware back button
-  App.addListener('backButton', async ({ canGoBack }) => {
+  App.addListener('backButton', async () => {
     const globalsStore = useGlobalsStore()
     const appStore = useAppStore()
 
@@ -40,7 +40,8 @@ export default defineNuxtPlugin(async () => {
       isModalOpen: globalsStore.isModalOpen,
       showReader: appStore.showReader,
       playerIsFullscreen: appStore.playerIsFullscreen,
-      canGoBack
+      // Deliberately not the event's canGoBack - see BackNavigationContext
+      hasInAppHistory: window.history.state?.back != null
     })
 
     if (action === 'close-modal') return bus.emit('close-modal')
