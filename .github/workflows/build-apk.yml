@@ -166,6 +166,9 @@ jobs:
           # copy logo + template from the repo into the ghpages folder
           cp static/logo.svg ghpages/logo.svg || true
           cp .github/testing-page-template.html ghpages/index.html
+          # Play requires a reachable privacy policy URL for the listing, so it is published
+          # alongside the test page rather than kept in a gist that can quietly disappear.
+          cp .github/privacy-policy.html ghpages/privacy.html
 
       - name: Build test page
         working-directory: ghpages
@@ -174,7 +177,7 @@ jobs:
           sed -i "s/__COMMIT__/$(git rev-parse --short HEAD)/g" index.html
           sed -i "s/__APK__/$(ls *apk | xargs -n1 basename)/g" index.html
           # Replace repository placeholder so forks point to their own repo (owner/name)
-          sed -i "s|__REPO__|${GITHUB_REPOSITORY}|g" index.html
+          sed -i "s|__REPO__|${GITHUB_REPOSITORY}|g" index.html privacy.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -71,6 +71,20 @@ Large screens and foldables:
 
 Under the hood this fork has also moved to Nuxt 3 + Pinia and ExoPlayer2 → Media3.
 
+## Publishing
+
+`docs/PLAY_STORE.md` covers getting this onto Google Play: what the repository automates (a
+`v*` tag builds a signed AAB and uploads it) and what only a human with a Play Console can do.
+
+Worth knowing before you start: a **personal** Play account created after 13 Nov 2023 cannot ship
+to production until it has run a closed test with 12 testers for 14 continuous days — and
+internal testing does not count toward that. Internal testing itself has no such gate and is live
+in minutes, which is usually what you actually want.
+
+The app's privacy policy lives at
+[yougotborked.github.io/audiobookshelf-app/privacy.html](https://yougotborked.github.io/audiobookshelf-app/privacy.html),
+published from `.github/privacy-policy.html` on every push to master.
+
 ## Contributing
 
 Built with [Nuxt](https://nuxt.com/) and [Capacitor](https://capacitorjs.com/).

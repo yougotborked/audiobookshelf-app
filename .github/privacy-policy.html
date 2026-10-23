@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Podshelf :: Privacy Policy</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0 auto; padding: 48px 20px 96px; max-width: 46rem;
+    background: #141210; color: #ECE4DA;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.65;
+  }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  h1 { font-size: 2rem; margin: 0; letter-spacing: -0.5px; }
+  h2 { font-size: 1.15rem; margin: 2.4rem 0 .6rem; color: #F0B457; }
+  p, li { color: #D0C3B4; }
+  a { color: #F0B457; }
+  .updated { color: #9A8E80; font-size: .9rem; margin-top: 0; }
+  code { background: #24201C; padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+  .box { background: #1F1C19; border: 1px solid #4A433B; border-radius: 12px; padding: 16px 20px; margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.svg" width="56" height="56" alt="">
+  <h1>Podshelf Privacy Policy</h1>
+</header>
+<p class="updated">Last updated: 23 October 2026</p>
+
+<div class="box">
+  <strong>The short version.</strong> Podshelf has no servers and no accounts. It talks to the
+  Audiobookshelf server <em>you</em> choose, and to nobody else except when you search for a new
+  podcast. Nothing is collected, stored or transmitted to the developer, and there is no
+  analytics, crash reporting or advertising of any kind in the app.
+</div>
+
+<h2>What Podshelf is</h2>
+<p>
+  Podshelf is a podcast player for Android. It is a client for
+  <a href="https://www.audiobookshelf.org">Audiobookshelf</a>, a server that you or someone you
+  know hosts. Podshelf provides no content of its own and has no backend. Your library, your
+  listening history and your account live on your own server.
+</p>
+
+<h2>Data the developer collects</h2>
+<p>
+  None. There is no account to create, no telemetry, no analytics SDK, no crash reporting service
+  and no advertising identifier. No data of any kind is sent to the developer or to any service
+  the developer operates, because no such service exists.
+</p>
+
+<h2>Data stored on your device</h2>
+<p>Podshelf keeps the following locally, in app-private storage, and never sends it anywhere except to the server you configured:</p>
+<ul>
+  <li>The address of your server, your username and your authentication tokens.</li>
+  <li>Podcast and episode details cached so the app works without a connection.</li>
+  <li>Episodes you have downloaded.</li>
+  <li>Playback positions, so listening continues where you left off.</li>
+  <li>Your settings, including theme and playback preferences.</li>
+  <li>A local diagnostic log, readable in the app under Settings, which stays on the device.</li>
+</ul>
+<p>
+  Uninstalling the app removes all of it. You can clear it at any time from Android's app
+  settings, or log out from within the app.
+</p>
+
+<h2>Where your data goes</h2>
+<ul>
+  <li>
+    <strong>Your Audiobookshelf server.</strong> Podshelf sends your credentials, requests for
+    your library and your listening progress to the server address you enter. That server is
+    operated by you or by whoever hosts it for you — not by the developer — and its own handling
+    of your data is outside this policy.
+  </li>
+  <li>
+    <strong>Podcast Index</strong> (<code>api.podcastindex.org</code>). Used only when you search
+    for a podcast to add. The search terms you type are sent to that service so it can return
+    matches. It is not contacted when you are simply listening, and nothing identifying you is
+    sent with the query. See the
+    <a href="https://podcastindex.org/">Podcast Index</a> site for its own terms.
+  </li>
+  <li>
+    <strong>Google Cast.</strong> If you cast to a device, playback URLs pointing at your server
+    are handed to Google's Cast framework on your local network so the receiver can stream them.
+    This happens only while you are casting.
+  </li>
+</ul>
+
+<h2>Permissions, and why</h2>
+<ul>
+  <li><strong>Internet</strong> — to reach your server.</li>
+  <li><strong>Foreground service (media playback, data sync)</strong> — to keep playing and to finish downloads when the app is not in front of you.</li>
+  <li><strong>Notifications</strong> — the playback notification with its transport controls, and download progress.</li>
+  <li><strong>Read audio / storage</strong> — to play episodes you have downloaded.</li>
+  <li><strong>Ignore battery optimizations</strong> — requested, never required, so long downloads and playback are not killed in the background. Declining it does not stop the app working.</li>
+</ul>
+
+<h2>Children</h2>
+<p>
+  Podshelf is not directed at children and collects nothing from anyone. The content you see is
+  whatever is on the server you connect to.
+</p>
+
+<h2>Changes</h2>
+<p>
+  If this policy changes, the revised version will be published at this address with a new date
+  above. The app's full source is public, so any change in what it sends and where can be checked
+  directly rather than taken on trust.
+</p>
+
+<h2>Contact</h2>
+<p>
+  Questions or problems:
+  <a href="https://github.com/__REPO__/issues">open an issue on GitHub</a>.
+</p>
+
+<p style="margin-top:3rem"><a href="./">&larr; Back to downloads</a></p>
+
+</body>
+</html>
