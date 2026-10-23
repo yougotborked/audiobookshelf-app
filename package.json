@@ -22,6 +22,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:android": "bash scripts/test-android.sh",
+    "screenshots": "playwright test",
     "icons-android": "cordova-res android --skip-config --copy",
     "ionic:build": "npm run build",
     "ionic:serve": "npm run dev",
