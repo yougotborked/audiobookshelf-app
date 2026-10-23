@@ -16,6 +16,12 @@ import com.audiobookshelf.app.data.LocalMediaProgress
  *  - Pulling the server's progress. The server's record is taken wholesale when its lastUpdate is
  *    newer, including an isFinished flag that contradicts the progress next to it. A record of
  *    progress 1.0 with isFinished false would clear a local finished state.
+ *
+ * And one place where a downloaded copy drifts from what was actually listened to:
+ *
+ *  - Streaming an item that is also downloaded. The sync writes the server's record and the
+ *    session row, but not the download's own progress row, so that row keeps the position from
+ *    the last local play until the next connect-time reconciliation.
  */
 object ProgressSyncRules {
 
@@ -49,5 +55,40 @@ object ProgressSyncRules {
       return true
     }
     return false
+  }
+
+  /**
+   * The on-device progress row a server play should also write through to, if any.
+   *
+   * Playback streamed from the server does not touch the local progress row belonging to a
+   * downloaded copy of the same episode. The rows are reconciled on the next connection to the
+   * server, so the drift is usually invisible - but between a streamed play and that
+   * reconciliation the download still holds the position from the last local play, and opening
+   * the app offline in that window resumes from it.
+   *
+   * Only a row that already exists is returned. An item that was streamed and never downloaded
+   * has no local media to resume, and creating a progress row for it would add an entry to the
+   * device's own list for something it cannot play.
+   *
+   * Matching is on the server's identifiers and the connection the row came from: the same
+   * library item id can exist on two different servers, and a row for the whole item is not a
+   * row for one of its episodes.
+   */
+  fun findLocalProgressForServerPlay(
+          rows: List<LocalMediaProgress>,
+          serverConnectionConfigId: String?,
+          libraryItemId: String?,
+          episodeId: String?
+  ): LocalMediaProgress? {
+    if (serverConnectionConfigId.isNullOrEmpty()) return null
+    if (libraryItemId.isNullOrEmpty()) return null
+
+    return rows.firstOrNull { row ->
+      row.serverConnectionConfigId == serverConnectionConfigId &&
+              row.libraryItemId == libraryItemId &&
+              // Null and empty both mean "not an episode", and the two spellings are mixed
+              // across the database and the session.
+              row.episodeId.orEmpty() == episodeId.orEmpty()
+    }
   }
 }
