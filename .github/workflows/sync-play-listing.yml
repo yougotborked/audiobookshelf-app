@@ -1,0 +1,55 @@
+name: Sync Play listing
+
+# The listing - title, descriptions, icon, feature graphic, screenshots - is kept in
+# docs/store/ and pushed to Play from here, so it is reviewable in a diff rather than typed
+# into the Console and silently drifting from the app.
+#
+# Runs when that content changes on master, and on demand. Deliberately not part of the release
+# workflow: listing copy and app binaries change for different reasons and at different times.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/store/**'
+      - 'scripts/sync-play-listing.mjs'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate only, send nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-play-listing
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    environment: play
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Until the Play app exists and the secret is set there is nothing to sync, and failing
+      # every push to master over it would be noise. A dry run still validates the content.
+      - name: Sync
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::notice::PLAY_SERVICE_ACCOUNT_JSON is not set - validating the listing only."
+            node scripts/sync-play-listing.mjs --dry-run
+            exit 0
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            node scripts/sync-play-listing.mjs --dry-run
+          else
+            node scripts/sync-play-listing.mjs
+          fi
