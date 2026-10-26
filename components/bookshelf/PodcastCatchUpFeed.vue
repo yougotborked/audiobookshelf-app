@@ -5,9 +5,7 @@
       <div>
         <h1 class="text-md-title-l text-md-on-surface font-semibold">Catch up</h1>
         <p class="text-md-body-s text-md-on-surface-variant mt-0.5">
-          <template v-if="unfinishedEpisodes.length">
-            {{ unfinishedEpisodes.length }} episode{{ unfinishedEpisodes.length !== 1 ? 's' : '' }} · oldest first
-          </template>
+          <template v-if="unfinishedEpisodes.length"> {{ unfinishedEpisodes.length }} episode{{ unfinishedEpisodes.length !== 1 ? 's' : '' }} · oldest first </template>
           <template v-else-if="!isLoading">All done</template>
         </p>
       </div>
@@ -46,7 +44,8 @@
 </template>
 
 <script>
-import { applyPodcastRules, useAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
+import { useAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
+import { episodePublishedAt, orderListeningQueue, queueItemStartTime, toPlayQueueItems } from '~/composables/useListeningQueue'
 
 export default {
   props: {
@@ -123,39 +122,20 @@ export default {
       })
       return epmap
     },
-    unfinishedEpisodes() {
-      const parseDate = (ep) => {
-        let val = ep.publishedAt != null ? ep.publishedAt : ep.pubDate
-        if (!val) return 0
-        if (typeof val === 'string') {
-          const n = Number(val)
-          if (!isNaN(n)) val = n
-        }
-        if (typeof val === 'number') {
-          if (val < 1e12) val *= 1000
-          return val
-        }
-        const p = Date.parse(val)
-        return isNaN(p) ? 0 : p
+    progressLookup() {
+      // The server's record and the device's, read through the shared queue rules. The device
+      // matters on its own: the native layer writes a finish before the socket confirms it, so
+      // without it a just-finished episode lingers in the list.
+      return {
+        server: (libraryItemId, episodeId) => this.userStore.getUserMediaProgress(libraryItemId, episodeId),
+        local: (libraryItemId, episodeId) => this.globalsStore.getLocalMediaProgressByServerItemId(libraryItemId, episodeId)
       }
-      const unfinished = this.episodes.filter((ep) => {
-        if (isProgressFinished(ep.progress)) return false
-        if (ep.libraryItemId) {
-          const serverProg = this.userStore.getUserMediaProgress(ep.libraryItemId, ep.id)
-          if (isProgressFinished(serverProg)) return false
-          // Also check local progress — native layer updates this immediately on finish
-          // before the server socket confirms, so episodes don't linger in the list
-          const localProg = this.globalsStore.getLocalMediaProgressByServerItemId(ep.libraryItemId, ep.id)
-          if (isProgressFinished(localProg)) return false
-        }
-        return true
-      })
-
-      // Honour the per-podcast rule, so a show set to excluded or newest-N here matches what the
-      // auto playlist and the auto-download passes do
-      return applyPodcastRules(unfinished, this.podcastRules, (ep) => ep.libraryItemId, parseDate).sort(
-        (a, b) => parseDate(a) - parseDate(b)
-      )
+    },
+    unfinishedEpisodes() {
+      // Oldest-first, with no resume reordering: this is a list someone is reading, and one that
+      // reshuffles as they listen is harder to scan than one that holds still. Minimal mode asks
+      // the same function for the same queue with `resumeFirst`, since it has no list to scan.
+      return orderListeningQueue(this.episodes, { rules: this.podcastRules, lookup: this.progressLookup })
     }
   },
   methods: {
@@ -171,26 +151,7 @@ export default {
       if (cached.length) {
         this.episodes = cached
       } else {
-        const episodes = [...this.localEpisodes]
-        const parseDate = (ep) => {
-          if (!ep) return 0
-          let val = ep.publishedAt != null ? ep.publishedAt : ep.pubDate
-          if (!val) return 0
-          if (typeof val === 'string') {
-            const num = Number(val)
-            if (!isNaN(num)) val = num
-          }
-          if (typeof val === 'number') {
-            if (val < 1e12) val *= 1000
-            return val
-          }
-          const parsed = Date.parse(val)
-          return isNaN(parsed) ? 0 : parsed
-        }
-        this.episodes = episodes
-          .slice()
-          .sort((a, b) => parseDate(b) - parseDate(a))
-          .slice(0, 200)
+        this.episodes = [...this.localEpisodes].sort((a, b) => episodePublishedAt(b) - episodePublishedAt(a)).slice(0, 200)
       }
 
       if (showToast && !this.offlineToastShown) {
@@ -220,7 +181,6 @@ export default {
       }
 
       try {
-
         const episodePayload = await this.nativeHttp.get(`/api/libraries/${this.currentLibraryId}/recent-episodes?limit=200`, { connectTimeout: 10000 })
 
         if (!episodePayload) {
@@ -243,32 +203,13 @@ export default {
 
       await this.hapticsImpact()
 
-      // Build a queue for all unfinished episodes so playback continues
-      // automatically without user interaction — same pattern as playlist "play all".
-      const queue = episodes
-        .map((ep) => {
-          if (!ep.libraryItemId) return null
-          const localEp = this.localEpisodeMap[ep.id]
-          const localLibraryItemId = localEp?.localLibraryItemId
-          return {
-            libraryItemId: (localEp && localLibraryItemId) ? localLibraryItemId : ep.libraryItemId,
-            episodeId: (localEp && localLibraryItemId) ? localEp.id : ep.id,
-            serverLibraryItemId: ep.libraryItemId,
-            serverEpisodeId: ep.id,
-            episode: ep,
-            localEpisode: localEp || null
-          }
-        })
-        .filter(Boolean)
-
+      // A queue of every unfinished episode, so playback continues without another tap - the
+      // same pattern as a playlist's "play all".
+      const queue = toPlayQueueItems(episodes, (ep) => this.localEpisodeMap[ep.id])
       if (!queue.length) return
 
       const first = queue[0]
-
-      const firstProgress = first.serverLibraryItemId
-        ? this.userStore.getUserMediaProgress(first.serverLibraryItemId, first.serverEpisodeId)
-        : null
-      const startTime = firstProgress?.currentTime || null
+      const startTime = queueItemStartTime(first, this.progressLookup)
 
       this.appStore.setPlayQueue(queue)
       this.appStore.setQueueIndex(0)

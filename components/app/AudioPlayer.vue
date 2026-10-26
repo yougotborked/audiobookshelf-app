@@ -1,5 +1,5 @@
 <template>
-  <div v-if="playbackSession" id="streamContainer" class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none" :class="{ fullscreen: showFullscreen, 'ios-player': platform === 'ios', 'web-player': platform === 'web' }">
+  <div v-if="playbackSession && !appStore.minimalModeActive" id="streamContainer" class="fixed top-0 left-0 layout-wrapper right-0 z-50 pointer-events-none" :class="{ fullscreen: showFullscreen, 'ios-player': platform === 'ios', 'web-player': platform === 'web' }">
     <!-- Fullscreen background: purely visual, no pointer-events so clicks pass through -->
     <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-none" :style="{ backgroundColor: coverRgb }">
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-audio-player)" />

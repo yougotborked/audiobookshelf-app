@@ -1011,6 +1011,9 @@ export default {
     this.eventBus.on('device-focus-update', this.deviceFocused)
     this.eventBus.on('socket-reconnected', this.onSocketReconnected)
     this.eventBus.on('playback-ended', this.onPlaybackEnded)
+    // Minimal mode has its own transport controls and the player component it would normally
+    // emit from is not on screen, so skipping has to be reachable from the bus too
+    this.eventBus.on('skip-next-queue', this.onSkipNextRequest)
 
     if (
       this.appStore.currentPlaybackSession &&
@@ -1047,6 +1050,7 @@ export default {
     this.eventBus.off('device-focus-update', this.deviceFocused)
     this.eventBus.off('socket-reconnected', this.onSocketReconnected)
     this.eventBus.off('playback-ended', this.onPlaybackEnded)
+    this.eventBus.off('skip-next-queue', this.onSkipNextRequest)
     clearTimeout(this.queueAdvanceFallbackTimeout)
   }
 }

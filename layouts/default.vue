@@ -1,7 +1,7 @@
 <template>
   <div class="w-full layout-wrapper bg-md-surface-1">
-    <app-appbar />
-    <div id="content" class="overflow-hidden relative" :class="appStore.getIsPlayerOpen ? 'playerOpen' : ''">
+    <app-appbar v-if="!appStore.minimalModeActive" />
+    <div id="content" class="overflow-hidden relative" :class="[appStore.getIsPlayerOpen && !appStore.minimalModeActive ? 'playerOpen' : '', appStore.minimalModeActive ? 'minimalMode' : '']">
       <slot />
     </div>
     <app-audio-player-container ref="streamContainer" />

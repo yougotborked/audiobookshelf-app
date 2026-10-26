@@ -83,6 +83,22 @@
       <p class="pl-4">{{ $strings.LabelAutoCacheUnplayedEpisodes }}</p>
     </div>
 
+    <!-- Minimal mode -->
+    <p class="text-md-label-m text-md-primary mb-3 mt-8 uppercase tracking-widest">{{ $strings.LabelMinimalMode }}</p>
+    <p class="text-md-body-s text-md-on-surface-variant mb-2">{{ $strings.LabelMinimalModeHelp }}</p>
+    <button type="button" class="w-full flex items-center py-3 text-left active:opacity-60" @click="openMinimalMode">
+      <div class="w-10 flex justify-center">
+        <span class="material-symbols text-2xl text-md-on-surface-variant">close_fullscreen</span>
+      </div>
+      <p class="pl-4">{{ $strings.LabelOpenMinimalMode }}</p>
+    </button>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center">
+        <ui-toggle-switch v-model="minimalModeOnLaunch" @update:modelValue="saveMinimalModeOnLaunch" />
+      </div>
+      <p class="pl-4">{{ $strings.LabelStartInMinimalMode }}</p>
+    </div>
+
     <!-- Sleep timer settings -->
     <template v-if="!isiOS">
       <p class="text-md-label-m text-md-primary mb-3 mt-8 uppercase tracking-widest">{{ $strings.HeaderSleepTimerSettings }}</p>
@@ -646,10 +662,22 @@ function toggleLockOrientation() {
   saveSettings()
 }
 
+const minimalModeOnLaunch = ref(false)
+
+async function saveMinimalModeOnLaunch(enabled: boolean) {
+  await useHaptics().impact()
+  await useLocalStore().setMinimalModeOnLaunch(enabled)
+}
+
+async function openMinimalMode() {
+  await useHaptics().impact()
+  useRouter().push('/minimal')
+}
+
 async function saveSettings() {
   await useHaptics().impact()
   const db = useDb()
-  const updatedDeviceData = await db.updateDeviceSettings({ ...settings }) as Record<string, unknown> | null
+  const updatedDeviceData = (await db.updateDeviceSettings({ ...settings })) as Record<string, unknown> | null
   if (updatedDeviceData) {
     appStore.setDeviceData(updatedDeviceData as Parameters<typeof appStore.setDeviceData>[0])
     deviceData.value = updatedDeviceData
@@ -707,8 +735,9 @@ async function init() {
   loading.value = false
 }
 
-onMounted(() => {
+onMounted(async () => {
   init()
+  minimalModeOnLaunch.value = await useLocalStore().getMinimalModeOnLaunch()
   window.addEventListener('resize', updateOrientationLockHonored)
 })
 

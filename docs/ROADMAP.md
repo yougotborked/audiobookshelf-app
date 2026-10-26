@@ -19,6 +19,15 @@ device, and has to degrade to the deterministic queue when it is unavailable. Wo
 deterministic queue as the product and the model as an optional re-ranker, not the other way
 round.
 
+**Status: a first version shipped.** `composables/useListeningQueue.ts` holds the ordering rules
+as pure functions - finished dropped, per-podcast rules applied, oldest first, and started
+episodes ahead of everything when asked. Catch up and minimal mode both read it, so there is one
+answer to "what plays next" rather than one per screen. `pages/minimal.vue` is the chrome-free
+surface: play/pause, jump, speed, skip, and how many are left. No model, no new playback path.
+
+Left for later: the optional re-ranker on top, and a way in from outside the app (a launcher
+shortcut or a quick-settings tile) so minimal mode does not have to be reached through settings.
+
 ## 2. iOS at Android parity
 
 Cross-platform Podshelf. The web layer is shared already; the gap is the native side — the

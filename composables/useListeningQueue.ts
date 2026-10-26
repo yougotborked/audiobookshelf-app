@@ -1,0 +1,206 @@
+/**
+ * What plays next, decided by reading the library rather than by asking.
+ *
+ * These rules were a computed property inside `PodcastCatchUpFeed.vue`, with the published-date
+ * parser written out twice in the same file and the play-queue mapping inline in a click handler.
+ * Nothing could reach any of it, so "which episode is next" could only be checked by opening the
+ * app and looking. Minimal mode needs the same answer on a surface with no list to look at, which
+ * is reason enough to have one definition of it.
+ *
+ * Everything here is pure: progress is read through injected lookups rather than the stores, so
+ * the ordering can be exercised without a server, a database or a player.
+ */
+import { isProgressFinished, type MaybeProgress } from '~/composables/useMediaProgress'
+import { applyPodcastRules, type AutoPlaylistPodcastRule } from '~/composables/useAutoPlaylist'
+
+export interface QueueProgress extends MaybeProgress {
+  currentTime?: number
+  lastUpdate?: number
+}
+
+export interface ListeningEpisode {
+  id?: string
+  libraryItemId?: string
+  publishedAt?: number | string | null
+  pubDate?: number | string | null
+  progress?: QueueProgress | null
+  [key: string]: unknown
+}
+
+export interface LocalEpisode {
+  id?: string
+  localLibraryItemId?: string
+  [key: string]: unknown
+}
+
+/**
+ * How the caller reads progress it did not get with the episode. Both are optional so a caller
+ * with only one source - an offline list, a test - does not have to invent the other.
+ */
+export interface ProgressLookup {
+  /** Progress as the server knows it. */
+  server?: (libraryItemId: string, episodeId: string) => QueueProgress | null | undefined
+  /**
+   * Progress as the device knows it. The native layer writes this the moment an episode finishes,
+   * before the server socket confirms, so without it a just-finished episode stays in the queue.
+   */
+  local?: (libraryItemId: string, episodeId: string) => QueueProgress | null | undefined
+}
+
+export interface PlayQueueItem {
+  libraryItemId: string
+  episodeId: string
+  serverLibraryItemId: string
+  serverEpisodeId: string
+  episode: ListeningEpisode
+  localEpisode: LocalEpisode | null
+  // The store's QueueItem is open-ended; without this a queue built here cannot be handed to it
+  [key: string]: unknown
+}
+
+/**
+ * Published date as milliseconds, from whichever field and shape a feed happened to supply:
+ * `publishedAt` as a number, the same value as a numeric string, `pubDate` as RFC 2822, or
+ * nothing at all.
+ *
+ * Seconds are promoted to milliseconds. A feed that reports seconds looks like 1970 next to one
+ * that reports milliseconds, which sorts every one of its episodes to the front of the queue.
+ */
+export function episodePublishedAt(episode: ListeningEpisode | null | undefined): number {
+  if (!episode) return 0
+  // First usable of the two, rather than "publishedAt if present": a feed that sends
+  // `publishedAt: 0` used to shadow a perfectly good `pubDate` and sort to the front
+  let value: unknown = episode.publishedAt || episode.pubDate
+  if (!value) return 0
+  if (typeof value === 'string') {
+    const asNumber = Number(value)
+    if (!isNaN(asNumber)) value = asNumber
+  }
+  if (typeof value === 'number') {
+    if (!isFinite(value)) return 0
+    // Anything below this is too small to be a millisecond timestamp in the podcast era, so it
+    // is seconds. 1e12 ms is Sep 2001; 1e12 s is the year 33658.
+    return value < 1e12 ? value * 1000 : value
+  }
+  const parsed = Date.parse(String(value))
+  return isNaN(parsed) ? 0 : parsed
+}
+
+/**
+ * The best progress record available for an episode: the one that came with it, plus whatever the
+ * server and the device know. Merged rather than picked, because each source can be the only one
+ * holding a given field - the device has the newest currentTime, the server has lastUpdate from
+ * other devices - and the newest wins where they overlap.
+ */
+export function episodeProgress(episode: ListeningEpisode | null | undefined, lookup: ProgressLookup = {}): QueueProgress | null {
+  if (!episode) return null
+  const records: QueueProgress[] = []
+  if (episode.progress) records.push(episode.progress)
+  const libraryItemId = episode.libraryItemId
+  const episodeId = episode.id
+  if (libraryItemId && episodeId) {
+    const server = lookup.server?.(libraryItemId, episodeId)
+    if (server) records.push(server)
+    const local = lookup.local?.(libraryItemId, episodeId)
+    if (local) records.push(local)
+  }
+  if (!records.length) return null
+  // Latest first, so a `reduce` that keeps the first defined value of each field prefers it
+  records.sort((a, b) => (b.lastUpdate || 0) - (a.lastUpdate || 0))
+  return records.reduce<QueueProgress>((merged, record) => {
+    if (merged.isFinished == null && record.isFinished != null) merged.isFinished = record.isFinished
+    if (merged.progress == null && record.progress != null) merged.progress = record.progress
+    if (merged.currentTime == null && record.currentTime != null) merged.currentTime = record.currentTime
+    if (merged.lastUpdate == null && record.lastUpdate != null) merged.lastUpdate = record.lastUpdate
+    // Finished anywhere is finished: the device sets the flag before the server hears about it,
+    // and a stale server record saying otherwise must not put the episode back in the queue.
+    if (record.isFinished) merged.isFinished = true
+    return merged
+  }, {})
+}
+
+/** Whether an episode should be kept out of the queue because it has been heard to the end. */
+export function isEpisodeFinished(episode: ListeningEpisode | null | undefined, lookup: ProgressLookup = {}): boolean {
+  return isProgressFinished(episodeProgress(episode, lookup))
+}
+
+/** Whether an episode has been started and not finished - the "finish what you began" case. */
+export function isEpisodeStarted(episode: ListeningEpisode | null | undefined, lookup: ProgressLookup = {}): boolean {
+  const progress = episodeProgress(episode, lookup)
+  if (!progress) return false
+  if (isProgressFinished(progress)) return false
+  return (progress.currentTime || 0) > 0 || (progress.progress || 0) > 0
+}
+
+export interface OrderListeningQueueOptions {
+  /** Per-podcast include / newest-N / exclude rules, shared with the auto playlist. */
+  rules?: Record<string, AutoPlaylistPodcastRule>
+  lookup?: ProgressLookup
+  /**
+   * Put started-but-unfinished episodes first, most recently played first.
+   *
+   * Off for a list someone is reading, where a stable oldest-first order is easier to scan than
+   * one that reshuffles as you listen. On where there is no list - minimal mode, a watch - because
+   * the one thing a single play button must not do is start something new while an episode is
+   * half heard.
+   */
+  resumeFirst?: boolean
+}
+
+/**
+ * The queue, in the order it should be played: finished episodes dropped, per-podcast rules
+ * applied, oldest first, and - when asked - whatever was already started ahead of all of it.
+ */
+export function orderListeningQueue(episodes: ListeningEpisode[] = [], { rules = {}, lookup = {}, resumeFirst = false }: OrderListeningQueueOptions = {}): ListeningEpisode[] {
+  const unfinished = episodes.filter((episode) => !!episode && !isEpisodeFinished(episode, lookup))
+  // Rules are applied to the unfinished set, so a "newest 3" show offers its newest three
+  // *remaining* episodes rather than three it may already have played
+  const allowed = applyPodcastRules(unfinished, rules, (episode) => episode.libraryItemId, episodePublishedAt)
+  const oldestFirst = allowed.slice().sort((a, b) => episodePublishedAt(a) - episodePublishedAt(b))
+  if (!resumeFirst) return oldestFirst
+
+  const started: ListeningEpisode[] = []
+  const fresh: ListeningEpisode[] = []
+  for (const episode of oldestFirst) {
+    if (isEpisodeStarted(episode, lookup)) started.push(episode)
+    else fresh.push(episode)
+  }
+  started.sort((a, b) => (episodeProgress(b, lookup)?.lastUpdate || 0) - (episodeProgress(a, lookup)?.lastUpdate || 0))
+  return [...started, ...fresh]
+}
+
+/**
+ * Turn ordered episodes into play-queue entries.
+ *
+ * Each entry carries both identities on purpose. A downloaded episode has to be played by its
+ * local ids or the player streams a file that is already on disk, while progress is only ever
+ * reported against the server ids.
+ */
+export function toPlayQueueItems(episodes: ListeningEpisode[] = [], localEpisodeFor: (episode: ListeningEpisode) => LocalEpisode | null | undefined = () => null): PlayQueueItem[] {
+  const items: PlayQueueItem[] = []
+  for (const episode of episodes) {
+    if (!episode?.libraryItemId || !episode.id) continue
+    const localEpisode = localEpisodeFor(episode) || null
+    const localLibraryItemId = localEpisode?.localLibraryItemId
+    const playLocally = !!(localEpisode && localLibraryItemId && localEpisode.id)
+    items.push({
+      libraryItemId: playLocally ? (localLibraryItemId as string) : episode.libraryItemId,
+      episodeId: playLocally ? (localEpisode?.id as string) : episode.id,
+      serverLibraryItemId: episode.libraryItemId,
+      serverEpisodeId: episode.id,
+      episode,
+      localEpisode
+    })
+  }
+  return items
+}
+
+/** Where to start a queue entry: where it was left off, or nothing for an episode never played. */
+export function queueItemStartTime(item: PlayQueueItem | null | undefined, lookup: ProgressLookup = {}): number | null {
+  if (!item) return null
+  const progress = episodeProgress(item.episode, lookup)
+  const currentTime = progress?.currentTime
+  if (typeof currentTime !== 'number' || currentTime <= 0) return null
+  if (isProgressFinished(progress)) return null
+  return currentTime
+}

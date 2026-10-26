@@ -1,5 +1,18 @@
 // playwright.config.js
+import { existsSync } from 'node:fs'
 import { defineConfig } from '@playwright/test'
+
+// Where a sandbox or CI image tends to leave a Chromium the runner did not download itself.
+// Playwright looks only in its own cache, keyed by the exact build its version pins, so a
+// perfectly good browser one directory away reads as "Executable doesn't exist".
+const KNOWN_CHROMIUM_PATHS = ['/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chromium-browser']
+
+function findChromium() {
+  if (process.env.PLAYWRIGHT_CHROMIUM_PATH) return process.env.PLAYWRIGHT_CHROMIUM_PATH
+  return KNOWN_CHROMIUM_PATHS.find((path) => existsSync(path)) || null
+}
+
+const chromiumPath = findChromium()
 
 // package.json sets "type": "module", so this file and everything under test/e2e are ES modules.
 // They were written with require()/module.exports, which meant `npx playwright test` could not
@@ -17,9 +30,10 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:3000',
     deviceScaleFactor: 2,
     colorScheme: 'dark',
-    // Sandboxes and CI images often ship a Chromium the runner did not download, at a path it
-    // does not look in. Point at it with PLAYWRIGHT_CHROMIUM_PATH rather than fetching another.
-    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {}
+    // Use whatever Chromium is already here rather than fetching another. PLAYWRIGHT_CHROMIUM_PATH
+    // overrides; failing that the usual sandbox locations are tried, and failing that Playwright
+    // falls back to its own cache as normal.
+    launchOptions: chromiumPath ? { executablePath: chromiumPath } : {}
   },
   webServer: {
     // `nuxi` takes a subcommand and the flag is --host; the old invocation exited with

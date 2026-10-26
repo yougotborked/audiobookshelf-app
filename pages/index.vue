@@ -17,12 +17,18 @@ const router = useRouter()
 async function init() {
   await appStore.setupNetworkListener()
   const db = useDb()
-  const deviceData = await db.getDeviceData() as Parameters<typeof appStore.setDeviceData>[0]
+  const deviceData = (await db.getDeviceData()) as Parameters<typeof appStore.setDeviceData>[0]
   appStore.setDeviceData(deviceData)
   await appStore.init()
 
   if (userStore.serverConnectionConfig) {
-    router.push('/bookshelf')
+    // Minimal mode is a whole-app mode, so it has to be honoured here rather than by redirecting
+    // out of the bookshelf - otherwise the app someone asked not to see flashes up on every start
+    if (await useLocalStore().getMinimalModeOnLaunch()) {
+      router.push('/minimal')
+    } else {
+      router.push('/bookshelf')
+    }
   } else {
     router.push('/connect')
   }
