@@ -202,6 +202,27 @@ Re-check this form whenever a dependency is added that talks to the network.
 - Do not imply any affiliation with the Audiobookshelf project. Podshelf is an independent fork;
   describe it as a client *for* an Audiobookshelf server.
 
+### Tags
+
+Up to five, chosen from Google's fixed list under **Grow users → Store presence → Store settings
+→ Manage tags**. They are not free text; search the picker for these, in priority order:
+
+1. **Podcasts** — the core one.
+2. **Audiobooks** — true, and it reaches people who already run an Audiobookshelf server, who are
+   the actual audience.
+3. A **media/music player** tag, if one is offered. Podshelf is a player, not a library.
+
+**Use two or three, not five.** Google's guidance is to pick the tags most strongly tied to the
+app, and it assigns further tags on its own, so unused slots are not wasted.
+
+**Avoid anything implying Podshelf provides content** — radio, music streaming, free music, news.
+Those are the high-volume tags and they are exactly wrong: the biggest review risk this app has
+is someone installing it without a server and rating it one star for being empty. A tag that
+brings that person in costs more than the install is worth.
+
+Tag changes can take up to 24 hours to appear, and Google suggests changing them only after
+significant feature changes, so they are worth getting right the first time.
+
 ## 9. Publish
 
 Everything above is one-time. After that:
