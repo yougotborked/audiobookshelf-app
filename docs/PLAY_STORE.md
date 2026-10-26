@@ -153,7 +153,7 @@ is another `listing.<language>.json` beside it.
 **Privacy policy URL** — required, even though the app collects nothing:
 
 ```
-https://yougotborked.github.io/audiobookshelf-app/privacy.html
+https://yougotborked.github.io/podshelf-app/privacy.html
 ```
 
 It is published automatically with the test page on every push to master, from

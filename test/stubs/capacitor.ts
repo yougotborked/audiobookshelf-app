@@ -19,6 +19,11 @@ export const StatusBar = {
 
 export const Style = { Dark: 'DARK', Light: 'LIGHT', Default: 'DEFAULT' }
 
+// The native HTTP client. Inert: tests that need a response mock it on the instance under test.
+export const CapacitorHttp = {
+  request: async () => ({ status: 200, data: {}, headers: {}, url: '' })
+}
+
 // Composables that register their own plugin call this. Inert, like everything else here: the
 // pure exports are what the tests import, and they do not reach the bridge.
 export const registerPlugin = <T,>(_name: string, impl?: { web?: () => T }): T =>
