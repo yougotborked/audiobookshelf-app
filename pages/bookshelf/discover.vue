@@ -57,7 +57,6 @@
     <div v-else class="flex-1 overflow-y-auto">
       <div class="px-4 pt-2 pb-1 flex items-center justify-between shrink-0">
         <p class="text-md-label-l text-md-on-surface font-semibold">{{ strings.LabelTrending }}</p>
-        <p v-if="!podcastIndexConfigured" class="text-xxs text-md-on-surface-variant opacity-60">No API key configured</p>
       </div>
 
       <div v-if="trendingLoading" class="py-8 flex justify-center">
@@ -70,13 +69,13 @@
         </button>
       </div>
       <p v-else-if="!trendingResults.length" class="px-4 py-4 text-sm text-md-on-surface-variant">
-        {{ podcastIndexConfigured ? 'No trending podcasts found.' : strings.MessageDiscoverEmpty }}
+        No trending podcasts found.
       </p>
       <template v-else>
-        <div v-for="feed in trendingResults" :key="feed.url" class="border-b border-md-outline-variant/20" @click="onCardClick(toPodcastCard(feed))">
+        <div v-for="feed in trendingResults" :key="feed.id" class="border-b border-md-outline-variant/20" @click="onCardClick(toPodcastCard(feed))">
           <podcast-result-card
             :podcast="toPodcastCard(feed)"
-            :in-library="isInLibrary(feed.url)"
+            :in-library="isInLibrary(feed.feedUrl)"
             :show-add="userIsAdminOrUp"
             @add.stop="startAddFlow(toPodcastCard(feed))"
           />
@@ -172,14 +171,14 @@
 </template>
 
 <script setup lang="ts">
-import type { PodcastIndexFeed, PodcastIndexFailure } from '~/composables/usePodcastIndex'
+import type { DiscoverFeed, DiscoveryFailure } from '~/composables/usePodcastDiscovery'
 
 const strings = useStrings()
 const nativeHttp = useNativeHttp()
 const toast = useToast()
 const userStore = useUserStore()
 const librariesStore = useLibrariesStore()
-const { isConfigured, fetchTrending } = usePodcastIndex()
+const { fetchTrending } = usePodcastDiscovery()
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const searchQuery = ref('')
@@ -187,17 +186,16 @@ const searchResults = ref<any[]>([])
 const searchLoading = ref(false)
 const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 
-const trendingResults = ref<PodcastIndexFeed[]>([])
+const trendingResults = ref<DiscoverFeed[]>([])
 const trendingLoading = ref(false)
 const trendingError = ref<string | null>(null)
 const activeCategory = ref<string | undefined>(undefined)
 
-const TRENDING_FAILURE_MESSAGES: Record<PodcastIndexFailure, string> = {
-  'not-configured': 'Podcast discovery is not configured in this build.',
-  rejected: 'Podcast Index rejected the request. Discovery may need updating.',
-  'rate-limited': 'Too many requests to Podcast Index. Try again in a minute.',
-  unreachable: 'Could not reach Podcast Index. Check your connection.',
-  'server-error': 'Podcast Index is having trouble. Try again later.'
+const TRENDING_FAILURE_MESSAGES: Record<DiscoveryFailure, string> = {
+  rejected: 'Could not load the podcast charts. Discovery may need updating.',
+  'rate-limited': 'Too many requests. Try again in a minute.',
+  unreachable: 'Could not reach the podcast charts. Check your connection.',
+  'server-error': 'The podcast charts are having trouble. Try again later.'
 }
 const activeGenre = ref<string | null>(null)
 
@@ -218,7 +216,6 @@ const previewEpisodes = ref<any[]>([])
 const currentLibraryId = computed(() => librariesStore.currentLibraryId)
 const userIsAdminOrUp = computed(() => userStore.getIsAdminOrUp)
 const isSearching = computed(() => searchQuery.value.trim().length > 0)
-const podcastIndexConfigured = computed(() => isConfigured.value)
 
 // ── Genres ────────────────────────────────────────────────────────────────────
 const genres = [
@@ -310,16 +307,18 @@ function clearSearch() {
   if (searchDebounce.value) clearTimeout(searchDebounce.value)
 }
 
-// ── Shape adapter: Podcast Index feed → card shape ────────────────────────────
-function toPodcastCard(feed: PodcastIndexFeed) {
+// ── Shape adapter: discovered feed → card shape ───────────────────────────────
+function toPodcastCard(feed: DiscoverFeed) {
   return {
-    feedUrl: feed.url,
+    feedUrl: feed.feedUrl,
     title: feed.title,
     artistName: feed.author,
-    cover: feed.artwork || feed.image,
-    genres: feed.categories ? Object.values(feed.categories) : [],
-    trackCount: feed.episodeCount ?? null,
-    explicit: feed.explicit,
+    cover: feed.artwork,
+    genres: feed.genres,
+    trackCount: feed.episodeCount || null,
+    // Apple's chart feed does not carry an explicit flag, and guessing one would be worse than
+    // leaving it off: the card simply does not show the badge.
+    explicit: false
   }
 }
 

@@ -70,8 +70,19 @@ only an *upload* key — which means a lost upload key can be reset, rather than
 keytool -genkeypair -v \
   -keystore podshelf-upload.jks \
   -alias podshelf-upload \
-  -keyalg RSA -keysize 4096 -validity 10000
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=Podshelf, O=Podshelf, C=US"
 ```
+
+Without `-dname`, keytool asks for a name, organisation, city, state and country. **None of it has
+to be real.** Those fields are X.509 certificate metadata; under Play App Signing, Google re-signs
+the app with a key it holds, and Android never shows a certificate to the user. `-dname` above just
+answers them up front. Pressing Enter through the prompts is equally fine — the fields become
+`Unknown`.
+
+Two things that *do* matter. The DN is readable from any signed artifact
+(`apksigner verify --print-certs`), so do not put a home address in it. And let keytool prompt for
+the password rather than passing `-storepass`, which would leave it in your shell history.
 
 Keep `podshelf-upload.jks` and its passwords somewhere you will still have them in five years —
 a password manager, not this repository. **Never commit it.** `.gitignore` does not need to cover
