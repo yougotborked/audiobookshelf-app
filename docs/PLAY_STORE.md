@@ -128,9 +128,17 @@ come from Play Console, and a role here would widen what the key reaches without
 Two steps it cannot do, and prints instructions for:
 
 1. **Invite the service account in Play Console** → *Users and permissions* → *Invite new user*,
-   with *Release to testing tracks* and *View app information* for this app (add *Release to
-   production* only if you want tagged builds to go live). There is no API for granting Play
-   Console access.
+   and grant it, for this app:
+   - **Manage store presence** — required to sync the store listing. Without it the service
+     account can still authenticate, open an edit and upload every image, and only the final
+     commit is refused with a bare "The caller does not have permission".
+   - *Release to testing tracks*
+   - *View app information and download bulk reports*
+   - *Release to production* — only if you want tagged builds to go live.
+
+   There is no API for granting Play Console access. Permission changes can take minutes, and
+   occasionally up to 24 hours, to reach the API: if a 403 persists straight after granting one,
+   wait and retry before changing anything else.
 2. **Add the key as `PLAY_SERVICE_ACCOUNT_JSON`**, then delete the local copy. A key file left in
    a working tree is a key that eventually gets committed.
 
@@ -204,24 +212,39 @@ Re-check this form whenever a dependency is added that talks to the network.
 
 ### Tags
 
-Up to five, chosen from Google's fixed list under **Grow users → Store presence → Store settings
-→ Manage tags**. They are not free text; search the picker for these, in priority order:
+Up to five, from Google's fixed list under **Grow users → Store presence → Store settings →
+Manage tags**. Not free text.
 
-1. **Podcasts** — the core one.
-2. **Audiobooks** — true, and it reaches people who already run an Audiobookshelf server, who are
-   the actual audience.
-3. A **media/music player** tag, if one is offered. Podshelf is a player, not a library.
+**There is no Podcast tag.** The audio-related ones are: Audio recorder, Audiobook, Music &
+audio, Music instrument, Radio, Ringtone, Sound effect, Karaoke, Guitar, Lyrics. Only two of them
+are honest here:
 
-**Use two or three, not five.** Google's guidance is to pick the tags most strongly tied to the
-app, and it assigns further tags on its own, so unused slots are not wasted.
+1. **Audiobook** — true (Podshelf is an Audiobookshelf client and plays books), and it reaches
+   people already running a server, who are the actual audience.
+2. **Music & audio** — generic, but accurate.
 
-**Avoid anything implying Podshelf provides content** — radio, music streaming, free music, news.
-Those are the high-volume tags and they are exactly wrong: the biggest review risk this app has
-is someone installing it without a server and rating it one star for being empty. A tag that
-brings that person in costs more than the install is worth.
+That is the whole list. Two is fine; Google assigns further tags on its own, and padding with
+inaccurate ones is worse than leaving slots empty.
 
-Tag changes can take up to 24 hours to appear, and Google suggests changing them only after
-significant feature changes, so they are worth getting right the first time.
+**Not Radio**, however adjacent podcasts feel. Radio means streamed stations. Someone searching
+it would install Podshelf, find an app that needs a server they do not have, and leave a one-star
+review — which a new listing with no ratings cannot absorb. It is the only other tempting tag and
+it is a trap.
+
+**Because no Podcast tag exists, the word has to reach Play search through the title and
+descriptions**, which Play indexes. The title has a 30-character budget and currently uses 8:
+
+| Title | Length |
+|---|---|
+| `Podshelf` | 8 |
+| `Podshelf: Podcast Player` | 24 |
+| `Podshelf: Self-hosted Podcasts` | 30 |
+
+A store title is not the launcher name — changing it does not rename the app on anyone's device.
+Weigh discoverability against wanting the brand to stand alone.
+
+Tag changes take up to 24 hours to appear, and Google suggests changing them only after
+significant feature changes.
 
 ## 9. Publish
 

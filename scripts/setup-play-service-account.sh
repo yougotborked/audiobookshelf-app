@@ -66,9 +66,16 @@ Two things left, both by hand - there is no API for either.
      Play Console -> Users and permissions -> Invite new user
      Email:  $SA_EMAIL
      App permissions for Podshelf:
+       - Manage store presence  <- REQUIRED to sync the store listing. Without it
+                                   everything appears to work and only the final
+                                   commit is refused with a bare 403.
        - Release to testing tracks
        - View app information and download bulk reports
        - Release to production  (only if you want tagged builds to go live)
+
+     Permission changes can take minutes, occasionally up to 24 hours, to reach
+     the API. If a 403 persists right after granting one, wait and retry before
+     changing anything else.
 
 2. Add the key as a GitHub secret
      Repo -> Settings -> Secrets and variables -> Actions
