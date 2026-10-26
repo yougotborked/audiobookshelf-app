@@ -36,6 +36,13 @@ textarea {
   max-height: calc(100% - 136px);
 }
 
+/* Minimal mode hides the appbar, the nav and the player bar, so the page gets the whole screen */
+#content.minimalMode {
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+}
+
 #bookshelf {
   height: calc(100% - 48px);
   min-height: calc(100% - 48px);
@@ -166,6 +173,12 @@ textarea {
     min-height: calc(100% - 136px);
     max-height: calc(100% - 136px);
     margin-left: 64px;
+  }
+  #content.minimalMode {
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    margin-left: 0; /* the side rail is hidden too */
   }
   #bookshelf {
     height: calc(100% - 40px);

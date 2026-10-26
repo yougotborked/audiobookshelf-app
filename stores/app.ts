@@ -66,6 +66,15 @@ interface AppState {
   playerIsPlaying: boolean
   playerIsFullscreen: boolean
   playerIsStartingPlayback: boolean
+  /**
+   * Minimal mode is on screen: one play control over the catch-up queue and nothing else.
+   *
+   * It lives here rather than being read from the route because the chrome it suppresses is not
+   * on the page that turns it on - the appbar and the nav sit in the layout, and the player is
+   * mounted by it - so a route check would have to be repeated in three components that have no
+   * other reason to know what route is open.
+   */
+  minimalModeActive: boolean
   playerStartingPlaybackMediaId: string | null
   isCasting: boolean
   isCastAvailable: boolean
@@ -101,6 +110,7 @@ export const useAppStore = defineStore('app', {
     playerIsPlaying: false,
     playerIsFullscreen: false,
     playerIsStartingPlayback: false,
+    minimalModeActive: false,
     playerStartingPlaybackMediaId: null,
     isCasting: false,
     isCastAvailable: false,

@@ -22,6 +22,8 @@ export type AppEvents = {
   'new-local-library-item': Record<string, unknown>
   'bookshelf-total-entities': number
   'download-series-click': void
+  /** Advance the play queue from outside the player's own controls, as minimal mode does. */
+  'skip-next-queue': void
 }
 
 const _emitter = mitt<AppEvents>()

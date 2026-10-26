@@ -20,7 +20,8 @@ const SCREENS = [
   { name: 'search', path: '/search' },
   { name: 'settings', path: '/settings' },
   { name: 'downloads', path: '/downloads' },
-  { name: 'stats', path: '/account/stats' }
+  { name: 'stats', path: '/account/stats' },
+  { name: 'minimal', path: '/minimal' }
 ] as const
 
 const OUT = 'docs/screenshots'
@@ -51,15 +52,22 @@ for (const screen of RESPONSIVE) {
   }
 }
 
-// The three themes, so a palette change can be judged in all of them at once.
+// The three themes, so a palette change can be judged in all of them at once. Minimal mode is
+// here as well as on the phone pass because it is nearly all accent and surface - a theme that
+// forgets a primary role shows up on it before anywhere else.
 for (const theme of ['dark', 'black', 'light']) {
-  test(`home @ ${theme} theme`, async ({ page }) => {
-    const booted = await bootApp(page, '/bookshelf', 'phone')
-    await expectAppRendered(page, booted)
-    await page.evaluate((t) => {
-      document.documentElement.dataset.theme = t
-    }, theme)
-    await settle(page)
-    await page.screenshot({ path: `${OUT}/themes/home-${theme}.png` })
-  })
+  for (const screen of [
+    { name: 'home', path: '/bookshelf' },
+    { name: 'minimal', path: '/minimal' }
+  ]) {
+    test(`${screen.name} @ ${theme} theme`, async ({ page }) => {
+      const booted = await bootApp(page, screen.path, 'phone')
+      await expectAppRendered(page, booted)
+      await page.evaluate((t) => {
+        document.documentElement.dataset.theme = t
+      }, theme)
+      await settle(page)
+      await page.screenshot({ path: `${OUT}/themes/${screen.name}-${theme}.png` })
+    })
+  }
 }

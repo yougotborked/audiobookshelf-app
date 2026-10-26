@@ -437,6 +437,31 @@ class LocalStorage {
     }
   }
 
+  /**
+   * Whether the app should open straight into minimal mode.
+   *
+   * Kept here rather than in the native device settings because nothing outside the webview acts
+   * on it, and adding a field to DeviceSettings means a Kotlin change and a migration for a
+   * preference the player never reads.
+   */
+  async setMinimalModeOnLaunch(enabled: boolean): Promise<void> {
+    try {
+      await Preferences.set({ key: this.ukey('minimalModeOnLaunch'), value: enabled ? '1' : '0' })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set minimal mode on launch', error)
+    }
+  }
+
+  async getMinimalModeOnLaunch(): Promise<boolean> {
+    try {
+      const obj = (await Preferences.get({ key: this.ukey('minimalModeOnLaunch') })) || {}
+      return obj.value === '1'
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get minimal mode on launch', error)
+      return false
+    }
+  }
+
   async getAutoPlaylistPodcastRules(): Promise<Record<string, AutoPlaylistPodcastRule>> {
     try {
       const obj = (await Preferences.get({ key: this.ukey('autoPlaylistPodcastRules') })) || {}
