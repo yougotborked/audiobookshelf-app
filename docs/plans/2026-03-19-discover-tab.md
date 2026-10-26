@@ -1,3 +1,9 @@
+> **Superseded.** Discovery no longer uses Podcast Index. It needed an API key and a shared
+> secret signed into every request, both of which had to be compiled into the client bundle and
+> were therefore extractable from any published APK. It now uses Apple's public chart feeds,
+> which need no credentials at all — see `composables/usePodcastDiscovery.ts`. The
+> `PODCAST_INDEX_*` configuration described below no longer exists; do not re-add it.
+
 # Discover Tab Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use `executing-plans` or `subagent-driven-development` to implement this plan.

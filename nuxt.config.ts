@@ -29,8 +29,6 @@ export default defineNuxtConfig({
       version: '0.12.0-beta',
       ANDROID_APP_URL: 'https://play.google.com/store/apps/details?id=com.podshelf.app',
       IOS_APP_URL: '',
-      PODCAST_INDEX_KEY: process.env.PODCAST_INDEX_KEY || '',
-      PODCAST_INDEX_SECRET: process.env.PODCAST_INDEX_SECRET || '',
     }
   },
 
