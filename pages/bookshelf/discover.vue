@@ -63,6 +63,12 @@
       <div v-if="trendingLoading" class="py-8 flex justify-center">
         <widgets-loading-spinner />
       </div>
+      <div v-else-if="trendingError" class="px-4 py-4">
+        <p class="text-sm text-md-on-surface-variant">{{ trendingError }}</p>
+        <button class="mt-3 px-4 py-2 rounded-md-full bg-md-primary-container text-md-on-primary-container text-sm" @click="loadTrending(activeCategory)">
+          {{ strings.ButtonRetry || 'Retry' }}
+        </button>
+      </div>
       <p v-else-if="!trendingResults.length" class="px-4 py-4 text-sm text-md-on-surface-variant">
         {{ podcastIndexConfigured ? 'No trending podcasts found.' : strings.MessageDiscoverEmpty }}
       </p>
@@ -166,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PodcastIndexFeed } from '~/composables/usePodcastIndex'
+import type { PodcastIndexFeed, PodcastIndexFailure } from '~/composables/usePodcastIndex'
 
 const strings = useStrings()
 const nativeHttp = useNativeHttp()
@@ -183,6 +189,16 @@ const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const trendingResults = ref<PodcastIndexFeed[]>([])
 const trendingLoading = ref(false)
+const trendingError = ref<string | null>(null)
+const activeCategory = ref<string | undefined>(undefined)
+
+const TRENDING_FAILURE_MESSAGES: Record<PodcastIndexFailure, string> = {
+  'not-configured': 'Podcast discovery is not configured in this build.',
+  rejected: 'Podcast Index rejected the request. Discovery may need updating.',
+  'rate-limited': 'Too many requests to Podcast Index. Try again in a minute.',
+  unreachable: 'Could not reach Podcast Index. Check your connection.',
+  'server-error': 'Podcast Index is having trouble. Try again later.'
+}
 const activeGenre = ref<string | null>(null)
 
 const libraryFeedUrls = ref<Set<string>>(new Set())
@@ -240,7 +256,19 @@ async function loadLibraryFeedUrls() {
 // ── Trending ──────────────────────────────────────────────────────────────────
 async function loadTrending(category?: string) {
   trendingLoading.value = true
-  trendingResults.value = await fetchTrending({ max: 15, category })
+  trendingError.value = null
+  activeCategory.value = category
+
+  const result = await fetchTrending({ max: 15, category })
+  if (result.ok) {
+    trendingResults.value = result.feeds
+  } else {
+    // Previously every failure returned an empty array, so a rejected key, a rate limit and no
+    // signal at all were indistinguishable from "nothing is trending" - which is how this sat
+    // broken without anything to go on.
+    trendingResults.value = []
+    trendingError.value = TRENDING_FAILURE_MESSAGES[result.reason]
+  }
   trendingLoading.value = false
 }
 

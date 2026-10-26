@@ -11,13 +11,13 @@ client; it does not provide any content of its own.
 
 ## 📲 Download the app
 
-### **[→ Get the latest APK from the Releases page](https://github.com/yougotborked/audiobookshelf-app/releases/latest)**
+### **[→ Get the latest APK from the Releases page](https://github.com/yougotborked/podshelf-app/releases/latest)**
 
-### **[→ Or from the test page](https://yougotborked.github.io/audiobookshelf-app/)**
+### **[→ Or from the test page](https://yougotborked.github.io/podshelf-app/)**
 
 Every push to `master` publishes a fresh debug APK two ways: to the rolling
-[`latest` release](https://github.com/yougotborked/audiobookshelf-app/releases/latest), and to a
-[test page](https://yougotborked.github.io/audiobookshelf-app/) on GitHub Pages that shows the build
+[`latest` release](https://github.com/yougotborked/podshelf-app/releases/latest), and to a
+[test page](https://yougotborked.github.io/podshelf-app/) on GitHub Pages that shows the build
 date and commit. Either way, download the `podshelf-*.apk` asset and install it.
 
 Notes on installing:
@@ -82,7 +82,7 @@ internal testing does not count toward that. Internal testing itself has no such
 in minutes, which is usually what you actually want.
 
 The app's privacy policy lives at
-[yougotborked.github.io/audiobookshelf-app/privacy.html](https://yougotborked.github.io/audiobookshelf-app/privacy.html),
+[yougotborked.github.io/podshelf-app/privacy.html](https://yougotborked.github.io/podshelf-app/privacy.html),
 published from `.github/privacy-policy.html` on every push to master.
 
 ## Contributing
