@@ -197,6 +197,43 @@ Two things are worth mentioning in the listing description rather than hiding:
 
 Re-check this form whenever a dependency is added that talks to the network.
 
+## 7b. Foreground service declaration
+
+Play asks what each foreground service permission is for. The answers follow from the manifest,
+so they are recorded here rather than re-derived every release.
+
+| Permission | Declared by | Answer |
+|---|---|---|
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | `PlayerNotificationService` (`mediaPlayback`) | **Media playback** |
+| `FOREGROUND_SERVICE_DATA_SYNC` | `DownloadService` (`dataSync`) | **Network processing → Other** |
+
+Not *Backing up, restoring* — nothing here is a backup. Description, if asked:
+
+> Downloads podcast episodes the user has selected, or enabled auto-download for, from their
+> self-hosted Audiobookshelf server so they can be played without a connection. A progress
+> notification is shown for the duration. The service runs in the foreground so a download
+> completes while the user is in another app rather than restarting.
+
+Play often asks for a short video for a `dataSync` declaration. Filming a download starting, the
+notification showing progress, and the episode playing offline afterwards covers it.
+
+## 7c. The two upload warnings, and why both are ignorable
+
+**"No deobfuscation file."** `minifyEnabled` is false, so nothing is obfuscated and there is no
+mapping file to upload. The warning is conditional on using obfuscation. The upside is that crash
+stack traces arrive readable.
+
+**Do not enable R8 to silence it.** Three dependencies resolve types reflectively — Jackson
+serialises every data class, paperdb does the same for storage, and Capacitor resolves plugins by
+name. Without correct keep rules those fail *at runtime, not at build time*: the unit tests stay
+green and the app breaks on a device. It is a deliberate piece of work with a device pass, not a
+pre-launch tweak.
+
+**"No native debug symbols."** The bundle contains one native library,
+`libandroidx.graphics.path.so`, which comes from AndroidX and ships stripped. This project builds
+no native code — there is no `externalNativeBuild` — so there is no symbol file to produce.
+`ndk.debugSymbolLevel` only covers native code the project compiles itself. Unactionable.
+
 ## 8. Listing copy
 
 - **App name:** Podshelf
