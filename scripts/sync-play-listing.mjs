@@ -105,8 +105,32 @@ async function api(token, method, pathname, { json, body, contentType } = {}) {
     body: json ? JSON.stringify(json) : body
   })
   const text = await res.text()
-  if (!res.ok) throw new Error(`${method} ${pathname} failed (${res.status}): ${text}`)
+  if (!res.ok) throw new Error(`${method} ${pathname} failed (${res.status}): ${text}${hintFor(res.status)}`)
   return text ? JSON.parse(text) : {}
+}
+
+/**
+ * Play answers a permissions gap with a bare "The caller does not have permission", which does
+ * not say which permission or where to grant it.
+ *
+ * The one that catches people is Manage store presence: without it a service account can still
+ * authenticate, open an edit and upload every image - everything appears to work - and only the
+ * commit is refused, because that is where Play checks whether the listing may actually change.
+ */
+function hintFor(status) {
+  if (status !== 403) return ''
+  return [
+    '',
+    '',
+    'A 403 here is almost always a Play Console permission, not a Google Cloud one.',
+    'Play Console -> Users and permissions -> the service account -> App permissions:',
+    '  - Manage store presence   <- required to commit a listing change',
+    '  - Release to testing tracks',
+    '  - View app information and download bulk reports',
+    '',
+    'Permission changes can take a few minutes, occasionally up to 24 hours, to reach the API.',
+    'If you have just granted it, wait and re-run before changing anything else.'
+  ].join('\n')
 }
 
 async function uploadImage(token, editId, language, imageType, filePath) {
