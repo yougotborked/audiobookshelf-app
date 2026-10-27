@@ -57,6 +57,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { listeningStreak } from '~/composables/useAchievements'
 
 const props = defineProps<{
   listeningStats: Record<string, unknown> | null
@@ -92,7 +93,7 @@ const last7Days = computed(() => {
 })
 
 const listeningStatsDays = computed(() => {
-  return props.listeningStats ? ((props.listeningStats.days as Record<string, number>) || {}) : {}
+  return props.listeningStats ? (props.listeningStats.days as Record<string, number>) || {} : {}
 })
 
 function getMinutesListeningForDate(date: string) {
@@ -184,24 +185,8 @@ const totalMinutesListeningThisWeek = computed(() => {
 
 const averageMinutesPerDay = computed(() => Math.round(totalMinutesListeningThisWeek.value / 7))
 
-const daysInARow = computed(() => {
-  let count = 0
-  while (true) {
-    const _date = utils.addDaysToToday(count * -1 - 1)
-    const datestr = utils.formatJsDate(_date, 'yyyy-MM-dd')
-
-    if (!listeningStatsDays.value[datestr] || listeningStatsDays.value[datestr] === 0) {
-      const today = utils.formatJsDate(new Date(), 'yyyy-MM-dd')
-      if (listeningStatsDays.value[today]) {
-        count++
-      }
-      return count
-    }
-    count++
-    if (count > 9999) {
-      console.error('Overflow protection')
-      return 0
-    }
-  }
-})
+// The streak rule lives in useAchievements so it can be tested and so the badges agree with the
+// number shown here. This was a `while (true)` loop with overflow protection standing in for a
+// terminating condition.
+const daysInARow = computed(() => listeningStreak(listeningStatsDays.value).current)
 </script>

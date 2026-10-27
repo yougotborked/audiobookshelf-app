@@ -20,7 +20,7 @@ const SCREENS = [
   { name: 'search', path: '/search' },
   { name: 'settings', path: '/settings' },
   { name: 'downloads', path: '/downloads' },
-  { name: 'stats', path: '/account/stats' },
+  { name: 'stats', path: '/stats' },
   { name: 'minimal', path: '/minimal' }
 ] as const
 

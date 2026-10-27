@@ -29,6 +29,8 @@
         </div>
       </div>
     </div>
+    <stats-achievement-shelf :summary="listeningSummary" :streak="streak" class="mt-5 mb-6" />
+
     <div class="flex flex-col md:flex-row overflow-hidden max-w-full">
       <stats-daily-listening-chart :listening-stats="listeningStats" class="lg:scale-100 transform scale-90 px-0" />
       <div class="w-80 my-6 mx-auto">
@@ -62,6 +64,7 @@
 <script setup lang="ts">
 import { useUserStore } from '~/stores/user'
 import { useLibrariesStore } from '~/stores/libraries'
+import { listeningStreak, type ListeningSummary } from '~/composables/useAchievements'
 
 const userStore = useUserStore()
 const librariesStore = useLibrariesStore()
@@ -87,8 +90,19 @@ const totalMinutesListening = computed(() => {
 })
 const totalDaysListened = computed(() => {
   if (!listeningStats.value) return 0
-  return Object.values(listeningStats.value.days || {}).length
+  // Days the server recorded against, not days heard - a zero is a recorded day with no listening
+  return Object.values((listeningStats.value.days || {}) as Record<string, number>).filter(Boolean).length
 })
+
+const streak = computed(() => listeningStreak((listeningStats.value?.days || {}) as Record<string, number>))
+
+const listeningSummary = computed<ListeningSummary>(() => ({
+  totalMinutes: totalMinutesListening.value,
+  itemsFinished: userItemsFinished.value.length,
+  daysListened: totalDaysListened.value,
+  currentStreak: streak.value.current,
+  longestStreak: streak.value.longest
+}))
 
 watch(currentLibraryId, (newVal) => {
   if (newVal) {

@@ -71,11 +71,15 @@ export async function bootApp(page: Page, path: string, viewport: ViewportName =
 export async function expectAppRendered(page: Page, booted: BootedApp): Promise<void> {
   const text = await page.evaluate(() => document.body.innerText.trim())
 
+  // A mistyped route renders Nuxt's error page, which is full of text and so sailed past the
+  // length check below - the stats shot was a 404 for as long as it existed. A screenshot of the
+  // wrong screen is worse than no screenshot, because it looks like the real thing.
+  if (/\b404\b/.test(text) && /page not found/i.test(text)) {
+    throw new Error(`App rendered a 404 at ${page.url()} - the route does not exist.`)
+  }
+
   if (text.length < 40) {
-    throw new Error(
-      `App did not render at ${page.url()} - only ${text.length} characters of visible text.\n` +
-        `Console errors:\n  ${booted.errors.slice(0, 10).join('\n  ') || '(none)'}`
-    )
+    throw new Error(`App did not render at ${page.url()} - only ${text.length} characters of visible text.\n` + `Console errors:\n  ${booted.errors.slice(0, 10).join('\n  ') || '(none)'}`)
   }
 
   // A mounted-hook crash leaves a partly built page that still has plenty of text, so the
