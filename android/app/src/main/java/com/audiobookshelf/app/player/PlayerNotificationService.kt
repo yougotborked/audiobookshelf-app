@@ -1039,22 +1039,42 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     return false
   }
 
-  fun play() {
+  /** Returns whether there was anything to play. False means the player has nothing to resume. */
+  fun play(): Boolean {
     if (currentPlayer.isPlaying) {
       Log.d(tag, "Already playing")
-      return
+      return true
     }
 
-    if ((currentPlayer.playbackState == Player.STATE_IDLE || currentPlayer.mediaItemCount == 0) &&
-            currentPlaybackSession != null
-    ) {
-      Log.i(tag, "play: player is idle/unprepared, re-preparing current playback session")
-      preparePlayer(currentPlaybackSession!!.clone(), true, mediaManager.getSavedPlaybackRate())
-      return
+    if (playerNeedsPreparing(currentPlayer.playbackState, currentPlayer.mediaItemCount)) {
+      // On a cold start the service is new, so currentPlaybackSession is null while the webview
+      // is already showing a player restored from the database. Falling back to that record is
+      // what makes its play button work; without it this branch recovered nothing and the play
+      // below ran against an empty player.
+      val session = sessionToResume(currentPlaybackSession, DeviceManager.deviceData.lastPlaybackSession)
+      if (session == null) {
+        Log.w(tag, "play: player is unprepared and there is no session to resume")
+        return false
+      }
+
+      if (needsServerConnectionRestored(session.serverConnectionConfigId, session.isLocal, DeviceManager.serverConnectionConfigId)) {
+        val config = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == session.serverConnectionConfigId }
+        if (config == null) {
+          Log.w(tag, "play: session names a server connection this device no longer has")
+          return false
+        }
+        Log.i(tag, "play: restoring server connection ${config.name} to resume")
+        DeviceManager.serverConnectionConfig = config
+      }
+
+      Log.i(tag, "play: player is idle/unprepared, preparing session ${session.mediaItemId}")
+      preparePlayer(session.clone(), true, mediaManager.getSavedPlaybackRate())
+      return true
     }
 
     currentPlayer.volume = 1F
     currentPlayer.play()
+    return true
   }
 
   fun pause() {
@@ -1066,8 +1086,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       pause()
       false
     } else {
+      // play() reports whether it found anything to play. Returning a bare true here is what let
+      // the webview show a pause icon over a player that had no media and was not going to start.
       play()
-      true
     }
   }
 
