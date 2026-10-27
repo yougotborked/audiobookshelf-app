@@ -10,13 +10,13 @@
     <!-- Fullscreen top controls: z-40 so they sit above #playerContent (z-20) in all orientations -->
     <div v-if="showFullscreen" class="z-40 absolute top-0 left-0 w-full pointer-events-none">
       <div class="top-4 left-4 absolute cursor-pointer pointer-events-auto">
-        <span class="material-symbols text-5xl" @click="collapseFullscreen">keyboard_arrow_down</span>
+        <span class="material-symbols text-5xl text-white drop-shadow-md" @click="collapseFullscreen">keyboard_arrow_down</span>
       </div>
       <div v-show="showCastBtn" class="top-6 right-20 absolute cursor-pointer pointer-events-auto" :class="{ 'opacity-60': !castAvailable && !isCasting }">
-        <span class="material-symbols text-3xl tap-area" @click="castClick">{{ isCasting ? 'cast_connected' : 'cast' }}</span>
+        <span class="material-symbols text-3xl tap-area text-white drop-shadow-md" @click="castClick">{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
       <div class="top-6 right-4 absolute cursor-pointer pointer-events-auto">
-        <span class="material-symbols text-3xl tap-area" @click="showMoreMenuDialog = true">more_vert</span>
+        <span class="material-symbols text-3xl tap-area text-white drop-shadow-md" @click="showMoreMenuDialog = true">more_vert</span>
       </div>
       <p class="top-4 absolute left-0 right-0 mx-auto text-center uppercase tracking-widest text-white/75 pointer-events-none" style="font-size: 10px">{{ isDirectPlayMethod ? getString('LabelPlaybackDirect') : isLocalPlayMethod ? getString('LabelPlaybackLocal') : getString('LabelPlaybackTranscode') }}</p>
     </div>

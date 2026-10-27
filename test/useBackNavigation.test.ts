@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveBackAction } from '~/composables/useBackNavigation'
 
-const open = { isModalOpen: false, showReader: false, playerIsFullscreen: false, hasInAppHistory: true }
+const open = { isModalOpen: false, showReader: false, playerIsFullscreen: false, hasPageOverlay: false, hasInAppHistory: true }
 
 // The bug this guards: none of this ran. MainActivity registered a back callback after
 // Capacitor's AppPlugin had registered its own, and the dispatcher runs them
@@ -38,9 +38,7 @@ describe('resolveBackAction', () => {
   })
 
   it('closes a modal before anything else', () => {
-    expect(
-      resolveBackAction({ isModalOpen: true, showReader: true, playerIsFullscreen: true, hasInAppHistory: false })
-    ).toBe('close-modal')
+    expect(resolveBackAction({ isModalOpen: true, showReader: true, playerIsFullscreen: true, hasPageOverlay: true, hasInAppHistory: false })).toBe('close-modal')
   })
 
   it('peels one layer at a time', () => {
@@ -48,5 +46,24 @@ describe('resolveBackAction', () => {
     expect(resolveBackAction({ ...open, isModalOpen: true, playerIsFullscreen: true })).toBe('close-modal')
     expect(resolveBackAction({ ...open, playerIsFullscreen: true })).toBe('minimize-player')
     expect(resolveBackAction(open)).toBe('history-back')
+  })
+
+  // The reported case: in Discover, tapping a podcast covers the page with its details without
+  // pushing a history entry. Back used to find nothing covering the page and go back in history,
+  // leaving the Discover tab - which reads as "back switched tabs".
+  it('closes a page overlay rather than navigating away from the tab', () => {
+    expect(resolveBackAction({ ...open, hasPageOverlay: true })).toBe('close-page-overlay')
+  })
+
+  it('closes a page overlay even on the first screen, instead of offering to exit', () => {
+    expect(resolveBackAction({ ...open, hasPageOverlay: true, hasInAppHistory: false })).toBe('close-page-overlay')
+  })
+
+  it('peels the floating layers before the page overlay underneath them', () => {
+    // A page overlay is part of the page; a modal, the reader and the fullscreen player all
+    // float above it, so each comes off first
+    expect(resolveBackAction({ ...open, hasPageOverlay: true, isModalOpen: true })).toBe('close-modal')
+    expect(resolveBackAction({ ...open, hasPageOverlay: true, showReader: true })).toBe('close-ebook')
+    expect(resolveBackAction({ ...open, hasPageOverlay: true, playerIsFullscreen: true })).toBe('minimize-player')
   })
 })

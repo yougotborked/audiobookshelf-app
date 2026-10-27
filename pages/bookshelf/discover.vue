@@ -178,6 +178,8 @@ const nativeHttp = useNativeHttp()
 const toast = useToast()
 const userStore = useUserStore()
 const librariesStore = useLibrariesStore()
+const globalsStore = useGlobalsStore()
+const eventBus = useEventBus()
 const { fetchTrending } = usePodcastDiscovery()
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -389,8 +391,33 @@ async function startAddFlowFromPreview() {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
+/**
+ * The preview and the add flow cover the page without being routes, so back has to be told they
+ * are there. Without this it found nothing covering the page, went back in history, and left the
+ * Discover tab - which looks like back switching tabs rather than closing the podcast.
+ */
+const hasOverlay = computed(() => showPreview.value || showAddFlow.value)
+
+watch(hasOverlay, (open) => {
+  globalsStore.pageOverlayOpen = open
+})
+
+/** Peel one layer: the add flow sits over the preview, so it goes first. */
+function onCloseOverlay() {
+  if (showAddFlow.value) cancelAddFlow()
+  else if (showPreview.value) closePreview()
+}
+
 onMounted(() => {
+  eventBus.on('close-page-overlay', onCloseOverlay)
   loadLibraryFeedUrls()
   loadTrending()
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('close-page-overlay', onCloseOverlay)
+  // Leaving the page with an overlay open would otherwise strand the flag set, and back would
+  // keep trying to close something that is no longer on screen
+  globalsStore.pageOverlayOpen = false
 })
 </script>

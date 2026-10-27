@@ -11,12 +11,21 @@
  * off the app's first history entry, reloading the whole app - which looks exactly like a crash
  * and restart.
  */
-export type BackAction = 'close-modal' | 'close-ebook' | 'minimize-player' | 'history-back' | 'confirm-exit'
+export type BackAction = 'close-modal' | 'close-ebook' | 'minimize-player' | 'close-page-overlay' | 'history-back' | 'confirm-exit'
 
 export interface BackNavigationContext {
   isModalOpen: boolean
   showReader: boolean
   playerIsFullscreen: boolean
+  /**
+   * A full-page overlay a page is drawing over itself, rather than a route it navigated to.
+   *
+   * Discover's podcast preview is one: tapping a result covers the page with the podcast's
+   * details without pushing a history entry. Back then found nothing covering the page and went
+   * back in history, which left the Discover tab entirely - the overlay was still on screen one
+   * frame earlier, so it read as "back switched tabs".
+   */
+  hasPageOverlay: boolean
   /**
    * Whether the app itself has somewhere to go back to.
    *
@@ -29,10 +38,13 @@ export interface BackNavigationContext {
 }
 
 /** The single thing back should do, given what is currently open. */
-export function resolveBackAction({ isModalOpen, showReader, playerIsFullscreen, hasInAppHistory }: BackNavigationContext): BackAction {
+export function resolveBackAction({ isModalOpen, showReader, playerIsFullscreen, hasPageOverlay, hasInAppHistory }: BackNavigationContext): BackAction {
   if (isModalOpen) return 'close-modal'
   if (showReader) return 'close-ebook'
   if (playerIsFullscreen) return 'minimize-player'
+  // Below the floating layers, above navigation: an overlay is part of the page, so it comes off
+  // before the page itself does
+  if (hasPageOverlay) return 'close-page-overlay'
   // Nothing is covering the page, so this is ordinary navigation - and with nowhere left to go
   // back to, back means leaving the app, which is worth confirming rather than doing silently.
   return hasInAppHistory ? 'history-back' : 'confirm-exit'

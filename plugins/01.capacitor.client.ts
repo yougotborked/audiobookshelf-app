@@ -27,6 +27,7 @@ export default defineNuxtPlugin(async () => {
       if (globalsStore.isModalOpen) bus.emit('close-modal')
       if (appStore.playerIsFullscreen) bus.emit('minimize-player')
       if (appStore.showReader) bus.emit('close-ebook')
+      if (globalsStore.pageOverlayOpen) bus.emit('close-page-overlay')
       next()
     })
   }
@@ -40,6 +41,7 @@ export default defineNuxtPlugin(async () => {
       isModalOpen: globalsStore.isModalOpen,
       showReader: appStore.showReader,
       playerIsFullscreen: appStore.playerIsFullscreen,
+      hasPageOverlay: globalsStore.pageOverlayOpen,
       // Deliberately not the event's canGoBack - see BackNavigationContext
       hasInAppHistory: window.history.state?.back != null
     })
@@ -47,6 +49,7 @@ export default defineNuxtPlugin(async () => {
     if (action === 'close-modal') return bus.emit('close-modal')
     if (action === 'close-ebook') return bus.emit('close-ebook')
     if (action === 'minimize-player') return bus.emit('minimize-player')
+    if (action === 'close-page-overlay') return bus.emit('close-page-overlay')
     if (action === 'history-back') return window.history.back()
 
     const strings = useStrings()

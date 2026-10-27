@@ -5,6 +5,8 @@ export type AppEvents = {
   'play-item': PlayItemPayload
   'pause-item': void
   'close-modal': void
+  /** Dismiss the topmost full-page overlay a page is drawing over itself. */
+  'close-page-overlay': void
   'minimize-player': void
   'close-ebook': void
   'close-stream': void
