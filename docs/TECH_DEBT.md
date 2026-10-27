@@ -85,6 +85,22 @@ pass rather than just streaming it.
 **Clears when** the play path can resolve a stream URL off the main thread and hand the player a
 buffering state while it does.
 
+### The watch waits for Wi-Fi rather than offering to find one
+
+**Where** `android/wear/src/main/java/com/podshelf/wear/download/HighBandwidthNetwork.kt`
+
+When no Wi-Fi turns up within the timeout, the download pass gives up and lets WorkManager try
+again later. The user is told nothing. Google's guidance is to explain that the feature needs
+Wi-Fi and offer a way into the watch's Wi-Fi settings
+(`com.google.android.clockwork.settings.connectivity.wifi.ADD_NETWORK_SETTINGS`, which needs
+`CHANGE_WIFI_STATE`).
+
+Right now a watch that has never been on Wi-Fi will simply never download, and the queue rows
+will say "Waiting for Wi-Fi" indefinitely with no way to act on it.
+
+**Clears when** the watch UI can tell the difference between "downloading shortly" and "this
+watch has no Wi-Fi to use", and offers the settings shortcut for the second.
+
 ### The watch does not write progress back
 
 **Where** `android/wear/`
