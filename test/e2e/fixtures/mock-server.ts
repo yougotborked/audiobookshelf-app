@@ -200,21 +200,35 @@ function recentEpisodes() {
 }
 
 /** The home screen's shelves, in the shape `/personalized` returns. */
+/**
+ * An entity for an episode shelf.
+ *
+ * The server sends these as a *library item* with the episode hung off it as `recentEpisode`,
+ * not as a bare episode - which is what LazyBookCard reads, both for the episode details and for
+ * `media.coverPath`. Sending a bare episode meant every card on these shelves fell back to
+ * `/book_placeholder.jpg`, so the home screen showed rows of red leather books in a podcast app,
+ * and four of those shots went to the Play listing.
+ */
+function episodeShelfEntity(podcast: PodcastSeed, ep: PodcastSeed['episodes'][number]) {
+  return {
+    ...libraryItemPayload(podcast),
+    recentEpisode: episodePayload(podcast, ep),
+    progress: progressPayload(podcast, ep)
+  }
+}
+
 function personalizedShelves() {
   const items = PODCASTS.map(libraryItemPayload)
-  const inProgress = PODCASTS.flatMap((p) =>
-    p.episodes
-      .filter((e) => e.progress > 0 && e.progress < 1)
-      .map((ep) => ({
-        ...episodePayload(p, ep),
-        podcast: { id: p.id, metadata: { title: p.title, author: p.author }, coverPath: `/cover/${p.id}` },
-        libraryItem: libraryItemPayload(p),
-        progress: progressPayload(p, ep)
-      }))
-  )
+  const inProgress = PODCASTS.flatMap((p) => p.episodes.filter((e) => e.progress > 0 && e.progress < 1).map((ep) => episodeShelfEntity(p, ep)))
   return [
     { id: 'continue-listening', label: 'Continue Listening', labelStringKey: 'LabelContinueListening', type: 'episode', entities: inProgress },
-    { id: 'recent-episodes', label: 'Newest Episodes', labelStringKey: 'LabelNewestEpisodes', type: 'episode', entities: recentEpisodes().slice(0, 6) },
+    {
+      id: 'recent-episodes',
+      label: 'Newest Episodes',
+      labelStringKey: 'LabelNewestEpisodes',
+      type: 'episode',
+      entities: PODCASTS.flatMap((p) => p.episodes.slice(0, 2).map((ep) => episodeShelfEntity(p, ep))).slice(0, 6)
+    },
     { id: 'recently-added', label: 'Recently Added', labelStringKey: 'LabelRecentlyAdded', type: 'podcast', entities: items }
   ]
 }
@@ -266,6 +280,11 @@ export function mockResponseFor(pathname: string): unknown | undefined {
   if (pathname === '/api/me/listening-stats') return { totalTime: 184000, items: {}, days: listeningDays(), dayOfWeek: {}, today: 3600, recentSessions: [] }
   if (pathname === '/status') return { isInit: true, language: 'en-us', ServerSettings: MOCK_SERVER_SETTINGS }
 
+  const libraryMatch = pathname.match(/^\/api\/libraries\/([^/]+)$/)
+  if (libraryMatch) {
+    const library = MOCK_LIBRARIES.find((l) => l.id === libraryMatch[1])
+    if (library) return { library, filterdata: {}, issues: 0, numUserPlaylists: 0 }
+  }
   if (pathname.endsWith('/personalized')) return personalizedShelves()
   if (pathname.endsWith('/recent-episodes')) return { episodes: recentEpisodes(), total: recentEpisodes().length, limit: 25, page: 0 }
   if (pathname.endsWith('/items')) {
@@ -318,9 +337,31 @@ function listeningDays(): Record<string, number> {
 export async function installMockServer(page: import('@playwright/test').Page): Promise<MockServerHandle> {
   const handle: MockServerHandle = { unhandled: [] }
 
-  // The app opens a socket at the server address; there is nothing to talk to, and letting it
-  // hang keeps `networkidle` from ever settling.
-  await page.route('**/socket.io/**', (route) => route.abort())
+  // The app opens a websocket at the server address (transports: ['websocket'], no polling), and
+  // judges the server unreachable while it is down - so aborting it put a red "offline" cloud in
+  // the appbar of every screenshot, including the four published to the Play listing.
+  //
+  // Speaking just enough Engine.IO/Socket.IO to complete a handshake is cheaper than running a
+  // real server and exercises the app's actual connect path:
+  //   server "0{...}"  open, with the session parameters
+  //   client "40"      connect to the default namespace
+  //   server "40{...}" namespace connected  -> socket.connected is true
+  //   client "2"/"3"   heartbeats
+  await page.routeWebSocket(/\/socket\.io\//, (ws) => {
+    ws.send('0' + JSON.stringify({ sid: 'mock-sid', upgrades: [], pingInterval: 25000, pingTimeout: 20000, maxPayload: 1000000 }))
+    ws.onMessage((message) => {
+      const packet = typeof message === 'string' ? message : message.toString()
+      if (packet.startsWith('40')) {
+        ws.send('40' + JSON.stringify({ sid: 'mock-nsp-sid' }))
+      } else if (packet === '2') {
+        ws.send('3')
+      } else if (packet.startsWith('42')) {
+        // The app emits `auth` on connect and waits for `init` before it considers itself
+        // authenticated; answering keeps it out of the reconnect loop.
+        if (packet.includes('"auth"')) ws.send('42' + JSON.stringify(['init', { userId: MOCK_USER.id, usersOnline: [] }]))
+      }
+    })
+  })
 
   await page.route(`${MOCK_ORIGIN}/**`, (route) => {
     const { pathname } = new URL(route.request().url())

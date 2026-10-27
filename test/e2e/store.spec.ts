@@ -17,11 +17,19 @@ test.use({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 3 })
 
 const OUT = 'docs/store/screenshots'
 
+/**
+ * Screens chosen to show the product, not to cover the app.
+ *
+ * The first set was catch-up, library, search and settings. Search photographed as an empty box
+ * on a blank screen - most of a listing image spent on nothing - and settings is a list of
+ * switches. Minimal mode and the badge wall are the two screens nothing else looks like, so they
+ * take those slots.
+ */
 const SCREENS = [
   { file: '01-catch-up', path: '/bookshelf' },
-  { file: '02-library', path: '/bookshelf/library' },
-  { file: '03-search', path: '/search' },
-  { file: '04-settings', path: '/settings' }
+  { file: '02-minimal', path: '/minimal' },
+  { file: '03-stats', path: '/stats' },
+  { file: '04-library', path: '/bookshelf/library' }
 ] as const
 
 for (const screen of SCREENS) {
