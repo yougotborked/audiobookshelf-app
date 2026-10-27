@@ -66,6 +66,31 @@ namespace); most do not, and generating them locally is expensive. Worth checkin
 availability across the user's own feeds before anything else — that single number decides
 whether this is feasible.
 
+**There is a probe for that number now.** It reads every podcast on your server, fetches each
+feed, and counts what is actually published:
+
+```shell
+PODSHELF_SERVER=https://abs.example.com PODSHELF_TOKEN=... node scripts/check-transcripts.mjs
+node scripts/check-transcripts.mjs --feeds feeds.txt    # one RSS url per line, no server needed
+node scripts/check-transcripts.mjs --json               # machine-readable
+```
+
+It reads only; nothing is written anywhere.
+
+The distinction it draws is the one that decides the feature: **timed** transcripts (`text/vtt`,
+`application/srt`, `application/json`) carry the positions in the audio, so a segment can be cut
+and *played*. Prose formats (`text/html`, `text/plain`) say what was said but not when, which
+leaves a summary rather than the thing — you could tell someone three shows covered a story, but
+not hand them the three minutes.
+
+It also counts shows and episodes separately, and reports how many shows transcribe ~everything.
+A show that transcribed two episodes is not a show a story can be followed across, so "27% of
+episodes" and "three shows do it properly" are different answers and only the second one
+supports the feature.
+
+The verdict line is deliberately blunt, including "do not build this on feed transcripts" — the
+point of measuring first was to avoid designing against data that is not there.
+
 ## 6. Statistics as something worth opening
 
 The stats area exists and is buried. Make it prominent and make it fun — badges, achievements, a
