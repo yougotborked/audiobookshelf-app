@@ -40,6 +40,16 @@ episode. `:wear-sync` holds the payload shapes and the rules that are genuinely 
 `:wear-sync` is a plain `org.jetbrains.kotlin.jvm` module on purpose: no Android types, so its
 rules are unit tested with `:wear-sync:test` — no device, no emulator, no Robolectric.
 
+**On the watch, a network's transport is not the interesting question.** Wear OS routes an app's
+traffic over Bluetooth proxied through the paired phone, over Wi-Fi, or over LTE, and swaps
+between them without telling the app. That abstraction is right for a small request — ask for the
+default network and it works wherever the watch is. It is wrong for an episode: while the phone
+is in range the default network is usually the phone proxy, at a few hundred kbps, and the
+platform will not bring up Wi-Fi on its own to make a download faster. Bulk transfers have to
+request Wi-Fi (`HighBandwidthNetwork`), bind to it, and **release it in a finally** — the watch
+stays on Wi-Fi as long as the request is registered. Judge a network by
+`suitableForBulkDownload`, not by which radio it happens to be.
+
 ## Build toolchain
 
 AGP 9.4.1, Gradle 9.8.2, `compileSdk`/`targetSdk` 37, Kotlin 2.3.20. Three AGP 9 facts that

@@ -123,3 +123,34 @@ fun playbackSource(downloadedPath: String?, isOnline: Boolean): PlaybackSource =
           isOnline -> PlaybackSource.Stream
           else -> PlaybackSource.Unavailable
         }
+
+/**
+ * Below this, a network is too slow to pull an episode over in a reasonable time.
+ *
+ * A watch paired over Bluetooth gets its internet proxied through the phone, and that link
+ * measures in the hundreds of kbps - fine for a JSON request, hopeless for fifty megabytes. Wi-Fi
+ * and LTE report thousands. At 1.5 Mbps a fifty megabyte episode takes about four minutes, which
+ * is the slowest worth starting.
+ */
+const val BULK_DOWNLOAD_MIN_KBPS: Int = 1_500
+
+/**
+ * Whether a network is worth downloading an episode over.
+ *
+ * Capability rather than transport, which is the whole point: Wear OS routes over Bluetooth,
+ * Wi-Fi or LTE and swaps between them without telling the app. What matters is not which one it
+ * picked but whether it is fast enough and whether it costs the user money.
+ *
+ * Unknown bandwidth - some networks report 0 - counts as fast enough. Refusing to download over
+ * a network that simply declines to describe itself would mean never downloading on the devices
+ * that do that, and a slow transfer is a better failure than no transfer.
+ */
+fun suitableForBulkDownload(
+        isMetered: Boolean,
+        downstreamBandwidthKbps: Int,
+        minimumKbps: Int = BULK_DOWNLOAD_MIN_KBPS
+): Boolean {
+  if (isMetered) return false
+  if (downstreamBandwidthKbps <= 0) return true
+  return downstreamBandwidthKbps >= minimumKbps
+}

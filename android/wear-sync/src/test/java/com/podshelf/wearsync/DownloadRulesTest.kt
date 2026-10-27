@@ -239,3 +239,51 @@ class PlaybackSourceTest {
     assertEquals(PlaybackSource.Unavailable, playbackSource("   ", isOnline = false))
   }
 }
+
+class BulkDownloadNetworkTest {
+  @Test
+  fun `fast and free is worth downloading over`() {
+    assertTrue(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = 20_000))
+  }
+
+  // The case this rule exists for: a watch paired over Bluetooth gets internet proxied through
+  // the phone, which is unmetered when the phone is on Wi-Fi but measures in the hundreds of
+  // kbps. Treating "unmetered" as "good enough" would have the watch crawl through fifty
+  // megabytes over Bluetooth instead of waiting for Wi-Fi.
+  @Test
+  fun `an unmetered but slow link is not worth downloading over`() {
+    assertFalse(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = 400))
+  }
+
+  @Test
+  fun `the bluetooth proxy to a phone is rejected despite being free`() {
+    assertFalse(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = 700))
+  }
+
+  @Test
+  fun `exactly at the threshold is fast enough`() {
+    assertTrue(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = BULK_DOWNLOAD_MIN_KBPS))
+  }
+
+  @Test
+  fun `just below the threshold is not`() {
+    assertFalse(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = BULK_DOWNLOAD_MIN_KBPS - 1))
+  }
+
+  @Test
+  fun `a metered network is refused however fast it is`() {
+    // LTE on the watch is quick and costs the user money. Fifty megabytes is not ours to spend.
+    assertFalse(suitableForBulkDownload(isMetered = true, downstreamBandwidthKbps = 50_000))
+  }
+
+  @Test
+  fun `a network that does not report its bandwidth is given the benefit of the doubt`() {
+    assertTrue(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = 0))
+    assertTrue(suitableForBulkDownload(isMetered = false, downstreamBandwidthKbps = -1))
+  }
+
+  @Test
+  fun `a metered network with unknown bandwidth is still refused`() {
+    assertFalse(suitableForBulkDownload(isMetered = true, downstreamBandwidthKbps = 0))
+  }
+}

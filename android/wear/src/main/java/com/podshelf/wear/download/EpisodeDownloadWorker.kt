@@ -46,13 +46,45 @@ class EpisodeDownloadWorker(context: Context, params: WorkerParameters) :
             episodes.clearPartials()
 
             // Eviction first, so a watch that is already full can still take the episode it
-            // actually needs next.
+            // actually needs next. Costs nothing and needs no network.
             episodesToEvict(episodes.cached(), queue).forEach { episodes.delete(it) }
 
+            val pending = episodesToDownload(queue, episodes.cachedIds())
+            if (pending.isEmpty()) return@withContext Result.success()
+
+            // WorkManager's UNMETERED constraint got us here, but unmetered is not the same as
+            // fast: while the phone is in Bluetooth range the watch's default network is
+            // usually the phone proxy, at a few hundred kbps. Ask for Wi-Fi before moving tens
+            // of megabytes, and leave it alone if the watch is already somewhere good.
+            val network = HighBandwidthNetwork(applicationContext)
+            val usingRequestedNetwork =
+                    if (network.currentNetworkIsFastEnough()) false else network.acquire()
+
+            if (!usingRequestedNetwork && !network.currentNetworkIsFastEnough()) {
+              // No Wi-Fi turned up. Retry rather than crawl: nothing here is urgent, and a
+              // download dribbling over Bluetooth costs battery for an episode that will not
+              // finish before the watch leaves the charger.
+              network.release()
+              return@withContext Result.retry()
+            }
+
+            try {
+              return@withContext downloadAll(pending, session, episodes)
+            } finally {
+              network.release()
+            }
+          }
+
+  private suspend fun downloadAll(
+          pending: List<com.podshelf.wearsync.WearQueueEntry>,
+          session: com.podshelf.wearsync.WearServerSession,
+          episodes: EpisodeStore
+  ): Result =
+          withContext(Dispatchers.IO) {
             val api = WearApi()
             var failed = false
 
-            for (entry in episodesToDownload(queue, episodes.cachedIds())) {
+            for (entry in pending) {
               val url = api.resolveTrackUrl(session, entry)
               if (url == null) {
                 Log.d(tag, "No track URL for ${entry.episodeId}")
