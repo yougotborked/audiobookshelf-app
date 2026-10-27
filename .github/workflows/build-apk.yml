@@ -135,12 +135,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Rename APK with timestamp + short SHA
-        working-directory: android/app/build/outputs/apk/debug/
+      # Both APKs carry the same build stamp, so a phone and watch pair downloaded together
+      # are visibly from the same commit. They share an applicationId and a versionCode, and
+      # installing mismatched halves is the kind of thing that wastes an evening.
+      - name: Rename APKs with timestamp + short SHA
         run: |
           build="$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
-          name="podshelf-${build}.apk"
-          mv -v app-debug.apk "${name}"
+          mv -v android/app/build/outputs/apk/debug/app-debug.apk \
+                android/app/build/outputs/apk/debug/podshelf-${build}.apk
+          mv -v android/wear/build/outputs/apk/debug/wear-debug.apk \
+                android/wear/build/outputs/apk/debug/podshelf-wear-${build}.apk
 
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
@@ -180,6 +184,12 @@ jobs:
           name: podshelf-apk
           path: ./ghpages
 
+      - name: Download watch APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: podshelf-wear-apk
+          path: ./ghpages
+
       - name: Prepare test page resources
         run: |
           mkdir -p ghpages
@@ -195,7 +205,10 @@ jobs:
         run: |
           sed -i "s/__DATE__/$(date)/g" index.html
           sed -i "s/__COMMIT__/$(git rev-parse --short HEAD)/g" index.html
-          sed -i "s/__APK__/$(ls *apk | xargs -n1 basename)/g" index.html
+          # Matched by prefix rather than by `ls *apk`, which now finds two files and would
+          # substitute both names into one href.
+          sed -i "s/__APK__/$(ls podshelf-[0-9]*.apk | head -1 | xargs -n1 basename)/g" index.html
+          sed -i "s/__WEAR_APK__/$(ls podshelf-wear-*.apk | head -1 | xargs -n1 basename)/g" index.html
           # Replace repository placeholder so forks point to their own repo (owner/name)
           sed -i "s|__REPO__|${GITHUB_REPOSITORY}|g" index.html privacy.html
 
@@ -225,10 +238,17 @@ jobs:
           name: podshelf-apk
           path: ./apk
 
-      - name: Get APK filename and commit info
+      - name: Download watch APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: podshelf-wear-apk
+          path: ./wear-apk
+
+      - name: Get APK filenames and commit info
         id: info
         run: |
           echo "apk=$(ls apk/*.apk | head -1)" >> "$GITHUB_OUTPUT"
+          echo "wearApk=$(ls wear-apk/*.apk | head -1)" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           echo "date=$(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
 
@@ -246,7 +266,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          printf 'Debug APK built from `master` at %s\n\nCommit: [%s](https://github.com/%s/commit/%s)\n\n> This release is automatically overwritten on every push to master.\n' \
+          printf 'Debug builds from `master` at %s\n\nCommit: [%s](https://github.com/%s/commit/%s)\n\n| File | Install on |\n| --- | --- |\n| `podshelf-*.apk` | Your phone |\n| `podshelf-wear-*.apk` | Your Wear OS watch |\n\nThe watch app is standalone - it talks to your Audiobookshelf server itself - but it is the\nphone app that sends it your queue, so install both.\n\n> This release is automatically overwritten on every push to master.\n' \
             "${{ steps.info.outputs.date }}" \
             "${{ steps.info.outputs.sha }}" \
             "${{ github.repository }}" \
@@ -255,4 +275,5 @@ jobs:
             --title "Latest build (${{ steps.info.outputs.sha }})" \
             --notes-file release-notes.md \
             --prerelease \
-            "${{ steps.info.outputs.apk }}"
+            "${{ steps.info.outputs.apk }}" \
+            "${{ steps.info.outputs.wearApk }}"

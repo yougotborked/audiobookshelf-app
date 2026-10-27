@@ -11,9 +11,11 @@ Catch up on what's new, queue it, take it offline, and listen in the car — on 
 [![Build](https://github.com/yougotborked/podshelf-app/actions/workflows/build-apk.yml/badge.svg)](https://github.com/yougotborked/podshelf-app/actions/workflows/build-apk.yml)
 [![Latest APK](https://img.shields.io/github/v/release/yougotborked/podshelf-app?label=latest%20apk&color=F0B457)](https://github.com/yougotborked/podshelf-app/releases/latest)
 [![License](https://img.shields.io/github/license/yougotborked/podshelf-app?color=F0B457)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Android-F0B457)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Wear%20OS-F0B457)
 
-### [⬇ Download the latest APK](https://github.com/yougotborked/podshelf-app/releases/latest) · [Test builds](https://yougotborked.github.io/podshelf-app/) · [Roadmap](docs/ROADMAP.md)
+### [⬇ Download the latest APKs](https://github.com/yougotborked/podshelf-app/releases/latest) · [Test builds](https://yougotborked.github.io/podshelf-app/) · [Roadmap](docs/ROADMAP.md)
+
+Every build ships two APKs: `podshelf-*.apk` for your phone and `podshelf-wear-*.apk` for a Wear OS watch.
 
 </div>
 
