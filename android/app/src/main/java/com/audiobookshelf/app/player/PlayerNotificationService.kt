@@ -740,7 +740,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       mediaProgressSyncer.stop(false) {
         apiHandler.playLibraryItem(libraryItemId, episodeId, playItemRequestPayload) {
           if (it == null) {
-            Log.e(tag, "Failed to start new playback session")
+            AbsLogger.error("PlayerNotificationService", "startNewPlaybackSession: server would not open a session for $libraryItemId")
+            // Logging alone left the app looking like it was starting playback and then simply
+            // never doing so, with nothing on screen to say why.
+            clientEventEmitter?.onPlaybackFailed("Could not start playback on the server")
           } else {
             Log.d(
                     tag,
@@ -1067,9 +1070,22 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
         DeviceManager.serverConnectionConfig = config
       }
 
-      Log.i(tag, "play: player is idle/unprepared, preparing session ${session.mediaItemId}")
-      preparePlayer(session.clone(), true, mediaManager.getSavedPlaybackRate())
-      return true
+      return when (resumeStrategy(true, session.isLocal)) {
+        ResumeStrategy.NOTHING -> false
+        ResumeStrategy.PREPARE_STORED -> {
+          Log.i(tag, "play: preparing stored local session ${session.mediaItemId}")
+          preparePlayer(session.clone(), true, mediaManager.getSavedPlaybackRate())
+          true
+        }
+        ResumeStrategy.REQUEST_NEW_SESSION -> {
+          // The stored record's track URLs are scoped to a server session that no longer exists,
+          // so preparing it would load a player whose every URL 404s. The ids are still good.
+          Log.i(tag, "play: asking the server for a new session for ${session.mediaItemId}")
+          currentPlaybackSession = session
+          startNewPlaybackSession()
+          true
+        }
+      }
     }
 
     currentPlayer.volume = 1F
