@@ -1,17 +1,10 @@
 <template>
   <div class="w-full h-full flex flex-col overflow-hidden relative">
-
     <!-- Search bar -->
     <div class="px-4 pt-4 pb-2 shrink-0">
       <div class="relative">
         <span class="material-symbols absolute left-3 top-1/2 -translate-y-1/2 text-md-on-surface-variant text-xl pointer-events-none">search</span>
-        <input
-          v-model="searchQuery"
-          type="search"
-          :placeholder="strings.MessageDiscoverSearch"
-          class="w-full bg-md-surface-3 text-md-on-surface rounded-md-full pl-10 pr-10 py-2.5 text-sm outline-none focus:ring-2 focus:ring-md-primary/50"
-          @input="onSearchInput"
-        />
+        <input v-model="searchQuery" type="search" :placeholder="strings.MessageDiscoverSearch" class="w-full bg-md-surface-3 text-md-on-surface rounded-md-full pl-10 pr-10 py-2.5 text-sm outline-none focus:ring-2 focus:ring-md-primary/50" @input="onSearchInput" />
         <button v-if="searchQuery" class="absolute right-3 top-1/2 -translate-y-1/2" @click="clearSearch">
           <span class="material-symbols text-md-on-surface-variant text-xl">close</span>
         </button>
@@ -20,15 +13,7 @@
 
     <!-- Genre chips -->
     <div class="px-3 pb-2 shrink-0 flex gap-2 overflow-x-auto no-scrollbar">
-      <button
-        v-for="genre in genres"
-        :key="genre.label"
-        class="shrink-0 px-3 py-1 rounded-md-full text-md-label-m border transition-colors"
-        :class="activeGenre === genre.label
-          ? 'bg-md-primary text-md-on-primary border-md-primary'
-          : 'bg-transparent text-md-on-surface-variant border-md-outline-variant'"
-        @click="selectGenre(genre)"
-      >
+      <button v-for="genre in genres" :key="genre.label" class="shrink-0 px-3 py-1 rounded-md-full text-md-label-m border transition-colors" :class="activeGenre === genre.label ? 'bg-md-primary text-md-on-primary border-md-primary' : 'bg-transparent text-md-on-surface-variant border-md-outline-variant'" @click="selectGenre(genre)">
         {{ genre.label }}
       </button>
     </div>
@@ -43,12 +28,7 @@
       </p>
       <template v-else>
         <div v-for="podcast in searchResults" :key="podcast.feedUrl" class="border-b border-md-outline-variant/20" @click="onCardClick(podcast)">
-          <podcast-result-card
-            :podcast="podcast"
-            :in-library="isInLibrary(podcast.feedUrl)"
-            :show-add="userIsAdminOrUp"
-            @add="startAddFlow(podcast)"
-          />
+          <podcast-result-card :podcast="podcast" :in-library="isInLibrary(podcast.feedUrl)" :show-add="userIsAdminOrUp" @add="startAddFlow(podcast)" />
         </div>
       </template>
     </div>
@@ -68,17 +48,10 @@
           {{ strings.ButtonRetry || 'Retry' }}
         </button>
       </div>
-      <p v-else-if="!trendingResults.length" class="px-4 py-4 text-sm text-md-on-surface-variant">
-        No trending podcasts found.
-      </p>
+      <p v-else-if="!trendingResults.length" class="px-4 py-4 text-sm text-md-on-surface-variant">No trending podcasts found.</p>
       <template v-else>
         <div v-for="feed in trendingResults" :key="feed.id" class="border-b border-md-outline-variant/20" @click="onCardClick(toPodcastCard(feed))">
-          <podcast-result-card
-            :podcast="toPodcastCard(feed)"
-            :in-library="isInLibrary(feed.feedUrl)"
-            :show-add="userIsAdminOrUp"
-            @add.stop="startAddFlow(toPodcastCard(feed))"
-          />
+          <podcast-result-card :podcast="toPodcastCard(feed)" :in-library="isInLibrary(feed.feedUrl)" :show-add="userIsAdminOrUp" @add.stop="startAddFlow(toPodcastCard(feed))" />
         </div>
       </template>
     </div>
@@ -119,15 +92,26 @@
 
         <!-- Add to Library button (admins only) -->
         <div v-if="userIsAdminOrUp" class="px-4 pb-3">
-          <button class="w-full py-2.5 rounded-md-full bg-md-primary text-md-on-primary text-md-label-l font-semibold active:opacity-75 transition-opacity" @click="startAddFlowFromPreview">
-            {{ strings.ButtonAdd }} to Library
+          <button class="w-full py-2.5 rounded-md-full bg-md-primary text-md-on-primary text-md-label-l font-semibold active:opacity-75 transition-opacity" @click="startAddFlowFromPreview">{{ strings.ButtonAdd }} to Library</button>
+        </div>
+
+        <!-- Description. Clamped until asked for: show notes run to many paragraphs, but a
+             clamp with no way past it means the detail is simply unreachable. -->
+        <div v-if="previewDescription" class="px-4 pb-4">
+          <p class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide mb-1">{{ strings.LabelDescription }}</p>
+          <p class="text-sm text-md-on-surface leading-relaxed" :class="previewExpanded ? '' : 'line-clamp-5'" v-html="previewDescription" />
+          <button class="mt-1.5 text-sm text-md-primary font-medium active:opacity-60" @click="previewExpanded = !previewExpanded">
+            {{ previewExpanded ? strings.ButtonReadLess : strings.ButtonReadMore }}
           </button>
         </div>
 
-        <!-- Description -->
-        <div v-if="previewDescription" class="px-4 pb-4">
-          <p class="text-md-label-s text-md-on-surface-variant uppercase tracking-wide mb-1">{{ strings.LabelDescription }}</p>
-          <p class="text-sm text-md-on-surface leading-relaxed line-clamp-5" v-html="previewDescription" />
+        <!-- Nothing came back. Said plainly, with a way to try again, instead of a screen that
+             looks like a podcast that simply has no description. -->
+        <div v-else-if="previewFailed" class="px-4 pb-4 flex flex-col items-start gap-2">
+          <p class="text-sm text-md-on-surface-variant">{{ strings.MessagePodcastDetailsUnavailable }}</p>
+          <button class="px-4 py-2 rounded-md-full bg-md-surface-3 text-md-on-surface text-md-label-l active:opacity-60" @click="loadPreviewDetails">
+            {{ strings.ButtonTryAgain }}
+          </button>
         </div>
 
         <!-- Episodes -->
@@ -153,12 +137,7 @@
         </button>
       </div>
       <div class="flex-1 overflow-y-auto py-2">
-        <forms-new-podcast-form
-          v-if="selectedPodcastFeed"
-          :podcast-data="selectedPodcast"
-          :podcast-feed-data="selectedPodcastFeed"
-          v-model:processing="addProcessing"
-        />
+        <forms-new-podcast-form v-if="selectedPodcastFeed" :podcast-data="selectedPodcast" :podcast-feed-data="selectedPodcastFeed" v-model:processing="addProcessing" />
       </div>
     </div>
 
@@ -166,7 +145,6 @@
     <div v-if="addProcessing" class="absolute inset-0 bg-black/25 z-60 flex items-center justify-center pointer-events-auto">
       <ui-loading-indicator />
     </div>
-
   </div>
 </template>
 
@@ -211,6 +189,10 @@ const addProcessing = ref(false)
 const showPreview = ref(false)
 const previewPodcast = ref<any>(null)
 const previewLoading = ref(false)
+// The feed fetch used to fail silently, leaving the title and artist with no description, no
+// episodes and no hint that anything had been attempted
+const previewFailed = ref(false)
+const previewExpanded = ref(false)
 const previewDescription = ref('')
 const previewEpisodes = ref<any[]>([])
 
@@ -221,15 +203,15 @@ const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
 // ── Genres ────────────────────────────────────────────────────────────────────
 const genres = [
-  { label: 'All',         cat: undefined },
-  { label: 'Comedy',      cat: 'Comedy' },
-  { label: 'True Crime',  cat: 'True Crime' },
-  { label: 'Technology',  cat: 'Technology' },
-  { label: 'News',        cat: 'News' },
-  { label: 'Science',     cat: 'Science' },
-  { label: 'History',     cat: 'History' },
-  { label: 'Sports',      cat: 'Sports' },
-  { label: 'Business',    cat: 'Business' },
+  { label: 'All', cat: undefined },
+  { label: 'Comedy', cat: 'Comedy' },
+  { label: 'True Crime', cat: 'True Crime' },
+  { label: 'Technology', cat: 'Technology' },
+  { label: 'News', cat: 'News' },
+  { label: 'Science', cat: 'Science' },
+  { label: 'History', cat: 'History' },
+  { label: 'Sports', cat: 'Sports' },
+  { label: 'Business', cat: 'Business' }
 ]
 
 // ── In-library ────────────────────────────────────────────────────────────────
@@ -240,13 +222,9 @@ function isInLibrary(feedUrl?: string) {
 async function loadLibraryFeedUrls() {
   if (!currentLibraryId.value) return
   try {
-    const res = await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/items?minified=1&limit=0`, { connectTimeout: 10000 }) as any
+    const res = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/items?minified=1&limit=0`, { connectTimeout: 10000 })) as any
     const items: any[] = res?.results ?? res?.items ?? []
-    libraryFeedUrls.value = new Set(
-      items
-        .map((item: any) => item?.media?.metadata?.feedUrl as string | undefined)
-        .filter(Boolean) as string[]
-    )
+    libraryFeedUrls.value = new Set(items.map((item: any) => item?.media?.metadata?.feedUrl as string | undefined).filter(Boolean) as string[])
   } catch {
     // non-fatal
   }
@@ -295,7 +273,7 @@ function onSearchInput() {
 async function doSearch(term: string) {
   searchLoading.value = true
   try {
-    const res = await nativeHttp.get(`/api/search/podcast?term=${encodeURIComponent(term)}`, { connectTimeout: 10000 }) as any[]
+    const res = (await nativeHttp.get(`/api/search/podcast?term=${encodeURIComponent(term)}`, { connectTimeout: 10000 })) as any[]
     searchResults.value = Array.isArray(res) ? res : []
   } catch {
     searchResults.value = []
@@ -332,7 +310,7 @@ async function startAddFlow(podcast: any) {
   }
   addProcessing.value = true
   try {
-    const payload = await nativeHttp.post('/api/podcasts/feed', { rssFeed: podcast.feedUrl }, { connectTimeout: 10000 }) as any
+    const payload = (await nativeHttp.post('/api/podcasts/feed', { rssFeed: podcast.feedUrl }, { connectTimeout: 10000 })) as any
     if (!payload) {
       toast.error('Failed to get podcast feed')
       return
@@ -356,22 +334,43 @@ function cancelAddFlow() {
 
 async function onCardClick(podcast: any) {
   previewPodcast.value = podcast
+  showPreview.value = true
+  await loadPreviewDetails()
+}
+
+/**
+ * Fetches the podcast's own feed for the description and episode list.
+ *
+ * The chart and search APIs give a title, an artist and artwork and nothing else, so everything
+ * worth reading here comes from this one request - which made swallowing its failure particularly
+ * bad: the screen looked like a podcast with no description rather than one that failed to load.
+ */
+async function loadPreviewDetails() {
+  const podcast = previewPodcast.value
   previewDescription.value = ''
   previewEpisodes.value = []
-  showPreview.value = true
+  previewExpanded.value = false
+  previewFailed.value = false
 
-  if (!podcast.feedUrl) return
+  if (!podcast?.feedUrl) {
+    previewFailed.value = true
+    return
+  }
+
   previewLoading.value = true
   try {
-    const payload = await nativeHttp.post('/api/podcasts/feed', { rssFeed: podcast.feedUrl }, { connectTimeout: 10000 }) as any
-    if (payload?.podcast) {
-      const feed = payload.podcast
-      const meta = (feed.metadata as Record<string, unknown>) || {}
-      previewDescription.value = (meta.descriptionPlain as string) || (meta.description as string) || ''
-      previewEpisodes.value = (feed.episodes as any[]) || []
-    }
-  } catch {
-    // non-fatal — show basic info without feed details
+    const payload = (await nativeHttp.post('/api/podcasts/feed', { rssFeed: podcast.feedUrl }, { connectTimeout: 10000 })) as any
+    const feed = payload?.podcast
+    if (!feed) throw new Error('Feed response had no podcast')
+    const meta = (feed.metadata as Record<string, unknown>) || {}
+    previewDescription.value = (meta.descriptionPlain as string) || (meta.description as string) || ''
+    previewEpisodes.value = (feed.episodes as any[]) || []
+    // A feed that parsed but carries neither is still nothing to read, and saying so beats a
+    // screen that looks deliberately empty
+    previewFailed.value = !previewDescription.value && !previewEpisodes.value.length
+  } catch (error) {
+    console.error('[discover] Failed to load podcast feed', error)
+    previewFailed.value = true
   } finally {
     previewLoading.value = false
   }
