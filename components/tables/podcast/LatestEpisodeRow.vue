@@ -70,6 +70,7 @@
 
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
+import { resolveCoverSrc } from '~/composables/useCoverSource'
 import { AbsDownloader } from '@/plugins/capacitor'
 
 const props = defineProps<{
@@ -98,10 +99,14 @@ const nativeHttp = useNativeHttp()
 
 // A downloaded episode has its cover on disk; using it keeps the list looking the same with no
 // server, and avoids a doomed request per row
-const coverSrc = computed(() => {
-  if (props.localCoverUrl) return Capacitor.convertFileSrc(props.localCoverUrl)
-  return globalsStore.getLibraryItemCoverSrcById(props.libraryItemId || '')
-})
+const coverSrc = computed(
+  () =>
+    resolveCoverSrc({
+      localCoverUrl: props.localCoverUrl,
+      serverCoverSrc: globalsStore.getLibraryItemCoverSrcById(props.libraryItemId || ''),
+      toFileUrl: (path) => Capacitor.convertFileSrc(path)
+    }) || ''
+)
 const toast = useToast()
 const router = useRouter()
 const { checkCellularPermission } = useCellularPermission()
@@ -142,11 +147,11 @@ const itemProgress = computed(() => {
   const localProg = globalsStore.getLocalMediaProgressByServerItemId(props.libraryItemId || '', props.episode.id as string)
   if (!localProg) return serverProg
   if (!serverProg) return localProg
-  const serverUpdate = (serverProg as Record<string, unknown>).lastUpdate as number || 0
-  const localUpdate = (localProg as Record<string, unknown>).lastUpdate as number || 0
+  const serverUpdate = ((serverProg as Record<string, unknown>).lastUpdate as number) || 0
+  const localUpdate = ((localProg as Record<string, unknown>).lastUpdate as number) || 0
   return localUpdate > serverUpdate ? localProg : serverProg
 })
-const itemProgressPercent = computed(() => (itemProgress.value as Record<string, unknown>)?.progress as number || 0)
+const itemProgressPercent = computed(() => ((itemProgress.value as Record<string, unknown>)?.progress as number) || 0)
 const userIsFinished = computed(() => isProgressFinished(itemProgress.value as MaybeProgress))
 const timeRemaining = computed(() => {
   if (streamIsPlaying.value) return 'Playing'
@@ -161,7 +166,7 @@ const timeRemaining = computed(() => {
 })
 const publishedAt = computed(() => props.episode.publishedAt as number | null)
 const downloadItem = computed(() => globalsStore.getDownloadItem(props.libraryItemId || '', props.episode.id as string))
-const localEpisodeId = computed(() => props.localEpisode?.id as string || null)
+const localEpisodeId = computed(() => (props.localEpisode?.id as string) || null)
 const podcast = computed(() => (props.episode.podcast as Record<string, unknown>) || {})
 
 function goToEpisodePage() {
@@ -236,7 +241,7 @@ async function startDownload(localFolder: Record<string, unknown> | null) {
   }
   const downloadRes = await AbsDownloader.downloadLibraryItem(payload as Parameters<typeof AbsDownloader.downloadLibraryItem>[0])
   if (downloadRes && (downloadRes as Record<string, unknown>).error) {
-    const errorMsg = (downloadRes as Record<string, unknown>).error as string || 'Unknown error'
+    const errorMsg = ((downloadRes as Record<string, unknown>).error as string) || 'Unknown error'
     console.error('Download error', errorMsg)
     toast.error(errorMsg)
   } else {
@@ -278,12 +283,12 @@ async function toggleFinished() {
   if (props.isLocal || props.localEpisode) {
     const isFinished = !userIsFinished.value
     const localLibraryItemId = props.isLocal ? props.libraryItemId : props.localLibraryItemId
-    const localEpisodeId = props.isLocal ? props.episode.id as string : props.localEpisode?.id as string
-    const payload = await db.updateLocalMediaProgressFinished({
+    const localEpisodeId = props.isLocal ? (props.episode.id as string) : (props.localEpisode?.id as string)
+    const payload = (await db.updateLocalMediaProgressFinished({
       localLibraryItemId,
       localEpisodeId,
       isFinished
-    }) as Record<string, unknown>
+    })) as Record<string, unknown>
     console.log('toggleFinished payload', JSON.stringify(payload))
     if (payload?.error) {
       toast.error((payload?.error as string) || 'Unknown error')

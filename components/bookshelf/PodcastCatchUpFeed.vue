@@ -46,6 +46,7 @@
 <script>
 import { useAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
 import { episodePublishedAt, orderListeningQueue, queueItemStartTime, toPlayQueueItems } from '~/composables/useListeningQueue'
+import { buildLocalCoverMap } from '~/composables/useCoverSource'
 
 export default {
   props: {
@@ -106,12 +107,7 @@ export default {
       return episodes
     },
     localCoverMap() {
-      // Keyed by server library item id, which is what the episode rows carry
-      const map = {}
-      this.localLibraryItems.forEach((li) => {
-        if (li.libraryItemId && li.coverContentUrl) map[li.libraryItemId] = li.coverContentUrl
-      })
-      return map
+      return buildLocalCoverMap(this.localLibraryItems)
     },
     localEpisodeMap() {
       var epmap = {}

@@ -89,8 +89,10 @@
  * Playback is the app's existing path: the queue goes to the store and `play-item` to the player
  * the layout already mounts. Nothing here opens a stream itself.
  */
+import { Capacitor } from '@capacitor/core'
 import { AbsAudioPlayer } from '~/plugins/capacitor'
-import { orderListeningQueue, queueItemStartTime, toPlayQueueItems, type ListeningEpisode, type ProgressLookup, type QueueProgress } from '~/composables/useListeningQueue'
+import { buildLocalCoverMap, resolveCoverSrc } from '~/composables/useCoverSource'
+import { localEpisodesAsQueueCandidates, orderListeningQueue, queueItemStartTime, restrictToDownloaded, toPlayQueueItems, type ListeningEpisode, type ProgressLookup, type QueueProgress } from '~/composables/useListeningQueue'
 import { useAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
 
 // Speeds worth reaching with a single tap. The full set lives behind the normal player's modal;
@@ -123,6 +125,8 @@ const isPlaying = computed(() => appStore.playerIsPlaying)
 const isStarting = computed(() => appStore.playerIsStartingPlayback)
 const hasSession = computed(() => !!appStore.currentPlaybackSession)
 
+// Keyed by server episode id, which is what both a server episode and a normalised download
+// carry - so one lookup serves the online queue and the offline one
 const localEpisodeMap = computed(() => {
   const map: Record<string, Record<string, unknown>> = {}
   for (const item of localLibraryItems.value) {
@@ -181,11 +185,19 @@ const showTitle = computed(() => {
   return (session?.displayAuthor as string) || ''
 })
 
+const localCoverMap = computed(() => buildLocalCoverMap(localLibraryItems.value))
+
 const coverSrc = computed(() => {
   if (coverFailed.value) return null
   const libraryItemId = current.value?.libraryItemId
   if (!libraryItemId) return null
-  return globalsStore.getLibraryItemCoverSrcById(libraryItemId) || null
+  // The downloaded cover first: offline, the server URL is a request that cannot succeed, and
+  // the fallback is a blank placeholder beside audio that plays perfectly well
+  return resolveCoverSrc({
+    localCoverUrl: localCoverMap.value[libraryItemId],
+    serverCoverSrc: globalsStore.getLibraryItemCoverSrcById(libraryItemId),
+    toFileUrl: (path) => Capacitor.convertFileSrc(path)
+  })
 })
 
 // Duration falls back to the episode's own figure so the bar is not empty before the first
@@ -230,19 +242,25 @@ async function loadEpisodes() {
   }
 }
 
+/**
+ * The queue with no server: only what is on disk.
+ *
+ * The cached list is the library's recent episodes, most of which are streams - offering one
+ * offline starts a connection that cannot be made, and on a surface with one button there is
+ * nothing to do about it. So the cache is kept for its metadata (titles, dates, progress) but
+ * filtered to downloads, and the download folder itself is the fallback when there is no cache.
+ */
 async function useCachedOrLocalEpisodes(libraryId: string) {
+  const downloaded = localEpisodesAsQueueCandidates(localLibraryItems.value)
+  const downloadedServerIds = new Set(downloaded.map((episode) => episode.id))
+
   const cached = ((await localStore.getCachedLatestEpisodes(libraryId)) as ListeningEpisode[]) || []
-  if (cached.length) {
-    episodes.value = cached
+  const playableFromCache = restrictToDownloaded(cached, (episode) => downloadedServerIds.has(episode.id))
+  if (playableFromCache.length) {
+    episodes.value = playableFromCache
     return
   }
-  const downloaded: ListeningEpisode[] = []
-  for (const item of localLibraryItems.value) {
-    const media = item.media as Record<string, unknown> | undefined
-    for (const localEpisode of (media?.episodes as Record<string, unknown>[]) || []) {
-      downloaded.push(localEpisode as ListeningEpisode)
-    }
-  }
+
   episodes.value = downloaded
 }
 
