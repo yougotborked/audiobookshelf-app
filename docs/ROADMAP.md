@@ -91,6 +91,34 @@ supports the feature.
 The verdict line is deliberately blunt, including "do not build this on feed transcripts" — the
 point of measuring first was to avoid designing against data that is not there.
 
+### Measured, 27 Oct 2026 — the answer is zero
+
+Run against the real library: **10 feeds, 1,743 episodes, 0 transcripts.** Not a low number, not a
+prose-only number — the `<podcast:transcript>` tag does not appear once.
+
+```
+Shows with any transcript 0 (0%)
+Episodes seen             1743
+  ...with any transcript  0 (0%)
+```
+
+The feeds are not obscure: The Daily, Planet Money, Up First, This American Life, Radiolab, Hard
+Fork, Marketplace, The Run-Up, Terrestrials, Machine Gods. Mainstream, well-resourced,
+NPR/NYT-backed shows — if anyone were publishing the tag it would be these.
+
+Checked rather than trusted: the word "transcript" does occur in those feeds, which looked
+promising until it turned out to be episode *descriptions* about news stories (DOJ transcripts,
+the Maxwell transcripts). The only podcast-namespace tag present anywhere is `podcast:funding`.
+Several of these shows publish transcripts on their websites; none declare them in the feed.
+
+**So item 5 is closed as specified.** Cross-podcast summarisation was to rest on transcripts the
+feeds already carry, and they carry none. The remaining routes are both the expensive path the
+roadmap set out to avoid: generating transcripts locally (hours of compute per show on somebody's
+home server), or scraping each publisher's website, which is per-publisher work that breaks
+whenever they redesign.
+
+Worth re-running if the namespace gets adopted — the probe is still there and takes a minute.
+
 ## 6. Statistics as something worth opening
 
 The stats area exists and is buried. Make it prominent and make it fun — badges, achievements, a
