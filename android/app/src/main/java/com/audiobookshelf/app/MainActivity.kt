@@ -38,6 +38,7 @@ import com.audiobookshelf.app.plugins.AbsDownloader
 import com.audiobookshelf.app.plugins.AbsFileSystem
 import com.audiobookshelf.app.plugins.AbsFoldPosture
 import com.audiobookshelf.app.plugins.AbsLogger
+import com.audiobookshelf.app.plugins.AbsWearSync
 import com.getcapacitor.BridgeActivity
 import kotlinx.coroutines.launch
 
@@ -65,6 +66,7 @@ class MainActivity : BridgeActivity() {
     registerPlugin(AbsFoldPosture::class.java)
     registerPlugin(AbsDatabase::class.java)
     registerPlugin(AbsLogger::class.java)
+    registerPlugin(AbsWearSync::class.java)
 
     super.onCreate(savedInstanceState)
     Log.d(tag, "onCreate")

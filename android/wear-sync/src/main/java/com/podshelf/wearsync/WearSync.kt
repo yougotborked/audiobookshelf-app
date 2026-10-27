@@ -165,3 +165,52 @@ fun entryAfter(queue: WearQueue, currentEpisodeId: String?): WearQueueEntry? {
   if (index < 0) return queue.entries.firstOrNull()
   return queue.entries.getOrNull(index + 1)
 }
+
+/**
+ * How far playback has to move before the watch is worth telling about it.
+ *
+ * The phone's progress ticks every few seconds. Pushing each tick across the Data Layer would
+ * wake the watch's radio continuously for a number it only reads when something starts playing.
+ */
+const val PROGRESS_RESYNC_THRESHOLD_SECONDS: Double = 30.0
+
+/**
+ * Whether a newly resolved queue is worth sending.
+ *
+ * The phone recomputes the queue on every library refresh, every progress tick and every app
+ * foreground, and almost all of those produce a queue identical to the one the watch already
+ * holds. Publishing regardless is not free: each DataItem write wakes the watch.
+ *
+ * `generatedAtMs` deliberately does not count as a change - it moves on every recompute, so
+ * comparing whole objects would make this function always return true and quietly do nothing.
+ */
+fun queueNeedsPublishing(
+        previous: WearQueue?,
+        next: WearQueue,
+        progressThresholdSeconds: Double = PROGRESS_RESYNC_THRESHOLD_SECONDS
+): Boolean {
+  if (previous == null) return true
+  if (previous.serverConnectionConfigId != next.serverConnectionConfigId) return true
+  if (previous.entries.size != next.entries.size) return true
+
+  return previous.entries.zip(next.entries).any { (before, after) ->
+    when {
+      before.episodeId != after.episodeId -> true
+      before.title != after.title -> true
+      before.coverPath != after.coverPath -> true
+      before.durationSeconds != after.durationSeconds -> true
+      else ->
+              kotlin.math.abs(before.currentTimeSeconds - after.currentTimeSeconds) >=
+                      progressThresholdSeconds
+    }
+  }
+}
+
+/**
+ * Whether the server details changed.
+ *
+ * Plain inequality, unlike the queue: every field here is one the watch cannot work without, and
+ * a token rotation that does not reach the watch turns every request into a 401.
+ */
+fun sessionNeedsPublishing(previous: WearServerSession?, next: WearServerSession): Boolean =
+        previous != next

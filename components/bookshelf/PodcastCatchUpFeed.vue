@@ -49,6 +49,7 @@
 <script>
 import { useAutoPlaylistPodcastRules } from '~/composables/useAutoPlaylist'
 import { episodePublishedAt, orderListeningQueue, queueItemStartTime, toPlayQueueItems } from '~/composables/useListeningQueue'
+import { useWearSync } from '~/composables/useWearSync'
 import { buildLocalCoverMap } from '~/composables/useCoverSource'
 
 export default {
@@ -70,7 +71,8 @@ export default {
     const strings = useStrings()
     const { impact: hapticsImpact } = useHaptics()
     const { rules: podcastRules, refresh: refreshPodcastRules } = useAutoPlaylistPodcastRules()
-    return { appStore, userStore, globalsStore, eventBus, db, localStore, nativeHttp, toast, strings, hapticsImpact, podcastRules, refreshPodcastRules }
+    const wearSync = useWearSync()
+    return { appStore, userStore, globalsStore, eventBus, db, localStore, nativeHttp, toast, strings, hapticsImpact, podcastRules, refreshPodcastRules, wearSync }
   },
   data() {
     return {
@@ -84,6 +86,15 @@ export default {
     currentLibraryId(newVal) {
       if (newVal) {
         this.loadEpisodes()
+      }
+    },
+    // The watch is told whenever this screen's queue changes. `immediate` matters: a watch
+    // paired after the feed last changed would otherwise sit empty until an episode arrived or
+    // finished, which on a quiet week is days.
+    wearQueueItems: {
+      immediate: true,
+      handler() {
+        this.publishToWatch()
       }
     }
   },
@@ -129,6 +140,11 @@ export default {
         server: (libraryItemId, episodeId) => this.userStore.getUserMediaProgress(libraryItemId, episodeId),
         local: (libraryItemId, episodeId) => this.globalsStore.getLocalMediaProgressByServerItemId(libraryItemId, episodeId)
       }
+    },
+    wearQueueItems() {
+      // The same mapping the play button uses, so the watch is handed exactly the queue a tap
+      // on this screen would start - not a parallel list that could disagree with it.
+      return toPlayQueueItems(this.unfinishedEpisodes, (ep) => this.localEpisodeMap[ep.id])
     },
     unfinishedEpisodes() {
       // Oldest-first, with no resume reordering: this is a list someone is reading, and one that
@@ -195,6 +211,29 @@ export default {
       } finally {
         this.isLoading = false
       }
+    },
+    /**
+     * Hands the resolved queue to the watch.
+     *
+     * Fire-and-forget on purpose: the phone has no business waiting on a Bluetooth link to
+     * render a list, and the native side already decides whether anything actually needs
+     * sending - see queueNeedsPublishing in :wear-sync, which keeps an unchanged queue off the
+     * air however often this is called.
+     */
+    publishToWatch() {
+      const serverAddress = this.userStore.getServerAddress
+      const token = this.userStore.getToken
+      const session =
+        serverAddress && token
+          ? {
+              serverAddress,
+              token,
+              userId: this.userStore.user?.id || '',
+              serverConnectionConfigId: this.userStore.getServerConnectionConfigId || ''
+            }
+          : null
+
+      this.wearSync.publish(session, this.wearQueueItems, this.progressLookup)
     },
     async playNext() {
       const episodes = this.unfinishedEpisodes
