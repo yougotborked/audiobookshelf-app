@@ -101,6 +101,18 @@ Named as a favourite: opinionated, snarky, and it simply works. Worth a proper s
 a feature list — what it does with mood and continuation, how it handles offline, how it talks to
 the user, and how much personality the UI carries.
 
+**Status: studied.** See [PLEXAMP_STUDY.md](PLEXAMP_STUDY.md). The headline finding is that the
+most magical-seeming feature, Mood Radio, is a shuffled query over album mood tags — its author
+says so on the forum — and that what carries it is the *naming*, not the mechanism. Named
+characters (DJ Stretch, DJ Contempo, moods called *swaggering* and *poignant*) are what make
+people choose one behaviour over another.
+
+Four things to steal, none of which need inference: named queue modes over the ordering rules
+that already exist; a "fill my 40-minute commute" queue, since podcasts have a budget music does
+not; a bounded self-evicting cache of what is coming next; and release notes written with
+Plexamp's candour. The "snarky" reading turned out to be wrong — the voice is specificity, not
+jokes, which is a bar any project can clear by deciding to.
+
 ## 8. Per-episode comments, distributed
 
 A comment section per episode shared across all Podshelf users, anonymous, with nothing stored on
