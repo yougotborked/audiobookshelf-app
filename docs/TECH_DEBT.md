@@ -68,16 +68,35 @@ mean asking after a confusing failure.
 that it landed on a private address, and ask then — with a line of explanation attached to the
 attempt that needs it.
 
-### The watch does not download episodes
+### The watch plays only what it has downloaded
+
+**Where** `android/wear/src/main/java/com/podshelf/wear/MainActivity.kt`
+
+An episode that has not downloaded yet cannot be played at all, even with the watch sitting on
+Wi-Fi. Resolving a stream URL needs a round trip to the server — Audiobookshelf hands out
+session-scoped track URLs rather than a stable path per episode — and that does not belong in a
+tap handler that has to answer instantly. The row says "Waiting for Wi-Fi" instead of starting
+something that would fail a second later.
+
+Offline is the case this feature exists for, so this is the right way round. It is still a gap:
+someone who adds an episode and wants it immediately, on Wi-Fi, has to wait for the download
+pass rather than just streaming it.
+
+**Clears when** the play path can resolve a stream URL off the main thread and hand the player a
+buffering state while it does.
+
+### The watch does not write progress back
 
 **Where** `android/wear/`
 
-The roadmap's goal for the watch is that a run does not need the phone. The queue and the
-credentials are cached on the watch, so the watch can start playback by itself — but the audio
-still streams. On a watch with no LTE and no phone in range, that is not standalone.
+Listening on the watch does not reach the server or the phone. Finish an episode on a run and
+the phone still has it in the queue, at the position it was at before you left.
 
-**Clears when** the watch caches the next few episodes' audio locally, which needs a download
-manager on the watch side and a policy for when to fetch (charging + Wi-Fi, most likely).
+The sync is one-way by design for now — the phone decides what plays next and the watch is told
+— but progress is the one thing that genuinely has to travel the other way.
+
+**Clears when** the watch publishes its own progress back over the Data Layer and the phone
+merges it, which needs a rule for whose position wins when both moved.
 
 ### The Kotlin package is still `com.audiobookshelf.app`
 

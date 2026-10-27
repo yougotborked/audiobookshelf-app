@@ -28,6 +28,15 @@
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <service
+            android:name=".player.WearPlayerService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
         <!--
           Started by the Data Layer when the phone publishes, which is normally while this app
           is closed - so the queue is on disk before anyone raises their wrist.

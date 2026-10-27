@@ -4,6 +4,7 @@ import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
+import com.podshelf.wear.download.EpisodeDownloadWorker
 import com.podshelf.wearsync.WearSync
 
 /**
@@ -33,5 +34,10 @@ class PhoneSyncListenerService : WearableListenerService() {
         WearSync.PATH_QUEUE -> store.putQueueJson(payload)
       }
     }
+
+    // A new queue is the only thing that changes what should be on disk, so this is where the
+    // download pass is asked for. WorkManager holds it until the watch is on Wi-Fi, which is
+    // usually that night - and runs it immediately if it already is.
+    EpisodeDownloadWorker.schedule(this)
   }
 }
