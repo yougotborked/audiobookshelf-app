@@ -189,6 +189,16 @@ class MainActivity : BridgeActivity() {
             ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
       needed.add(Manifest.permission.POST_NOTIFICATIONS)
     }
+    // Asked at startup alongside the others rather than at the first connection attempt,
+    // because a denial here is not recoverable in place: the connect screen's failure is a
+    // six second timeout with no hint that a permission is missing. It joins an existing
+    // batch, and on a device where Bluetooth was already allowed the Nearby Devices group may
+    // not prompt again at all.
+    PermissionHelper.localNetworkPermission()?.let { localNetwork ->
+      if (ActivityCompat.checkSelfPermission(this, localNetwork) != PackageManager.PERMISSION_GRANTED) {
+        needed.add(localNetwork)
+      }
+    }
     if (needed.isNotEmpty()) {
       ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS)
     }

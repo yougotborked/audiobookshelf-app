@@ -50,6 +50,24 @@ official, both on 8.x.
 **Clears when** either filesharer ships an 8.x release, or the three call sites move to
 filesystem + share.
 
+### Local network access is asked for at startup, not when it is needed
+
+**Where** `android/app/src/main/java/com/audiobookshelf/app/MainActivity.kt`
+
+`ACCESS_LOCAL_NETWORK` is requested in the startup batch alongside audio and notifications,
+rather than at the moment the app first tries to reach a server on the LAN. That shows the
+prompt to someone whose server is only ever reachable over the internet and who will never
+need it.
+
+It is where it is because a denial is not recoverable in place: without the permission a
+connection to a private address does not fail, it times out after six seconds, and the connect
+screen has no way to tell that apart from a server that is genuinely down. Asking later would
+mean asking after a confusing failure.
+
+**Clears when** the connect flow can resolve the server address off the main thread, notice
+that it landed on a private address, and ask then — with a line of explanation attached to the
+attempt that needs it.
+
 ### The watch does not download episodes
 
 **Where** `android/wear/`
