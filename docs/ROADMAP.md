@@ -55,6 +55,28 @@ listening as signals, not just genre.
 Open question: where the catalogue comes from. The server knows only what is subscribed, so
 discovery means reaching a directory (Podcast Index is already wired in for search).
 
+**Status: the shape half is in.** `composables/useListeningProfile.ts` builds a profile from
+finished episodes - the band of episode length they actually complete, and the genres weighted by
+how much listening each represents - and the Discover charts are ordered by it, each suggestion
+carrying the one line that explains why it rose.
+
+Two judgements worth keeping:
+
+- **Only finished episodes count.** Starting something is a reaction to its title; finishing it is
+  a verdict. Counting both would let a show someone abandoned twice argue for more like itself.
+- **It refuses to be confident below five finished episodes.** A considered-looking
+  recommendation built on two is worse than none, so below that the charts are left exactly as
+  they came rather than reordered on no evidence.
+
+The preview also says how a show's typical episode compares with what this listener finishes -
+"Typically 4 hr — longer than most of what you finish". That is the part of the roadmap's "shape
+of listening" a genre list cannot express, and it is free there because the feed has already been
+fetched.
+
+Left for later: activity as a signal (running, commuting) needs something the app does not
+currently know, and the catalogue is still Apple's charts, so the pool being ranked is popular
+shows rather than everything.
+
 ## 5. Cross-podcast story summarisation
 
 Several news shows cover the same story on the same day. Pull the segments about one story
