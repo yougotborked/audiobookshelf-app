@@ -1,12 +1,19 @@
 <template>
-  <div ref="wrapper" class="modal modal-bg w-full h-full max-h-screen fixed top-0 left-0 flex items-end justify-center z-50 opacity-0" style="background: rgba(0,0,0,0.5)">
+  <div ref="wrapper" class="modal modal-bg w-full h-full max-h-screen fixed top-0 left-0 flex items-end justify-center z-50 opacity-0" style="background: rgba(0, 0, 0, 0.5)">
     <div class="absolute top-0 left-0 w-full h-full pointer-events-none" />
 
-    <div class="absolute z-40 top-3 right-4 h-10 w-10 flex items-center justify-center cursor-pointer text-md-on-surface-variant hover:text-md-on-surface" @click="show = false">
+    <!--
+      This floats on the scrim over whatever the page was showing - often cover art - not on a
+      surface, so it cannot borrow a surface token for its colour. text-md-on-surface-variant is
+      a muted grey meant to sit on --md-surface; over dark artwork it all but disappeared. A
+      translucent circle of its own gives it a background it can be read against whatever is
+      behind, in every theme.
+    -->
+    <div class="absolute z-40 top-3 right-4 h-10 w-10 flex items-center justify-center cursor-pointer rounded-md-full bg-black/50 text-white hover:bg-black/70" @click="show = false">
       <span class="material-symbols text-2xl">close</span>
     </div>
     <slot name="outer" />
-    <div ref="content" class="relative text-md-on-surface bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="(Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle) as any)" v-click-outside="clickBg">
+    <div ref="content" class="relative text-md-on-surface bg-md-surface-3 rounded-t-md-xl w-full overflow-hidden" :style="Object.assign({ height: modalHeight, maxWidth: maxWidth, maxHeight: '90vh' }, popoverStyle) as any" v-click-outside="clickBg">
       <!-- Drag handle -->
       <div class="w-8 h-1 rounded-md-full bg-md-on-surface-variant/40 mx-auto mt-3 mb-1" />
       <slot />
@@ -45,7 +52,9 @@ const justOpened = ref(false)
 const persistent = computed(() => props.persistent !== false)
 
 const show = computed({
-  get() { return props.modelValue },
+  get() {
+    return props.modelValue
+  },
   set(val: boolean) {
     emit('update:modelValue', val)
     emit('input', val)
@@ -99,7 +108,9 @@ function clickBg(ev: MouseEvent) {
 function setShow() {
   globalsStore.isModalOpen = true
   justOpened.value = true
-  setTimeout(() => { justOpened.value = false }, 350)
+  setTimeout(() => {
+    justOpened.value = false
+  }, 350)
   document.body.appendChild(el.value!)
   const isPopover = !!props.anchorSelector && typeof window !== 'undefined' && window.innerWidth > window.innerHeight
   if (isPopover) {
@@ -120,11 +131,15 @@ function setHide() {
   globalsStore.isModalOpen = false
   content.value!.style.transform = 'translateY(100%)'
   content.value!.style.opacity = '0'
-  setTimeout(() => { el.value!.remove() }, 250)
+  setTimeout(() => {
+    el.value!.remove()
+  }, 250)
   document.documentElement.classList.remove('modal-open')
 }
 
-function closeModalEvt() { show.value = false }
+function closeModalEvt() {
+  show.value = false
+}
 
 onMounted(() => {
   eventBus.on('close-modal', closeModalEvt)

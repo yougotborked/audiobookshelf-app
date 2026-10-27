@@ -38,6 +38,8 @@ interface LocalMediaProgressIndex {
 
 interface GlobalsState {
   isModalOpen: boolean
+  /** A page is covering itself with a full-page overlay that back should dismiss first. */
+  pageOverlayOpen: boolean
   itemDownloads: DownloadItem[]
   bookshelfListView: boolean
   series: unknown | null
@@ -58,6 +60,7 @@ interface GlobalsState {
 export const useGlobalsStore = defineStore('globals', {
   state: (): GlobalsState => ({
     isModalOpen: false,
+    pageOverlayOpen: false,
     itemDownloads: [],
     bookshelfListView: false,
     series: null,
