@@ -159,7 +159,7 @@
     --color-track-cursor:   240 180 87;   /* md-primary */
     --color-track:          208 195 180;  /* md-on-surface-variant */
     --color-track-buffered: 31 28 25;
-    --gradient-item-page:   linear-gradient(rgb(20 18 16) 0%, rgb(36 32 28) 100%);
+    --gradient-item-page:   linear-gradient(rgba(20,18,16,0.4) 0%, rgba(20,18,16,1) 80%);
     --gradient-audio-player: linear-gradient(0deg, rgb(20 18 16) 0%, transparent 100%);
     --gradient-minimized-audio-player: linear-gradient(180deg, transparent 0%, rgb(44 39 34) 100%);
   }
@@ -186,7 +186,7 @@
     --color-bg-toggle-selected: 23 21 19;
     --color-track-buffered: 18 17 15;
     --dynamic-surface:      0 0 0;
-    --gradient-item-page:   rgb(0, 0, 0);
+    --gradient-item-page:   linear-gradient(rgba(0,0,0,0.4) 0%, rgba(0,0,0,1) 80%);
     --gradient-audio-player: rgb(0, 0, 0);
     --gradient-minimized-audio-player: rgb(0, 0, 0);
   }

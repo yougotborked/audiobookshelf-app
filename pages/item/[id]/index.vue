@@ -21,7 +21,7 @@
     <div class="relative">
       <!-- background gradient -->
       <div id="item-page-bg-gradient" class="absolute top-0 left-0 w-full pointer-events-none z-0" :style="{ opacity: coverRgb ? 1 : 0 }">
-        <div class="w-full h-full" :style="({ backgroundColor: coverRgb } as any)" />
+        <div class="w-full h-full" :style="{ backgroundColor: coverRgb } as any" />
         <div class="w-full h-full absolute top-0 left-0" style="background: var(--gradient-item-page)" />
       </div>
 
@@ -609,8 +609,21 @@ function checkDescriptionClamped() {
   }
 }
 
+/**
+ * Sizes the cover-tinted wash behind the page header.
+ *
+ * innerHeight, not outerHeight: outerHeight includes the system chrome, so the block was sized
+ * against something taller than the viewport it is drawn in. Recomputed on resize because a fold
+ * or a rotation changes both terms.
+ */
+function updateBgGradientHeight() {
+  const height = Math.max(window.innerHeight - 64 - coverHeight.value, 0)
+  document.documentElement.style.setProperty('--item-page-bg-gradient-height', height + 'px')
+}
+
 function windowResized() {
   windowWidth.value = window.innerWidth
+  updateBgGradientHeight()
   checkDescriptionClamped()
 }
 
@@ -648,8 +661,7 @@ function init() {
   socket.$on('rss_feed_closed', rssFeedClosed)
   checkDescriptionClamped()
 
-  const itemPageBgGradientHeight = window.outerHeight - 64 - coverHeight.value
-  document.documentElement.style.setProperty('--item-page-bg-gradient-height', itemPageBgGradientHeight + 'px')
+  updateBgGradientHeight()
 
   if (appStore.lastItemScrollData.id === libraryItemId && (window as any)['item-page']) {
     ;(window as any)['item-page'].scrollTop = appStore.lastItemScrollData.scrollTop || 0
@@ -682,7 +694,7 @@ async function loadServerLibraryItem() {
   }
 
   if (!fetchedItem) {
-    const fallbackLocal = await db.getLocalLibraryItemByLId(libraryItemId).catch(() => null) as any
+    const fallbackLocal = (await db.getLocalLibraryItemByLId(libraryItemId).catch(() => null)) as any
     if (fallbackLocal) {
       fetchedItem = fallbackLocal
       loadedFromCache.value = true
@@ -695,7 +707,7 @@ async function loadServerLibraryItem() {
   }
 
   try {
-    const localLibraryItemCheck = await db.getLocalLibraryItemByLId(libraryItemId) as any
+    const localLibraryItemCheck = (await db.getLocalLibraryItemByLId(libraryItemId)) as any
     if (localLibraryItemCheck) {
       fetchedItem.localLibraryItem = localLibraryItemCheck
     }
@@ -711,7 +723,7 @@ onMounted(async () => {
   const libItemId = libraryItemId
 
   if (libItemId.startsWith('local')) {
-    const localItem = await db.getLocalLibraryItem(libItemId) as any
+    const localItem = (await db.getLocalLibraryItem(libItemId)) as any
     if (!localItem) {
       await navigateTo('/?error=Failed to get downloaded library item')
       return
@@ -730,7 +742,7 @@ onMounted(async () => {
     }
 
     if (localItem && !localItem.isLocal) {
-      const localLi = await db.getLocalLibraryItemByLId(localItem.id || libItemId) as any
+      const localLi = (await db.getLocalLibraryItemByLId(localItem.id || libItemId)) as any
       if (localLi) {
         localItem.localLibraryItem = localLi
       }
@@ -738,11 +750,11 @@ onMounted(async () => {
 
     libraryItem.value = localItem
   } else if (!userStore.serverConnectionConfig) {
-    let cachedItem = await localStore.getCachedLibraryItem(libItemId) as any
+    let cachedItem = (await localStore.getCachedLibraryItem(libItemId)) as any
     if (cachedItem) {
       loadedFromCache.value = true
     } else {
-      const fallbackLocal = await db.getLocalLibraryItemByLId(libItemId) as any
+      const fallbackLocal = (await db.getLocalLibraryItemByLId(libItemId)) as any
       if (fallbackLocal) {
         cachedItem = fallbackLocal
         loadedFromCache.value = true
@@ -753,7 +765,7 @@ onMounted(async () => {
     }
 
     if (cachedItem && !cachedItem.isLocal) {
-      const localLi = await db.getLocalLibraryItemByLId(cachedItem.id || libItemId) as any
+      const localLi = (await db.getLocalLibraryItemByLId(cachedItem.id || libItemId)) as any
       if (localLi) {
         cachedItem.localLibraryItem = localLi
       }
@@ -787,7 +799,6 @@ onBeforeUnmount(() => {
     appStore.setLastItemScrollData({ scrollTop: (window as any)['item-page'].scrollTop || 0, id: libraryItemId })
   }
 })
-
 </script>
 
 <style>
