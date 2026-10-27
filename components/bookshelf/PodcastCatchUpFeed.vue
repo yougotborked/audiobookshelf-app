@@ -3,7 +3,10 @@
     <!-- Sticky header -->
     <div class="px-4 pt-4 pb-2 flex items-start justify-between shrink-0">
       <div>
-        <h1 class="text-md-title-l text-md-on-surface font-semibold">Catch up</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="text-md-title-l text-md-on-surface font-semibold">Catch up</h1>
+          <stats-streak-chip />
+        </div>
         <p class="text-md-body-s text-md-on-surface-variant mt-0.5">
           <template v-if="unfinishedEpisodes.length"> {{ unfinishedEpisodes.length }} episode{{ unfinishedEpisodes.length !== 1 ? 's' : '' }} · oldest first </template>
           <template v-else-if="!isLoading">All done</template>

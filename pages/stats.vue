@@ -1,62 +1,42 @@
 <template>
-  <div class="w-full h-full px-0 py-4 overflow-y-auto">
-    <!-- Year in review banner shown at the top in December and January -->
+  <!--
+    Mobile-first, and capped at 600dp like the rest of the app: this was a desktop layout with
+    md: breakpoints, a fixed w-80 session column and a chart scaled to 90% to make it fit, which
+    on a phone meant three headline numbers squeezed into a row and a chart drawn smaller than
+    the space it had.
+  -->
+  <div class="w-full h-full overflow-y-auto min-[600px]:max-w-3xl min-[600px]:mx-auto">
     <stats-year-in-review-banner v-if="showYearInReviewBanner" />
 
-    <h1 class="text-xl px-4">
-      {{ $strings.HeaderYourStats }}
-    </h1>
+    <h1 class="text-md-title-l text-md-on-surface px-4 pt-4 pb-3">{{ $strings.HeaderYourStats }}</h1>
 
-    <div class="flex text-center justify-center">
-      <div class="flex p-2">
-        <div class="px-3">
-          <p class="text-4xl md:text-5xl font-bold">{{ $formatNumber(userItemsFinished.length) }}</p>
-          <p class="text-xs md:text-sm text-md-on-surface-variant">{{ $strings.LabelStatsItemsFinished }}</p>
-        </div>
-      </div>
-
-      <div class="flex p-2">
-        <div class="px-1">
-          <p class="text-4xl md:text-5xl font-bold">{{ $formatNumber(totalDaysListened) }}</p>
-          <p class="text-xs md:text-sm text-md-on-surface-variant">{{ $strings.LabelStatsDaysListened }}</p>
-        </div>
-      </div>
-
-      <div class="flex p-2">
-        <div class="px-1">
-          <p class="text-4xl md:text-5xl font-bold">{{ $formatNumber(totalMinutesListening) }}</p>
-          <p class="text-xs md:text-sm text-md-on-surface-variant">{{ $strings.LabelStatsMinutesListening }}</p>
-        </div>
-      </div>
-    </div>
-    <stats-achievement-shelf :summary="listeningSummary" :streak="streak" class="mt-5 mb-6" />
-
-    <div class="flex flex-col md:flex-row overflow-hidden max-w-full">
-      <stats-daily-listening-chart :listening-stats="listeningStats" class="lg:scale-100 transform scale-90 px-0" />
-      <div class="w-80 my-6 mx-auto">
-        <div class="flex mb-4 items-center">
-          <h1 class="text-2xl">{{ $strings.HeaderStatsRecentSessions }}</h1>
-          <div class="flex-grow" />
-        </div>
-        <p v-if="!mostRecentListeningSessions.length">{{ $strings.MessageNoListeningSessions }}</p>
-        <template v-for="(item, index) in mostRecentListeningSessions" :key="item.id">
-          <div class="w-full py-0.5">
-            <div class="flex items-center mb-1">
-              <p class="text-sm text-md-on-surface-variant w-8 min-w-8">{{ index + 1 }}.&nbsp;</p>
-              <div class="w-56">
-                <p class="text-sm text-md-on-surface truncate">{{ item.mediaMetadata ? item.mediaMetadata.title : '' }}</p>
-                <p class="text-xs text-md-on-surface-variant">{{ $dateDistanceFromNow(item.updatedAt ?? null) }}</p>
-              </div>
-              <div class="w-16 min-w-16 text-right">
-                <p class="text-xs font-bold">{{ $elapsedPretty(item.timeListening ?? 0) }}</p>
-              </div>
-            </div>
-          </div>
-        </template>
+    <!-- The totals. One row, but each figure gets a third of the width rather than fighting for it -->
+    <div class="grid grid-cols-3 gap-2 px-4">
+      <div v-for="total in totals" :key="total.label" class="rounded-md-lg bg-md-surface-2 px-2 py-3 text-center">
+        <p class="text-md-headline-s text-md-on-surface font-semibold tabular-nums leading-none">{{ $formatNumber(total.value) }}</p>
+        <p class="text-md-label-s text-md-on-surface-variant mt-1.5 leading-tight">{{ total.label }}</p>
       </div>
     </div>
 
-    <!-- Year in review banner shown at the bottom Feb - Nov -->
+    <stats-achievement-shelf :summary="listeningSummary" :streak="streak" class="mt-6 mb-7" />
+
+    <div class="px-4">
+      <stats-daily-listening-chart :listening-stats="listeningStats" />
+    </div>
+
+    <div class="px-4 pb-6">
+      <h2 class="text-md-title-m text-md-on-surface mb-2">{{ $strings.HeaderStatsRecentSessions }}</h2>
+      <p v-if="!mostRecentListeningSessions.length" class="text-md-body-m text-md-on-surface-variant">{{ $strings.MessageNoListeningSessions }}</p>
+      <div v-for="(item, index) in mostRecentListeningSessions" :key="item.id" class="flex items-center gap-3 py-2 border-b border-md-outline-variant/30 last:border-b-0">
+        <p class="text-md-label-m text-md-on-surface-variant tabular-nums w-5 shrink-0">{{ index + 1 }}</p>
+        <div class="min-w-0 flex-1">
+          <p class="text-md-body-m text-md-on-surface truncate">{{ item.mediaMetadata ? item.mediaMetadata.title : '' }}</p>
+          <p class="text-md-body-s text-md-on-surface-variant">{{ $dateDistanceFromNow(item.updatedAt ?? null) }}</p>
+        </div>
+        <p class="text-md-label-m text-md-on-surface tabular-nums shrink-0">{{ $elapsedPretty(item.timeListening ?? 0) }}</p>
+      </div>
+    </div>
+
     <stats-year-in-review-banner v-if="!showYearInReviewBanner" />
   </div>
 </template>
@@ -67,6 +47,7 @@ import { useLibrariesStore } from '~/stores/libraries'
 import { listeningStreak, type ListeningSummary } from '~/composables/useAchievements'
 
 const userStore = useUserStore()
+const strings = useStrings()
 const librariesStore = useLibrariesStore()
 const nativeHttp = useNativeHttp()
 
@@ -95,6 +76,12 @@ const totalDaysListened = computed(() => {
 })
 
 const streak = computed(() => listeningStreak((listeningStats.value?.days || {}) as Record<string, number>))
+
+const totals = computed(() => [
+  { value: userItemsFinished.value.length, label: strings.LabelStatsItemsFinished },
+  { value: totalDaysListened.value, label: strings.LabelStatsDaysListened },
+  { value: totalMinutesListening.value, label: strings.LabelStatsMinutesListening }
+])
 
 const listeningSummary = computed<ListeningSummary>(() => ({
   totalMinutes: totalMinutesListening.value,
