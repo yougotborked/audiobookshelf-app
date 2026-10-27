@@ -143,6 +143,19 @@ control was invisible. Nothing catches this but looking at it, which is what
 The accent carries one meaning — where you are in something — so it belongs on progress, the
 current item and the play control, and not on decoration.
 
+**There is one vocabulary for colour: the Material tokens.** The app used to carry a second set
+of aliases (`text-fg`, `bg-primary`, `border-border` …) that were defined as exact duplicates of
+Material tokens in every theme, plus raw Tailwind palette colours (`text-gray-400`,
+`bg-yellow-400`, `bg-green-500`) inherited from upstream. The aliases rendered correctly and so
+survived unnoticed; the palette colours did not, because they are fixed values that do not change
+between themes — which is how the light theme ended up with unreadable secondary text and the
+player's scrubber ended up stock `yellow-300` rather than the Podshelf amber.
+
+Both are gone, and the alias definitions were deleted so a stray one now renders *no colour at
+all* rather than looking slightly off. `scripts/check-theme-tokens.mjs` (the `theme` step of
+`npm run verify`) fails on either, with a small allowlist for the genuine exceptions — the player
+picks its glyph colour against the cover art's lightness, which no token can express.
+
 ## Critical Constraints
 
 **State management — Pinia only, not Vuex.**

@@ -12,27 +12,27 @@
         </div>
 
         <!-- No progress shown for collapsed series or podcasts in library -->
-        <div v-if="!isPodcast && !collapsedSeries" class="absolute bottom-0 left-0 h-1 shadow-sm max-w-full z-10 rounded-b" :class="itemIsFinished ? 'bg-md-primary' : 'bg-yellow-400'" :style="{ width: coverWidth * userProgressPercent + 'px' }"></div>
+        <div v-if="!isPodcast && !collapsedSeries" class="absolute bottom-0 left-0 h-1 shadow-sm max-w-full z-10 rounded-b" :class="itemIsFinished ? 'bg-md-primary/50' : 'bg-md-primary'" :style="{ width: coverWidth * userProgressPercent + 'px' }"></div>
       </div>
       <div class="flex-grow pl-2" :class="showPlayButton ? 'pr-12' : 'pr-2'">
         <p class="whitespace-normal line-clamp-2" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">
           <span v-if="seriesSequence">#{{ seriesSequence }}&nbsp;</span>{{ displayTitle }}
         </p>
-        <p class="truncate text-fg-muted" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">{{ displayAuthor }}</p>
-        <p v-if="displaySortLine" class="truncate text-fg-muted" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">{{ displaySortLine }}</p>
-        <p v-if="duration" class="truncate text-fg-muted" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">{{ utils.elapsedPretty(duration) }}</p>
+        <p class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">{{ displayAuthor }}</p>
+        <p v-if="displaySortLine" class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">{{ displaySortLine }}</p>
+        <p v-if="duration" class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">{{ utils.elapsedPretty(duration) }}</p>
 
-        <p v-if="numEpisodesIncomplete" class="truncate text-fg-muted" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">
+        <p v-if="numEpisodesIncomplete" class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">
           {{ getString('LabelNumEpisodesIncomplete', [numEpisodes, numEpisodesIncomplete]) }}
         </p>
-        <p v-else-if="numEpisodes" class="truncate text-fg-muted" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">
+        <p v-else-if="numEpisodes" class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.7 * sizeMultiplier + 'rem' }">
           {{ getString('LabelNumEpisodes', [numEpisodes]) }}
         </p>
       </div>
       <div v-if="showPlayButton" class="absolute top-0 bottom-0 right-0 h-full flex items-center justify-center z-20 pr-1">
-        <button type="button" class="relative rounded-full bg-fg-muted/50" :class="{ 'p-2': !playerIsStartingForThisMedia }" @click.stop.prevent="play">
+        <button type="button" class="relative rounded-full bg-md-on-surface-variant/50" :class="{ 'p-2': !playerIsStartingForThisMedia }" @click.stop.prevent="play">
           <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill text-white">{{ playerIsPlaying ? 'pause' : 'play_arrow' }}</span>
-          <div v-else class="p-2 text-md-on-surface w-10 h-10 flex items-center justify-center bg-fg-muted/80 rounded-full overflow-hidden">
+          <div v-else class="p-2 text-md-on-surface w-10 h-10 flex items-center justify-center bg-md-on-surface-variant/80 rounded-full overflow-hidden">
             <svg class="animate-spin" style="width: 24px; height: 24px" viewBox="0 0 24 24">
               <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
             </svg>

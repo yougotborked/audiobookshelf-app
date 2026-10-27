@@ -29,7 +29,7 @@ const emit = defineEmits<{
 const className = computed(() => {
   const classes: string[] = []
   if (!props.borderless) {
-    classes.push(`bg-${props.bgColor ?? 'md-surface-3'} border border-gray-600`)
+    classes.push(`bg-${props.bgColor ?? 'md-surface-3'} border border-md-outline-variant`)
   }
   return classes.join(' ')
 })

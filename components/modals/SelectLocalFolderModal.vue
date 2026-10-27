@@ -7,7 +7,7 @@
     </template>
 
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
-      <div ref="container" class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-3 rounded-lg border border-fg/20" style="max-height: 75%" @click.stop>
+      <div ref="container" class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-3 rounded-lg border border-md-on-surface/20" style="max-height: 75%" @click.stop>
         <ul class="h-full w-full" role="listbox" aria-labelledby="listbox-label">
           <template v-for="folder in localFolders" :key="folder.id">
             <li :id="`folder-${folder.id}`" class="text-md-on-surface select-none relative py-5" role="option" @click="clickedOption(folder)">

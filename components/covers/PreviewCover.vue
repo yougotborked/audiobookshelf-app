@@ -15,14 +15,14 @@
       <span class="material-symbols text-md-on-surface-variant/50" :style="{ fontSize: 1.5 * sizeMultiplier + 'rem' }">cloud_off</span>
     </div>
 
-    <div v-else-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-red-100" :style="{ padding: placeholderCoverPadding + 'rem' }">
+    <div v-else-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-md-error-container" :style="{ padding: placeholderCoverPadding + 'rem' }">
       <div class="w-full h-full border-2 border-error flex flex-col items-center justify-center">
         <ui-podshelf-mark class="mb-2 text-md-primary" :style="{ height: 64 * sizeMultiplier + 'px', width: 64 * sizeMultiplier + 'px' }" />
         <p class="text-centertext-error" :style="{ fontSize: sizeMultiplier + 'rem' }">Invalid Cover</p>
       </div>
     </div>
 
-    <p v-if="!imageFailed && showResolution" class="absolute -bottom-5 left-0 right-0 mx-auto text-xs text-gray-300 text-center">{{ resolution }}</p>
+    <p v-if="!imageFailed && showResolution" class="absolute -bottom-5 left-0 right-0 mx-auto text-xs text-md-on-surface-variant text-center">{{ resolution }}</p>
   </div>
 </template>
 

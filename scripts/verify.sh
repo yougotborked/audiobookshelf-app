@@ -2,7 +2,7 @@
 # One command that runs every check this repo can verify locally, including inside a bare
 # container with no Android tooling preinstalled.
 #
-#   scripts/verify.sh                 lint, typecheck, i18n, vitest, Kotlin unit tests
+#   scripts/verify.sh                 lint, typecheck, i18n, theme, vitest, Kotlin unit tests
 #   scripts/verify.sh lint typecheck  just those steps
 #   scripts/verify.sh --list          show the available steps
 #   scripts/verify.sh all             the default steps plus the debug APK build
@@ -14,8 +14,8 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-DEFAULT_STEPS=(lint typecheck i18n unit android)
-ALL_STEPS=(lint typecheck i18n unit android apk)
+DEFAULT_STEPS=(lint typecheck i18n theme unit android)
+ALL_STEPS=(lint typecheck i18n theme unit android apk)
 
 usage() {
   cat <<'USAGE'
@@ -23,11 +23,12 @@ Steps:
   lint       eslint over the Nuxt sources
   typecheck  vue-tsc, compared against scripts/typecheck-baseline.json
   i18n       strings/*.json alphabetization (same rule as the i18n CI workflow)
+  theme      no retired or off-palette colour classes (see check-theme-tokens.mjs)
   unit       vitest over the pure logic in composables/
   android    compile the Android sources and run the Kotlin unit tests
   apk        assemble the debug APK (slow; not in the default set)
 
-Aliases: "all" = every step above. No arguments = lint typecheck i18n unit android.
+Aliases: "all" = every step above. No arguments = lint typecheck i18n theme unit android.
 USAGE
 }
 
@@ -68,6 +69,7 @@ run_step() {
 step_lint() { npm run --silent lint; }
 step_typecheck() { node scripts/typecheck.mjs; }
 step_i18n() { node scripts/check-i18n-sorted.mjs; }
+step_theme() { node scripts/check-theme-tokens.mjs; }
 step_unit() { npx vitest run; }
 step_android() { scripts/test-android.sh; }
 step_apk() {
@@ -82,7 +84,7 @@ step_apk() {
 
 for step in "${STEPS[@]}"; do
   case "$step" in
-    lint | typecheck | i18n | unit | android | apk) run_step "$step" "step_${step}" ;;
+    lint | typecheck | i18n | theme | unit | android | apk) run_step "$step" "step_${step}" ;;
     *)
       echo "Unknown step: $step" >&2
       usage >&2

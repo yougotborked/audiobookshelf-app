@@ -19,7 +19,7 @@
               <span class="material-symbols text-2xl text-md-on-surface-variant">chevron_right</span>
             </div>
           </nuxt-link>
-          <div v-if="num + 1 < localLibraryItems.length" class="flex border-t border-fg/10 my-3" />
+          <div v-if="num + 1 < localLibraryItems.length" class="flex border-t border-md-on-surface/10 my-3" />
         </div>
       </template>
     </div>

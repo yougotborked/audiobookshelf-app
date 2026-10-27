@@ -17,7 +17,7 @@
 
       <p class="text-sm text-md-on-surface episode-subtitle mt-1.5 mb-0.5" v-html="subtitle" />
 
-      <p v-if="sortKey === 'audioFile.metadata.filename'" class="text-xs text-fg-muted truncate mt-2 mb-0.5">
+      <p v-if="sortKey === 'audioFile.metadata.filename'" class="text-xs text-md-on-surface-variant truncate mt-2 mb-0.5">
         <span class="font-semibold">{{ getString('LabelFilename') }}</span
         >: <span class="font-light">{{ (episode.audioFile as any).metadata.filename }}</span>
       </p>

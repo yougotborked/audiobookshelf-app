@@ -29,7 +29,7 @@
           </button>
         </div>
       </nuxt-link>
-      <div class="absolute bottom-0 left-0 h-0.5 shadow-sm z-10" :class="userIsFinished ? 'bg-md-primary' : 'bg-yellow-400'" :style="{ width: progressPercent * 100 + '%' }"></div>
+      <div class="absolute bottom-0 left-0 h-0.5 shadow-sm z-10" :class="userIsFinished ? 'bg-md-primary/50' : 'bg-md-primary'" :style="{ width: progressPercent * 100 + '%' }"></div>
     </div>
   </div>
 </template>

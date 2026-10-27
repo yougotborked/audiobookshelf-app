@@ -7,8 +7,8 @@
     </template>
 
     <div class="w-full h-full overflow-hidden absolute top-0 left-0 flex items-center justify-center" @click="show = false">
-      <div ref="container" class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-2 rounded-lg border border-fg/20" style="max-height: 75%" @click.stop>
-        <div class="sticky top-0 z-10 bg-md-surface-2 grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 border-b border-fg/10 transition-shadow" :class="{ 'shadow-md': isScrolled }">
+      <div ref="container" class="w-full overflow-x-hidden overflow-y-auto bg-md-surface-2 rounded-lg border border-md-on-surface/20" style="max-height: 75%" @click.stop>
+        <div class="sticky top-0 z-10 bg-md-surface-2 grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 border-b border-md-on-surface/10 transition-shadow" :class="{ 'shadow-md': isScrolled }">
           <div>
             <p class="text-md-on-surface-variant text-sm">{{ strings.LabelChapters }}</p>
           </div>
@@ -22,7 +22,7 @@
         <ul class="h-full w-full" role="listbox" aria-labelledby="listbox-label">
           <li v-for="chapter in chapters" :key="chapter.id" :id="`chapter-row-${chapter.id}`" class="text-md-on-surface select-none relative cursor-pointer" :class="currentChapterId === chapter.id ? 'bg-md-surface-container' : ''" role="option" @click="clickedOption(chapter)">
             <div class="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-3 items-start">
-              <p class="font-normal line-clamp-2 text-sm text-fg/80">{{ chapter.title }}</p>
+              <p class="font-normal line-clamp-2 text-sm text-md-on-surface/80">{{ chapter.title }}</p>
               <div class="text-right" style="min-width: 60px">
                 <span class="font-mono text-md-on-surface-variant text-sm" style="letter-spacing: -0.5px">{{ utils.secondsToTimestamp(chapter.start / _playbackRate) }}</span>
               </div>
@@ -31,7 +31,7 @@
               </div>
             </div>
 
-            <div v-show="chapter.id === currentChapterId" class="w-0.5 h-full absolute top-0 left-0 bg-yellow-400" />
+            <div v-show="chapter.id === currentChapterId" class="w-0.5 h-full absolute top-0 left-0 bg-md-primary" />
           </li>
         </ul>
       </div>

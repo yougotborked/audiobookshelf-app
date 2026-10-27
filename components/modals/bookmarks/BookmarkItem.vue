@@ -10,7 +10,7 @@
       <p class="text-sm font-mono text-md-on-surface-variant flex items-center"><span class="material-symbols text-base pl-px pr-1">schedule</span>{{ utils.secondsToTimestamp(bookmark.time / playbackRate) }}</p>
     </div>
     <div class="h-full flex items-center justify-end transform w-16 pr-2" @click.stop>
-      <span class="material-symbols text-2xl mr-2 text-md-on-surface hover:text-yellow-400" @click.stop="editClick">edit</span>
+      <span class="material-symbols text-2xl mr-2 text-md-on-surface hover:text-md-primary" @click.stop="editClick">edit</span>
       <span class="material-symbols text-2xl text-md-on-surface hover:text-error" @click.stop="deleteClick">delete</span>
     </div>
   </div>

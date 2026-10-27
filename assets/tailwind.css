@@ -2,19 +2,9 @@
 
 @theme {
   /* ── Backward-compat legacy tokens ── */
-  --color-bg: rgb(var(--color-bg));
-  --color-bg-hover: rgb(var(--color-bg-hover));
-  --color-fg: rgb(var(--color-fg));
-  --color-fg-muted: rgb(var(--color-fg-muted));
-  --color-secondary: rgb(var(--color-secondary));
-  --color-primary: rgb(var(--color-primary));
-  --color-border: rgb(var(--color-border));
-  --color-bg-toggle: rgb(var(--color-bg-toggle));
-  --color-bg-toggle-selected: rgb(var(--color-bg-toggle-selected));
   --color-track-cursor: rgb(var(--color-track-cursor));
   --color-track: rgb(var(--color-track));
   --color-track-buffered: rgb(var(--color-track-buffered));
-  --color-accent: #F0B457;
   --color-error: #FF5252;
   --color-info: #2196F3;
   --color-success: #4CAF50;
@@ -38,8 +28,8 @@
   --color-md-outline-variant: rgb(var(--md-outline-variant));
   --color-md-error: rgb(var(--md-error));
   --color-md-error-container: rgb(var(--md-error-container));
-  --color-dynamic-primary: rgb(var(--dynamic-primary));
-  --color-dynamic-surface: rgb(var(--dynamic-surface));
+  --color-md-on-error: rgb(var(--md-on-error));
+  --color-md-on-error-container: rgb(var(--md-on-error-container));
 
   /* ── M3 Shape ── */
   --radius-md-xs: var(--md-shape-xs);
@@ -129,8 +119,6 @@
     --md-on-surface-variant:   208 195 180;  /* secondary text */
 
     /* ── Dynamic colour (set by fast-average-color on Now Playing) ── */
-    --dynamic-primary:         240 180 87;
-    --dynamic-surface:         20 18 16;
 
     /* ── M3 Shape ── */
     --md-shape-xs:   4px;
@@ -147,15 +135,6 @@
     --md-motion-accelerate: 200ms cubic-bezier(0.3, 0, 1, 1);
 
     /* ── Backward-compat aliases (keep until Phase 2 replaces usages) ── */
-    --color-bg:             20 18 16;
-    --color-bg-hover:       36 32 28;
-    --color-fg:             236 228 218;
-    --color-fg-muted:       208 195 180;
-    --color-primary:        31 28 25;
-    --color-secondary:      36 32 28;
-    --color-border:         74 67 59;
-    --color-bg-toggle:      31 28 25;
-    --color-bg-toggle-selected: 42 37 32;
     --color-track-cursor:   240 180 87;   /* md-primary */
     --color-track:          208 195 180;  /* md-on-surface-variant */
     --color-track-buffered: 31 28 25;
@@ -176,16 +155,7 @@
     --md-on-surface-variant: 168 158 146;
     --md-outline: 128 118 106;
     --md-outline-variant: 58 53 47;
-    --color-bg:             0 0 0;
-    --color-fg:             240 234 226;
-    --color-fg-muted:       168 158 146;
-    --color-primary:        12 11 10;
-    --color-secondary:      18 17 15;
-    --color-border:         58 53 47;
-    --color-bg-toggle:      12 11 10;
-    --color-bg-toggle-selected: 23 21 19;
     --color-track-buffered: 18 17 15;
-    --dynamic-surface:      0 0 0;
     --gradient-item-page:   linear-gradient(rgba(0,0,0,0.4) 0%, rgba(0,0,0,1) 80%);
     --gradient-audio-player: rgb(0, 0, 0);
     --gradient-minimized-audio-player: rgb(0, 0, 0);
@@ -224,19 +194,6 @@
     --md-on-surface-variant: 82 73 62;
     --md-outline:            132 122 108;
     --md-outline-variant:    215 203 188;
-
-    --dynamic-primary:       125 87 0;
-    --dynamic-surface:       255 251 245;
-
-    --color-bg:             255 251 245;
-    --color-bg-hover:       244 237 226;
-    --color-fg:             31 27 22;
-    --color-fg-muted:       82 73 62;
-    --color-border:         215 203 188;
-    --color-primary:        248 242 233;
-    --color-secondary:      244 237 226;
-    --color-bg-toggle:      248 242 233;
-    --color-bg-toggle-selected: 240 232 219;
     --color-track-cursor:   125 87 0;
     --color-track:          82 73 62;
     --color-track-buffered: 240 232 219;
@@ -246,7 +203,7 @@
   }
 
   body {
-    @apply bg-primary;
+    @apply bg-md-surface-1;
     color: rgb(var(--md-on-surface));
   }
 }

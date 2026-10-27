@@ -14,10 +14,10 @@
               <ui-checkbox v-else v-model="selectedEpisodes[String(index)]" small checkbox-bg="md-surface-3" border-color="gray-600" />
             </div>
             <div class="pl-9 pr-2 py-2 border-b border-white/10">
-              <p v-if="(episode as any).episode" class="font-semibold text-gray-200 text-xs">#{{ (episode as any).episode }}</p>
+              <p v-if="(episode as any).episode" class="font-semibold text-md-on-surface text-xs">#{{ (episode as any).episode }}</p>
               <p class="break-words mb-1 text-sm">{{ (episode as any).title }}</p>
-              <p v-if="(episode as any).subtitle" class="break-words mb-1 text-xs text-gray-300 episode-subtitle">{{ (episode as any).subtitle }}</p>
-              <p class="text-xxs text-gray-300">{{ utils.dateDistanceFromNow((episode as any).publishedAt) ? getString('LabelPublishedDate', [(episode as any).publishedAt ? utils.dateDistanceFromNow((episode as any).publishedAt) : strings.LabelUnknown]) : '' }}</p>
+              <p v-if="(episode as any).subtitle" class="break-words mb-1 text-xs text-md-on-surface-variant episode-subtitle">{{ (episode as any).subtitle }}</p>
+              <p class="text-xxs text-md-on-surface-variant">{{ utils.dateDistanceFromNow((episode as any).publishedAt) ? getString('LabelPublishedDate', [(episode as any).publishedAt ? utils.dateDistanceFromNow((episode as any).publishedAt) : strings.LabelUnknown]) : '' }}</p>
             </div>
           </div>
         </template>

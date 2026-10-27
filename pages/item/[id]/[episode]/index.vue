@@ -257,11 +257,11 @@ function parseDescription(desc: string) {
       if (!timeMatch) return match
       const time = timeMatch[0]
       const seekTimeInSeconds = convertToSeconds(time)
-      return `<span class="time-marker cursor-pointer text-blue-400 hover:text-blue-300" data-time="${seekTimeInSeconds}">${displayTime}</span>`
+      return `<span class="time-marker cursor-pointer text-md-primary hover:text-md-primary/80" data-time="${seekTimeInSeconds}">${displayTime}</span>`
     })
     .replace(timeMarkerRegex, (match: string) => {
       const seekTimeInSeconds = convertToSeconds(match)
-      return `<span class="time-marker cursor-pointer text-blue-400 hover:text-blue-300" data-time="${seekTimeInSeconds}">${match}</span>`
+      return `<span class="time-marker cursor-pointer text-md-primary hover:text-md-primary/80" data-time="${seekTimeInSeconds}">${match}</span>`
     })
 }
 
