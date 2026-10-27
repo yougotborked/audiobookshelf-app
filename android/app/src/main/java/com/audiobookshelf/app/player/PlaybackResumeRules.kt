@@ -41,6 +41,34 @@ fun <T> sessionToResume(current: T?, lastKnown: T?): T? {
   return current ?: lastKnown
 }
 
+/** What resuming a stored session requires. */
+enum class ResumeStrategy {
+  /** Nothing to resume, and a play button should honestly report doing nothing. */
+  NOTHING,
+  /** The stored session can be handed straight to the player. */
+  PREPARE_STORED,
+  /** The stored session names the item, but the server has to be asked for a fresh one. */
+  REQUEST_NEW_SESSION
+}
+
+/**
+ * How a stored session can be resumed, which depends entirely on where its audio lives.
+ *
+ * A local session's tracks are files on disk and their URLs keep working for as long as the
+ * download does. A *server* session's do not: since Audiobookshelf 2.22 a direct-play track is
+ * fetched from `/public/session/<session id>/track/<n>`, an address scoped to a playback session
+ * the server opened and has long since closed. Preparing that record gets a player full of media
+ * items whose every URL 404s - which looks exactly like the app trying to play and no sound
+ * arriving, because that is what it is.
+ *
+ * The item ids in the record are still good, so the server can be asked to open a new session
+ * for the same episode. That is what `startNewPlaybackSession` does.
+ */
+fun resumeStrategy(hasSession: Boolean, sessionIsLocal: Boolean): ResumeStrategy {
+  if (!hasSession) return ResumeStrategy.NOTHING
+  return if (sessionIsLocal) ResumeStrategy.PREPARE_STORED else ResumeStrategy.REQUEST_NEW_SESSION
+}
+
 /**
  * Whether the server connection has to be re-established before this session can be prepared.
  *

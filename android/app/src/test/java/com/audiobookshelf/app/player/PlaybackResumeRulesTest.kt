@@ -91,4 +91,28 @@ class PlaybackResumeRulesTest {
     assertFalse(needsServerConnectionRestored(null, false, null))
     assertFalse(needsServerConnectionRestored("", false, null))
   }
+
+  /**
+   * The second half of the bug. The first fix found the stored session and prepared it, and the
+   * app went from doing nothing to *looking* like it was starting and still playing no audio:
+   * since Audiobookshelf 2.22 a server track is fetched from /public/session/<id>/track/<n>, an
+   * address scoped to a session the server closed when the app did. Every URL 404s.
+   */
+  @Test
+  fun `asks the server for a new session rather than replaying a closed one`() {
+    assertEquals(ResumeStrategy.REQUEST_NEW_SESSION, resumeStrategy(true, false))
+  }
+
+  /** A download's tracks are files on disk; their URLs outlive any server session. */
+  @Test
+  fun `prepares a stored local session directly`() {
+    assertEquals(ResumeStrategy.PREPARE_STORED, resumeStrategy(true, true))
+  }
+
+  /** Nothing stored: the one case a play button should report doing nothing. */
+  @Test
+  fun `has no strategy when there is no session`() {
+    assertEquals(ResumeStrategy.NOTHING, resumeStrategy(false, false))
+    assertEquals(ResumeStrategy.NOTHING, resumeStrategy(false, true))
+  }
 }
