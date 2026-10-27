@@ -1,7 +1,7 @@
 <template>
-  <div class="w-96 my-6 mx-auto">
+  <div ref="container" class="w-full my-6">
     <h1 class="text-2xl mb-4">{{ strings.HeaderStatsMinutesListeningChart }}</h1>
-    <div class="relative w-96 h-72">
+    <div class="relative w-full h-72">
       <div class="absolute top-0 left-0">
         <template v-for="lbl in yAxisLabels" :key="lbl">
           <div :style="{ height: lineSpacing + 'px' }" class="flex items-center justify-end">
@@ -11,7 +11,7 @@
       </div>
 
       <template v-for="n in 7" :key="n">
-        <div class="absolute pointer-events-none left-0 h-px bg-white/10" :style="{ top: n * lineSpacing - lineSpacing / 2 + 'px', width: '360px', marginLeft: '24px' }" />
+        <div class="absolute pointer-events-none left-0 h-px bg-md-outline-variant" :style="{ top: n * lineSpacing - lineSpacing / 2 + 'px', width: chartContentWidth + 'px', marginLeft: chartContentMarginLeft + 'px' }" />
 
         <div class="absolute z-10" :style="{ left: points[n - 1].x + 'px', bottom: points[n - 1].y + 'px' }">
           <div class="h-2 w-2 bg-md-primary/80 hover:bg-md-primary rounded-full transform duration-150 transition-transform hover:scale-125" />
@@ -67,18 +67,47 @@ const strings = useStrings()
 const utils = useUtils()
 
 const chartHeight = 288
-const chartWidth = 384
-const chartContentWidth = 360
 const chartContentHeight = 268
+/** Width reserved for the y-axis labels, to the left of the plotted area. */
+const AXIS_GUTTER = 24
+/** Below this the plot is too cramped to read, so it scrolls rather than collapsing. */
+const MIN_CHART_WIDTH = 280
+
+const container = ref<HTMLElement | null>(null)
+const chartWidth = ref(384)
+
+function measure() {
+  const width = container.value?.clientWidth
+  if (width) chartWidth.value = Math.max(width, MIN_CHART_WIDTH)
+}
+
+let observer: ResizeObserver | null = null
+onMounted(() => {
+  measure()
+  // The container's width changes with orientation and with a fold opening, neither of which
+  // fires a resize on the element itself in every engine
+  if (typeof ResizeObserver !== 'undefined' && container.value) {
+    observer = new ResizeObserver(measure)
+    observer.observe(container.value)
+  }
+  window.addEventListener('resize', measure)
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  window.removeEventListener('resize', measure)
+})
+
+const chartContentWidth = computed(() => chartWidth.value - AXIS_GUTTER)
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat().format(n)
 }
 
-const chartContentMarginLeft = computed(() => chartWidth - chartContentWidth)
+const chartContentMarginLeft = computed(() => AXIS_GUTTER)
 const chartContentMarginBottom = computed(() => chartHeight - chartContentHeight)
 const lineSpacing = computed(() => chartHeight / 7)
-const daySpacing = computed(() => chartContentWidth / 7)
+const daySpacing = computed(() => chartContentWidth.value / 7)
 
 const last7Days = computed(() => {
   const days = []

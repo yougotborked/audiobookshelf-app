@@ -83,9 +83,17 @@ The streak rule came out of a `while (true)` loop inside `DailyListeningChart`, 
 could reach; the chart now reads the shared one, so the number on the chart and the number behind
 the badges cannot disagree.
 
-Left for later: the stats page is still styled from upstream (`text-fg-muted` rather than the
-Material tokens) and still reachable only from the side drawer - "prominent" is not done. Sharing
-a badge could reuse the Year in Review image path.
+The page itself was then rebuilt mobile-first: it had been a desktop layout with `md:`
+breakpoints, a fixed `w-80` session column and a chart scaled to 90% to make it fit. The chart
+measures its container now instead of assuming 384px, so it fills a tablet and fits a phone
+without being shrunk, and its gridlines use a token rather than `bg-white/10`, which was
+invisible on the light theme.
+
+Reachability: a streak chip sits next to "Catch up" on the home screen and is the way in. It
+renders nothing until there is a streak to show - a chip reading "0 days" on a new install is a
+scolding, not an invitation.
+
+Left for later: sharing a badge could reuse the Year in Review image path.
 
 ## 7. Steal from Plexamp
 
