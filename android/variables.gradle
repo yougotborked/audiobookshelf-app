@@ -1,7 +1,16 @@
 ext {
+    // Play rejects a versionCode it has already seen and will not accept one lower than the
+    // track's current release, so it has to move forward on every upload. The publish workflow
+    // derives both from the git tag that triggered it (v1.2.3 -> 10203 / "1.2.3"). A local or
+    // debug CI build keeps the checked-in values.
+    //
+    // Hoisted here rather than left in app/build.gradle because the wear module ships under the
+    // same applicationId and has to carry the same numbers.
+    podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '116') as Integer
+    podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.12.0-beta') as String
     minSdkVersion = 26
-    compileSdkVersion = 36
-    targetSdkVersion = 36
+    compileSdkVersion = 37
+    targetSdkVersion = 37
     androidxActivityVersion = '1.9.2'
     androidxAppCompatVersion = '1.7.0'
     androidxCoordinatorLayoutVersion = '1.3.0'
@@ -18,11 +27,16 @@ ext {
     glide_version = '5.0.5'
     androidx_work_version = '2.10.5'
     junit_version = '4.13.2'
+    jackson_version = '2.21.1'
+    kotlinx_serialization_version = '1.10.0'
+    compose_bom_version = '2026.09.00'
+    wear_compose_version = '1.7.1'
     kotlin_version = '2.3.20'
     kotlin_coroutines_version = '1.10.2'
     test_runner_version = '1.1.0'
     coreSplashScreenVersion = '1.0.1'
     androidxWebkitVersion = '1.12.1'
     androidx_window_version = '1.3.0'
+    androidx_lifecycle_version = '2.11.0'
     ksp_version = '2.3.6'
 }

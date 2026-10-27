@@ -2,7 +2,7 @@
 
 apply from: "variables.gradle"
 
-def agpVersion = findProperty('agpVersion') ?: '9.1.0'
+def agpVersion = findProperty('agpVersion') ?: '9.4.1'
 
 buildscript {
   // Versions must be declared here — buildscript{} is evaluated before apply from: "variables.gradle"
@@ -16,6 +16,8 @@ buildscript {
       classpath 'com.google.gms:google-services:4.4.4'
       classpath "com.android.tools.build:gradle:${agpVersion}"
       classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+      classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$kotlin_version"
+      classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
       classpath "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:$ksp_version"
 
       // NOTE: Do not place your application dependencies here; they belong

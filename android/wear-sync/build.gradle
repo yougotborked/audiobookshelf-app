@@ -1,0 +1,29 @@
+// The phone <-> watch contract.
+//
+// A plain JVM module, deliberately: it holds no Android types, so both :app and :wear can
+// depend on it and its rules can be unit tested without a device, an emulator or Robolectric.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+    jvmToolchain(21)
+}
+
+dependencies {
+    // kotlinx.serialization rather than the Jackson the phone uses everywhere else, because
+    // this module is also on the watch's classpath and jackson-module-kotlin pulls in
+    // kotlin-reflect. That is tens of megabytes of dex for a handful of flat data classes, on
+    // the one device in this project with a real storage budget. kotlinx generates its
+    // serializers at compile time and needs no reflection at all.
+    api "org.jetbrains.kotlinx:kotlinx-serialization-json:$rootProject.ext.kotlinx_serialization_version"
+
+    testImplementation "junit:junit:$rootProject.ext.junit_version"
+}
+
+// scripts/test-android.sh runs every module's test task in one invocation, so a `--tests`
+// filter naming a class in another module must not fail this one.
+tasks.withType(Test).configureEach {
+  filter {
+    failOnNoMatchingTests = false
+  }
+}

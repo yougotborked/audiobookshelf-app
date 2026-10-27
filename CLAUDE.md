@@ -18,8 +18,44 @@ distrobox enter audiobookshelf-dev -- bash -c "cd ~/workspace/audiobookshelf-app
 | Kotlin unit tests | `npm run test:android` |
 | Screenshots of the app | `npm run screenshots` → `docs/screenshots/` |
 | Full Android debug APK | `npm run generate && npx cap sync android && cd android && ./gradlew assembleDebug --no-daemon` |
+| Watch debug APK | `cd android && ./gradlew :wear:assembleDebug --no-daemon` (no Capacitor sync needed) |
 
 Java 21 (Temurin) is required for Android builds (`jvmToolchain(21)` in `build.gradle`).
+
+## Android modules
+
+| Module | What it is |
+|--------|------------|
+| `:app` | The phone app: a Capacitor webview plus the native player service |
+| `:wear` | The Wear OS app: native Compose, its own player, no webview |
+| `:wear-sync` | The phone ↔ watch contract. A plain JVM module, so both can depend on it |
+
+**The phone decides what plays next; the watch is told.** "What plays next" is defined once, in
+`composables/useListeningQueue.ts`. The phone resolves the queue and pushes the result to the
+watch over the Wearable Data Layer. Do not re-derive the ordering in Kotlin for the watch — a
+second definition drifts, and the drift shows up as the two devices disagreeing about the next
+episode. `:wear-sync` holds the payload shapes and the rules that are genuinely the watch's own
+(resume position, stream URL, when a cached queue is too old or belongs to another server).
+
+`:wear-sync` is a plain `org.jetbrains.kotlin.jvm` module on purpose: no Android types, so its
+rules are unit tested with `:wear-sync:test` — no device, no emulator, no Robolectric.
+
+## Build toolchain
+
+AGP 9.4.1, Gradle 9.8.2, `compileSdk`/`targetSdk` 37, Kotlin 2.3.20. Three AGP 9 facts that
+will bite otherwise:
+
+- **AGP 9 compiles Kotlin itself.** Applying `kotlin-android` / `org.jetbrains.kotlin.android`
+  on top of it is now an error, not a no-op.
+- **`android.kotlinOptions` is gone.** Compiler settings go in the top-level `kotlin` block's
+  `compilerOptions`.
+- **`compileSdk 37` is the `platforms;android-37.0` package**, not `android-37`, and only
+  cmdline-tools 23+ can see it — the minor-versioned SDKs introduced version 4 of the remote
+  repository XML, and an older `sdkmanager` reports the platform as simply not existing.
+  `scripts/install-android-sdk.sh` handles both; CI runs the same script.
+
+One AGP 9 compromise is recorded in [docs/TECH_DEBT.md](docs/TECH_DEBT.md) — read it before
+touching `android/gradle.properties`.
 
 ## Verification
 
@@ -61,7 +97,8 @@ Two things that bit before and will again:
 | Kind | Location | Runner |
 |------|----------|--------|
 | Pure TS logic | `test/*.test.ts` | vitest, plain Node |
-| Kotlin / Android | `android/app/src/test/java/...` | JUnit via Gradle |
+| Kotlin / Android | `android/app/src/test/java/...`, `android/wear/src/test/java/...` | JUnit via Gradle |
+| Phone ↔ watch rules | `android/wear-sync/src/test/java/...` | JUnit, plain JVM |
 | Screenshots | `test/e2e/*.spec.ts` | Playwright, `npm run screenshots` |
 
 The extensions matter: `vitest.config.ts` includes `test/**/*.test.ts`, so a Playwright spec must
@@ -81,7 +118,8 @@ fail is worth nothing — reintroduce the bug, watch the test go red, then put t
 
 ### Kotlin changes are verifiable locally
 
-`npm run test:android` compiles the Android sources and runs `android/app/src/test`. It
+`npm run test:android` compiles the Android sources and runs the tests in `:app`, `:wear` and
+`:wear-sync`. It
 installs the Android SDK into `/opt/android-sdk` on first run (~400MB) and applies
 `scripts/gradle-mirror.init.gradle`.
 
