@@ -12,15 +12,8 @@
       <div class="top-4 left-4 absolute cursor-pointer pointer-events-auto">
         <span class="material-symbols text-5xl" @click="collapseFullscreen">keyboard_arrow_down</span>
       </div>
-      <div
-        v-show="showCastBtn"
-        class="top-6 right-20 absolute cursor-pointer pointer-events-auto"
-        :class="{ 'opacity-60': !castAvailable && !isCasting }"
-      >
-        <span
-          class="material-symbols text-3xl tap-area"
-          @click="castClick"
-        >{{ isCasting ? 'cast_connected' : 'cast' }}</span>
+      <div v-show="showCastBtn" class="top-6 right-20 absolute cursor-pointer pointer-events-auto" :class="{ 'opacity-60': !castAvailable && !isCasting }">
+        <span class="material-symbols text-3xl tap-area" @click="castClick">{{ isCasting ? 'cast_connected' : 'cast' }}</span>
       </div>
       <div class="top-6 right-4 absolute cursor-pointer pointer-events-auto">
         <span class="material-symbols text-3xl tap-area" @click="showMoreMenuDialog = true">more_vert</span>
@@ -60,11 +53,7 @@
       <p class="author-text text-md-on-surface/75 truncate">{{ authorName }}</p>
     </div>
 
-    <div id="playerContent"
-         class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden"
-         :class="{ 'bg-md-surface-4': !showFullscreen }"
-         :style="showFullscreen ? { background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 60%, transparent 100%)' } : {}"
-         @click="clickContainer">
+    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden" :class="{ 'bg-md-surface-4': !showFullscreen }" :style="showFullscreen ? { background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 60%, transparent 100%)' } : {}" @click="clickContainer">
       <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-5" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer tap-area" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
@@ -80,18 +69,12 @@
           </div>
 
           <div class="flex items-center gap-7">
-            <span
-              class="material-symbols text-3xl text-md-on-surface cursor-pointer tap-area"
-              :class="playQueueAvailable ? 'opacity-75' : 'opacity-10'"
-              @click.stop="clickQueueBtn"
-            >playlist_play</span>
+            <span class="material-symbols text-3xl text-md-on-surface cursor-pointer tap-area" :class="playQueueAvailable ? 'opacity-75' : 'opacity-10'" @click.stop="clickQueueBtn">playlist_play</span>
             <span v-show="chapters.length > 0" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer tap-area" @click="clickChaptersBtn">format_list_bulleted</span>
           </div>
         </div>
       </div>
-      <div v-else
-           class="w-full h-full absolute top-0 left-0 pointer-events-none rounded-t-md-lg"
-           :style="{ backgroundColor: coverRgb, opacity: 0.15 }" />
+      <div v-else class="w-full h-full absolute top-0 left-0 pointer-events-none rounded-t-md-lg" :style="{ backgroundColor: coverRgb, opacity: 0.15 }" />
 
       <div id="playerControls" class="absolute right-0 bottom-0 mx-auto" style="max-width: 414px">
         <div class="flex items-center max-w-full" :class="playerSettings.lockUi ? 'justify-center' : 'justify-between'">
@@ -158,17 +141,20 @@ const toast = useToast()
 const { getJumpLabel } = useJumpLabel()
 
 // ── Props ─────────────────────────────────────────────────────────────────────
-const props = withDefaults(defineProps<{
-  bookmarks?: unknown[]
-  sleepTimerRunning?: boolean
-  sleepTimeRemaining?: number
-  serverLibraryItemId?: string | null
-}>(), {
-  bookmarks: () => [],
-  sleepTimerRunning: false,
-  sleepTimeRemaining: 0,
-  serverLibraryItemId: null
-})
+const props = withDefaults(
+  defineProps<{
+    bookmarks?: unknown[]
+    sleepTimerRunning?: boolean
+    sleepTimeRemaining?: number
+    serverLibraryItemId?: string | null
+  }>(),
+  {
+    bookmarks: () => [],
+    sleepTimerRunning: false,
+    sleepTimeRemaining: 0,
+    serverLibraryItemId: null
+  }
+)
 
 // ── Emits ─────────────────────────────────────────────────────────────────────
 const emit = defineEmits<{
@@ -308,6 +294,17 @@ const menuItems = computed(() => {
       text: getString('ButtonHistory'),
       value: 'history',
       icon: 'history'
+    })
+  }
+
+  // Minimal mode plays the podcast catch-up queue, so it is only offered where that queue is
+  // what you are listening to. Reaching it meant digging through settings, which is a long way
+  // round for a mode whose whole point is not having to look at the app.
+  if (isPodcast.value) {
+    items.push({
+      text: getString('LabelOpenMinimalMode'),
+      value: 'minimal',
+      icon: 'close_fullscreen'
     })
   }
 
@@ -488,11 +485,11 @@ const mediaId = computed(() => {
   if (isPodcast.value || !playbackSession.value) return null
   const session = playbackSession.value
   if (session.libraryItemId) {
-    return session.episodeId ? `${session.libraryItemId}-${session.episodeId}` : session.libraryItemId as string
+    return session.episodeId ? `${session.libraryItemId}-${session.episodeId}` : (session.libraryItemId as string)
   }
   const lli = session.localLibraryItem as Record<string, unknown> | null
   if (!lli) return null
-  return session.localEpisodeId ? `${lli.id}-${session.localEpisodeId}` : lli.id as string
+  return session.localEpisodeId ? `${lli.id}-${session.localEpisodeId}` : (lli.id as string)
 })
 
 // ── Watchers ──────────────────────────────────────────────────────────────────
@@ -503,33 +500,39 @@ watch(showFullscreen, (val) => {
   bodyEl.style.backgroundColor = showFullscreen.value ? coverRgb.value : ''
 })
 
-watch(() => appStore.currentPlaybackSession, (val) => {
-  if (!val) {
-    playbackSession.value = null
-    return
-  }
+watch(
+  () => appStore.currentPlaybackSession,
+  (val) => {
+    if (!val) {
+      playbackSession.value = null
+      return
+    }
 
-  if (!playbackSession.value || (playbackSession.value as Record<string, unknown>).id !== (val as Record<string, unknown>).id) {
-    // Initialize the player UI when a session is restored or changed
-    // so metadata like title and cover image are populated correctly.
-    // Skip loading state so the play button stays interactive.
-    onPlaybackSession(val as unknown as Record<string, unknown>, { isLoading: false })
-  }
+    if (!playbackSession.value || (playbackSession.value as Record<string, unknown>).id !== (val as Record<string, unknown>).id) {
+      // Initialize the player UI when a session is restored or changed
+      // so metadata like title and cover image are populated correctly.
+      // Skip loading state so the play button stays interactive.
+      onPlaybackSession(val as unknown as Record<string, unknown>, { isLoading: false })
+    }
 
-  totalDuration.value = Number(((val as Record<string, unknown>).duration as number || 0).toFixed(2))
-  currentTime.value = Number(((val as Record<string, unknown>).currentTime as number || 0).toFixed(2))
-  timeupdate()
-})
-
-watch(() => appStore.playerIsPlaying, async (isPlayingVal) => {
-  isPlaying.value = isPlayingVal
-  if (isPlayingVal) {
-    await refreshCurrentPlaybackPosition()
-    startPlayInterval()
-  } else {
-    stopPlayInterval()
+    totalDuration.value = Number((((val as Record<string, unknown>).duration as number) || 0).toFixed(2))
+    currentTime.value = Number((((val as Record<string, unknown>).currentTime as number) || 0).toFixed(2))
+    timeupdate()
   }
-})
+)
+
+watch(
+  () => appStore.playerIsPlaying,
+  async (isPlayingVal) => {
+    isPlaying.value = isPlayingVal
+    if (isPlayingVal) {
+      await refreshCurrentPlaybackPosition()
+      startPlayInterval()
+    } else {
+      stopPlayInterval()
+    }
+  }
+)
 
 // Folding changes the pane the artwork has to fit, and nothing else triggers a re-measure:
 // unfolding a device does not always change window size enough to fire a resize.
@@ -933,7 +936,10 @@ async function clickMenuAction(action: string) {
   await hapticsImpact()
   showMoreMenuDialog.value = false
   nextTick(() => {
-    if (action === 'history') {
+    if (action === 'minimal') {
+      showFullscreen.value = false
+      router.push('/minimal')
+    } else if (action === 'history') {
       router.push(`/media/${mediaId.value}/history?title=${title.value}`)
       showFullscreen.value = false
     } else if (action === 'scale_elapsed_time') {
@@ -1063,7 +1069,7 @@ function onPlaybackSession(ps: Record<string, unknown>, opts?: { isLoading?: boo
 
   isEnded.value = false
   // Don't flash the loading spinner when the same session is resent on app resume
-  setIsLoading(isResync ? false : (opts?.isLoading !== undefined ? opts.isLoading : true))
+  setIsLoading(isResync ? false : opts?.isLoading !== undefined ? opts.isLoading : true)
   syncStatus.value = 0
   lastNativeCurrentTime.value = null
   appStore.setPlaybackSession(ps as unknown as import('~/types').PlaybackSession)
@@ -1176,8 +1182,7 @@ function updateScreenSize() {
   // Portrait fullscreen: position title/author block below cover with a fixed gap, so it never
   // overlaps the cover or the controls. The floor is the top of the controls normally, and the
   // hinge when split - text must not run into either.
-  const coverBottomFromScreenBottom =
-    (windowHeight.value * centerFromBottomPercent) / 100 + centerOffset - coverHeight / 2
+  const coverBottomFromScreenBottom = (windowHeight.value * centerFromBottomPercent) / 100 + centerOffset - coverHeight / 2
   const textFloor = panes ? (windowHeight.value * (panes.bottomPercent + panes.hingePercent)) / 100 : 220
   const textBlockBottom = Math.max(coverBottomFromScreenBottom - 90, textFloor)
   document.documentElement.style.setProperty('--fullscreen-text-bottom', textBlockBottom + 'px')
@@ -1220,8 +1225,7 @@ async function onAppStateChange(state: { isActive: boolean }) {
 async function refreshCurrentPlaybackPosition() {
   if (!playbackSession.value || typeof AbsAudioPlayer?.getCurrentTime !== 'function') return
   try {
-    const previousNativeTime =
-      typeof lastNativeCurrentTime.value === 'number' ? lastNativeCurrentTime.value : null
+    const previousNativeTime = typeof lastNativeCurrentTime.value === 'number' ? lastNativeCurrentTime.value : null
     const data = await AbsAudioPlayer.getCurrentTime()
     if (!data) return
 
@@ -1241,8 +1245,7 @@ async function refreshCurrentPlaybackPosition() {
       updateTimestamp()
     }
 
-    const observedChange =
-      previousNativeTime !== null && rawCurrentTime !== null ? rawCurrentTime - previousNativeTime : 0
+    const observedChange = previousNativeTime !== null && rawCurrentTime !== null ? rawCurrentTime - previousNativeTime : 0
 
     // The native player reports this directly. Watching whether the position moved cannot tell a
     // paused player from one that is buffering or stalled, which left the mini player and the
@@ -1282,7 +1285,6 @@ function maybeRestartPolling() {
   if (!isPlaying.value && !appStore.playerIsPlaying) return
   startPlayInterval()
 }
-
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(() => {
@@ -1688,9 +1690,15 @@ defineExpose({
   }
 
   /* Top bar controls: smaller top offset to avoid overlapping cover art */
-  .fullscreen .top-4.left-4 { top: 8px !important; }
-  .fullscreen .top-6.right-4 { top: 8px !important; }
-  .fullscreen .top-6.right-16 { top: 8px !important; }
+  .fullscreen .top-4.left-4 {
+    top: 8px !important;
+  }
+  .fullscreen .top-6.right-4 {
+    top: 8px !important;
+  }
+  .fullscreen .top-6.right-16 {
+    top: 8px !important;
+  }
 
   /* Fullscreen bottom toolbar (bookmark/speed/sleep/queue/chapters):
      move to right column, above the seek track */
