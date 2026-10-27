@@ -3,7 +3,7 @@
     <div class="px-4 pt-2 pb-2">
       <div class="flex items-center justify-between mb-3">
         <p class="text-md-title-m text-md-on-surface">Filter</p>
-        <ui-btn v-show="selected !== 'all'" class="text-sm border-yellow-400/40 h-8" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
+        <ui-btn v-show="selected !== 'all'" class="text-sm border-md-primary/40 h-8" :padding-y="0" @click="clearSelected">{{ strings.ButtonClearFilter }}</ui-btn>
       </div>
       <div class="w-full overflow-x-hidden overflow-y-auto" style="max-height: 70vh">
         <ul v-show="!sublist" class="w-full" role="listbox" aria-labelledby="listbox-label">

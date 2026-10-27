@@ -49,11 +49,11 @@ function clickBtn(value: string | number | boolean) {
   margin-left: -1px;
 }
 .toggle-btn {
-  background-color: rgb(var(--color-bg-toggle));
-  color: rgb(var(--color-fg) / 0.5);
+  background-color: rgb(var(--md-surface-1));
+  color: rgb(var(--md-on-surface) / 0.5);
 }
 .toggle-btn.selected {
-  background-color: rgb(var(--color-bg-toggle-selected));
-  color: rgb(var(--color-fg));
+  background-color: rgb(var(--md-surface-3));
+  color: rgb(var(--md-on-surface));
 }
 </style>

@@ -5,10 +5,10 @@
     </div>
     <div class="w-full overflow-x-hidden overflow-y-auto search-content px-4" @click.stop>
       <div v-show="isFetching" class="w-full py-8 flex justify-center">
-        <p class="text-lg text-fg-muted">{{ $strings.MessageFetching }}</p>
+        <p class="text-lg text-md-on-surface-variant">{{ $strings.MessageFetching }}</p>
       </div>
       <div v-if="!isFetching && lastSearch && !totalResults" class="w-full py-8 flex justify-center">
-        <p class="text-lg text-fg-muted">{{ $strings.MessageNoItemsFound }}</p>
+        <p class="text-lg text-md-on-surface-variant">{{ $strings.MessageNoItemsFound }}</p>
       </div>
       <p v-if="bookResults.length" class="font-semibold text-sm mb-1">{{ $strings.LabelBooks }}</p>
       <template v-for="item in bookResults" :key="item.libraryItem.id">
@@ -19,9 +19,9 @@
         </div>
       </template>
 
-      <p v-if="podcastResults.length" class="uppercase text-xs text-fg-muted my-1 px-1 font-semibold">{{ $strings.LabelPodcasts }}</p>
+      <p v-if="podcastResults.length" class="uppercase text-xs text-md-on-surface-variant my-1 px-1 font-semibold">{{ $strings.LabelPodcasts }}</p>
       <template v-for="item in podcastResults" :key="item.libraryItem.id">
-        <div class="text-fg select-none relative py-1">
+        <div class="text-md-on-surface select-none relative py-1">
           <nuxt-link :to="`/item/${item.libraryItem.id}`">
             <cards-item-search-card :library-item="item.libraryItem" :search="lastSearch" />
           </nuxt-link>
@@ -30,7 +30,7 @@
 
       <p v-if="episodeResults.length" class="font-semibold text-sm mb-1 mt-2">{{ $strings.HeaderEpisodes }}</p>
       <template v-for="item in episodeResults" :key="item.libraryItem.recentEpisode.id">
-        <div class="text-fg select-none relative py-1">
+        <div class="text-md-on-surface select-none relative py-1">
           <nuxt-link :to="`/item/${item.libraryItem.id}/${item.libraryItem.recentEpisode.id}`">
             <cards-episode-search-card :episode="item.libraryItem.recentEpisode" :library-item="item.libraryItem" />
           </nuxt-link>

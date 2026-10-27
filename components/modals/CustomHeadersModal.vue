@@ -21,8 +21,8 @@
         <div class="w-full h-full p-4" v-else>
           <template v-for="[key, value] in Object.entries(headersCopy)" :key="key">
             <div class="w-full rounded-lg bg-white/5 py-2 pl-4 pr-12 relative mb-2">
-              <p class="text-base font-semibold text-gray-200 leading-5">{{ key }}</p>
-              <p class="text-sm text-gray-400">{{ value }}</p>
+              <p class="text-base font-semibold text-md-on-surface leading-5">{{ key }}</p>
+              <p class="text-sm text-md-on-surface-variant">{{ value }}</p>
 
               <div class="absolute top-0 bottom-0 right-0 h-full p-4 flex items-center justify-center text-error">
                 <button @click="removeHeader(key)"><span class="material-symbols text-lg">delete</span></button>

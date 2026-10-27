@@ -9,7 +9,7 @@
         <template v-if="page === 'library'">
           <div class="relative flex items-center px-2">
             <span class="material-symbols text-2xl" @click="showFilterModal = true">filter_alt</span>
-            <div v-show="hasFilters" class="absolute top-0 right-2 w-2 h-2 rounded-full bg-md-primary border border-green-300 shadow-sm z-10 pointer-events-none" />
+            <div v-show="hasFilters" class="absolute top-0 right-2 w-2 h-2 rounded-full bg-md-primary border border-md-surface-4 shadow-sm z-10 pointer-events-none" />
           </div>
           <span class="material-symbols text-2xl px-2" @click="showSortModal = true">sort</span>
         </template>

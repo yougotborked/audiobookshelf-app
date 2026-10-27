@@ -3,8 +3,8 @@
     <covers-book-cover :library-item="libraryItem" :width="coverWidth" :book-cover-aspect-ratio="bookCoverAspectRatio" />
     <div class="grow px-2 audiobookSearchCardContent">
       <p class="truncate text-sm">{{ title }}</p>
-      <p v-if="podcastTitle" class="truncate text-xs text-fg-muted">{{ podcastTitle }}</p>
-      <p v-if="authorName" class="text-xs text-fg-muted truncate">{{ getString('LabelByAuthor', [authorName]) }}</p>
+      <p v-if="podcastTitle" class="truncate text-xs text-md-on-surface-variant">{{ podcastTitle }}</p>
+      <p v-if="authorName" class="text-xs text-md-on-surface-variant truncate">{{ getString('LabelByAuthor', [authorName]) }}</p>
     </div>
   </div>
 </template>

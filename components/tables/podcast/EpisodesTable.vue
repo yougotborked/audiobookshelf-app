@@ -29,7 +29,7 @@
 
       <button class="outline:none mx-3 pt-0.5 relative" @click="showFilters">
         <span class="material-symbols text-xl text-md-on-surface">filter_alt</span>
-        <div v-show="filterKey !== 'all' && episodesAreFiltered" class="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-md-primary border border-green-300 shadow-sm z-10 pointer-events-none" />
+        <div v-show="filterKey !== 'all' && episodesAreFiltered" class="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-md-primary border border-md-surface-4 shadow-sm z-10 pointer-events-none" />
       </button>
 
       <div class="flex items-center border border-white/25 rounded px-2" @click="clickSort">

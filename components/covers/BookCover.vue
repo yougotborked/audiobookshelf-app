@@ -20,7 +20,7 @@
       <p class="text-center text-md-on-surface-variant/70 line-clamp-2" :style="{ fontSize: 0.6 * sizeMultiplier + 'rem' }">{{ title }}</p>
     </div>
 
-    <div v-else-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-red-100" :style="{ padding: placeholderCoverPadding + 'rem' }">
+    <div v-else-if="imageFailed" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-md-error-container" :style="{ padding: placeholderCoverPadding + 'rem' }">
       <div class="w-full h-full border-2 border-error flex flex-col items-center justify-center">
         <ui-podshelf-mark class="mb-2 text-md-primary" :style="{ height: 64 * sizeMultiplier + 'px', width: 64 * sizeMultiplier + 'px' }" />
         <p class="text-centertext-error" :style="{ fontSize: titleFontSize + 'rem' }">Invalid Cover</p>

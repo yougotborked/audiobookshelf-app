@@ -9,24 +9,24 @@
 
     <div v-if="!isIos" class="w-full max-w-full px-2 py-2">
       <template v-for="folder in localFolders" :key="folder.id">
-        <nuxt-link :to="`/localMedia/folders/${folder.id}`" class="flex items-center px-2 py-4 bg-primary rounded-md border-bg mb-1">
-          <span class="material-symbols fill text-xl text-yellow-400">folder</span>
+        <nuxt-link :to="`/localMedia/folders/${folder.id}`" class="flex items-center px-2 py-4 bg-md-surface-1 rounded-md border-md-surface-0 mb-1">
+          <span class="material-symbols fill text-xl text-md-primary">folder</span>
           <p class="ml-2">{{ folder.name }}</p>
           <div class="flex-grow" />
-          <p class="text-sm italic text-fg-muted px-3 capitalize">{{ folder.mediaType }}s</p>
-          <span class="material-symbols text-xl text-fg-muted">arrow_right</span>
+          <p class="text-sm italic text-md-on-surface-variant px-3 capitalize">{{ folder.mediaType }}s</p>
+          <span class="material-symbols text-xl text-md-on-surface-variant">arrow_right</span>
         </nuxt-link>
       </template>
       <div v-if="!localFolders.length" class="flex justify-center">
         <p class="text-center">{{ $strings.MessageNoMediaFolders }}</p>
       </div>
-      <div v-if="!isAndroid10OrBelow || overrideFolderRestriction" class="flex border-t border-fg/10 my-4 py-4">
+      <div v-if="!isAndroid10OrBelow || overrideFolderRestriction" class="flex border-t border-md-on-surface/10 my-4 py-4">
         <div class="flex-grow pr-1">
           <ui-dropdown v-model="newFolderMediaType" :placeholder="$strings.LabelSelectMediaType" :items="mediaTypeItems" />
         </div>
         <ui-btn small class="w-28" color="success" @click="selectFolder">{{ $strings.ButtonNewFolder }}</ui-btn>
       </div>
-      <div v-else class="flex border-t border-fg/10 my-4 py-4">
+      <div v-else class="flex border-t border-md-on-surface/10 my-4 py-4">
         <div class="flex-grow pr-1">
           <p class="text-sm">{{ $strings.MessageAndroid10Downloads }}</p>
         </div>

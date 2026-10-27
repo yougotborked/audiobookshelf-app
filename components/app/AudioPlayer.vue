@@ -83,7 +83,7 @@
             <span class="material-symbols text-3xl leading-none">replay</span>
             <span v-if="showFullscreen" class="jump-label text-[10px] font-semibold leading-tight">{{ jumpBackwardsLabel }}</span>
           </div>
-          <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-primary mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
+          <div class="play-btn cursor-pointer shadow-sm flex items-center justify-center rounded-full text-md-on-surface mx-4 relative overflow-hidden" :style="{ backgroundColor: coverRgb }" :class="{ 'animate-spin': seekLoading }" @mousedown.prevent @mouseup.prevent @click.stop="playPauseClick">
             <div v-if="!coverBgIsLight" class="absolute top-0 left-0 w-full h-full bg-white/20 pointer-events-none" />
 
             <span v-if="!showLoadingState" class="material-symbols fill" :class="coverRgb ? (coverBgIsLight ? 'text-gray-800' : 'text-white') : ''">{{ seekLoading ? 'autorenew' : !isPlaying ? 'play_arrow' : 'pause' }}</span>
@@ -752,8 +752,8 @@ function timeupdate() {
   if (seekLoading.value) {
     setSeekLoading(false)
     if (playedTrack.value) {
-      playedTrack.value.classList.remove('bg-yellow-300')
-      playedTrack.value.classList.add('bg-gray-200')
+      playedTrack.value.classList.remove('bg-track-cursor')
+      playedTrack.value.classList.add('bg-track')
     }
   }
 
@@ -810,8 +810,8 @@ function seek(time: number) {
     const perc = time / totalDuration.value
     playedTrack.value.style.width = perc * 100 + '%'
 
-    playedTrack.value.classList.remove('bg-gray-200')
-    playedTrack.value.classList.add('bg-yellow-300')
+    playedTrack.value.classList.remove('bg-track')
+    playedTrack.value.classList.add('bg-track-cursor')
   }
 }
 

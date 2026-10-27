@@ -4,7 +4,7 @@
     <div class="max-h-[70vh] overflow-y-auto">
       <draggable v-model="localQueue" handle=".drag" tag="div" item-key="libraryItemId" @end="dragEnd">
         <template #item="{ element: item, index: idx }">
-          <div class="flex items-center px-4 py-2 border-b border-fg/10 cursor-pointer" :class="{ 'bg-md-secondary-container': idx === currentIndex }" @click="select(idx)">
+          <div class="flex items-center px-4 py-2 border-b border-md-on-surface/10 cursor-pointer" :class="{ 'bg-md-secondary-container': idx === currentIndex }" @click="select(idx)">
             <span class="material-symbols drag mr-2 text-md-on-surface-variant cursor-move">drag_handle</span>
             <p class="flex-grow truncate">{{ itemTitle(item) }}</p>
             <span v-if="idx === currentIndex" class="material-symbols text-md-primary">play_arrow</span>

@@ -14,7 +14,7 @@
 
     <!-- your year in review -->
     <div v-if="showYearInReview">
-      <div class="w-full h-px bg-slate-200/10 my-4" />
+      <div class="w-full h-px bg-md-on-surface/10 my-4" />
 
       <div class="flex items-center justify-center mb-2 max-w-[800px] mx-auto">
         <!-- previous button -->

@@ -11,7 +11,7 @@
     </button>
 
     <transition name="menu">
-      <ul v-show="showMenu" class="absolute z-10 -mt-px w-full bg-md-surface-3 border border-md-outline-variant shadow-lg max-h-56 rounded-b-md py-1 ring-1 ring-bg/5 overflow-auto focus:outline-none text-sm" role="listbox">
+      <ul v-show="showMenu" class="absolute z-10 -mt-px w-full bg-md-surface-3 border border-md-outline-variant shadow-lg max-h-56 rounded-b-md py-1 ring-1 ring-md-surface-0/5 overflow-auto focus:outline-none text-sm" role="listbox">
         <template v-for="item in items" :key="item.value">
           <li class="text-md-on-surface select-none relative py-2 cursor-pointer hover:bg-black/20" role="option" @click="clickedOption(item.value)">
             <div class="flex items-center">

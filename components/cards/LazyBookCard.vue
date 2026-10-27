@@ -13,8 +13,8 @@
         </p>
         <widgets-explicit-indicator v-if="isExplicit" />
       </div>
-      <p class="truncate text-fg-muted" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">{{ displayLineTwo || '&nbsp;' }}</p>
-      <p v-if="displaySortLine" class="truncate text-fg-muted" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">{{ displaySortLine }}</p>
+      <p class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">{{ displayLineTwo || '&nbsp;' }}</p>
+      <p v-if="displaySortLine" class="truncate text-md-on-surface-variant" :style="{ fontSize: 0.8 * sizeMultiplier + 'rem' }">{{ displaySortLine }}</p>
     </div>
 
     <div v-if="seriesSequenceList" class="absolute bg-md-surface-4 text-md-on-surface rounded-md-xs z-20 text-right" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', padding: `${0.1 * sizeMultiplier}rem ${0.25 * sizeMultiplier}rem`, fontSize: sizeMultiplier * 0.8 + 'rem' }">
@@ -26,7 +26,7 @@
 
     <div class="w-full h-full absolute top-0 left-0 rounded overflow-hidden z-10">
       <div v-show="libraryItem && !imageReady" class="absolute top-0 left-0 w-full h-full flex items-center justify-center" :style="{ padding: sizeMultiplier * 0.5 + 'rem' }">
-        <p :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }" class="text-fg-muted text-center">{{ title }}</p>
+        <p :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }" class="text-md-on-surface-variant text-center">{{ title }}</p>
       </div>
 
       <img v-show="libraryItem" ref="cover" :src="bookCoverSrc" class="w-full h-full transition-opacity duration-300" :class="showCoverBg ? 'object-contain' : 'object-fill'" @load="imageLoaded" :style="{ opacity: imageReady ? 1 : 0 }" />
@@ -42,7 +42,7 @@
       </div>
 
       <div v-if="showPlayButton" class="absolute -bottom-16 -right-16 rotate-45 w-32 h-32 p-2 bg-gradient-to-r from-transparent to-black to-40% inline-flex justify-start items-center">
-        <div class="hover:text-white text-gray-200 hover:scale-110 transform duration-200 pointer-events-auto -rotate-45" @click.stop.prevent="play">
+        <div class="hover:text-white text-md-on-surface hover:scale-110 transform duration-200 pointer-events-auto -rotate-45" @click.stop.prevent="play">
           <span class="material-symbols fill">{{ streamIsPlaying ? 'pause_circle' : 'play_circle' }}</span>
         </div>
       </div>
@@ -69,8 +69,8 @@
     </div>
 
     <!-- Error widget -->
-    <div v-if="showError" :style="{ height: 1.5 * sizeMultiplier + 'rem', width: 2.5 * sizeMultiplier + 'rem' }" class="bg-error rounded-r-full shadow-md flex items-center justify-end border-r border-b border-red-300 absolute bottom-4 left-0 z-10">
-      <span class="material-symbols text-red-100 pr-1" :style="{ fontSize: 0.875 * sizeMultiplier + 'rem' }">priority_high</span>
+    <div v-if="showError" :style="{ height: 1.5 * sizeMultiplier + 'rem', width: 2.5 * sizeMultiplier + 'rem' }" class="bg-error rounded-r-full shadow-md flex items-center justify-end border-r border-b border-md-error absolute bottom-4 left-0 z-10">
+      <span class="material-symbols text-md-on-error pr-1" :style="{ fontSize: 0.875 * sizeMultiplier + 'rem' }">priority_high</span>
     </div>
 
     <!-- rss feed icon -->
@@ -96,7 +96,7 @@
     </div>
 
     <!-- Podcast Num Episodes Incomplete -->
-    <div v-else-if="numEpisodesIncomplete && !isSelectionMode" class="absolute rounded-full bg-yellow-400 box-shadow-md z-10 flex items-center justify-center" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', width: 1.25 * sizeMultiplier + 'rem', height: 1.25 * sizeMultiplier + 'rem' }">
+    <div v-else-if="numEpisodesIncomplete && !isSelectionMode" class="absolute rounded-full bg-md-primary box-shadow-md z-10 flex items-center justify-center" :style="{ top: 0.375 * sizeMultiplier + 'rem', right: 0.375 * sizeMultiplier + 'rem', width: 1.25 * sizeMultiplier + 'rem', height: 1.25 * sizeMultiplier + 'rem' }">
       <p class="text-black" :style="{ fontSize: sizeMultiplier * 0.8 + 'rem' }">{{ numEpisodesIncomplete }}</p>
     </div>
   </div>
@@ -274,7 +274,7 @@ const overlayWrapperClasslist = computed(() => {
   if (isSelectionMode.value) classes.push('opacity-60')
   else classes.push('opacity-40')
   if (selected.value) {
-    classes.push('border-2 border-yellow-400')
+    classes.push('border-2 border-md-primary')
   }
   return classes
 })
