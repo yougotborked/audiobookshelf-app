@@ -74,6 +74,19 @@ bit of gamification.
 Year in Review already exists and is the strongest thing in there. The shareable-image path is
 built, so achievements have somewhere to live.
 
+**Status: badges and streaks shipped.** `composables/useAchievements.ts` holds the streak rule
+and an 18-badge ladder across listening time, episodes finished, streak length and days listened,
+all as pure functions. The stats page leads with the current streak and the nearest unearned
+badge, then the wall.
+
+The streak rule came out of a `while (true)` loop inside `DailyListeningChart`, which nothing
+could reach; the chart now reads the shared one, so the number on the chart and the number behind
+the badges cannot disagree.
+
+Left for later: the stats page is still styled from upstream (`text-fg-muted` rather than the
+Material tokens) and still reachable only from the side drawer - "prominent" is not done. Sharing
+a badge could reuse the Year in Review image path.
+
 ## 7. Steal from Plexamp
 
 Named as a favourite: opinionated, snarky, and it simply works. Worth a proper study rather than

@@ -203,12 +203,14 @@ function recentEpisodes() {
 function personalizedShelves() {
   const items = PODCASTS.map(libraryItemPayload)
   const inProgress = PODCASTS.flatMap((p) =>
-    p.episodes.filter((e) => e.progress > 0 && e.progress < 1).map((ep) => ({
-      ...episodePayload(p, ep),
-      podcast: { id: p.id, metadata: { title: p.title, author: p.author }, coverPath: `/cover/${p.id}` },
-      libraryItem: libraryItemPayload(p),
-      progress: progressPayload(p, ep)
-    }))
+    p.episodes
+      .filter((e) => e.progress > 0 && e.progress < 1)
+      .map((ep) => ({
+        ...episodePayload(p, ep),
+        podcast: { id: p.id, metadata: { title: p.title, author: p.author }, coverPath: `/cover/${p.id}` },
+        libraryItem: libraryItemPayload(p),
+        progress: progressPayload(p, ep)
+      }))
   )
   return [
     { id: 'continue-listening', label: 'Continue Listening', labelStringKey: 'LabelContinueListening', type: 'episode', entities: inProgress },
@@ -261,7 +263,7 @@ export function mockResponseFor(pathname: string): unknown | undefined {
   }
   if (pathname === '/api/me') return { ...MOCK_USER, mediaProgress: allProgress() }
   if (pathname === '/api/libraries') return { libraries: MOCK_LIBRARIES }
-  if (pathname === '/api/me/listening-stats') return { totalTime: 184000, items: {}, days: {}, dayOfWeek: {}, today: 3600, recentSessions: [] }
+  if (pathname === '/api/me/listening-stats') return { totalTime: 184000, items: {}, days: listeningDays(), dayOfWeek: {}, today: 3600, recentSessions: [] }
   if (pathname === '/status') return { isInit: true, language: 'en-us', ServerSettings: MOCK_SERVER_SETTINGS }
 
   if (pathname.endsWith('/personalized')) return personalizedShelves()
@@ -294,6 +296,25 @@ export function mockResponseFor(pathname: string): unknown | undefined {
 /**
  * Serves the fake server to `page`, and records any path the fixture did not recognise.
  */
+/**
+ * A plausible listening history: a live streak running up to today, an earlier longer run, and a
+ * gap between them. Empty `days` made the stats screenshot useless - every streak and badge read
+ * zero, which is the one state that shows nothing of the design.
+ */
+function listeningDays(): Record<string, number> {
+  const days: Record<string, number> = {}
+  const add = (daysAgo: number, minutes: number) => {
+    const date = new Date()
+    date.setDate(date.getDate() - daysAgo)
+    days[`${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`] = minutes
+  }
+  // Current run: today back five days
+  for (let i = 0; i < 5; i++) add(i, 20 + i * 7)
+  // A longer run earlier, so "best" differs from "current"
+  for (let i = 9; i < 21; i++) add(i, 15 + (i % 5) * 9)
+  return days
+}
+
 export async function installMockServer(page: import('@playwright/test').Page): Promise<MockServerHandle> {
   const handle: MockServerHandle = { unhandled: [] }
 
