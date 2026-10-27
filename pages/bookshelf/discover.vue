@@ -50,8 +50,10 @@
       </div>
       <p v-else-if="!trendingResults.length" class="px-4 py-4 text-sm text-md-on-surface-variant">No trending podcasts found.</p>
       <template v-else>
-        <div v-for="feed in trendingResults" :key="feed.id" class="border-b border-md-outline-variant/20" @click="onCardClick(toPodcastCard(feed))">
+        <div v-for="feed in rankedTrending" :key="feed.id" class="border-b border-md-outline-variant/20" @click="onCardClick(toPodcastCard(feed))">
           <podcast-result-card :podcast="toPodcastCard(feed)" :in-library="isInLibrary(feed.feedUrl)" :show-add="userIsAdminOrUp" @add.stop="startAddFlow(toPodcastCard(feed))" />
+          <!-- Why this one is near the top. Only shown when there is a profile behind it. -->
+          <p v-if="feed.match?.reasons?.length" class="px-4 pb-2 -mt-1 text-xs text-md-primary">{{ feed.match.reasons[0] }}</p>
         </div>
       </template>
     </div>
@@ -83,6 +85,9 @@
             <p class="text-md-title-m font-semibold text-md-on-surface leading-snug">{{ previewPodcast.title }}</p>
             <p class="text-sm text-md-on-surface-variant mt-1">{{ previewPodcast.artistName }}</p>
             <p v-if="previewPodcast.genres?.length" class="text-xs text-md-on-surface-variant/70 mt-1">{{ previewPodcast.genres.slice(0, 3).join(' · ') }}</p>
+            <!-- The thing a genre list cannot say: a four-hour show is a different proposition
+                 from a twenty-minute one, whatever it is about. -->
+            <p v-if="previewLengthFit" class="text-xs text-md-on-surface-variant mt-1">{{ previewLengthFit }}</p>
             <div class="flex items-center gap-2 mt-2 flex-wrap">
               <span v-if="isInLibrary(previewPodcast.feedUrl)" class="text-xxs px-2 py-0.5 rounded-md-full bg-md-secondary-container text-md-on-secondary-container font-medium">{{ strings.LabelInLibrary }}</span>
               <span v-if="previewEpisodes.length" class="text-xs text-md-on-surface-variant">{{ previewEpisodes.length }} ep</span>
@@ -150,6 +155,7 @@
 
 <script setup lang="ts">
 import type { DiscoverFeed, DiscoveryFailure } from '~/composables/usePodcastDiscovery'
+import { buildListeningProfile, describeLengthFit, rankCandidates } from '~/composables/useListeningProfile'
 
 const strings = useStrings()
 const nativeHttp = useNativeHttp()
@@ -180,11 +186,31 @@ const TRENDING_FAILURE_MESSAGES: Record<DiscoveryFailure, string> = {
 const activeGenre = ref<string | null>(null)
 
 const libraryFeedUrls = ref<Set<string>>(new Set())
+/** Genres per library item, taken from the same request that collects the feed urls. */
+const libraryGenresById = ref<Record<string, { genres: string[] }>>({})
 
 const showAddFlow = ref(false)
 const selectedPodcast = ref<any>(null)
 const selectedPodcastFeed = ref<any>(null)
 const addProcessing = ref(false)
+
+/**
+ * What this listener's finished episodes look like, used to order the charts.
+ *
+ * The charts are the same for everyone; this is the only part of discovery that knows anything
+ * about the person. It reads progress the user store already holds, so it costs no request, and
+ * it stays silent until there is enough finished listening to mean something.
+ */
+const listeningProfile = computed(() => buildListeningProfile(((userStore.user?.mediaProgress as Record<string, unknown>[]) || []) as never[], libraryGenresById.value))
+
+const rankedTrending = computed(() => rankCandidates(trendingResults.value, listeningProfile.value))
+
+const previewLengthFit = computed(() =>
+  describeLengthFit(
+    previewEpisodes.value.map((ep: any) => Number(ep?.duration)),
+    listeningProfile.value
+  )
+)
 
 const showPreview = ref(false)
 const previewPodcast = ref<any>(null)
@@ -225,6 +251,11 @@ async function loadLibraryFeedUrls() {
     const res = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/items?minified=1&limit=0`, { connectTimeout: 10000 })) as any
     const items: any[] = res?.results ?? res?.items ?? []
     libraryFeedUrls.value = new Set(items.map((item: any) => item?.media?.metadata?.feedUrl as string | undefined).filter(Boolean) as string[])
+    const genres: Record<string, { genres: string[] }> = {}
+    for (const item of items) {
+      if (item?.id) genres[item.id] = { genres: item?.media?.metadata?.genres ?? [] }
+    }
+    libraryGenresById.value = genres
   } catch {
     // non-fatal
   }
