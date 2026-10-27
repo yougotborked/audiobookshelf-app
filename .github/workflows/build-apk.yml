@@ -98,6 +98,13 @@ jobs:
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
 
+      # compileSdk 37 ships as the minor-versioned platforms;android-37.0 package, which an
+      # older sdkmanager cannot even see - the minor-versioned SDKs introduced version 4 of the
+      # remote repository XML. The script updates the command-line tools when that is the case,
+      # and is the same one a bare container runs, so CI and a laptop install the same packages.
+      - name: Install the Android SDK packages the build needs
+        run: scripts/install-android-sdk.sh
+
       - name: Setup debug keystore
         run: |
           mkdir -p "$HOME/.android"
@@ -107,9 +114,11 @@ jobs:
       # within the same build execution instead of crossing invocation boundaries.
       # testDebugUnitTest comes before assembleDebug so a failing test fails the job rather
       # than producing an APK nobody should install.
-      - name: Run static analysis + unit tests + build Android app (Debug)
+      # :wear-sync is a plain JVM module, so its tests hang off `test` rather than
+      # `testDebugUnitTest` and have to be named explicitly or they silently do not run.
+      - name: Run static analysis + unit tests + build Android apps (Debug)
         working-directory: android
-        run: ./gradlew --no-daemon --build-cache --configuration-cache staticAnalysis testDebugUnitTest assembleDebug
+        run: ./gradlew --no-daemon --build-cache --configuration-cache staticAnalysis testDebugUnitTest :wear-sync:test assembleDebug
 
       - name: Upload unit test report
         if: failure()
@@ -119,6 +128,10 @@ jobs:
           path: |
             android/app/build/reports/tests/testDebugUnitTest/**
             android/app/build/test-results/testDebugUnitTest/**
+            android/wear/build/reports/tests/testDebugUnitTest/**
+            android/wear/build/test-results/testDebugUnitTest/**
+            android/wear-sync/build/reports/tests/test/**
+            android/wear-sync/build/test-results/test/**
           if-no-files-found: ignore
           retention-days: 7
 
@@ -134,6 +147,16 @@ jobs:
         with:
           name: podshelf-apk
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      # Separate from the phone artifact on purpose: the publish job builds its download page
+      # from `ls *apk` in the artifact it downloads, so a second APK in there would break it.
+      - name: Upload watch app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: podshelf-wear-apk
+          path: android/wear/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
 

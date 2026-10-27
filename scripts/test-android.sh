@@ -27,29 +27,39 @@ if [[ ! -d node_modules/@capacitor/android ]]; then
   exit 1
 fi
 
+# :wear-sync is a plain JVM module (`test`, not `testDebugUnitTest`); :app and :wear are
+# Android modules. All three in one invocation so Gradle configures the build once.
 GRADLE_ARGS=(
   -p android
   --no-daemon
   --init-script "$ROOT_DIR/scripts/gradle-mirror.init.gradle"
   :app:testDebugUnitTest
+  :wear:testDebugUnitTest
+  :wear-sync:test
 )
 
 if [[ -n "${1:-}" ]]; then
+  # --tests applies to every test task in the invocation, and a class lives in only one module.
+  # The modules set failOnNoMatchingTests false so the other two report zero tests instead of
+  # failing the run.
   GRADLE_ARGS+=(--tests "$1")
 fi
 
 printf '▶ ./gradlew %s\n' "${GRADLE_ARGS[*]}"
 ./android/gradlew "${GRADLE_ARGS[@]}"
 
-RESULTS_DIR="android/app/build/test-results/testDebugUnitTest"
-if [[ -d "$RESULTS_DIR" ]]; then
-  printf '\n▶ Results\n'
-  for xml in "$RESULTS_DIR"/TEST-*.xml; do
+printf '\n▶ Results\n'
+for results_dir in \
+    android/app/build/test-results/testDebugUnitTest \
+    android/wear/build/test-results/testDebugUnitTest \
+    android/wear-sync/build/test-results/test; do
+  [[ -d "$results_dir" ]] || continue
+  for xml in "$results_dir"/TEST-*.xml; do
     [[ -e "$xml" ]] || continue
     class="$(basename "$xml" .xml)"
     class="${class#TEST-}"
     summary="$(grep -o 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$xml" | head -1)"
     printf '  %-70s %s\n' "$class" "$summary"
   done
-  printf '\nHTML report: android/app/build/reports/tests/testDebugUnitTest/index.html\n'
-fi
+done
+printf '\nHTML reports under android/*/build/reports/tests/\n'

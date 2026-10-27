@@ -100,6 +100,7 @@ and commit. Every push to `master` publishes both.
 |---|---|
 | [Roadmap](docs/ROADMAP.md) | What is planned, what shipped, and the reasoning behind each |
 | [Development](docs/DEVELOPMENT.md) | Building, the checks, screenshots, CI |
+| [Tech debt](docs/TECH_DEBT.md) | Deliberate compromises and the condition that clears each |
 | [CLAUDE.md](CLAUDE.md) | Codebase constraints — state management, theming, where tests go |
 | [Plexamp study](docs/PLEXAMP_STUDY.md) | What a well-loved player does well, and what transfers |
 | [Play Store](docs/PLAY_STORE.md) | Release signing and the Play Console process |

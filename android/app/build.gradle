@@ -1,30 +1,31 @@
 plugins {
+  // AGP 9 compiles Kotlin itself; applying org.jetbrains.kotlin.android on top of it is now an
+  // error rather than a no-op (see https://kotl.in/gradle/agp-built-in-kotlin).
   id 'com.android.application'
-  id 'kotlin-android'
 }
 
 kotlin {
   jvmToolchain(21)
+  // AGP 9 removed android.kotlinOptions; the compiler is configured through the Kotlin
+  // extension instead.
+  compilerOptions {
+    jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    freeCompilerArgs.add('-jvm-default=enable')
+  }
 }
 
 // Version identity for the build.
 //
-// Play rejects a versionCode it has already seen and will not accept one lower than the track's
-// current release, so it has to move forward on every upload. The publish workflow derives both
-// of these from the git tag that triggered it (v1.2.3 -> 10203 / "1.2.3"): monotonic, and
-// reproducible from the tag alone. A local build or a debug CI build keeps the checked-in values.
-def podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '116') as Integer
-def podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.12.0-beta') as String
+// Both now live in variables.gradle, so the wear module - which ships under the same
+// applicationId and must carry the same numbers - reads the one definition.
+def podshelfVersionCode = rootProject.ext.podshelfVersionCode
+def podshelfVersionName = rootProject.ext.podshelfVersionName
 
 android {
   namespace = 'com.audiobookshelf.app'
   buildFeatures {
     viewBinding = true
     buildConfig = true
-  }
-  kotlinOptions {
-    freeCompilerArgs = ['-jvm-default=enable']
-    jvmTarget = '21'
   }
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_21
@@ -85,7 +86,7 @@ android {
       applicationIdSuffix ".debug"
       versionNameSuffix "-debug"
       minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
     }
     release {
       // Only attached when the key is actually present. Wiring it unconditionally would make
@@ -95,7 +96,7 @@ android {
         signingConfig signingConfigs.release
       }
       minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
     }
   }
 }
@@ -144,6 +145,10 @@ dependencies {
   // WindowManager - reports the hinge on a foldable, for tabletop and book postures
   implementation "androidx.window:window:$androidx_window_version"
 
+  // Lifecycle - MainActivity's repeatOnLifecycle. Declared rather than relied on transitively:
+  // it used to arrive through appcompat, which AGP 9 no longer leaks onto the compile classpath.
+  implementation "androidx.lifecycle:lifecycle-runtime-ktx:$androidx_lifecycle_version"
+
   // Media3 (replaces ExoPlayer 2 — see android/media3-migration branch)
   implementation "androidx.media3:media3-exoplayer:$media3_version"
   implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
@@ -164,7 +169,7 @@ dependencies {
   implementation 'com.squareup.okhttp3:okhttp:5.3.0'
 
   // Jackson for JSON
-  implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.21.1'
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
 
   testImplementation "org.robolectric:robolectric:4.13"
   testImplementation "junit:junit:$junit_version"
@@ -181,3 +186,11 @@ tasks.named('check') {
 }
 
 apply from: 'capacitor.build.gradle'
+
+// scripts/test-android.sh runs every module's test task in one invocation, so a `--tests`
+// filter naming a class in another module must not fail this one.
+tasks.withType(Test).configureEach {
+  filter {
+    failOnNoMatchingTests = false
+  }
+}

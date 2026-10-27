@@ -9,6 +9,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Android 17 stopped letting INTERNET cover a private address: reaching a server on the
+      same LAN needs this as well. Most Audiobookshelf servers are on the user's own network,
+      so without it the app can talk to the internet and not to the one host it exists to
+      reach. Harmless below 37, where the platform grants local access implicitly.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"

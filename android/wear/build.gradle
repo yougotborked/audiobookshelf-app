@@ -1,0 +1,76 @@
+// The Wear OS app: standalone playback on the watch, so a run does not need the phone.
+//
+// A separate module rather than a flavour of :app. The phone app is a Capacitor webview, and a
+// watch cannot usefully run one - the UI has to be native, the player is its own service, and
+// the two share no screens. What they will share is the server they talk to.
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+    namespace "com.podshelf.wear"
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.podshelf.app"
+        // Wear OS 3 and up. The watch this is being built for runs Wear OS 5, but there is no
+        // reason to exclude the Wear 3/4 devices that can run the same code.
+        minSdkVersion 30
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.podshelfVersionCode
+        versionName rootProject.ext.podshelfVersionName
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+        }
+        release {
+            // On, unlike :app. A watch has a real storage budget, and this module's
+            // dependencies - Compose, media3 - are almost entirely dead weight without
+            // shrinking: 33MB unminified for what is a list and a player, against 1.2MB with
+            // R8. The only thing needing a keep rule is kotlinx.serialization's generated
+            // serializers; see proguard-rules.pro.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        compose true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    kotlin {
+        jvmToolchain(21)
+    }
+}
+
+dependencies {
+    implementation project(':wear-sync')
+    implementation "androidx.core:core-ktx:$rootProject.ext.androidx_core_ktx_version"
+    implementation platform("androidx.compose:compose-bom:$rootProject.ext.compose_bom_version")
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    implementation "androidx.wear.compose:compose-material:$rootProject.ext.wear_compose_version"
+    implementation "androidx.wear.compose:compose-foundation:$rootProject.ext.wear_compose_version"
+    implementation "androidx.activity:activity-compose:$rootProject.ext.androidxActivityVersion"
+
+    // Playback on the watch is its own service; nothing is shared with the phone's player.
+    implementation "androidx.media3:media3-exoplayer:$rootProject.ext.media3_version"
+    implementation "androidx.media3:media3-session:$rootProject.ext.media3_version"
+
+    testImplementation "junit:junit:$rootProject.ext.junit_version"
+}
+
+// scripts/test-android.sh runs every module's test task in one invocation, so a `--tests`
+// filter naming a class in another module must not fail this one.
+tasks.withType(Test).configureEach {
+  filter {
+    failOnNoMatchingTests = false
+  }
+}

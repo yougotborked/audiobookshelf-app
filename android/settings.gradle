@@ -21,8 +21,10 @@ if (!embeddedJdks.isEmpty()) {
 }
 
 include ':app'
+include ':wear'
+include ':wear-sync'
 
-def agpVersion = providers.gradleProperty('agpVersion').getOrElse('8.13.1')
+def agpVersion = providers.gradleProperty('agpVersion').getOrElse('9.4.1')
 
 def rewriteAgpCoordinate = { File gradleFile ->
   if (!gradleFile?.exists()) return
