@@ -544,8 +544,22 @@ watch(bookCoverAspectRatio, () => {
   updateScreenSize()
 })
 
+/**
+ * Builds the marquee if it does not exist yet, then shows `text` in it.
+ *
+ * The title is written into the DOM imperatively rather than bound, so if the marquee is never
+ * constructed the line stays empty while the author line beside it renders normally - which is
+ * exactly what a restored session looked like after a cold start. Every path that wants to show
+ * a title goes through here so none of them can depend on a particular tick winning.
+ */
+function showTitle(text: string) {
+  if (!titlewrapper.value) return
+  if (!titleMarquee.value) titleMarquee.value = new WrappingMarquee(titlewrapper.value)
+  titleMarquee.value.init(text)
+}
+
 watch(title, (val) => {
-  if (titleMarquee.value) titleMarquee.value.init(val)
+  showTitle(val)
 })
 
 // ── Methods ───────────────────────────────────────────────────────────────────
@@ -1077,10 +1091,7 @@ function onPlaybackSession(ps: Record<string, unknown>, opts?: { isLoading?: boo
   // Set track width
   nextTick(() => {
     if (titleMarquee.value) titleMarquee.value.reset()
-    if (titlewrapper.value) {
-      titleMarquee.value = new WrappingMarquee(titlewrapper.value)
-      titleMarquee.value.init(title.value)
-    }
+    showTitle(title.value)
 
     measureAndUpdateTrackWidth()
   })
@@ -1153,7 +1164,7 @@ function refreshUI() {
 
 function updateScreenSize() {
   setTimeout(() => {
-    if (titleMarquee.value) titleMarquee.value.init(title.value)
+    showTitle(title.value)
   }, 500)
 
   windowHeight.value = window.innerHeight
