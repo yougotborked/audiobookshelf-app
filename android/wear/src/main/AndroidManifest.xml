@@ -5,6 +5,13 @@
 
     <!-- Standalone: the watch talks to the server itself rather than proxying the phone. -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Android 17 stopped letting INTERNET cover a private address. The watch streams and
+      downloads from the same self-hosted server the phone does, which is usually on the user's
+      own LAN, so without this the watch can reach the internet and not the one host it needs.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -20,6 +27,28 @@
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
+
+        <service
+            android:name=".player.WearPlayerService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
+        <!--
+          Started by the Data Layer when the phone publishes, which is normally while this app
+          is closed - so the queue is on disk before anyone raises their wrist.
+        -->
+        <service
+            android:name=".sync.PhoneSyncListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/podshelf" />
+            </intent-filter>
+        </service>
 
         <activity
             android:name=".MainActivity"

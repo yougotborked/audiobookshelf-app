@@ -52,6 +52,7 @@ android {
 
 dependencies {
     implementation project(':wear-sync')
+    implementation "com.google.android.gms:play-services-wearable:$rootProject.ext.play_services_wearable_version"
     implementation "androidx.core:core-ktx:$rootProject.ext.androidx_core_ktx_version"
     implementation platform("androidx.compose:compose-bom:$rootProject.ext.compose_bom_version")
     implementation "androidx.compose.ui:ui"
@@ -59,10 +60,15 @@ dependencies {
     implementation "androidx.wear.compose:compose-material:$rootProject.ext.wear_compose_version"
     implementation "androidx.wear.compose:compose-foundation:$rootProject.ext.wear_compose_version"
     implementation "androidx.activity:activity-compose:$rootProject.ext.androidxActivityVersion"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:$rootProject.ext.androidx_lifecycle_version"
 
     // Playback on the watch is its own service; nothing is shared with the phone's player.
     implementation "androidx.media3:media3-exoplayer:$rootProject.ext.media3_version"
     implementation "androidx.media3:media3-session:$rootProject.ext.media3_version"
+
+    // WorkManager - holds the download pass until the watch is on Wi-Fi
+    implementation "androidx.work:work-runtime-ktx:$rootProject.ext.androidx_work_version"
+    implementation "com.squareup.okhttp3:okhttp:$rootProject.ext.okhttp_version"
 
     testImplementation "junit:junit:$rootProject.ext.junit_version"
 }

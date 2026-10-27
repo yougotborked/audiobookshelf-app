@@ -226,3 +226,156 @@ class WearSyncTest {
     assertNull(entryAfter(queue(), "a"))
   }
 }
+
+class WearPublishRulesTest {
+  private fun entry(
+          episodeId: String = "ep-1",
+          title: String = "An episode",
+          coverPath: String? = "/cover",
+          durationSeconds: Double = 1800.0,
+          currentTimeSeconds: Double = 0.0
+  ) =
+          WearQueueEntry(
+                  libraryItemId = "li-1",
+                  episodeId = episodeId,
+                  title = title,
+                  podcastTitle = "A podcast",
+                  coverPath = coverPath,
+                  durationSeconds = durationSeconds,
+                  currentTimeSeconds = currentTimeSeconds
+          )
+
+  private fun queue(
+          entries: List<WearQueueEntry>,
+          configId: String = "cfg-1",
+          generatedAtMs: Long = 1_000
+  ) = WearQueue(generatedAtMs, configId, entries)
+
+  private fun session(token: String = "tok") =
+          WearServerSession("https://abs.example.com", token, "user-1", "cfg-1")
+
+  @Test
+  fun `the first queue is always worth sending`() {
+    assertTrue(queueNeedsPublishing(null, queue(listOf(entry()))))
+  }
+
+  @Test
+  fun `an identical queue recomputed later is not worth sending`() {
+    val before = queue(listOf(entry()), generatedAtMs = 1_000)
+    val after = queue(listOf(entry()), generatedAtMs = 9_999_999)
+    assertFalse(queueNeedsPublishing(before, after))
+  }
+
+  @Test
+  fun `a different episode order is worth sending`() {
+    val before = queue(listOf(entry("a"), entry("b")))
+    val after = queue(listOf(entry("b"), entry("a")))
+    assertTrue(queueNeedsPublishing(before, after))
+  }
+
+  @Test
+  fun `an added or removed episode is worth sending`() {
+    assertTrue(queueNeedsPublishing(queue(listOf(entry("a"))), queue(listOf(entry("a"), entry("b")))))
+    assertTrue(queueNeedsPublishing(queue(listOf(entry("a"), entry("b"))), queue(listOf(entry("a")))))
+  }
+
+  @Test
+  fun `a switched server is worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry()), configId = "cfg-1"),
+                    queue(listOf(entry()), configId = "cfg-2")
+            )
+    )
+  }
+
+  @Test
+  fun `a renamed episode is worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry(title = "Old"))),
+                    queue(listOf(entry(title = "New")))
+            )
+    )
+  }
+
+  @Test
+  fun `a new cover is worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry(coverPath = null))),
+                    queue(listOf(entry(coverPath = "/cover")))
+            )
+    )
+  }
+
+  @Test
+  fun `a corrected duration is worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry(durationSeconds = 1800.0))),
+                    queue(listOf(entry(durationSeconds = 1830.0)))
+            )
+    )
+  }
+
+  @Test
+  fun `a small progress tick is not worth waking the watch for`() {
+    assertFalse(
+            queueNeedsPublishing(
+                    queue(listOf(entry(currentTimeSeconds = 100.0))),
+                    queue(listOf(entry(currentTimeSeconds = 120.0)))
+            )
+    )
+  }
+
+  @Test
+  fun `progress at exactly the threshold is worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry(currentTimeSeconds = 100.0))),
+                    queue(listOf(entry(currentTimeSeconds = 130.0)))
+            )
+    )
+  }
+
+  @Test
+  fun `progress that jumped backwards past the threshold is worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry(currentTimeSeconds = 500.0))),
+                    queue(listOf(entry(currentTimeSeconds = 100.0)))
+            )
+    )
+  }
+
+  @Test
+  fun `a later entry changing is still worth sending`() {
+    assertTrue(
+            queueNeedsPublishing(
+                    queue(listOf(entry("a"), entry("b", currentTimeSeconds = 0.0))),
+                    queue(listOf(entry("a"), entry("b", currentTimeSeconds = 400.0)))
+            )
+    )
+  }
+
+  @Test
+  fun `two empty queues are not worth sending`() {
+    assertFalse(queueNeedsPublishing(queue(emptyList()), queue(emptyList())))
+  }
+
+  @Test
+  fun `the first session is always worth sending`() {
+    assertTrue(sessionNeedsPublishing(null, session()))
+  }
+
+  @Test
+  fun `an unchanged session is not worth sending`() {
+    assertFalse(sessionNeedsPublishing(session(), session()))
+  }
+
+  @Test
+  fun `a rotated token is worth sending`() {
+    assertTrue(sessionNeedsPublishing(session(token = "old"), session(token = "new")))
+  }
+}

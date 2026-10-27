@@ -145,6 +145,10 @@ dependencies {
   // WindowManager - reports the hinge on a foldable, for tabletop and book postures
   implementation "androidx.window:window:$androidx_window_version"
 
+  // Wearable Data Layer - publishes the session and the resolved queue to the watch
+  implementation "com.google.android.gms:play-services-wearable:$play_services_wearable_version"
+  implementation project(':wear-sync')
+
   // Lifecycle - MainActivity's repeatOnLifecycle. Declared rather than relied on transitively:
   // it used to arrive through appcompat, which AGP 9 no longer leaks onto the compile classpath.
   implementation "androidx.lifecycle:lifecycle-runtime-ktx:$androidx_lifecycle_version"
@@ -166,7 +170,7 @@ dependencies {
   implementation "com.anggrayudi:storage:1.5.6"
 
   // OK HTTP
-  implementation 'com.squareup.okhttp3:okhttp:5.3.0'
+  implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
 
   // Jackson for JSON
   implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
