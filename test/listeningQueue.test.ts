@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { episodeProgress, episodePublishedAt, isEpisodeFinished, isEpisodeStarted, orderListeningQueue, queueItemStartTime, toPlayQueueItems, type ListeningEpisode, type ProgressLookup } from '~/composables/useListeningQueue'
+import { episodeProgress, episodePublishedAt, isEpisodeFinished, isEpisodeStarted, localEpisodesAsQueueCandidates, orderListeningQueue, queueItemStartTime, restrictToDownloaded, toPlayQueueItems, type ListeningEpisode, type ProgressLookup } from '~/composables/useListeningQueue'
 
 // The rules these cover used to live in a computed property inside PodcastCatchUpFeed.vue, where
 // the only way to check "what plays next" was to open the app and look at the list. Minimal mode
@@ -231,5 +231,67 @@ describe('queueItemStartTime', () => {
   it('reads the resume point from the device when the episode payload has none', () => {
     const [item] = toPlayQueueItems([episode('a-1', DAY)])
     expect(queueItemStartTime(item, { local: () => ({ currentTime: 42 }) })).toBe(42)
+  })
+})
+
+// Offline, the queue is built from the download folder instead of the server. A local episode
+// carries serverEpisodeId and its own id, and keeps libraryItemId on its parent item - so feeding
+// the raw records in dropped every one of them and reported "nothing left to play" to a device
+// with a full download folder.
+describe('localEpisodesAsQueueCandidates', () => {
+  const downloads = [
+    {
+      id: 'local-item-1',
+      libraryItemId: 'li-1',
+      media: { episodes: [{ id: 'local-ep-1', serverEpisodeId: 'ep-1', publishedAt: 2 * DAY }] }
+    }
+  ]
+
+  it('lifts the parent library item id onto the episode, so it can be played and reported', () => {
+    const [episode] = localEpisodesAsQueueCandidates(downloads)
+    expect(episode.libraryItemId).toBe('li-1')
+    expect(episode.id).toBe('ep-1')
+  })
+
+  it('keeps the local ids, so the file on disk is what plays', () => {
+    const [episode] = localEpisodesAsQueueCandidates(downloads)
+    expect(episode.localEpisodeId).toBe('local-ep-1')
+    expect(episode.localLibraryItemId).toBe('local-item-1')
+  })
+
+  it('produces episodes the queue actually accepts', () => {
+    // The whole point: the raw records were silently dropped here
+    const candidates = localEpisodesAsQueueCandidates(downloads)
+    expect(toPlayQueueItems(candidates)).toHaveLength(1)
+    expect(orderListeningQueue(candidates)).toHaveLength(1)
+  })
+
+  it('drops a download that was never matched to a server episode', () => {
+    expect(localEpisodesAsQueueCandidates([{ id: 'l', libraryItemId: 'li-1', media: { episodes: [{ id: 'local-ep-1' }] } }])).toEqual([])
+  })
+
+  it('drops a download whose item is not linked to a server item', () => {
+    expect(localEpisodesAsQueueCandidates([{ id: 'l', media: { episodes: [{ id: 'e', serverEpisodeId: 'ep-1' }] } }])).toEqual([])
+  })
+
+  it('survives items with no media or no episodes', () => {
+    expect(
+      localEpisodesAsQueueCandidates([
+        { id: 'l', libraryItemId: 'li-1' },
+        { id: 'l2', libraryItemId: 'li-2', media: null }
+      ])
+    ).toEqual([])
+    expect(localEpisodesAsQueueCandidates()).toEqual([])
+  })
+})
+
+describe('restrictToDownloaded', () => {
+  it('keeps only what can play with no server', () => {
+    const kept = restrictToDownloaded([episode('a-1', DAY), episode('a-2', DAY)], (ep) => ep.id === 'a-2')
+    expect(kept.map((ep) => ep.id)).toEqual(['a-2'])
+  })
+
+  it('returns nothing when nothing is downloaded, rather than offering doomed streams', () => {
+    expect(restrictToDownloaded([episode('a-1', DAY)], () => false)).toEqual([])
   })
 })

@@ -204,3 +204,53 @@ export function queueItemStartTime(item: PlayQueueItem | null | undefined, looku
   if (isProgressFinished(progress)) return null
   return currentTime
 }
+
+/** A downloaded item, as the device database returns it. */
+export interface LocalLibraryItemWithEpisodes {
+  id?: string
+  /** The server item this download came from. */
+  libraryItemId?: string
+  media?: { episodes?: Record<string, unknown>[] } | null
+  [key: string]: unknown
+}
+
+/**
+ * Downloads, reshaped into the episodes the queue rules expect.
+ *
+ * A local episode carries `serverEpisodeId` and its own id, and nothing else that identifies it:
+ * `libraryItemId` lives on the parent item, not the episode. Feeding the raw records to the queue
+ * therefore dropped every one of them - `toPlayQueueItems` skips an episode with no server
+ * identity - so an offline device with a full download folder was told there was nothing left to
+ * play. Progress lookups failed for the same reason, so nothing was filtered as finished either.
+ */
+export function localEpisodesAsQueueCandidates(localLibraryItems: LocalLibraryItemWithEpisodes[] = []): ListeningEpisode[] {
+  const episodes: ListeningEpisode[] = []
+  for (const item of localLibraryItems) {
+    if (!item?.libraryItemId) continue
+    for (const localEpisode of item.media?.episodes || []) {
+      const serverEpisodeId = localEpisode.serverEpisodeId as string | undefined
+      // Without a server episode id this download cannot be matched to progress or reported
+      // against, and two episodes of the same show would be indistinguishable
+      if (!serverEpisodeId) continue
+      episodes.push({
+        ...localEpisode,
+        id: serverEpisodeId,
+        libraryItemId: item.libraryItemId,
+        localEpisodeId: localEpisode.id as string | undefined,
+        localLibraryItemId: item.id
+      })
+    }
+  }
+  return episodes
+}
+
+/**
+ * Only what can actually be played with no server.
+ *
+ * The cached episode list is the whole library's recent episodes, most of which are streams.
+ * Offering one offline starts a stream that cannot connect, which on a surface with a single play
+ * button leaves nothing to do about it.
+ */
+export function restrictToDownloaded(episodes: ListeningEpisode[] = [], isDownloaded: (episode: ListeningEpisode) => boolean): ListeningEpisode[] {
+  return episodes.filter((episode) => !!episode && isDownloaded(episode))
+}
