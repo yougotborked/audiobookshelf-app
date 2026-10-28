@@ -33,17 +33,23 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
+import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.common.util.concurrent.MoreExecutors
+import android.content.Intent
+import com.podshelf.wear.download.DownloadState
 import com.podshelf.wear.download.EpisodeDownloadWorker
 import com.podshelf.wear.download.EpisodeStore
 import com.podshelf.wear.player.WearPlayerService
 import com.podshelf.wear.sync.WearSyncStore
+import com.podshelf.wearsync.DownloadStatus
 import com.podshelf.wearsync.WearQueue
 import com.podshelf.wearsync.WearQueueEntry
+import com.podshelf.wearsync.downloadStatus
 import com.podshelf.wearsync.queueMatchesSession
+import com.podshelf.wearsync.shouldOfferWifiSetup
 
 /**
  * The watch app.
@@ -61,7 +67,9 @@ class MainActivity : ComponentActivity() {
     // download at the time - the watch was on mobile data, or off Wi-Fi entirely.
     EpisodeDownloadWorker.schedule(this)
 
-    setContent { PodshelfWearApp(WearSyncStore.get(this), EpisodeStore(this)) }
+    setContent {
+      PodshelfWearApp(WearSyncStore.get(this), EpisodeStore(this), DownloadState.get(this))
+    }
   }
 
   /**
@@ -87,9 +95,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore) {
+fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: DownloadState) {
   val session by store.session.collectAsStateWithLifecycle()
   val queue by store.queue.collectAsStateWithLifecycle()
+  val lastAttemptFailed by downloads.lastAttemptFailed.collectAsStateWithLifecycle()
+  val hasEverDownloaded by downloads.hasEverDownloaded.collectAsStateWithLifecycle()
   val controller = rememberMediaController()
 
   MaterialTheme {
@@ -99,7 +109,13 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore) {
     if (current == null || current.entries.isEmpty() || !queueMatchesSession(current, session)) {
       WaitingForPhone(hasSession = session != null)
     } else {
-      QueueList(current, episodes, controller)
+      QueueList(
+              queue = current,
+              episodes = episodes,
+              controller = controller,
+              hasEverDownloaded = hasEverDownloaded,
+              lastAttemptFailed = lastAttemptFailed
+      )
     }
   }
 }
@@ -148,14 +164,43 @@ private fun WaitingForPhone(hasSession: Boolean) {
 }
 
 @Composable
-private fun QueueList(queue: WearQueue, episodes: EpisodeStore, controller: MediaController?) {
+private fun QueueList(
+        queue: WearQueue,
+        episodes: EpisodeStore,
+        controller: MediaController?,
+        hasEverDownloaded: Boolean,
+        lastAttemptFailed: Boolean
+) {
   val listState = rememberScalingLazyListState()
+  val context = LocalContext.current
+
+  val statuses =
+          queue.entries.associate { entry ->
+            entry.episodeId to
+                    downloadStatus(
+                            isDownloaded = episodes.has(entry.episodeId),
+                            // Nothing reports per-episode progress yet, so an in-flight fetch
+                            // still reads as waiting rather than claiming a state we cannot see.
+                            isDownloading = false,
+                            hasWifiConfigured = hasEverDownloaded,
+                            lastAttemptFailed = lastAttemptFailed
+                    )
+          }
+
   ScalingLazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
     item { ListHeader { Text(text = "Up next") } }
+
+    // Offered once, above the list, and only when it is the actual obstacle. Repeating it per
+    // row - or showing it beside episodes that are already downloaded - teaches people to
+    // ignore it.
+    if (shouldOfferWifiSetup(statuses.values)) {
+      item { WifiSetupPrompt(onOpenSettings = { openWifiSettings(context) }) }
+    }
+
     items(queue.entries) { entry ->
       QueueRow(
               entry = entry,
-              isDownloaded = episodes.has(entry.episodeId),
+              status = statuses[entry.episodeId] ?: DownloadStatus.WAITING_FOR_WIFI,
               onPlay = { play(entry, episodes, controller) }
       )
     }
@@ -163,21 +208,62 @@ private fun QueueList(queue: WearQueue, episodes: EpisodeStore, controller: Medi
 }
 
 @Composable
-private fun QueueRow(entry: WearQueueEntry, isDownloaded: Boolean, onPlay: () -> Unit) {
+private fun WifiSetupPrompt(onOpenSettings: () -> Unit) {
+  Column(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Text(
+            text = "Episodes download over Wi-Fi. This watch has none saved yet.",
+            style = MaterialTheme.typography.caption2,
+            textAlign = TextAlign.Center
+    )
+    CompactChip(onClick = onOpenSettings, label = { Text(text = "Set up Wi-Fi") })
+  }
+}
+
+/**
+ * Opens the watch's own add-network screen.
+ *
+ * A Wear-specific action rather than the handset Settings intent, which does not exist here.
+ * Wrapped because a watch without it - an emulator, a stripped build - should not crash the
+ * list someone is reading.
+ */
+private fun openWifiSettings(context: android.content.Context) {
+  try {
+    context.startActivity(
+            Intent("com.google.android.clockwork.settings.connectivity.wifi.ADD_NETWORK_SETTINGS")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    )
+  } catch (e: Exception) {
+    // Nothing useful to say on a 1.2 inch screen; the prompt stays and the list still works.
+  }
+}
+
+@Composable
+private fun QueueRow(entry: WearQueueEntry, status: DownloadStatus, onPlay: () -> Unit) {
+  val isReady = status == DownloadStatus.READY
   Chip(
           modifier = Modifier.fillMaxWidth(),
           onClick = onPlay,
           // Not downloaded means not playable without the server, and the watch cannot resolve a
           // stream URL from the main thread. Rather than start something that fails mid-tap, the
           // row says what it is waiting for.
-          enabled = isDownloaded,
+          enabled = isReady,
           colors =
-                  if (isDownloaded) ChipDefaults.primaryChipColors()
+                  if (isReady) ChipDefaults.primaryChipColors()
                   else ChipDefaults.secondaryChipColors(),
           label = { Text(text = entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
           secondaryLabel = {
             Text(
-                    text = if (isDownloaded) entry.podcastTitle else "Waiting for Wi-Fi",
+                    text =
+                            when (status) {
+                              DownloadStatus.READY -> entry.podcastTitle
+                              DownloadStatus.DOWNLOADING -> "Downloading"
+                              DownloadStatus.WAITING_FOR_WIFI -> "Waiting for Wi-Fi"
+                              DownloadStatus.NEEDS_WIFI_SETUP -> "Needs Wi-Fi"
+                              DownloadStatus.FAILED -> "Could not download - will retry"
+                            },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
             )
