@@ -287,3 +287,50 @@ class BulkDownloadNetworkTest {
     assertFalse(suitableForBulkDownload(isMetered = true, downstreamBandwidthKbps = 0))
   }
 }
+
+class DownloadTargetChoiceTest {
+  @Test
+  fun `the cycle steps through the offered sizes`() {
+    assertEquals(3, nextDownloadTarget(2))
+    assertEquals(5, nextDownloadTarget(3))
+  }
+
+  @Test
+  fun `the cycle wraps so one button reaches everything`() {
+    assertEquals(2, nextDownloadTarget(20))
+  }
+
+  // A list that changed between builds must not quietly shrink someone's library.
+  @Test
+  fun `a stored value no longer offered moves to the nearest choice`() {
+    assertEquals(5, nextDownloadTarget(6))
+    assertEquals(12, nextDownloadTarget(11))
+  }
+
+  @Test
+  fun `an empty list leaves the target alone`() {
+    assertEquals(7, nextDownloadTarget(7, emptyList()))
+  }
+
+  // Zero is deliberately absent: a watch holding nothing is indistinguishable from a broken one.
+  @Test
+  fun `no choice is zero or negative`() {
+    for (choice in DOWNLOAD_TARGET_CHOICES) assertTrue(choice > 0)
+  }
+
+  @Test
+  fun `the choices are offered smallest first`() {
+    assertEquals(DOWNLOAD_TARGET_CHOICES.sorted(), DOWNLOAD_TARGET_CHOICES)
+  }
+
+  @Test
+  fun `the footprint estimate scales with the target`() {
+    assertEquals(250, estimateDownloadFootprintMb(5, typicalEpisodeMb = 50))
+    assertEquals(0, estimateDownloadFootprintMb(0))
+  }
+
+  @Test
+  fun `a nonsense target estimates nothing rather than a negative size`() {
+    assertEquals(0, estimateDownloadFootprintMb(-3))
+  }
+}

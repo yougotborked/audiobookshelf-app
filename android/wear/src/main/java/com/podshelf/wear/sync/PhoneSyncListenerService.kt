@@ -5,7 +5,10 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 import com.podshelf.wear.download.EpisodeDownloadWorker
+import com.podshelf.wear.download.DownloadState
+import com.podshelf.wear.download.EpisodeStore
 import com.podshelf.wearsync.WearSync
+import com.podshelf.wearsync.episodesToEvict
 
 /**
  * Receives the phone's pushes.
@@ -35,9 +38,19 @@ class PhoneSyncListenerService : WearableListenerService() {
       }
     }
 
-    // A new queue is the only thing that changes what should be on disk, so this is where the
-    // download pass is asked for. WorkManager holds it until the watch is on Wi-Fi, which is
-    // usually that night - and runs it immediately if it already is.
+    // Deleting happens now, not with the downloads.
+    //
+    // An episode finished on the phone drops out of the next published queue, and that is how
+    // the watch learns it is done. Freeing the space needs no network at all, so leaving it to
+    // the download pass meant a watch holding episodes someone had already heard until it next
+    // found Wi-Fi - which is exactly when it also wants room for new ones.
+    val store2 = WearSyncStore.get(this)
+    val episodes = EpisodeStore(this)
+    val target = DownloadState.get(this).downloadTarget.value
+    episodesToEvict(episodes.cached(), store2.queue.value, target).forEach { episodes.delete(it) }
+
+    // Fetching does need a network, so it stays behind WorkManager's constraints: held until
+    // the watch is on Wi-Fi, run immediately if it already is.
     EpisodeDownloadWorker.schedule(this)
   }
 }

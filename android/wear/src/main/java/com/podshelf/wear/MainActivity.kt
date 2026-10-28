@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,6 +43,7 @@ import android.content.Intent
 import com.podshelf.wear.download.DownloadState
 import com.podshelf.wear.download.EpisodeDownloadWorker
 import com.podshelf.wear.download.EpisodeStore
+import com.podshelf.wear.player.NowPlayingScreen
 import com.podshelf.wear.player.WearPlayerService
 import com.podshelf.wear.sync.WearSyncStore
 import com.podshelf.wearsync.DownloadStatus
@@ -49,6 +51,8 @@ import com.podshelf.wearsync.WearQueue
 import com.podshelf.wearsync.WearQueueEntry
 import com.podshelf.wearsync.describeLastSync
 import com.podshelf.wearsync.downloadStatus
+import com.podshelf.wearsync.estimateDownloadFootprintMb
+import com.podshelf.wearsync.nextDownloadTarget
 import com.podshelf.wearsync.queueMatchesSession
 import com.podshelf.wearsync.shouldOfferWifiSetup
 
@@ -102,9 +106,27 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: Dow
   val lastAttemptFailed by downloads.lastAttemptFailed.collectAsStateWithLifecycle()
   val lastSyncedAtMs by store.lastSyncedAtMs.collectAsStateWithLifecycle()
   val hasEverDownloaded by downloads.hasEverDownloaded.collectAsStateWithLifecycle()
+  val downloadTarget by downloads.downloadTarget.collectAsStateWithLifecycle()
   val controller = rememberMediaController()
 
+  var showPlayer by remember { mutableStateOf(false) }
+  var hasPlayable by remember { mutableStateOf(false) }
+
+  // Whether there is anything to go back to. Polled because the player lives in a service and
+  // can finish, or advance to the next episode, while this screen is open.
+  LaunchedEffect(controller) {
+    while (true) {
+      hasPlayable = controller?.currentMediaItem != null
+      kotlinx.coroutines.delay(1000)
+    }
+  }
+
   MaterialTheme {
+    if (showPlayer) {
+      NowPlayingScreen(controller = controller, onBack = { showPlayer = false })
+      return@MaterialTheme
+    }
+
     val current = queue
     // A queue from a server the phone has since switched away from is worse than none: its
     // library item ids mean nothing on the new server, so every track would 404.
@@ -114,10 +136,19 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: Dow
       QueueList(
               queue = current,
               episodes = episodes,
-              controller = controller,
               hasEverDownloaded = hasEverDownloaded,
               lastAttemptFailed = lastAttemptFailed,
-              lastSyncedAtMs = lastSyncedAtMs
+              lastSyncedAtMs = lastSyncedAtMs,
+              hasPlayable = hasPlayable,
+              downloadTarget = downloadTarget,
+              onCycleTarget = { downloads.setDownloadTarget(nextDownloadTarget(downloadTarget)) },
+              onOpenPlayer = { showPlayer = true },
+              onPlay = { entry ->
+                play(entry, episodes, controller)
+                // Straight to the controls. Starting audio and leaving someone on a list with
+                // no visible way back to it was the whole complaint.
+                showPlayer = true
+              }
       )
     }
   }
@@ -184,10 +215,14 @@ private fun LastSyncLine(lastSyncedAtMs: Long) {
 private fun QueueList(
         queue: WearQueue,
         episodes: EpisodeStore,
-        controller: MediaController?,
         hasEverDownloaded: Boolean,
         lastAttemptFailed: Boolean,
-        lastSyncedAtMs: Long
+        lastSyncedAtMs: Long,
+        hasPlayable: Boolean,
+        downloadTarget: Int,
+        onCycleTarget: () -> Unit,
+        onOpenPlayer: () -> Unit,
+        onPlay: (WearQueueEntry) -> Unit
 ) {
   val listState = rememberScalingLazyListState()
   val context = LocalContext.current
@@ -208,6 +243,20 @@ private fun QueueList(
   ScalingLazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
     item { ListHeader { Text(text = "Up next") } }
 
+    // A way back to whatever is playing, from the top of the list. Without it the only route to
+    // the transport controls was the system media notification, which you find by swiping the
+    // app away - not something anyone should have to discover.
+    if (hasPlayable) {
+      item {
+        Chip(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onOpenPlayer,
+                colors = ChipDefaults.primaryChipColors(),
+                label = { Text(text = "Now playing", maxLines = 1) }
+        )
+      }
+    }
+
     // Offered once, above the list, and only when it is the actual obstacle. Repeating it per
     // row - or showing it beside episodes that are already downloaded - teaches people to
     // ignore it.
@@ -219,13 +268,29 @@ private fun QueueList(
       QueueRow(
               entry = entry,
               status = statuses[entry.episodeId] ?: DownloadStatus.WAITING_FOR_WIFI,
-              onPlay = { play(entry, episodes, controller) }
+              onPlay = { onPlay(entry) }
       )
     }
 
     // Below the list rather than above it: on a full queue this is reassurance, not news, and
     // it should not push the first episode off the screen.
-    item { LastSyncLine(lastSyncedAtMs) }
+    item {
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // How much to keep. On the watch rather than pushed from the phone, because it is a
+        // fact about this device's storage - a 32GB watch and an 8GB one want different
+        // answers from the same phone.
+        Chip(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onCycleTarget,
+                colors = ChipDefaults.secondaryChipColors(),
+                label = { Text(text = "Keep $downloadTarget episodes", maxLines = 1) },
+                secondaryLabel = {
+                  Text(text = "about ${estimateDownloadFootprintMb(downloadTarget)} MB", maxLines = 1)
+                }
+        )
+        LastSyncLine(lastSyncedAtMs)
+      }
+    }
   }
 }
 

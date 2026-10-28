@@ -19,6 +19,7 @@ import com.podshelf.wearsync.WearProgressRecord
 import com.podshelf.wearsync.progressIsFinished
 import com.podshelf.wearsync.PlaybackSource
 import com.podshelf.wearsync.WearQueueEntry
+import com.podshelf.wearsync.autoAdvanceTarget
 import com.podshelf.wearsync.playbackSource
 import com.podshelf.wearsync.resumePositionMs
 
@@ -75,6 +76,7 @@ class WearPlayerService : MediaSessionService() {
                 if (playbackState == Player.STATE_ENDED) {
                   recordProgress(forceFinished = true)
                   ProgressReportWorker.schedule(this@WearPlayerService)
+                  advanceToNext()
                 }
               }
             }
@@ -138,6 +140,31 @@ class WearPlayerService : MediaSessionService() {
     }
     mediaSession = null
     super.onDestroy()
+  }
+
+  /**
+   * Plays the next downloaded episode when one finishes.
+   *
+   * The point of a catch-up queue on a watch is not having to touch it. Skipping past anything
+   * not on disk is deliberate - the watch holds only the head of the queue, so stopping at the
+   * first gap would end a run early with good episodes sitting on the device.
+   */
+  private fun advanceToNext() {
+    val player = mediaSession?.player ?: return
+    val episodes = EpisodeStore(this)
+    val queue = WearSyncStore.get(this).queue.value
+    val finishedId = player.currentMediaItem?.mediaId
+
+    val next = autoAdvanceTarget(queue, finishedId) { episodes.has(it) } ?: return
+    val item = mediaItemFor(next, episodes, streamUrl = null, isOnline = false) ?: return
+
+    // The speed is a preference, not a property of the episode - carrying it across is what
+    // someone who listens at 2x expects, and resetting it every episode would be maddening.
+    val speed = player.playbackParameters.speed
+    player.setMediaItem(item, startPositionMs(next))
+    player.setPlaybackSpeed(speed)
+    player.prepare()
+    player.playWhenReady = true
   }
 
   companion object {
