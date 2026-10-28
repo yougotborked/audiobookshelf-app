@@ -44,12 +44,13 @@ class EpisodeDownloadWorker(context: Context, params: WorkerParameters) :
 
             val episodes = EpisodeStore(applicationContext)
             episodes.clearPartials()
+            val target = DownloadState.get(applicationContext).downloadTarget.value
 
             // Eviction first, so a watch that is already full can still take the episode it
             // actually needs next. Costs nothing and needs no network.
-            episodesToEvict(episodes.cached(), queue).forEach { episodes.delete(it) }
+            episodesToEvict(episodes.cached(), queue, target).forEach { episodes.delete(it) }
 
-            val pending = episodesToDownload(queue, episodes.cachedIds())
+            val pending = episodesToDownload(queue, episodes.cachedIds(), target)
             if (pending.isEmpty()) return@withContext Result.success()
 
             // WorkManager's UNMETERED constraint got us here, but unmetered is not the same as

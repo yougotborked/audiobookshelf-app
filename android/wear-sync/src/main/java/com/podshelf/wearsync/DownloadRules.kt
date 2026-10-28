@@ -154,3 +154,34 @@ fun suitableForBulkDownload(
   if (downstreamBandwidthKbps <= 0) return true
   return downstreamBandwidthKbps >= minimumKbps
 }
+
+/**
+ * How many episodes the user can choose to keep ready.
+ *
+ * Offered as a short list rather than a number picker, because the only thing most people want
+ * to express is "a couple", "a few" or "as much as it will take" - and a watch is a bad place to
+ * aim at a stepper. Zero is deliberately absent: a watch holding nothing is indistinguishable
+ * from a broken one, and the way to stop downloading is to uninstall.
+ */
+val DOWNLOAD_TARGET_CHOICES: List<Int> = listOf(2, 3, 5, 8, 12, 20)
+
+/** The next choice in the cycle, so one button can walk the whole list. */
+fun nextDownloadTarget(current: Int, choices: List<Int> = DOWNLOAD_TARGET_CHOICES): Int {
+  if (choices.isEmpty()) return current
+  val index = choices.indexOf(current)
+  if (index >= 0) return choices[(index + 1) % choices.size]
+  // A stored value no longer offered - the list changed between builds - moves to the nearest
+  // one rather than jumping to the smallest, which would quietly shrink someone's library.
+  val nearest = choices.minByOrNull { kotlin.math.abs(it - current) } ?: return choices.first()
+  return nearest
+}
+
+/**
+ * Roughly what a target costs, for a line of text under the control.
+ *
+ * An estimate stated as one, because the honest number is unknowable before the files arrive:
+ * episode lengths vary by an order of magnitude and bitrates by more. The point is to stop
+ * someone choosing twenty with no idea that it means several gigabytes.
+ */
+fun estimateDownloadFootprintMb(target: Int, typicalEpisodeMb: Int = 50): Int =
+        maxOf(target, 0) * maxOf(typicalEpisodeMb, 0)

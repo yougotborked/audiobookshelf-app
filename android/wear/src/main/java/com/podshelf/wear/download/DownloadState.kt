@@ -1,6 +1,7 @@
 package com.podshelf.wear.download
 
 import android.content.Context
+import com.podshelf.wearsync.WATCH_DOWNLOAD_TARGET
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,21 @@ class DownloadState(context: Context) {
   private val _hasEverDownloaded = MutableStateFlow(prefs.getBoolean(KEY_EVER, false))
   val hasEverDownloaded: StateFlow<Boolean> = _hasEverDownloaded.asStateFlow()
 
+  /**
+   * How many episodes to keep ready, as the user chose.
+   *
+   * Stored on the watch rather than pushed from the phone: it is a fact about this device's
+   * storage, and someone with a 32GB watch and someone with an 8GB one want different answers
+   * from the same phone.
+   */
+  private val _downloadTarget = MutableStateFlow(prefs.getInt(KEY_TARGET, WATCH_DOWNLOAD_TARGET))
+  val downloadTarget: StateFlow<Int> = _downloadTarget.asStateFlow()
+
+  fun setDownloadTarget(target: Int) {
+    prefs.edit().putInt(KEY_TARGET, target).apply()
+    _downloadTarget.value = target
+  }
+
   fun recordAttempt(succeeded: Boolean, acquiredNetwork: Boolean) {
     prefs.edit()
             .putBoolean(KEY_FAILED, !succeeded)
@@ -45,6 +61,7 @@ class DownloadState(context: Context) {
     private const val PREFS = "podshelf_wear_downloads"
     private const val KEY_FAILED = "last_attempt_failed"
     private const val KEY_EVER = "has_ever_downloaded"
+    private const val KEY_TARGET = "download_target"
 
     @Volatile private var instance: DownloadState? = null
 
