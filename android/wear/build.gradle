@@ -20,9 +20,25 @@ android {
         versionName rootProject.ext.podshelfVersionName
     }
 
+    // The Wearable Data Layer only delivers between apps that share BOTH an applicationId and a
+    // signing certificate. The phone app signs debug builds with the repository's checked-in
+    // keystore, so this module has to use the same one rather than AGP's default at
+    // ~/.android/debug.keystore - otherwise a locally built pair looks identical, installs
+    // fine, and silently exchanges nothing. CI happens to agree today only because the workflow
+    // copies the keystore into place first, which is luck rather than configuration.
+    signingConfigs {
+        debug {
+            storeFile rootProject.file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
+            signingConfig signingConfigs.debug
         }
         release {
             // On, unlike :app. A watch has a real storage budget, and this module's

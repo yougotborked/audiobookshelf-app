@@ -8,6 +8,20 @@ Entries are removed, not ticked off — the git history keeps the record.
 
 ## Open
 
+### The watch app's queue arrives only from the catch-up feed
+
+**Where** `components/bookshelf/PodcastCatchUpFeed.vue`
+
+The phone publishes to the watch from one screen. Open Podshelf on any other tab and the watch
+is never told anything — on a fresh install it sits on "Open Podshelf on your phone", with no
+hint that a particular screen is what it is waiting for.
+
+It lives there because that screen is where the queue is resolved, and resolving it a second
+time somewhere else would be the duplicate definition this whole design avoids.
+
+**Clears when** the resolved queue lives somewhere a store can publish from on app start,
+rather than being a computed property of one component.
+
 ### `android.r8.proguardAndroidTxt.disallowed=false`
 
 **Where** `android/gradle.properties`
