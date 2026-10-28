@@ -2,6 +2,7 @@ package com.podshelf.wearsync
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -85,5 +86,52 @@ class DownloadStatusTest {
   @Test
   fun `an empty queue offers nothing`() {
     assertFalse(shouldOfferWifiSetup(emptyList()))
+  }
+}
+
+class LastSyncTest {
+  private val minute = 60_000L
+  private val hour = 60 * minute
+  private val day = 24 * hour
+
+  @Test
+  fun `a watch that has never synced says nothing`() {
+    // The caller has its own line for this, because it is the one case with an action attached.
+    assertNull(describeLastSync(lastSyncedAtMs = 0, nowMs = day))
+    assertNull(describeLastSync(lastSyncedAtMs = -1, nowMs = day))
+  }
+
+  @Test
+  fun `a sync within the last minute is just now`() {
+    assertEquals("Synced just now", describeLastSync(day, day + 59_000))
+  }
+
+  @Test
+  fun `minutes are reported in minutes`() {
+    assertEquals("Synced 5m ago", describeLastSync(day, day + 5 * minute))
+    assertEquals("Synced 59m ago", describeLastSync(day, day + 59 * minute))
+  }
+
+  @Test
+  fun `an hour rolls over to hours`() {
+    assertEquals("Synced 1h ago", describeLastSync(day, day + hour))
+    assertEquals("Synced 23h ago", describeLastSync(day, day + 23 * hour))
+  }
+
+  @Test
+  fun `a day reads as yesterday`() {
+    assertEquals("Synced yesterday", describeLastSync(day, day + day))
+  }
+
+  @Test
+  fun `more than a day counts days`() {
+    assertEquals("Synced 3d ago", describeLastSync(day, day + 3 * day))
+  }
+
+  // Two devices rarely agree on the time to the second, and a watch whose clock was just
+  // corrected should not claim it synced in the future.
+  @Test
+  fun `a timestamp in the future does not read as negative time`() {
+    assertEquals("Synced just now", describeLastSync(day + hour, day))
   }
 }

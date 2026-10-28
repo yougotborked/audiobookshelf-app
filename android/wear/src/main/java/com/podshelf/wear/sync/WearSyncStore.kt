@@ -28,22 +28,41 @@ class WearSyncStore(context: Context) {
   private val _queue = MutableStateFlow(WearSync.decodeQueue(prefs.getString(KEY_QUEUE, null)))
   val queue: StateFlow<WearQueue?> = _queue.asStateFlow()
 
+  /**
+   * When the phone last reached this watch, in wall-clock milliseconds, or 0 for never.
+   *
+   * Recorded on arrival rather than taken from the payload's own `generatedAtMs`: the question
+   * someone squinting at a watch has is "is the phone talking to this thing", and a queue the
+   * phone resolved an hour ago but delivered seconds ago answers that yes.
+   */
+  private val _lastSyncedAtMs = MutableStateFlow(prefs.getLong(KEY_LAST_SYNC, 0L))
+  val lastSyncedAtMs: StateFlow<Long> = _lastSyncedAtMs.asStateFlow()
+
   fun putSessionJson(json: String) {
     val decoded = WearSync.decodeSession(json) ?: return
     prefs.edit().putString(KEY_SESSION, json).apply()
     _session.value = decoded
+    markSynced()
   }
 
   fun putQueueJson(json: String) {
     val decoded = WearSync.decodeQueue(json) ?: return
     prefs.edit().putString(KEY_QUEUE, json).apply()
     _queue.value = decoded
+    markSynced()
+  }
+
+  private fun markSynced() {
+    val now = System.currentTimeMillis()
+    prefs.edit().putLong(KEY_LAST_SYNC, now).apply()
+    _lastSyncedAtMs.value = now
   }
 
   companion object {
     private const val PREFS = "podshelf_wear_sync"
     private const val KEY_SESSION = "session_json"
     private const val KEY_QUEUE = "queue_json"
+    private const val KEY_LAST_SYNC = "last_synced_at_ms"
 
     @Volatile private var instance: WearSyncStore? = null
 

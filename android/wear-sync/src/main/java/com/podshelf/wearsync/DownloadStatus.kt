@@ -58,3 +58,33 @@ fun downloadStatus(
  */
 fun shouldOfferWifiSetup(statuses: Collection<DownloadStatus>): Boolean =
         statuses.any { it == DownloadStatus.NEEDS_WIFI_SETUP }
+
+/**
+ * How long ago the phone last reached this watch, in words.
+ *
+ * Exists because "nothing is happening" is the hardest state to debug from a watch: an empty
+ * screen looks the same whether the phone has never sent anything, sent it a week ago, or sent
+ * it a moment ago with nothing in the queue. One line of text separates all three.
+ *
+ * Null when the watch has never heard from the phone at all - the caller says something
+ * different for that, because it is the one case with an action attached.
+ */
+fun describeLastSync(lastSyncedAtMs: Long, nowMs: Long): String? {
+  if (lastSyncedAtMs <= 0) return null
+
+  val elapsed = nowMs - lastSyncedAtMs
+  val minutes = elapsed / 60_000
+  val hours = minutes / 60
+  val days = hours / 24
+
+  return when {
+    // Also catches a negative elapsed time, which happens when the two clocks disagree or the
+    // watch's was just corrected. An explicit guard above this read well and was dead code:
+    // removing it changed no test, which is how it was found.
+    minutes < 1 -> "Synced just now"
+    minutes < 60 -> "Synced ${minutes}m ago"
+    hours < 24 -> "Synced ${hours}h ago"
+    days == 1L -> "Synced yesterday"
+    else -> "Synced ${days}d ago"
+  }
+}

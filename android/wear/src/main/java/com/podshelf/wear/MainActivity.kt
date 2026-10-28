@@ -47,6 +47,7 @@ import com.podshelf.wear.sync.WearSyncStore
 import com.podshelf.wearsync.DownloadStatus
 import com.podshelf.wearsync.WearQueue
 import com.podshelf.wearsync.WearQueueEntry
+import com.podshelf.wearsync.describeLastSync
 import com.podshelf.wearsync.downloadStatus
 import com.podshelf.wearsync.queueMatchesSession
 import com.podshelf.wearsync.shouldOfferWifiSetup
@@ -99,6 +100,7 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: Dow
   val session by store.session.collectAsStateWithLifecycle()
   val queue by store.queue.collectAsStateWithLifecycle()
   val lastAttemptFailed by downloads.lastAttemptFailed.collectAsStateWithLifecycle()
+  val lastSyncedAtMs by store.lastSyncedAtMs.collectAsStateWithLifecycle()
   val hasEverDownloaded by downloads.hasEverDownloaded.collectAsStateWithLifecycle()
   val controller = rememberMediaController()
 
@@ -107,14 +109,15 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: Dow
     // A queue from a server the phone has since switched away from is worse than none: its
     // library item ids mean nothing on the new server, so every track would 404.
     if (current == null || current.entries.isEmpty() || !queueMatchesSession(current, session)) {
-      WaitingForPhone(hasSession = session != null)
+      WaitingForPhone(hasSession = session != null, lastSyncedAtMs = lastSyncedAtMs)
     } else {
       QueueList(
               queue = current,
               episodes = episodes,
               controller = controller,
               hasEverDownloaded = hasEverDownloaded,
-              lastAttemptFailed = lastAttemptFailed
+              lastAttemptFailed = lastAttemptFailed,
+              lastSyncedAtMs = lastSyncedAtMs
       )
     }
   }
@@ -146,7 +149,7 @@ private fun rememberMediaController(): MediaController? {
 }
 
 @Composable
-private fun WaitingForPhone(hasSession: Boolean) {
+private fun WaitingForPhone(hasSession: Boolean, lastSyncedAtMs: Long) {
   Column(
           modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
           verticalArrangement = Arrangement.Center,
@@ -160,7 +163,21 @@ private fun WaitingForPhone(hasSession: Boolean) {
             style = MaterialTheme.typography.body2,
             textAlign = TextAlign.Center
     )
+    // The difference between "the phone has never reached this watch" and "it did, and there
+    // is simply nothing to play" is invisible without this, and only the first has anything
+    // the user can do about it.
+    LastSyncLine(lastSyncedAtMs)
   }
+}
+
+@Composable
+private fun LastSyncLine(lastSyncedAtMs: Long) {
+  val described = describeLastSync(lastSyncedAtMs, System.currentTimeMillis())
+  Text(
+          text = described ?: "Never synced with your phone",
+          style = MaterialTheme.typography.caption3,
+          textAlign = TextAlign.Center
+  )
 }
 
 @Composable
@@ -169,7 +186,8 @@ private fun QueueList(
         episodes: EpisodeStore,
         controller: MediaController?,
         hasEverDownloaded: Boolean,
-        lastAttemptFailed: Boolean
+        lastAttemptFailed: Boolean,
+        lastSyncedAtMs: Long
 ) {
   val listState = rememberScalingLazyListState()
   val context = LocalContext.current
@@ -204,6 +222,10 @@ private fun QueueList(
               onPlay = { play(entry, episodes, controller) }
       )
     }
+
+    // Below the list rather than above it: on a full queue this is reassurance, not news, and
+    // it should not push the first episode off the screen.
+    item { LastSyncLine(lastSyncedAtMs) }
   }
 }
 

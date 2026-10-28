@@ -156,7 +156,10 @@
 <script setup lang="ts">
 import type { DiscoverFeed, DiscoveryFailure } from '~/composables/usePodcastDiscovery'
 import { buildListeningProfile, describeLengthFit, rankCandidates } from '~/composables/useListeningProfile'
+import { indexLibraryByFeed, normalizeFeedUrl, parsePodcastFeed } from '~/composables/usePodcastFeedPreview'
+import { fetchExternalText } from '~/composables/useNativeHttp'
 
+const router = useRouter()
 const strings = useStrings()
 const nativeHttp = useNativeHttp()
 const toast = useToast()
@@ -185,7 +188,7 @@ const TRENDING_FAILURE_MESSAGES: Record<DiscoveryFailure, string> = {
 }
 const activeGenre = ref<string | null>(null)
 
-const libraryFeedUrls = ref<Set<string>>(new Set())
+const libraryItemIdByFeed = ref<Map<string, string>>(new Map())
 /** Genres per library item, taken from the same request that collects the feed urls. */
 const libraryGenresById = ref<Record<string, { genres: string[] }>>({})
 
@@ -241,8 +244,13 @@ const genres = [
 ]
 
 // ── In-library ────────────────────────────────────────────────────────────────
+function libraryItemIdFor(feedUrl?: string): string | undefined {
+  const key = normalizeFeedUrl(feedUrl)
+  return key ? libraryItemIdByFeed.value.get(key) : undefined
+}
+
 function isInLibrary(feedUrl?: string) {
-  return !!feedUrl && libraryFeedUrls.value.has(feedUrl)
+  return !!libraryItemIdFor(feedUrl)
 }
 
 async function loadLibraryFeedUrls() {
@@ -250,7 +258,14 @@ async function loadLibraryFeedUrls() {
   try {
     const res = (await nativeHttp.get(`/api/libraries/${currentLibraryId.value}/items?minified=1&limit=0`, { connectTimeout: 10000 })) as any
     const items: any[] = res?.results ?? res?.items ?? []
-    libraryFeedUrls.value = new Set(items.map((item: any) => item?.media?.metadata?.feedUrl as string | undefined).filter(Boolean) as string[])
+    // Keyed by normalized feed URL. Apple and a library routinely store the same feed with a
+    // different scheme, a www prefix or tracking parameters, and comparing the raw strings made
+    // Discover offer podcasts the user already had.
+    libraryItemIdByFeed.value = indexLibraryByFeed(
+      items,
+      (item: any) => item?.media?.metadata?.feedUrl,
+      (item: any) => item?.id
+    )
     const genres: Record<string, { genres: string[] }> = {}
     for (const item of items) {
       if (item?.id) genres[item.id] = { genres: item?.media?.metadata?.genres ?? [] }
@@ -351,7 +366,11 @@ async function startAddFlow(podcast: any) {
     showAddFlow.value = true
   } catch (err: any) {
     console.error('[Discover] feed check failed', err)
-    toast.error('Failed to get podcast feed')
+    // Adding genuinely does need admin - it creates a library item on the server - so a 403
+    // here is a real answer rather than a fault, and saying "failed to get podcast feed" sends
+    // the user looking at the podcast instead of at their account.
+    const status = err?.status ?? err?.response?.status
+    toast.error(status === 403 ? 'Only a server admin can add podcasts' : 'Failed to get podcast feed')
   } finally {
     addProcessing.value = false
   }
@@ -364,6 +383,14 @@ function cancelAddFlow() {
 }
 
 async function onCardClick(podcast: any) {
+  // Already in the library: open it rather than offering a preview and an Add button for
+  // something that is one tap away in full.
+  const existingId = libraryItemIdFor(podcast?.feedUrl)
+  if (existingId) {
+    router.push(`/item/${existingId}`)
+    return
+  }
+
   previewPodcast.value = podcast
   showPreview.value = true
   await loadPreviewDetails()
@@ -390,12 +417,16 @@ async function loadPreviewDetails() {
 
   previewLoading.value = true
   try {
-    const payload = (await nativeHttp.post('/api/podcasts/feed', { rssFeed: podcast.feedUrl }, { connectTimeout: 10000 })) as any
-    const feed = payload?.podcast
-    if (!feed) throw new Error('Feed response had no podcast')
-    const meta = (feed.metadata as Record<string, unknown>) || {}
-    previewDescription.value = (meta.descriptionPlain as string) || (meta.description as string) || ''
-    previewEpisodes.value = (feed.episodes as any[]) || []
+    // Straight from the podcast's own feed, not through the server.
+    //
+    // This used to POST /api/podcasts/feed, which Audiobookshelf restricts to admins - so for
+    // every non-admin account, every podcast in Discover reported that its feed could not be
+    // loaded, naming the feed for what was really a permission. An RSS feed is public, and the
+    // native HTTP client is not bound by CORS, so there is nothing to ask anyone for.
+    const raw = await fetchExternalText(podcast.feedUrl, { connectTimeout: 10000 })
+    const parsed = parsePodcastFeed(raw)
+    previewDescription.value = parsed.description
+    previewEpisodes.value = parsed.episodes
     // A feed that parsed but carries neither is still nothing to read, and saying so beats a
     // screen that looks deliberately empty
     previewFailed.value = !previewDescription.value && !previewEpisodes.value.length

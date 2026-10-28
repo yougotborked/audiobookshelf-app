@@ -35,12 +35,38 @@ Media3 player, the download service, the progress syncer and the database all ha
 implementations with no Swift counterpart. This is the largest item on the list by some margin
 and is worth scoping properly before any of it starts.
 
-## 3. Wear OS
+## 3. Wear OS — shipped, Oct 2026
 
 Standalone watch playback: catch-up queue plus offline caching on the watch, so a run does not
-need the phone. Needs its own module, its own (small) media service and its own download path;
-the watch cannot reuse the phone's. The minimal surface — one queue, play/pause, skip, caching —
-is close to idea 1, which is an argument for doing 1 first and letting the watch inherit it.
+need the phone.
+
+Three modules: `:wear` (native Compose, its own media3 service), `:wear-sync` (the phone ↔ watch
+contract, a plain JVM module so its rules are testable without a device), and the existing
+`:app`.
+
+**The phone decides what plays next; the watch is told.** The guess in the original note — that
+the watch would want its own queue logic — turned out to be the thing to avoid. "What plays
+next" is defined once in `composables/useListeningQueue.ts`; the phone resolves it and publishes
+the result over the Wearable Data Layer. A Kotlin reimplementation would have been a second
+definition that drifts, showing up as the two devices disagreeing about the next episode.
+
+What it does: receives the queue and credentials, caches both on disk, downloads the head of the
+queue over Wi-Fi, plays from local files through Bluetooth headphones, and reports listening back
+to the Audiobookshelf server — not back through the phone, because the server is already where
+devices reconcile.
+
+Two things the note did not anticipate:
+
+- **"Unmetered" is not "fast".** While the phone is in Bluetooth range, the watch's default
+  network is the phone proxy at a few hundred kbps — unmetered, so it satisfies a WorkManager
+  constraint, and hopeless for fifty megabytes. Bulk transfers have to request Wi-Fi explicitly.
+- **Android 17 blocks local network access** without `ACCESS_LOCAL_NETWORK`, which matters more
+  here than almost anywhere: a self-hosted server is usually on the same LAN, and a blocked
+  connection times out rather than failing, so it reads as a dead server.
+
+Still open, in [TECH_DEBT.md](TECH_DEBT.md): an episode that has not downloaded cannot be
+streamed on demand, and a watch that has never been on Wi-Fi can now say so but cannot be
+rescued by the phone's connection.
 
 ## 4. Suggestion and discovery
 
