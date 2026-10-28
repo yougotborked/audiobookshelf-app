@@ -151,6 +151,29 @@ async function request(method: string, _url: string, data: unknown, options: Req
   }
 }
 
+/**
+ * Fetches a third-party URL as text, deliberately outside `request`.
+ *
+ * Everything in `request` is about the Audiobookshelf server: it attaches the bearer token,
+ * prefixes the server address, refreshes on a 401, and - the reason this is separate - sets
+ * `appStore.serverReachable` from the outcome. Routing a podcast's own RSS feed through it
+ * would let a dead feed mark the user's server unreachable, and a working feed mark a dead
+ * server reachable. Neither has anything to do with the other.
+ *
+ * `responseType: 'text'` because the bridge otherwise tries to parse the body, and RSS is not
+ * JSON.
+ */
+export async function fetchExternalText(url: string, options: RequestOptions = {}): Promise<string> {
+  const res = await CapacitorHttp.request({ method: 'GET', url, responseType: 'text', ...options })
+  if (res.status >= 400) {
+    const error: HttpError = new Error(`HTTP ${res.status}`)
+    error.status = res.status
+    error.url = url
+    throw error
+  }
+  return typeof res.data === 'string' ? res.data : String(res.data ?? '')
+}
+
 const _nativeHttp = {
   get: (url: string, options?: RequestOptions) => request('GET', url, undefined, options),
   post: (url: string, data: unknown, options?: RequestOptions) => request('POST', url, data, options),
