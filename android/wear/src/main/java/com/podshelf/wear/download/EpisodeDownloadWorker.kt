@@ -60,16 +60,25 @@ class EpisodeDownloadWorker(context: Context, params: WorkerParameters) :
             val usingRequestedNetwork =
                     if (network.currentNetworkIsFastEnough()) false else network.acquire()
 
+            val state = DownloadState.get(applicationContext)
+
             if (!usingRequestedNetwork && !network.currentNetworkIsFastEnough()) {
               // No Wi-Fi turned up. Retry rather than crawl: nothing here is urgent, and a
               // download dribbling over Bluetooth costs battery for an episode that will not
               // finish before the watch leaves the charger.
+              //
+              // Recorded as "no network acquired" rather than as a failure, because those are
+              // different things to tell someone: one is a watch between chances, the other is
+              // a watch that cannot download at all until they set up Wi-Fi.
               network.release()
+              state.recordAttempt(succeeded = false, acquiredNetwork = false)
               return@withContext Result.retry()
             }
 
             try {
-              return@withContext downloadAll(pending, session, episodes)
+              val result = downloadAll(pending, session, episodes)
+              state.recordAttempt(succeeded = result is Result.Success, acquiredNetwork = true)
+              return@withContext result
             } finally {
               network.release()
             }

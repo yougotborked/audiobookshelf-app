@@ -16,7 +16,7 @@ android {
         // reason to exclude the Wear 3/4 devices that can run the same code.
         minSdkVersion 30
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode rootProject.ext.podshelfVersionCode
+        versionCode rootProject.ext.podshelfWearVersionCode
         versionName rootProject.ext.podshelfVersionName
     }
 
@@ -33,6 +33,18 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // The same upload key as the phone app, from the same environment. Play requires one
+        // signature across every artifact in a listing, so a watch bundle signed with anything
+        // else - or with nothing - is rejected after the upload rather than before it.
+        release {
+            def keystorePath = System.getenv('PODSHELF_KEYSTORE_PATH')
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv('PODSHELF_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('PODSHELF_KEY_ALIAS')
+                keyPassword System.getenv('PODSHELF_KEY_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
@@ -41,6 +53,11 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
+            // Only attached when the key is present, so `./gradlew bundleRelease` on a laptop
+            // without the secrets still configures and simply comes out unsigned.
+            if (System.getenv('PODSHELF_KEYSTORE_PATH')) {
+                signingConfig signingConfigs.release
+            }
             // On, unlike :app. A watch has a real storage budget, and this module's
             // dependencies - Compose, media3 - are almost entirely dead weight without
             // shrinking: 33MB unminified for what is a list and a player, against 1.2MB with

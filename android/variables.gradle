@@ -5,8 +5,31 @@ ext {
     // debug CI build keeps the checked-in values.
     //
     // Hoisted here rather than left in app/build.gradle because the wear module ships under the
-    // same applicationId and has to carry the same numbers.
+    // same applicationId and derives its own code from this one.
     podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '116') as Integer
+
+    // The watch's version code, which must NOT equal the phone's.
+    //
+    // Play treats the two artifacts as one listing with several device targets, and a version
+    // code has to be unique across every form factor in the app - two bundles sharing one is
+    // simply rejected. Higher than the phone's as well as different, because a watch can match
+    // the phone artifact too and Play hands a device the highest code it qualifies for.
+    //
+    // A constant offset rather than a separate counter: it keeps the watch's codes increasing
+    // exactly as often as the phone's, so neither can quietly fall behind its own last release,
+    // and the phone code is still readable inside it.
+    podshelfWearVersionCode = podshelfVersionCode + 1_000_000
+
+    // Enforced here rather than by inspecting the built bundles, because nothing downstream
+    // can see it clearly: Play's rejection names the upload rather than the codes, and an .aab
+    // is not an APK - aapt2 cannot read one, so a workflow step that tries looks like it
+    // passed. A collision can only arise from someone editing the line above, and this fails
+    // the build the moment they do.
+    if (podshelfWearVersionCode == podshelfVersionCode) {
+        throw new GradleException(
+                'The watch and phone version codes must differ: Play treats both artifacts as ' +
+                        'one listing and rejects a release where they collide.')
+    }
     podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.12.0-beta') as String
     minSdkVersion = 26
     compileSdkVersion = 37
