@@ -15,6 +15,9 @@ enum class DownloadStatus {
   /** Being fetched right now. */
   DOWNLOADING,
 
+  /** Not on the watch, but reachable right now. Plays over the network, costing battery. */
+  STREAMABLE,
+
   /** Nothing is wrong; the watch simply has not been somewhere it could download. */
   WAITING_FOR_WIFI,
 
@@ -36,12 +39,17 @@ enum class DownloadStatus {
 fun downloadStatus(
         isDownloaded: Boolean,
         isDownloading: Boolean,
+        isOnline: Boolean,
         hasWifiConfigured: Boolean,
         lastAttemptFailed: Boolean
 ): DownloadStatus =
         when {
           isDownloaded -> DownloadStatus.READY
           isDownloading -> DownloadStatus.DOWNLOADING
+          // Being able to play it now outranks every explanation of why it is not downloaded.
+          // Those explanations exist to turn a dead row into something actionable, and a row
+          // that will play when tapped is already the most actionable it can be.
+          isOnline -> DownloadStatus.STREAMABLE
           // Checked before the failure: a watch with no network to use did not "fail", and
           // telling someone a download failed when they have never set up Wi-Fi sends them
           // looking in the wrong place.
@@ -50,14 +58,24 @@ fun downloadStatus(
           else -> DownloadStatus.WAITING_FOR_WIFI
         }
 
+/** Whether tapping this row will start audio, one way or another. */
+fun isPlayable(status: DownloadStatus): Boolean =
+        status == DownloadStatus.READY || status == DownloadStatus.STREAMABLE
+
 /**
  * Whether the screen should offer a way into the watch's Wi-Fi settings.
  *
- * Only when it is the actual obstacle. An offer to configure Wi-Fi shown next to episodes that
- * are already downloaded teaches people to ignore it.
+ * Asked of the facts rather than of the row states, which is a change from the first version.
+ * Deriving it from the statuses meant that a watch online through the phone - every row
+ * streamable - hid the prompt, even though the reason nothing had downloaded was still that no
+ * Wi-Fi had ever been set up. Those are different questions and only one of them is about
+ * whether audio can play this second.
+ *
+ * Still only when it is the actual obstacle: offered beside a fully downloaded queue, it is
+ * noise that teaches people to ignore it.
  */
-fun shouldOfferWifiSetup(statuses: Collection<DownloadStatus>): Boolean =
-        statuses.any { it == DownloadStatus.NEEDS_WIFI_SETUP }
+fun shouldOfferWifiSetup(hasWifiConfigured: Boolean, anyUndownloaded: Boolean): Boolean =
+        !hasWifiConfigured && anyUndownloaded
 
 /**
  * How long ago the phone last reached this watch, in words.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toWearQueueEntries, WEAR_QUEUE_LIMIT } from '../composables/useWearSync'
+import { queuePayloadFor, toWearQueueEntries, WEAR_QUEUE_LIMIT } from '../composables/useWearSync'
 import { toPlayQueueItems } from '../composables/useListeningQueue'
 
 function episode(overrides: Record<string, unknown> = {}) {
@@ -128,5 +128,29 @@ describe('toWearQueueEntries', () => {
   it('handles an empty queue', () => {
     expect(toWearQueueEntries()).toEqual([])
     expect(toWearQueueEntries([])).toEqual([])
+  })
+})
+
+describe('queuePayloadFor', () => {
+  const session = { serverAddress: 'https://x', token: 't', userId: 'u', serverConnectionConfigId: 'c' }
+
+  // The distinction that matters. Sending an empty queue clears the watch, which is right when
+  // there is genuinely nothing left to hear and catastrophic from a screen that simply never
+  // resolved a queue - a run would lose its list mid-stride.
+  it('sends nothing about the queue when there is nothing to say', () => {
+    expect(queuePayloadFor(session, null)).toBeNull()
+  })
+
+  it('sends an empty queue when the queue is genuinely empty', () => {
+    expect(queuePayloadFor(session, [])).toEqual({ entries: [] })
+  })
+
+  it('sends the mapped entries when there is a queue', () => {
+    const payload = queuePayloadFor(session, items([episode()]))
+    expect(payload?.entries.map((e) => e.episodeId)).toEqual(['ep-1'])
+  })
+
+  it('sends nothing at all without a session', () => {
+    expect(queuePayloadFor(null, items([episode()]))).toBeNull()
   })
 })

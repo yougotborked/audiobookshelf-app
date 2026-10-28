@@ -27,6 +27,28 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const { isValidVersion, setOrientationLock } = useUtils()
 const bus = useEventBus()
+const wearSync = useWearSync()
+
+/**
+ * Tells the watch which server it is talking to, as soon as that is known.
+ *
+ * Separate from the queue, which is published by whichever screen resolved it. Without this the
+ * watch cannot tell "the phone has never reached me" from "it did, and there is nothing to
+ * play" - and a user whose current library is a book library never opens a screen that resolves
+ * a podcast queue at all, so their watch sat on "Open Podshelf on your phone" indefinitely while
+ * the phone was in fact right there.
+ *
+ * An empty queue is not sent with it. The watch keeps whatever it already has, so a run started
+ * before switching libraries still plays.
+ */
+watch(
+  () => [userStore.getServerAddress, userStore.getToken, userStore.getServerConnectionConfigId],
+  ([serverAddress, token, configId]) => {
+    if (!serverAddress || !token) return
+    wearSync.publish({ serverAddress, token, userId: (userStore.user?.id as string) || '', serverConnectionConfigId: configId || '' }, null)
+  },
+  { immediate: true }
+)
 
 const inittingLibraries = ref(false)
 const hasMounted = ref(false)

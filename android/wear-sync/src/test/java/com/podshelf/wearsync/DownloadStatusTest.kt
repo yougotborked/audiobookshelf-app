@@ -10,9 +10,10 @@ class DownloadStatusTest {
   private fun status(
           isDownloaded: Boolean = false,
           isDownloading: Boolean = false,
+          isOnline: Boolean = false,
           hasWifiConfigured: Boolean = true,
           lastAttemptFailed: Boolean = false
-  ) = downloadStatus(isDownloaded, isDownloading, hasWifiConfigured, lastAttemptFailed)
+  ) = downloadStatus(isDownloaded, isDownloading, isOnline, hasWifiConfigured, lastAttemptFailed)
 
   @Test
   fun `a downloaded episode is ready`() {
@@ -24,7 +25,7 @@ class DownloadStatusTest {
     // Whatever else is true, the file is here and playable.
     assertEquals(
             DownloadStatus.READY,
-            status(isDownloaded = true, hasWifiConfigured = false, lastAttemptFailed = true)
+            status(isDownloaded = true, isOnline = true, hasWifiConfigured = false, lastAttemptFailed = true)
     )
   }
 
@@ -65,27 +66,62 @@ class DownloadStatusTest {
     assertEquals(DownloadStatus.DOWNLOADING, status(isDownloading = true, lastAttemptFailed = true))
   }
 
+  // --- streaming ---
+
+  @Test
+  fun `an undownloaded episode on a reachable network can be streamed`() {
+    assertEquals(DownloadStatus.STREAMABLE, status(isOnline = true))
+  }
+
+  // Being able to play it now outranks every explanation of why it is not downloaded: those
+  // explanations exist to turn a dead row into something actionable.
+  @Test
+  fun `streaming outranks the reasons a download has not happened`() {
+    assertEquals(DownloadStatus.STREAMABLE, status(isOnline = true, hasWifiConfigured = false))
+    assertEquals(DownloadStatus.STREAMABLE, status(isOnline = true, lastAttemptFailed = true))
+  }
+
+  @Test
+  fun `a downloaded episode is still played from disk even when online`() {
+    // A watch mid-run has a radio it is trying not to use.
+    assertEquals(DownloadStatus.READY, status(isDownloaded = true, isOnline = true))
+  }
+
+  @Test
+  fun `only ready and streamable rows start audio`() {
+    assertTrue(isPlayable(DownloadStatus.READY))
+    assertTrue(isPlayable(DownloadStatus.STREAMABLE))
+    assertFalse(isPlayable(DownloadStatus.WAITING_FOR_WIFI))
+    assertFalse(isPlayable(DownloadStatus.NEEDS_WIFI_SETUP))
+    assertFalse(isPlayable(DownloadStatus.FAILED))
+    assertFalse(isPlayable(DownloadStatus.DOWNLOADING))
+  }
+
   // --- offering the shortcut ---
 
   @Test
-  fun `the Wi-Fi shortcut is offered when something needs it`() {
-    assertTrue(
-            shouldOfferWifiSetup(listOf(DownloadStatus.READY, DownloadStatus.NEEDS_WIFI_SETUP))
-    )
+  fun `the Wi-Fi shortcut is offered when nothing has downloaded and something is missing`() {
+    assertTrue(shouldOfferWifiSetup(hasWifiConfigured = false, anyUndownloaded = true))
+  }
+
+  // The reason this is asked of the facts rather than of the row states: a watch online through
+  // the phone shows every row as streamable, and deriving the prompt from those statuses hid it
+  // even though no Wi-Fi had ever been set up and nothing could ever download.
+  @Test
+  fun `being able to stream does not hide the Wi-Fi prompt`() {
+    val streamingEverything = status(isOnline = true, hasWifiConfigured = false)
+    assertEquals(DownloadStatus.STREAMABLE, streamingEverything)
+    assertTrue(shouldOfferWifiSetup(hasWifiConfigured = false, anyUndownloaded = true))
   }
 
   @Test
-  fun `the shortcut is not offered when nothing needs it`() {
-    assertFalse(
-            shouldOfferWifiSetup(
-                    listOf(DownloadStatus.READY, DownloadStatus.WAITING_FOR_WIFI, DownloadStatus.FAILED)
-            )
-    )
+  fun `the shortcut is not offered to a watch that downloads fine`() {
+    assertFalse(shouldOfferWifiSetup(hasWifiConfigured = true, anyUndownloaded = true))
   }
 
   @Test
-  fun `an empty queue offers nothing`() {
-    assertFalse(shouldOfferWifiSetup(emptyList()))
+  fun `the shortcut is not offered when everything is already downloaded`() {
+    assertFalse(shouldOfferWifiSetup(hasWifiConfigured = false, anyUndownloaded = false))
   }
 }
 
