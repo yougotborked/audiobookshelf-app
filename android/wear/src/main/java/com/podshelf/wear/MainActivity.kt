@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,17 +44,25 @@ import android.content.Intent
 import com.podshelf.wear.download.DownloadState
 import com.podshelf.wear.download.EpisodeDownloadWorker
 import com.podshelf.wear.download.EpisodeStore
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import com.podshelf.wear.player.NowPlayingScreen
 import com.podshelf.wear.player.WearPlayerService
+import com.podshelf.wear.server.WearApi
 import com.podshelf.wear.sync.WearSyncStore
 import com.podshelf.wearsync.DownloadStatus
 import com.podshelf.wearsync.WearQueue
+import com.podshelf.wearsync.WearServerSession
 import com.podshelf.wearsync.WearQueueEntry
 import com.podshelf.wearsync.describeLastSync
 import com.podshelf.wearsync.downloadStatus
+import com.podshelf.wearsync.isPlayable
 import com.podshelf.wearsync.estimateDownloadFootprintMb
 import com.podshelf.wearsync.nextDownloadTarget
 import com.podshelf.wearsync.queueMatchesSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.podshelf.wearsync.shouldOfferWifiSetup
 
 /**
@@ -111,12 +120,17 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: Dow
 
   var showPlayer by remember { mutableStateOf(false) }
   var hasPlayable by remember { mutableStateOf(false) }
+  var isOnline by remember { mutableStateOf(false) }
+  var resolving by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
+  val appContext = LocalContext.current.applicationContext
 
   // Whether there is anything to go back to. Polled because the player lives in a service and
   // can finish, or advance to the next episode, while this screen is open.
   LaunchedEffect(controller) {
     while (true) {
       hasPlayable = controller?.currentMediaItem != null
+      isOnline = hasInternet(appContext)
       kotlinx.coroutines.delay(1000)
     }
   }
@@ -143,11 +157,28 @@ fun PodshelfWearApp(store: WearSyncStore, episodes: EpisodeStore, downloads: Dow
               downloadTarget = downloadTarget,
               onCycleTarget = { downloads.setDownloadTarget(nextDownloadTarget(downloadTarget)) },
               onOpenPlayer = { showPlayer = true },
+              isOnline = isOnline,
+              resolving = resolving,
               onPlay = { entry ->
-                play(entry, episodes, controller)
-                // Straight to the controls. Starting audio and leaving someone on a list with
-                // no visible way back to it was the whole complaint.
-                showPlayer = true
+                if (episodes.has(entry.episodeId)) {
+                  play(entry, episodes, controller, streamUrl = null, isOnline = false)
+                  // Straight to the controls. Starting audio and leaving someone on a list with
+                  // no visible way back to it was the whole complaint.
+                  showPlayer = true
+                } else {
+                  // Streaming needs a play session from the server before there is a URL to hand
+                  // the player, and that is a round trip - it cannot happen inside a tap handler
+                  // that has to answer instantly. The row says "Connecting" meanwhile.
+                  resolving = true
+                  scope.launch {
+                    val url = resolveStreamUrl(session, entry)
+                    resolving = false
+                    if (url != null) {
+                      play(entry, episodes, controller, streamUrl = url, isOnline = true)
+                      showPlayer = true
+                    }
+                  }
+                }
               }
       )
     }
@@ -219,6 +250,8 @@ private fun QueueList(
         lastAttemptFailed: Boolean,
         lastSyncedAtMs: Long,
         hasPlayable: Boolean,
+        isOnline: Boolean,
+        resolving: Boolean,
         downloadTarget: Int,
         onCycleTarget: () -> Unit,
         onOpenPlayer: () -> Unit,
@@ -235,6 +268,7 @@ private fun QueueList(
                             // Nothing reports per-episode progress yet, so an in-flight fetch
                             // still reads as waiting rather than claiming a state we cannot see.
                             isDownloading = false,
+                            isOnline = isOnline,
                             hasWifiConfigured = hasEverDownloaded,
                             lastAttemptFailed = lastAttemptFailed
                     )
@@ -260,7 +294,11 @@ private fun QueueList(
     // Offered once, above the list, and only when it is the actual obstacle. Repeating it per
     // row - or showing it beside episodes that are already downloaded - teaches people to
     // ignore it.
-    if (shouldOfferWifiSetup(statuses.values)) {
+    if (shouldOfferWifiSetup(
+                    hasWifiConfigured = hasEverDownloaded,
+                    anyUndownloaded = statuses.values.any { it != DownloadStatus.READY }
+            )
+    ) {
       item { WifiSetupPrompt(onOpenSettings = { openWifiSettings(context) }) }
     }
 
@@ -268,6 +306,7 @@ private fun QueueList(
       QueueRow(
               entry = entry,
               status = statuses[entry.episodeId] ?: DownloadStatus.WAITING_FOR_WIFI,
+              resolving = resolving,
               onPlay = { onPlay(entry) }
       )
     }
@@ -328,28 +367,37 @@ private fun openWifiSettings(context: android.content.Context) {
 }
 
 @Composable
-private fun QueueRow(entry: WearQueueEntry, status: DownloadStatus, onPlay: () -> Unit) {
-  val isReady = status == DownloadStatus.READY
+private fun QueueRow(
+        entry: WearQueueEntry,
+        status: DownloadStatus,
+        resolving: Boolean,
+        onPlay: () -> Unit
+) {
+  val playable = isPlayable(status)
   Chip(
           modifier = Modifier.fillMaxWidth(),
           onClick = onPlay,
-          // Not downloaded means not playable without the server, and the watch cannot resolve a
-          // stream URL from the main thread. Rather than start something that fails mid-tap, the
-          // row says what it is waiting for.
-          enabled = isReady,
+          // A row is tappable when tapping it will produce audio - from disk, or over the
+          // network. Everything else says what it is waiting for rather than starting something
+          // that fails a second later.
+          enabled = playable && !resolving,
+          // The accent is reserved for what plays without a radio. A streamable row is
+          // available, not ideal: it costs battery and stops at the first dead spot.
           colors =
-                  if (isReady) ChipDefaults.primaryChipColors()
+                  if (status == DownloadStatus.READY) ChipDefaults.primaryChipColors()
                   else ChipDefaults.secondaryChipColors(),
           label = { Text(text = entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
           secondaryLabel = {
             Text(
                     text =
-                            when (status) {
-                              DownloadStatus.READY -> entry.podcastTitle
-                              DownloadStatus.DOWNLOADING -> "Downloading"
-                              DownloadStatus.WAITING_FOR_WIFI -> "Waiting for Wi-Fi"
-                              DownloadStatus.NEEDS_WIFI_SETUP -> "Needs Wi-Fi"
-                              DownloadStatus.FAILED -> "Could not download - will retry"
+                            when {
+                              resolving && status == DownloadStatus.STREAMABLE -> "Connecting"
+                              status == DownloadStatus.READY -> entry.podcastTitle
+                              status == DownloadStatus.DOWNLOADING -> "Downloading"
+                              status == DownloadStatus.STREAMABLE -> "Stream - not downloaded yet"
+                              status == DownloadStatus.WAITING_FOR_WIFI -> "Waiting for Wi-Fi"
+                              status == DownloadStatus.NEEDS_WIFI_SETUP -> "Needs Wi-Fi"
+                              else -> "Could not download - will retry"
                             },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -359,15 +407,47 @@ private fun QueueRow(entry: WearQueueEntry, status: DownloadStatus, onPlay: () -
 }
 
 /**
+ * Whether the watch can reach anything at all right now.
+ *
+ * Capability, not transport: true over Wi-Fi, over LTE, and over the Bluetooth proxy through a
+ * paired phone. One episode is worth streaming over any of them, unlike a batch of downloads -
+ * which is why this asks a different question from currentNetworkIsFastEnough.
+ *
+ * VALIDATED as well as INTERNET, because a watch associated to a captive portal or a Wi-Fi
+ * network with no route reports the capability and answers nothing.
+ */
+private fun hasInternet(context: android.content.Context): Boolean {
+  val connectivity =
+          context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE)
+                  as? ConnectivityManager ?: return false
+  val network = connectivity.activeNetwork ?: return false
+  val capabilities = connectivity.getNetworkCapabilities(network) ?: return false
+  return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+          capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+}
+
+/** Asks the server for a play session and returns a URL, off the main thread. */
+private suspend fun resolveStreamUrl(session: WearServerSession?, entry: WearQueueEntry): String? {
+  val current = session ?: return null
+  return withContext(Dispatchers.IO) { WearApi().resolveTrackUrl(current, entry) }
+}
+
+/**
  * Starts an episode.
  *
  * Downloaded only, for now: resolving a stream URL means a round trip to the server, which does
  * not belong on the main thread and does not belong in a tap handler that has to answer
  * instantly. Offline is the case that matters here anyway.
  */
-private fun play(entry: WearQueueEntry, episodes: EpisodeStore, controller: MediaController?) {
+private fun play(
+        entry: WearQueueEntry,
+        episodes: EpisodeStore,
+        controller: MediaController?,
+        streamUrl: String?,
+        isOnline: Boolean
+) {
   val player = controller ?: return
-  val item = WearPlayerService.mediaItemFor(entry, episodes, streamUrl = null, isOnline = false) ?: return
+  val item = WearPlayerService.mediaItemFor(entry, episodes, streamUrl, isOnline) ?: return
 
   player.setMediaItem(item, WearPlayerService.startPositionMs(entry))
   player.prepare()

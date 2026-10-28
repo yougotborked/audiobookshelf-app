@@ -28,6 +28,11 @@ on:
         description: 'Version, without the leading v (e.g. 0.13.0)'
         required: true
         type: string
+      include_wear:
+        description: 'Upload the Wear OS bundle too (needs the Wear form factor set up in Play Console first)'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -161,14 +166,37 @@ jobs:
             ls -la "$aab"
           done
 
+      # Which bundles go up.
+      #
+      # Play will not accept a Wear OS artifact until the Wear form factor has been added to the
+      # app in Play Console and the listing carries at least one Wear screenshot - and it fails
+      # the whole release, not just that artifact, so a phone release would be blocked by an
+      # unconfigured watch listing. Leaving the watch out is therefore a supported way to ship.
+      - name: Decide which bundles to upload
+        id: bundles
+        env:
+          INCLUDE_WEAR: ${{ github.event_name != 'workflow_dispatch' || inputs.include_wear }}
+        run: |
+          phone=android/app/build/outputs/bundle/release/app-release.aab
+          wear=android/wear/build/outputs/bundle/release/wear-release.aab
+          {
+            echo 'files<<EOF'
+            echo "$phone"
+            if [ "$INCLUDE_WEAR" = "true" ]; then
+              echo "$wear"
+              echo "::notice::Uploading the phone and Wear OS bundles"
+            else
+              echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
+            fi
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload to Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
-          releaseFiles: |
-            android/app/build/outputs/bundle/release/app-release.aab
-            android/wear/build/outputs/bundle/release/wear-release.aab
+          releaseFiles: ${{ steps.bundles.outputs.files }}
           track: ${{ inputs.track || 'internal' }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}

@@ -25,20 +25,24 @@ Any watch carrying a build from before the pin may need the one-time uninstall.
 
 **Clears when** the watch app ships through Play, which signs every build with the upload key.
 
-### The watch's queue arrives only from the catch-up feed
+### The watch's queue still arrives from one screen
 
 **Where** `components/bookshelf/PodcastCatchUpFeed.vue`
 
-The phone publishes to the watch from one component. In practice that is the landing screen for
-a podcast library, so opening the app normally does publish — but it is a coincidence of layout,
-not a guarantee. A user whose current library is a book library never renders the feed, and
-their watch is never told anything at all.
+The *session* is now published from the app layout on startup, so the watch always knows which
+server it is talking to and can tell "the phone has never reached me" from "there is nothing to
+play". The *queue* is still published by the one component that resolves it.
 
-It lives there because that is where the queue is resolved, and resolving it a second time
-elsewhere would be the duplicate definition this whole design avoids.
+In practice that component is the landing screen for a podcast library, so opening the app
+normally publishes. A user whose current library is a book library never renders it, and their
+watch keeps whatever queue it last had — which is better than being wiped, and still not fresh.
 
-**Clears when** the resolved queue lives somewhere a store can publish from on app start,
-rather than being a computed property of one component.
+Moving it means the resolved queue living somewhere a store can publish from, rather than being
+a computed property of one component. That is a real refactor across two working surfaces (the
+feed and minimal mode, which resolves the same queue independently), and the gap it closes is
+narrow, so it is recorded rather than done.
+
+**Clears when** the queue resolution moves into a store both surfaces read from.
 
 ### `android.r8.proguardAndroidTxt.disallowed=false`
 
@@ -99,23 +103,6 @@ mean asking after a confusing failure.
 **Clears when** the connect flow can resolve the server address off the main thread, notice
 that it landed on a private address, and ask then — with a line of explanation attached to the
 attempt that needs it.
-
-### The watch plays only what it has downloaded
-
-**Where** `android/wear/src/main/java/com/podshelf/wear/MainActivity.kt`
-
-An episode that has not downloaded yet cannot be played at all, even with the watch sitting on
-Wi-Fi. Resolving a stream URL needs a round trip to the server — Audiobookshelf hands out
-session-scoped track URLs rather than a stable path per episode — and that does not belong in a
-tap handler that has to answer instantly. The row says "Waiting for Wi-Fi" instead of starting
-something that would fail a second later.
-
-Offline is the case this feature exists for, so this is the right way round. It is still a gap:
-someone who adds an episode and wants it immediately, on Wi-Fi, has to wait for the download
-pass rather than just streaming it.
-
-**Clears when** the play path can resolve a stream URL off the main thread and hand the player a
-buffering state while it does.
 
 ### The watch waits for Wi-Fi rather than offering to find one
 

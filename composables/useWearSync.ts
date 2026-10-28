@@ -110,6 +110,19 @@ export function toWearQueueEntries(items: PlayQueueItem[] = [], lookup: Progress
   return entries
 }
 
+/**
+ * What to send as the queue, or null to leave the watch's alone.
+ *
+ * `items` of null means "I have nothing to say about the queue" and is NOT an empty queue.
+ * Sending an empty one clears the watch - right when there is genuinely nothing left to hear,
+ * and catastrophic from a screen that simply never resolved a queue: a run would lose its list
+ * mid-stride. The app layout publishes the session on startup and passes null for this reason.
+ */
+export function queuePayloadFor(session: WearSessionPayload | null, items: PlayQueueItem[] | null, lookup: ProgressLookup = {}): { entries: WearQueueEntryPayload[] } | null {
+  if (!session || !items) return null
+  return { entries: toWearQueueEntries(items, lookup) }
+}
+
 interface AbsWearSyncPlugin {
   publish(options: { session: WearSessionPayload | null; queue: { entries: WearQueueEntryPayload[] } | null }): Promise<{ published: boolean }>
 }
@@ -118,7 +131,16 @@ interface AbsWearSyncPlugin {
 const AbsWearSync = registerPlugin<AbsWearSyncPlugin>('AbsWearSync')
 
 export function useWearSync() {
-  async function publish(session: WearSessionPayload | null, items: PlayQueueItem[], lookup: ProgressLookup) {
+  /**
+   * Tells the watch about the server, and optionally about the queue.
+   *
+   * `items` of `null` means "I have nothing to say about the queue" and is NOT the same as an
+   * empty one. Sending an empty queue clears the watch - which is right when there is genuinely
+   * nothing left to hear, and catastrophic when it comes from a screen that simply never
+   * resolved a queue: a run would lose its list mid-stride. The app layout publishes the session
+   * on startup and passes null for exactly this reason.
+   */
+  async function publish(session: WearSessionPayload | null, items: PlayQueueItem[] | null, lookup: ProgressLookup = {}) {
     // Native-only, and a missing bridge is not an error worth surfacing: the web build and iOS
     // have no watch to talk to.
     if (!AbsWearSync?.publish) return
@@ -126,7 +148,7 @@ export function useWearSync() {
     try {
       await AbsWearSync.publish({
         session,
-        queue: session ? { entries: toWearQueueEntries(items, lookup) } : null
+        queue: queuePayloadFor(session, items, lookup)
       })
     } catch (error) {
       console.warn('[useWearSync] Failed to publish to the watch', error)

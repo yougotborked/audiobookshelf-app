@@ -1,3 +1,28 @@
+import { execSync } from 'node:child_process'
+
+/**
+ * The app's version, from the newest release tag.
+ *
+ * The drawer shows this, and it used to be a literal that rotted: every sideloaded build said
+ * 0.12.0-beta for weeks after 0.13.0 shipped, which makes "what version are you on" unanswerable
+ * during testing - exactly when it gets asked. The Android build reads the same tag, so the
+ * number in the drawer and the number in Android's app info agree.
+ *
+ * Failures are swallowed: a source archive, a shallow clone with no tags and a machine without
+ * git are all normal, and none should stop a build.
+ */
+function appVersion(): string {
+  if (process.env.PODSHELF_VERSION_NAME) return process.env.PODSHELF_VERSION_NAME
+  try {
+    return execSync('git describe --tags --abbrev=0 --match="v[0-9]*"', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+      .replace(/^v/, '')
+  } catch {
+    return '0.0.0-untagged'
+  }
+}
+
 export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: false },
@@ -26,7 +51,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      version: '0.12.0-beta',
+      version: appVersion(),
       ANDROID_APP_URL: 'https://play.google.com/store/apps/details?id=com.podshelf.app',
       IOS_APP_URL: '',
     }
