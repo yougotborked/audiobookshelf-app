@@ -82,7 +82,15 @@ data class WearQueueEntry(
         val coverPath: String?,
         val durationSeconds: Double,
         /** Where the phone last left this episode, in seconds. */
-        val currentTimeSeconds: Double
+        val currentTimeSeconds: Double,
+        /**
+         * When that position was last written, in wall-clock milliseconds.
+         *
+         * Carried so the watch can tell whether its own listening is newer than the phone's
+         * before reporting it, rather than winding someone's position backwards. Zero when the
+         * phone has no progress record for the episode at all.
+         */
+        val progressUpdatedAtMs: Long = 0
 )
 
 @Serializable
@@ -199,6 +207,11 @@ fun queueNeedsPublishing(
       before.title != after.title -> true
       before.coverPath != after.coverPath -> true
       before.durationSeconds != after.durationSeconds -> true
+      // progressUpdatedAtMs is deliberately NOT compared. It moves on every progress tick, so
+      // treating a change in it as a reason to publish would wake the watch's radio every few
+      // seconds of playback and undo this whole function. It rides along with the position
+      // threshold below instead, which means the watch's baseline can be up to one threshold
+      // of playback out of date - see docs/TECH_DEBT.md for what that costs.
       else ->
               kotlin.math.abs(before.currentTimeSeconds - after.currentTimeSeconds) >=
                       progressThresholdSeconds

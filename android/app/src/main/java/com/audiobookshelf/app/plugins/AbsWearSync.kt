@@ -109,7 +109,8 @@ class AbsWearSync : Plugin() {
                       podcastTitle = item.optString("podcastTitle"),
                       coverPath = item.optString("coverPath").ifEmpty { null },
                       durationSeconds = item.optDouble("durationSeconds", 0.0),
-                      currentTimeSeconds = item.optDouble("currentTimeSeconds", 0.0)
+                      currentTimeSeconds = item.optDouble("currentTimeSeconds", 0.0),
+                      progressUpdatedAtMs = item.optLong("progressUpdatedAtMs", 0L)
               )
       )
     }
