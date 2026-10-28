@@ -292,6 +292,10 @@ git tag v0.13.0
 git push origin v0.13.0
 ```
 
+A tag publishes to the **internal** track. Closed testing ("closed beta") is the `alpha` track,
+which a tag will not reach — run the workflow from the Actions tab and choose it. That is
+deliberate: a tag is a decision to cut a version, and which audience sees it is a separate one.
+
 The workflow builds **two** signed AABs — the phone app and the Wear OS app — derives
 `versionName 0.13.0` and `versionCode 1300` from the tag, and uploads both to the **internal**
 track as one release.
@@ -308,6 +312,25 @@ each stay under 100.
 
 The first tagged build gets versionCode ≥ 1200, comfortably above the 116 the debug builds use,
 so there is no collision with anything already installed.
+
+### Before the watch can go to Play at all
+
+Three things have to exist in Play Console first, and none of them is code. Play fails the
+**whole release** if a Wear artifact arrives before they do — not just that artifact — so an
+unconfigured watch listing blocks the phone release with it.
+
+1. **Add the Wear OS form factor.** Test and release → Advanced settings → Form factors →
+   **+ Add form factor** → Wear OS. Until this is done there is nowhere to put a watch build or
+   its screenshots.
+2. **At least one Wear OS screenshot**, taken on a real watch or an emulator: 1:1, at least
+   384 × 384, the app interface only — no device frame, no added text or graphics, no
+   transparency. These cannot be generated from the repository's screenshot harness, which
+   drives the web app in a browser; the watch app is native Compose and needs a device.
+3. **Mention "Wear OS" in the listing**, in `docs/store/listing.en-US.json`.
+
+Until all three are in place, publish the phone alone: run the workflow from the Actions tab
+with **include_wear** unchecked. The watch bundle is still built and still has to be signed and
+version-correct — it is simply not sent.
 
 ### The watch's version code
 
