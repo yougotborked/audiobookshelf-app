@@ -5,6 +5,7 @@
 // the two share no screens. What they will share is the server they talk to.
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'io.github.takahirom.roborazzi'
 
 android {
     namespace "com.podshelf.wear"
@@ -73,6 +74,14 @@ android {
         compose true
     }
 
+    testOptions {
+        unitTests {
+            // Roborazzi renders the real composables through Robolectric, which needs the
+            // module's resources on the unit-test classpath to do it.
+            includeAndroidResources = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
@@ -104,6 +113,15 @@ dependencies {
     implementation "com.squareup.okhttp3:okhttp:$rootProject.ext.okhttp_version"
 
     testImplementation "junit:junit:$rootProject.ext.junit_version"
+
+    // Renders the watch's own composables to PNG without a device. There is no Wear emulator
+    // here - no KVM, so one would be software-rendered - and the web screenshot harness cannot
+    // help: it drives the Nuxt app in a browser, and this module is native Compose.
+    testImplementation "org.robolectric:robolectric:4.13"
+    testImplementation "io.github.takahirom.roborazzi:roborazzi:1.77.0"
+    testImplementation "io.github.takahirom.roborazzi:roborazzi-compose:1.77.0"
+    testImplementation "androidx.compose.ui:ui-test-junit4"
+    debugImplementation "androidx.compose.ui:ui-test-manifest"
 }
 
 // scripts/test-android.sh runs every module's test task in one invocation, so a `--tests`

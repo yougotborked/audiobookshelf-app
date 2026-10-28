@@ -32,15 +32,30 @@ const TEXT_LIMITS = { title: 30, shortDescription: 80, fullDescription: 4000 }
 
 const DRY_RUN = process.argv.includes('--dry-run')
 
-/** Graphics to upload, by Play's image type. Anything missing on disk is skipped, not an error. */
+/** PNGs in a directory under docs/store/, sorted, or nothing if the directory is absent. */
+function screenshotsIn(dir, type) {
+  const full = path.join(STORE, dir)
+  if (!fs.existsSync(full)) return []
+  return fs
+    .readdirSync(full, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith('.png'))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((e) => ({ type, file: path.join(dir, e.name) }))
+}
+
+/**
+ * Graphics to upload, by Play's image type. Anything missing on disk is skipped, not an error.
+ *
+ * The Wear screenshots are rendered by `./gradlew :wear:recordRoborazziDebug`, which draws the
+ * watch's real composables at 384x384 without a device - there is no Wear emulator available
+ * and the web screenshot harness cannot help, because it drives the Nuxt app in a browser while
+ * the watch app is native Compose.
+ */
 const IMAGES = [
   { type: 'icon', file: 'icon-512.png' },
   { type: 'featureGraphic', file: 'feature-graphic-1024x500.png' },
-  ...fs
-    .readdirSync(path.join(STORE, 'screenshots'), { withFileTypes: true })
-    .filter((e) => e.isFile() && e.name.endsWith('.png'))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((e) => ({ type: 'phoneScreenshots', file: path.join('screenshots', e.name) }))
+  ...screenshotsIn('screenshots', 'phoneScreenshots'),
+  ...screenshotsIn('wear', 'wearScreenshots')
 ]
 
 function loadServiceAccount() {

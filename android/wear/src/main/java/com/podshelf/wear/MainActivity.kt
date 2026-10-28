@@ -367,7 +367,7 @@ private fun openWifiSettings(context: android.content.Context) {
 }
 
 @Composable
-private fun QueueRow(
+internal fun QueueRow(
         entry: WearQueueEntry,
         status: DownloadStatus,
         resolving: Boolean,

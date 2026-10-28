@@ -30,6 +30,7 @@ import androidx.media3.session.MediaController
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.CompactButton
+import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
@@ -89,14 +90,56 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
     }
   }
 
+  NowPlayingContent(
+          title = title,
+          artist = artist,
+          isPlaying = isPlaying,
+          speed = speed,
+          progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f,
+          onSeekBack = { controller?.seekBack() },
+          onSeekForward = { controller?.seekForward() },
+          onPlayPause = {
+            val player = controller ?: return@NowPlayingContent
+            if (player.isPlaying) player.pause() else player.play()
+          },
+          onCycleSpeed = {
+            val player = controller ?: return@NowPlayingContent
+            val next = nextPlaybackSpeed(player.playbackParameters.speed)
+            player.setPlaybackSpeed(next)
+            speed = next
+          },
+          onBack = onBack
+  )
+}
+
+/**
+ * The screen itself, with no player attached.
+ *
+ * Stateless so the same composable renders in the app and in the screenshot test. A preview that
+ * rebuilt this layout would be a second implementation of it, and the screenshot would stop
+ * being evidence about the real screen the moment the two drifted.
+ */
+@Composable
+fun NowPlayingContent(
+        title: String,
+        artist: String,
+        isPlaying: Boolean,
+        speed: Float,
+        progress: Float,
+        onSeekBack: () -> Unit = {},
+        onSeekForward: () -> Unit = {},
+        onPlayPause: () -> Unit = {},
+        onCycleSpeed: () -> Unit = {},
+        onBack: () -> Unit = {}
+) {
   Column(
-          modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp),
+          modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 10.dp),
           verticalArrangement = Arrangement.Center,
           horizontalAlignment = Alignment.CenterHorizontally
   ) {
     Text(
             text = title.ifEmpty { "Nothing playing" },
-            style = MaterialTheme.typography.title3,
+            style = MaterialTheme.typography.button,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -104,7 +147,7 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
     if (artist.isNotEmpty()) {
       Text(
               text = artist,
-              style = MaterialTheme.typography.caption2,
+              style = MaterialTheme.typography.caption3,
               textAlign = TextAlign.Center,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
@@ -117,18 +160,14 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
     Box(
             modifier =
                     Modifier.fillMaxWidth()
-                            .padding(vertical = 10.dp)
+                            .padding(vertical = 8.dp)
                             .height(4.dp)
                             .background(MaterialTheme.colors.onSurfaceVariant.copy(alpha = 0.3f))
     ) {
       Box(
               modifier =
                       Modifier.fillMaxHeight()
-                              .fillMaxWidth(
-                                      if (durationMs > 0)
-                                              (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
-                                      else 0f
-                              )
+                              .fillMaxWidth(progress.coerceIn(0f, 1f))
                               .background(MaterialTheme.colors.primary)
       )
     }
@@ -138,7 +177,7 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
     ) {
-      CompactButton(onClick = { controller?.seekBack() }) {
+      CompactButton(onClick = onSeekBack) {
         Icon(
                 painter = androidx.compose.ui.res.painterResource(android.R.drawable.ic_media_rew),
                 contentDescription = "Back 10 seconds",
@@ -147,11 +186,8 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
       }
 
       Button(
-              onClick = {
-                val player = controller ?: return@Button
-                if (player.isPlaying) player.pause() else player.play()
-              },
-              modifier = Modifier.size(56.dp),
+              onClick = onPlayPause,
+              modifier = Modifier.size(48.dp),
               colors = ButtonDefaults.primaryButtonColors()
       ) {
         Icon(
@@ -161,11 +197,11 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
                                 else android.R.drawable.ic_media_play
                         ),
                 contentDescription = if (isPlaying) "Pause" else "Play",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
         )
       }
 
-      CompactButton(onClick = { controller?.seekForward() }) {
+      CompactButton(onClick = onSeekForward) {
         Icon(
                 painter = androidx.compose.ui.res.painterResource(android.R.drawable.ic_media_ff),
                 contentDescription = "Forward 30 seconds",
@@ -174,24 +210,27 @@ fun NowPlayingScreen(controller: MediaController?, onBack: () -> Unit) {
       }
     }
 
+    // Inset hard from the sides. This row sits near the bottom of a round display, where the
+    // usable width is a fraction of the diameter - at full width the two controls were half
+    // off the glass and "Queue" wrapped to "Queu/e". Nothing but rendering it at 384x384 shows
+    // that, which is what the screenshot test is for.
+    // Centred and sized to their own text, not stretched across a fixed width. Forcing them
+    // apart on a round screen either pushed them off the glass or squeezed "Queue" down to
+    // "Queu" - both of which this test showed and neither of which any other check could.
     Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.padding(top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
     ) {
-      // One button cycling a short list, rather than a slider nobody can aim at on a run.
-      CompactButton(
-              onClick = {
-                val player = controller ?: return@CompactButton
-                val next = nextPlaybackSpeed(player.playbackParameters.speed)
-                player.setPlaybackSpeed(next)
-                speed = next
-              }
-      ) { Text(text = formatPlaybackSpeed(speed), style = MaterialTheme.typography.caption2) }
+      // One control cycling a short list, rather than a slider nobody can aim at on a run.
+      // Chips rather than CompactButtons because these carry words: a CompactButton is a circle
+      // sized for a glyph, and text in one is text that does not fit.
+      CompactChip(
+              onClick = onCycleSpeed,
+              label = { Text(text = formatPlaybackSpeed(speed), maxLines = 1) }
+      )
 
-      CompactButton(onClick = onBack) {
-        Text(text = "Queue", style = MaterialTheme.typography.caption2)
-      }
+      CompactChip(onClick = onBack, label = { Text(text = "Queue", maxLines = 1) })
     }
   }
 }
