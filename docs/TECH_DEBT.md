@@ -8,6 +8,23 @@ Entries are removed, not ticked off — the git history keeps the record.
 
 ## Open
 
+### Updating the watch app over an older sideload can fail on the signing key
+
+**Where** `android/wear/build.gradle`
+
+A debug build of the watch app signed with a different key than the one already installed cannot
+update it: Android refuses with *"signatures do not match newer version"*. The remedy is to
+uninstall the watch app and install again, which also clears its cached queue and downloads.
+
+The module now pins its debug signing to the repository's `debug.keystore`, so builds from here
+on are stable. Before that it used AGP's default at `~/.android/debug.keystore`, which CI
+happened to overwrite with the repository's copy — an implicit arrangement that could produce a
+differently signed APK depending on what that file held when the build ran.
+
+Any watch carrying a build from before the pin may need the one-time uninstall.
+
+**Clears when** the watch app ships through Play, which signs every build with the upload key.
+
 ### The watch's queue arrives only from the catch-up feed
 
 **Where** `components/bookshelf/PodcastCatchUpFeed.vue`

@@ -45,7 +45,7 @@
     <div v-for="group in groups" :key="group.metric" class="px-4 pb-1">
       <p class="text-md-label-m text-md-on-surface-variant mb-1.5 mt-2">{{ group.label }}</p>
       <div class="grid grid-cols-4 gap-2">
-        <button v-for="tier in group.tiers" :key="tier.id" type="button" class="rounded-md-md px-1.5 py-2.5 flex flex-col items-center text-center gap-1 transition-opacity" :class="badgeClass(tier)" @click="selected = tier">
+        <button v-for="tier in group.tiers" :key="tier.id" type="button" class="rounded-md-md px-1.5 py-2.5 flex flex-col items-center text-center gap-1 transition-opacity" :class="badgeClass(tier)" @click="openDetail(tier)">
           <span class="material-symbols text-2xl leading-none">{{ tier.icon }}</span>
           <p class="text-md-label-s leading-tight">{{ tier.title }}</p>
         </button>
@@ -54,8 +54,14 @@
 
     <!-- Tap a badge to find out what it is. The titles are flavour - "Archivist", "Deep
          Catalogue" - which is the point of them and no help at all in working out the ask. -->
-    <modals-modal v-if="selected" :model-value="true" width="88%" max-width="420px" @update:model-value="selected = null">
-      <div class="px-6 py-6 flex flex-col items-center text-center gap-3">
+    <!--
+      Kept mounted and toggled, never `v-if`-ed into existence already open. Modal.vue starts at
+      opacity-0 and fades in from a `watch` on its model value, and a watcher only fires on a
+      change - so a modal mounted with the value already true never runs setShow() and sits there
+      fully transparent. It was rendered, it was on top, and tapping a badge did nothing visible.
+    -->
+    <modals-modal v-model="detailOpen" width="88%" max-width="420px">
+      <div v-if="selected" class="px-6 py-6 flex flex-col items-center text-center gap-3">
         <div class="h-20 w-20 rounded-md-full flex items-center justify-center" :class="badgeClass(selected)">
           <span class="material-symbols text-4xl leading-none">{{ selected.icon }}</span>
         </div>
@@ -77,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   BADGE_RANK_NAMES,
   describeProgress,
@@ -110,6 +116,18 @@ const upcoming = computed(() => nextPerMetric(evaluated.value))
 const groups = computed(() => groupByMetric(evaluated.value))
 
 const selected = ref<EvaluatedAchievement | null>(null)
+const detailOpen = ref(false)
+
+function openDetail(tier: EvaluatedAchievement) {
+  selected.value = tier
+  detailOpen.value = true
+}
+
+// The badge is kept after closing so the sheet does not blank out mid-fade; the next tap
+// replaces it.
+watch(detailOpen, (open) => {
+  if (!open) setTimeout(() => (selected.value = null), 200)
+})
 
 // Written out in full rather than built as `bg-md-badge-${rank}`. Tailwind generates classes by
 // scanning the source for literal strings, so an interpolated name produces markup referring to
