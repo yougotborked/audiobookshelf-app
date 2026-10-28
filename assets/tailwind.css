@@ -19,6 +19,23 @@
   --color-md-surface-4: rgb(var(--md-surface-4));
   --color-md-surface-5: rgb(var(--md-surface-5));
   --color-md-primary: rgb(var(--md-primary));
+
+  /* ── Badge ranks ──
+     The badges are the one place in the app with their own palette. They are a reward wall, not
+     part of the interface language, and five tiers all rendered in the single accent read as one
+     undifferentiated grid. These are still tokens rather than raw palette colours, so they
+     restate themselves per theme like everything else - a fixed bronze that looks right on the
+     dark theme is muddy on the light one. */
+  --color-md-badge-1: rgb(var(--md-badge-1));
+  --color-md-badge-2: rgb(var(--md-badge-2));
+  --color-md-badge-3: rgb(var(--md-badge-3));
+  --color-md-badge-4: rgb(var(--md-badge-4));
+  --color-md-badge-5: rgb(var(--md-badge-5));
+  --color-md-badge-1-on: rgb(var(--md-badge-1-on));
+  --color-md-badge-2-on: rgb(var(--md-badge-2-on));
+  --color-md-badge-3-on: rgb(var(--md-badge-3-on));
+  --color-md-badge-4-on: rgb(var(--md-badge-4-on));
+  --color-md-badge-5-on: rgb(var(--md-badge-5-on));
   --color-md-on-primary: rgb(var(--md-on-primary));
   --color-md-primary-container: rgb(var(--md-primary-container));
   --color-md-on-primary-container: rgb(var(--md-on-primary-container));
@@ -74,6 +91,18 @@
 
 @layer base {
   :root {
+    /* Badge ranks: bronze, silver, gold, platinum, mythic. Container tones for a dark
+       surface - deep enough that white-ish glyphs sit on them cleanly. */
+    --md-badge-1:  84 53 32;
+    --md-badge-2:  70 74 82;
+    --md-badge-3:  97 76 20;
+    --md-badge-4:  40 83 83;
+    --md-badge-5:  73 46 96;
+    --md-badge-1-on: 255 219 193;
+    --md-badge-2-on: 222 228 238;
+    --md-badge-3-on: 255 228 161;
+    --md-badge-4-on: 176 240 238;
+    --md-badge-5-on: 236 208 255;
     /* ──────────────────────────────────────────────────────────────────────────
        Podshelf palette - "lamplight"
 
@@ -145,6 +174,18 @@
 
   /* Black theme overrides - for OLED. Same hues, surfaces pulled to zero. */
   html[data-theme='black'] {
+    /* Badge ranks: bronze, silver, gold, platinum, mythic. Container tones for a dark
+       surface - deep enough that white-ish glyphs sit on them cleanly. */
+    --md-badge-1:  84 53 32;
+    --md-badge-2:  70 74 82;
+    --md-badge-3:  97 76 20;
+    --md-badge-4:  40 83 83;
+    --md-badge-5:  73 46 96;
+    --md-badge-1-on: 255 219 193;
+    --md-badge-2-on: 222 228 238;
+    --md-badge-3-on: 255 228 161;
+    --md-badge-4-on: 176 240 238;
+    --md-badge-5-on: 236 208 255;
     --md-surface-0: 0 0 0;
     --md-surface-1: 12 11 10;
     --md-surface-2: 18 17 15;
@@ -170,6 +211,18 @@
     tonal set, not the half of it that happens to be background.
   */
   html[data-theme='light'] {
+    /* Badge ranks on a light surface: pale containers, dark glyphs. A bronze tuned for the
+       dark theme turns to mud here, which is exactly the failure the token rule exists for. */
+    --md-badge-1:  255 226 205;
+    --md-badge-2:  225 229 237;
+    --md-badge-3:  255 235 180;
+    --md-badge-4:  196 240 238;
+    --md-badge-5:  240 219 255;
+    --md-badge-1-on: 60 34 16;
+    --md-badge-2-on: 38 43 50;
+    --md-badge-3-on: 61 44 0;
+    --md-badge-4-on: 0 55 54;
+    --md-badge-5-on: 48 20 68;
     --md-surface-0: 255 251 245;     /* warm paper, not blue-white */
     --md-surface-1: 248 242 233;
     --md-surface-2: 244 237 226;

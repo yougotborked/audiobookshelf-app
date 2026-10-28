@@ -58,7 +58,12 @@ for (const screen of RESPONSIVE) {
 for (const theme of ['dark', 'black', 'light']) {
   for (const screen of [
     { name: 'home', path: '/bookshelf' },
-    { name: 'minimal', path: '/minimal' }
+    { name: 'minimal', path: '/minimal' },
+    // The badge wall carries the only palette in the app that is not the Material set, five
+    // tones of it, and the theme-token check cannot judge a token's *value* - only that one was
+    // used. A bronze tuned for the dark theme turning to mud on the light one is invisible to
+    // every check there is except looking.
+    { name: 'stats', path: '/stats' }
   ]) {
     test(`${screen.name} @ ${theme} theme`, async ({ page }) => {
       const booted = await bootApp(page, screen.path, 'phone')

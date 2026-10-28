@@ -17,18 +17,20 @@
       </div>
     </div>
 
-    <!-- What to aim at next -->
-    <div v-if="next" class="mx-4 mb-5 rounded-md-lg bg-md-surface-1 px-4 py-3">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols text-2xl text-md-on-surface-variant shrink-0">{{ next.icon }}</span>
-        <div class="min-w-0 flex-1">
-          <p class="text-md-label-l text-md-on-surface truncate">{{ next.title }}</p>
-          <p class="text-md-body-s text-md-on-surface-variant">{{ next.description }}</p>
+    <!-- What to aim at next, one per ladder -->
+    <div v-if="upcoming.length" class="mx-4 mb-5 rounded-md-lg bg-md-surface-1 px-4 py-3 flex flex-col gap-3">
+      <div v-for="tier in upcoming" :key="`next-${tier.id}`">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols text-2xl shrink-0" :class="rankInk(tier.rank)">{{ tier.icon }}</span>
+          <div class="min-w-0 flex-1">
+            <p class="text-md-label-l text-md-on-surface truncate">{{ tier.title }}</p>
+            <p class="text-md-body-s text-md-on-surface-variant truncate">{{ describeRequirement(tier) }}</p>
+          </div>
+          <p class="text-md-label-m text-md-on-surface-variant tabular-nums shrink-0">{{ Math.round(tier.progress * 100) }}%</p>
         </div>
-        <p class="text-md-label-m text-md-on-surface-variant tabular-nums shrink-0">{{ formatNumber(next.value) }} / {{ formatNumber(next.threshold) }}</p>
-      </div>
-      <div class="w-full h-1.5 rounded-md-full bg-md-surface-4 overflow-hidden mt-2.5">
-        <div class="h-full bg-md-primary rounded-md-full transition-all duration-500" :style="{ width: `${Math.round(next.progress * 100)}%` }" />
+        <div class="w-full h-1.5 rounded-md-full bg-md-surface-4 overflow-hidden mt-2">
+          <div class="h-full rounded-md-full transition-all duration-500" :class="rankFill(tier.rank)" :style="{ width: `${Math.round(tier.progress * 100)}%` }" />
+        </div>
       </div>
     </div>
 
@@ -37,20 +39,57 @@
       <p class="text-md-label-m text-md-on-surface-variant tabular-nums">{{ earned.length }} / {{ evaluated.length }}</p>
     </div>
 
-    <!-- Earned first, then the rest dimmed: a locked badge is the point of a badge wall, so it is
-         shown rather than hidden, but it must not compete with the ones actually won -->
-    <div class="px-4 grid grid-cols-3 gap-3 pb-2">
-      <div v-for="tier in ordered" :key="tier.id" class="rounded-md-md px-2 py-3 flex flex-col items-center text-center gap-1.5" :class="tier.earned ? 'bg-md-secondary-container' : 'bg-md-surface-1 opacity-50'">
-        <span class="material-symbols text-2xl leading-none" :class="tier.earned ? 'text-md-on-secondary-container' : 'text-md-on-surface-variant'">{{ tier.earned ? tier.icon : 'lock' }}</span>
-        <p class="text-md-label-s leading-tight" :class="tier.earned ? 'text-md-on-secondary-container' : 'text-md-on-surface-variant'">{{ tier.title }}</p>
+    <!-- Grouped by ladder, each in threshold order. A locked badge keeps its icon and its rank
+         colour at low opacity: hiding it behind a padlock made the wall unreadable, because the
+         only thing you could learn from an unearned badge was that it existed. -->
+    <div v-for="group in groups" :key="group.metric" class="px-4 pb-1">
+      <p class="text-md-label-m text-md-on-surface-variant mb-1.5 mt-2">{{ group.label }}</p>
+      <div class="grid grid-cols-4 gap-2">
+        <button v-for="tier in group.tiers" :key="tier.id" type="button" class="rounded-md-md px-1.5 py-2.5 flex flex-col items-center text-center gap-1 transition-opacity" :class="badgeClass(tier)" @click="selected = tier">
+          <span class="material-symbols text-2xl leading-none">{{ tier.icon }}</span>
+          <p class="text-md-label-s leading-tight">{{ tier.title }}</p>
+        </button>
       </div>
     </div>
+
+    <!-- Tap a badge to find out what it is. The titles are flavour - "Archivist", "Deep
+         Catalogue" - which is the point of them and no help at all in working out the ask. -->
+    <modals-modal v-if="selected" :model-value="true" width="88%" max-width="420px" @update:model-value="selected = null">
+      <div class="px-6 py-6 flex flex-col items-center text-center gap-3">
+        <div class="h-20 w-20 rounded-md-full flex items-center justify-center" :class="badgeClass(selected)">
+          <span class="material-symbols text-4xl leading-none">{{ selected.icon }}</span>
+        </div>
+        <div>
+          <p class="text-md-title-m text-md-on-surface">{{ selected.title }}</p>
+          <p class="text-md-label-s text-md-on-surface-variant mt-0.5">{{ BADGE_RANK_NAMES[selected.rank] }}{{ selected.earned ? ' · Earned' : '' }}</p>
+        </div>
+        <p class="text-md-body-m text-md-on-surface-variant">{{ selected.description }}</p>
+        <div class="w-full rounded-md-md bg-md-surface-2 px-4 py-3">
+          <p class="text-md-label-m text-md-on-surface">{{ describeRequirement(selected) }}</p>
+          <p class="text-md-body-s text-md-on-surface-variant mt-1 tabular-nums">{{ describeProgress(selected) }}</p>
+          <div v-if="!selected.earned" class="w-full h-1.5 rounded-md-full bg-md-surface-4 overflow-hidden mt-2">
+            <div class="h-full rounded-md-full" :class="rankFill(selected.rank)" :style="{ width: `${Math.round(selected.progress * 100)}%` }" />
+          </div>
+        </div>
+      </div>
+    </modals-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { earnedAchievements, evaluateAchievements, nextAchievement, type ListeningSummary, type ListeningStreak } from '~/composables/useAchievements'
+import { computed, ref } from 'vue'
+import {
+  BADGE_RANK_NAMES,
+  describeProgress,
+  describeRequirement,
+  earnedAchievements,
+  evaluateAchievements,
+  groupByMetric,
+  nextPerMetric,
+  type EvaluatedAchievement,
+  type ListeningSummary,
+  type ListeningStreak
+} from '~/composables/useAchievements'
 import { formatNumber } from '~/composables/useStrings'
 
 const props = defineProps<{
@@ -60,8 +99,56 @@ const props = defineProps<{
 
 const evaluated = computed(() => evaluateAchievements(props.summary))
 const earned = computed(() => earnedAchievements(evaluated.value))
-const next = computed(() => nextAchievement(evaluated.value))
 
-// Earned badges first, each group keeping the ladder's own order so a metric's tiers stay together
-const ordered = computed(() => [...evaluated.value].sort((a, b) => Number(b.earned) - Number(a.earned)))
+// One target per ladder rather than a single global "next". Once most of the wall is earned, a
+// global next picks whichever happens to be closest and says nothing about where the remaining
+// room actually is - which is the moment a heavy user starts asking.
+const upcoming = computed(() => nextPerMetric(evaluated.value))
+
+// Grouped into ladders rather than sorted earned-first. A badge means more beside the ones
+// either side of it: you can see what you cleared and what the next rung costs.
+const groups = computed(() => groupByMetric(evaluated.value))
+
+const selected = ref<EvaluatedAchievement | null>(null)
+
+// Written out in full rather than built as `bg-md-badge-${rank}`. Tailwind generates classes by
+// scanning the source for literal strings, so an interpolated name produces markup referring to
+// a class that was never emitted - which renders as no colour at all and looks like a theming
+// bug rather than a build one. This cost a screenshot to catch.
+const RANK_SURFACE: Record<number, string> = {
+  1: 'bg-md-badge-1 text-md-badge-1-on',
+  2: 'bg-md-badge-2 text-md-badge-2-on',
+  3: 'bg-md-badge-3 text-md-badge-3-on',
+  4: 'bg-md-badge-4 text-md-badge-4-on',
+  5: 'bg-md-badge-5 text-md-badge-5-on'
+}
+const RANK_FILL: Record<number, string> = {
+  1: 'bg-md-badge-1',
+  2: 'bg-md-badge-2',
+  3: 'bg-md-badge-3',
+  4: 'bg-md-badge-4',
+  5: 'bg-md-badge-5'
+}
+const RANK_INK: Record<number, string> = {
+  1: 'text-md-badge-1-on',
+  2: 'text-md-badge-2-on',
+  3: 'text-md-badge-3-on',
+  4: 'text-md-badge-4-on',
+  5: 'text-md-badge-5-on'
+}
+
+function badgeClass(tier: EvaluatedAchievement): string {
+  // Locked badges keep their rank's colour, dimmed, rather than going grey. The point of a
+  // locked badge is seeing what it is and what it is worth.
+  const base = RANK_SURFACE[tier.rank] ?? RANK_SURFACE[1]
+  return tier.earned ? base : `${base} opacity-40`
+}
+
+function rankFill(rank: number): string {
+  return RANK_FILL[rank] ?? RANK_FILL[1]
+}
+
+function rankInk(rank: number): string {
+  return RANK_INK[rank] ?? RANK_INK[1]
+}
 </script>

@@ -107,6 +107,25 @@ export interface AchievementTier {
   description: string
   /** A Material Symbols name. */
   icon: string
+  /**
+   * How hard this one is, 1-5.
+   *
+   * Not derived from the threshold, because thresholds are not comparable across metrics - a
+   * thousand episodes and a thousand-day streak are wildly different asks. Stated per badge so
+   * the ladder can be re-tuned without the colours silently rearranging themselves.
+   */
+  rank: BadgeRank
+}
+
+/** Bronze through mythic. Drives the badge's colour and nothing else. */
+export type BadgeRank = 1 | 2 | 3 | 4 | 5
+
+export const BADGE_RANK_NAMES: Record<BadgeRank, string> = {
+  1: 'Bronze',
+  2: 'Silver',
+  3: 'Gold',
+  4: 'Platinum',
+  5: 'Mythic'
 }
 
 export interface EvaluatedAchievement extends AchievementTier {
@@ -124,27 +143,37 @@ export interface EvaluatedAchievement extends AchievementTier {
  * is worth celebrating, and the names only work if they are written rather than derived.
  */
 export const ACHIEVEMENT_TIERS: AchievementTier[] = [
-  { id: 'minutes-60', metric: 'minutes', threshold: 60, title: 'First Hour', description: 'An hour of listening', icon: 'hourglass_bottom' },
-  { id: 'minutes-600', metric: 'minutes', threshold: 600, title: 'Ten Hours', description: 'Ten hours in', icon: 'schedule' },
-  { id: 'minutes-3000', metric: 'minutes', threshold: 3000, title: 'Fifty Hours', description: 'Fifty hours of listening', icon: 'history_toggle_off' },
-  { id: 'minutes-6000', metric: 'minutes', threshold: 6000, title: 'Hundred Club', description: 'A hundred hours', icon: 'avg_pace' },
-  { id: 'minutes-30000', metric: 'minutes', threshold: 30000, title: 'Five Hundred', description: 'Five hundred hours', icon: 'local_fire_department' },
+  // Minutes listened. The top two were added because a heavy user clears five hundred hours in
+  // a year and then has nothing left to aim at, which is the opposite of what a badge is for.
+  { id: 'minutes-60', metric: 'minutes', threshold: 60, title: 'First Hour', description: 'An hour of listening', icon: 'hourglass_bottom', rank: 1 },
+  { id: 'minutes-600', metric: 'minutes', threshold: 600, title: 'Ten Hours', description: 'Ten hours in', icon: 'schedule', rank: 1 },
+  { id: 'minutes-3000', metric: 'minutes', threshold: 3000, title: 'Fifty Hours', description: 'Fifty hours of listening', icon: 'history_toggle_off', rank: 2 },
+  { id: 'minutes-6000', metric: 'minutes', threshold: 6000, title: 'Hundred Club', description: 'A hundred hours', icon: 'avg_pace', rank: 3 },
+  { id: 'minutes-30000', metric: 'minutes', threshold: 30000, title: 'Five Hundred', description: 'Five hundred hours', icon: 'local_fire_department', rank: 4 },
+  { id: 'minutes-60000', metric: 'minutes', threshold: 60000, title: 'Thousand Hours', description: 'A thousand hours of listening', icon: 'bolt', rank: 5 },
+  { id: 'minutes-150000', metric: 'minutes', threshold: 150000, title: 'Deep Catalogue', description: 'Two and a half thousand hours', icon: 'diamond', rank: 5 },
 
-  { id: 'finished-1', metric: 'finished', threshold: 1, title: 'Opening Credits', description: 'Finished your first episode', icon: 'play_circle' },
-  { id: 'finished-10', metric: 'finished', threshold: 10, title: 'Regular', description: 'Ten episodes finished', icon: 'headphones' },
-  { id: 'finished-50', metric: 'finished', threshold: 50, title: 'Devoted', description: 'Fifty episodes finished', icon: 'podcasts' },
-  { id: 'finished-250', metric: 'finished', threshold: 250, title: 'Completionist', description: 'Two hundred and fifty finished', icon: 'workspace_premium' },
-  { id: 'finished-1000', metric: 'finished', threshold: 1000, title: 'Archivist', description: 'A thousand episodes finished', icon: 'inventory_2' },
+  { id: 'finished-1', metric: 'finished', threshold: 1, title: 'Opening Credits', description: 'Finished your first episode', icon: 'play_circle', rank: 1 },
+  { id: 'finished-10', metric: 'finished', threshold: 10, title: 'Regular', description: 'Ten episodes finished', icon: 'headphones', rank: 1 },
+  { id: 'finished-50', metric: 'finished', threshold: 50, title: 'Devoted', description: 'Fifty episodes finished', icon: 'podcasts', rank: 2 },
+  { id: 'finished-250', metric: 'finished', threshold: 250, title: 'Completionist', description: 'Two hundred and fifty finished', icon: 'workspace_premium', rank: 3 },
+  { id: 'finished-1000', metric: 'finished', threshold: 1000, title: 'Archivist', description: 'A thousand episodes finished', icon: 'inventory_2', rank: 4 },
+  { id: 'finished-2500', metric: 'finished', threshold: 2500, title: 'Librarian', description: 'Two and a half thousand finished', icon: 'auto_stories', rank: 5 },
+  { id: 'finished-5000', metric: 'finished', threshold: 5000, title: 'Encyclopaedist', description: 'Five thousand episodes finished', icon: 'hive', rank: 5 },
 
-  { id: 'streak-3', metric: 'streak', threshold: 3, title: 'Habit Forming', description: 'Three days running', icon: 'bolt' },
-  { id: 'streak-7', metric: 'streak', threshold: 7, title: 'Full Week', description: 'Seven days running', icon: 'calendar_view_week' },
-  { id: 'streak-30', metric: 'streak', threshold: 30, title: 'Monthly', description: 'Thirty days running', icon: 'calendar_month' },
-  { id: 'streak-100', metric: 'streak', threshold: 100, title: 'Unbroken', description: 'A hundred days running', icon: 'military_tech' },
-  { id: 'streak-365', metric: 'streak', threshold: 365, title: 'Year Round', description: 'A full year, every day', icon: 'emoji_events' },
+  { id: 'streak-3', metric: 'streak', threshold: 3, title: 'Habit Forming', description: 'Three days running', icon: 'bolt', rank: 1 },
+  { id: 'streak-7', metric: 'streak', threshold: 7, title: 'Full Week', description: 'Seven days running', icon: 'calendar_view_week', rank: 1 },
+  { id: 'streak-30', metric: 'streak', threshold: 30, title: 'Monthly', description: 'Thirty days running', icon: 'calendar_month', rank: 2 },
+  { id: 'streak-100', metric: 'streak', threshold: 100, title: 'Unbroken', description: 'A hundred days running', icon: 'military_tech', rank: 3 },
+  { id: 'streak-365', metric: 'streak', threshold: 365, title: 'Year Round', description: 'A full year, every day', icon: 'emoji_events', rank: 4 },
+  { id: 'streak-500', metric: 'streak', threshold: 500, title: 'Relentless', description: 'Five hundred days running', icon: 'whatshot', rank: 5 },
+  { id: 'streak-1000', metric: 'streak', threshold: 1000, title: 'Thousand Days', description: 'A thousand days without missing one', icon: 'stars', rank: 5 },
 
-  { id: 'days-10', metric: 'days', threshold: 10, title: 'Getting Started', description: 'Listened on ten days', icon: 'today' },
-  { id: 'days-100', metric: 'days', threshold: 100, title: 'Hundred Days', description: 'Listened on a hundred days', icon: 'event_available' },
-  { id: 'days-365', metric: 'days', threshold: 365, title: 'Year of Listening', description: 'Listened on 365 days', icon: 'auto_awesome' }
+  { id: 'days-10', metric: 'days', threshold: 10, title: 'Getting Started', description: 'Listened on ten days', icon: 'today', rank: 1 },
+  { id: 'days-100', metric: 'days', threshold: 100, title: 'Hundred Days', description: 'Listened on a hundred days', icon: 'event_available', rank: 2 },
+  { id: 'days-365', metric: 'days', threshold: 365, title: 'Year of Listening', description: 'Listened on 365 days', icon: 'auto_awesome', rank: 3 },
+  { id: 'days-730', metric: 'days', threshold: 730, title: 'Two Years In', description: 'Listened on 730 days', icon: 'nature', rank: 4 },
+  { id: 'days-1500', metric: 'days', threshold: 1500, title: 'Long Haul', description: 'Listened on 1500 days', icon: 'landscape', rank: 5 }
 ]
 
 /** The summary value a tier is measured against. Longest streak counts, so a badge once earned stays earned. */
@@ -186,4 +215,90 @@ export function nextAchievement(evaluated: EvaluatedAchievement[]): EvaluatedAch
   const unearned = evaluated.filter((tier) => !tier.earned)
   if (!unearned.length) return null
   return unearned.reduce((best, tier) => (tier.progress > best.progress ? tier : best))
+}
+
+/**
+ * A metric's value in the units people think in.
+ *
+ * Minutes are the unit everything is stored in and nobody counts in: "30000 minutes" is a
+ * number you have to do arithmetic on before it means anything, where "500 hours" is a fact.
+ */
+export function formatMetricValue(metric: AchievementMetric, value: number): string {
+  const safe = Math.max(Math.round(value), 0)
+  if (metric === 'minutes') {
+    if (safe < 60) return `${safe} min`
+    const hours = Math.round(safe / 60)
+    return `${hours.toLocaleString()} ${hours === 1 ? 'hour' : 'hours'}`
+  }
+  if (metric === 'finished') return `${safe.toLocaleString()} ${safe === 1 ? 'episode' : 'episodes'}`
+  return `${safe.toLocaleString()} ${safe === 1 ? 'day' : 'days'}`
+}
+
+/**
+ * What a badge asks for, as a sentence.
+ *
+ * The badges carry flavour titles - "Archivist", "Deep Catalogue" - which is the point of them
+ * and useless for working out what you have to do. This is the plain version that sits
+ * underneath.
+ */
+export function describeRequirement(tier: AchievementTier): string {
+  const amount = formatMetricValue(tier.metric, tier.threshold)
+  switch (tier.metric) {
+    case 'minutes':
+      return `Listen for ${amount}`
+    case 'finished':
+      return `Finish ${amount}`
+    case 'streak':
+      return `Listen ${amount} in a row`
+    case 'days':
+      return `Listen on ${amount}`
+  }
+}
+
+/** "250 of 500 hours", or the requirement once there is nothing left to do. */
+export function describeProgress(tier: EvaluatedAchievement): string {
+  if (tier.earned) return describeRequirement(tier)
+  const unit = formatMetricValue(tier.metric, tier.threshold)
+  const soFar = formatMetricValue(tier.metric, tier.value)
+  // Only the target carries the unit when both share one, so it reads as a fraction rather
+  // than as two separate measurements.
+  const sameUnit = unit.replace(/^[\d,]+\s/, '') === soFar.replace(/^[\d,]+\s/, '')
+  return sameUnit ? `${soFar.replace(/\s.*$/, '')} of ${unit}` : `${soFar} of ${unit}`
+}
+
+/**
+ * The next badge to aim at in each metric, for someone who has cleared the easy ones.
+ *
+ * A single global "next" stops being useful once most of the wall is earned: it picks whichever
+ * one happens to be closest and says nothing about the other three ladders, which is exactly
+ * when a heavy user wants to know where the remaining room is.
+ */
+export function nextPerMetric(evaluated: EvaluatedAchievement[]): EvaluatedAchievement[] {
+  const byMetric = new Map<AchievementMetric, EvaluatedAchievement>()
+  for (const tier of evaluated) {
+    if (tier.earned) continue
+    const current = byMetric.get(tier.metric)
+    // Lowest unearned threshold per metric: the ladder is climbed in order, so the next rung is
+    // the nearest one, not the most nearly complete.
+    if (!current || tier.threshold < current.threshold) byMetric.set(tier.metric, tier)
+  }
+  return [...byMetric.values()]
+}
+
+/** Badges grouped into their ladders, each in threshold order, for a wall that reads as rows. */
+export function groupByMetric(evaluated: EvaluatedAchievement[]): { metric: AchievementMetric; label: string; tiers: EvaluatedAchievement[] }[] {
+  const labels: Record<AchievementMetric, string> = {
+    minutes: 'Time listened',
+    finished: 'Episodes finished',
+    streak: 'Streaks',
+    days: 'Days listened'
+  }
+  const order: AchievementMetric[] = ['minutes', 'finished', 'streak', 'days']
+  return order
+    .map((metric) => ({
+      metric,
+      label: labels[metric],
+      tiers: evaluated.filter((tier) => tier.metric === metric).sort((a, b) => a.threshold - b.threshold)
+    }))
+    .filter((group) => group.tiers.length > 0)
 }
