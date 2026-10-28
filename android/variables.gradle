@@ -1,49 +1,24 @@
 ext {
-    /**
-     * The newest release tag, or null outside a git checkout.
-     *
-     * Read so that a debug build reports the version it was actually built after. The checked-in
-     * fallback used to be the only answer, and it rotted: every sideloaded APK said 0.12.0-beta
-     * for weeks after 0.13.0 shipped, which makes "what version are you on" an unanswerable
-     * question during testing - exactly when it is asked most.
-     *
-     * Failures are swallowed on purpose. A source archive, a shallow clone with no tags, or a
-     * machine without git are all normal, and none of them should stop the app building.
-     */
-    podshelfLatestTag = {
-        try {
-            return providers.exec {
-                commandLine 'git', 'describe', '--tags', '--abbrev=0', '--match=v[0-9]*'
-            }.standardOutput.asText.get().trim().replaceFirst(/^v/, '')
-        } catch (Exception ignored) {
-            return null
-        }
-    }()
-
-    // Play rejects a versionCode it has already seen and will not accept one lower than the
-    // track's current release, so it has to move forward on every upload. The publish workflow
-    // passes both in, derived from the tag that triggered it (v1.2.3 -> 10203 / "1.2.3").
+    // The version, supplied by whatever is driving the build.
     //
-    // Outside that workflow the tag is read directly, so a debug build matches the release it
-    // was built from. The literal is a last resort for a checkout with no tags at all.
+    // scripts/app-version.sh derives it from the newest release tag; CI and the publish workflow
+    // both export it before Gradle runs. Reading git from here looked obvious and could not
+    // work: `providers.exec` registers a value source that the configuration cache re-evaluates
+    // when it stores the entry, outside any try/catch, so a shallow clone with no tags - which
+    // is what CI checks out by default - failed the whole build with "non-zero exit value 128".
+    //
+    // Play rejects a versionCode it has seen before and will not go backwards, so this has to
+    // move forward on every upload. Deriving it from the tag keeps it monotonic and
+    // reproducible rather than depending on a counter that resets when a workflow is renamed.
+    //
+    // The fallback is deliberately an obviously wrong version rather than a plausible stale one.
+    // Nobody reports "0.0.0-untagged" and wonders why their fix is missing, which is exactly
+    // what 0.12.0-beta did for weeks after 0.13.0 shipped.
     //
     // Hoisted here rather than left in app/build.gradle because the wear module ships under the
     // same applicationId and derives its own code from this one.
-    podshelfVersionCode = {
-        def fromEnv = System.getenv('PODSHELF_VERSION_CODE')
-        if (fromEnv) return fromEnv as Integer
-        if (podshelfLatestTag) {
-            // Same arithmetic as the publish workflow: major x 10000 + minor x 100 + patch, so a
-            // debug build never looks newer than the release it came from.
-            def parts = podshelfLatestTag.split(/[.\-+]/)
-            try {
-                return (parts[0] as Integer) * 10000 + (parts[1] as Integer) * 100 + (parts[2] as Integer)
-            } catch (Exception ignored) {
-                // A tag that does not parse is not worth failing a build over.
-            }
-        }
-        return 116
-    }()
+    podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '0') as Integer
+    podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.0.0-untagged') as String
 
     // The watch's version code, which must NOT equal the phone's.
     //
@@ -67,7 +42,6 @@ ext {
                 'The watch and phone version codes must differ: Play treats both artifacts as ' +
                         'one listing and rejects a release where they collide.')
     }
-    podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: podshelfLatestTag ?: '0.0.0-untagged') as String
     minSdkVersion = 26
     compileSdkVersion = 37
     targetSdkVersion = 37
