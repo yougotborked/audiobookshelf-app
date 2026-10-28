@@ -101,18 +101,23 @@ will say "Waiting for Wi-Fi" indefinitely with no way to act on it.
 **Clears when** the watch UI can tell the difference between "downloading shortly" and "this
 watch has no Wi-Fi to use", and offers the settings shortcut for the second.
 
-### The watch does not write progress back
+### The watch's idea of the phone's position can be half a minute stale
 
-**Where** `android/wear/`
+**Where** `queueNeedsPublishing` in `android/wear-sync/.../WearSync.kt`
 
-Listening on the watch does not reach the server or the phone. Finish an episode on a run and
-the phone still has it in the queue, at the position it was at before you left.
+The watch decides whether to report its own listening by comparing its record against
+`progressUpdatedAtMs` — the timestamp the phone last published. That timestamp rides along with
+the position threshold rather than being compared itself, because it moves on every progress
+tick and comparing it would wake the watch's radio every few seconds of playback.
 
-The sync is one-way by design for now — the phone decides what plays next and the watch is told
-— but progress is the one thing that genuinely has to travel the other way.
+So the baseline can be up to one threshold of playback out of date. For that to cause harm, both
+devices have to be playing the *same* episode inside the same thirty-second window, and the
+watch's write then lands on top of a slightly newer phone position. Two devices playing one
+episode at once is already undefined, so this is an edge of an edge — but it is real, and it is
+the price of not waking the watch constantly.
 
-**Clears when** the watch publishes its own progress back over the Data Layer and the phone
-merges it, which needs a rule for whose position wins when both moved.
+**Clears when** the phone also publishes on playback *stopping* — a rare, cheap event — which
+would bound the staleness to "since you stopped".
 
 ### The Kotlin package is still `com.audiobookshelf.app`
 

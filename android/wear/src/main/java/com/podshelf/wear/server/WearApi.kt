@@ -1,6 +1,7 @@
 package com.podshelf.wear.server
 
 import android.os.Build
+import com.podshelf.wearsync.WearProgressRecord
 import com.podshelf.wearsync.WearQueueEntry
 import com.podshelf.wearsync.WearServerSession
 import com.podshelf.wearsync.trackStreamUrl
@@ -66,6 +67,51 @@ class WearApi(private val client: OkHttpClient = defaultClient()) {
       val contentUrl = tracks.optJSONObject(0)?.optString("contentUrl").orEmpty()
       if (contentUrl.isEmpty()) return null
       return trackStreamUrl(session.serverAddress, contentUrl, session.token)
+    }
+  }
+
+  /**
+   * Tells the server where the listener got to.
+   *
+   * The same endpoint the phone uses. The server is where devices reconcile, so the watch
+   * writing here is what makes a run show up on the phone - no second sync path, and no merge
+   * logic that exists only for the watch.
+   */
+  fun reportProgress(session: WearServerSession, record: WearProgressRecord): Boolean {
+    val payload =
+            JSONObject()
+                    .put("currentTime", record.currentTimeSeconds)
+                    .put("isFinished", record.isFinished)
+                    .apply {
+                      // Only sent when known. A zero duration would tell the server the episode
+                      // has no length, which is worse than leaving its own value alone.
+                      if (record.durationSeconds > 0) {
+                        put("duration", record.durationSeconds)
+                        put(
+                                "progress",
+                                (record.currentTimeSeconds / record.durationSeconds)
+                                        .coerceIn(0.0, 1.0)
+                        )
+                      }
+                    }
+                    .toString()
+                    .toRequestBody(JSON)
+
+    val url =
+            "${session.serverAddress.trimEnd('/')}/api/me/progress/${record.libraryItemId}/${record.episodeId}"
+
+    return try {
+      client.newCall(
+                      Request.Builder()
+                              .url(url)
+                              .header("Authorization", "Bearer ${session.token}")
+                              .patch(payload)
+                              .build()
+              )
+              .execute()
+              .use { it.isSuccessful }
+    } catch (e: Exception) {
+      false
     }
   }
 

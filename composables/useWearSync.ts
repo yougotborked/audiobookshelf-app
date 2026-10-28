@@ -21,6 +21,7 @@ export interface WearQueueEntryPayload {
   coverPath: string | null
   durationSeconds: number
   currentTimeSeconds: number
+  progressUpdatedAtMs: number
 }
 
 export interface WearSessionPayload {
@@ -98,7 +99,11 @@ export function toWearQueueEntries(items: PlayQueueItem[] = [], lookup: Progress
       podcastTitle: podcastTitleOf(episode),
       coverPath: libraryItemId ? `/api/items/${libraryItemId}/cover` : null,
       durationSeconds: duration,
-      currentTimeSeconds: currentTime
+      currentTimeSeconds: currentTime,
+      // Carried so the watch can tell whether its own listening is newer than this before
+      // reporting it to the server. Without it the watch cannot distinguish "I heard this on a
+      // run" from "the phone has since moved past it", and would wind the position backwards.
+      progressUpdatedAtMs: numberOr(progress?.lastUpdate, 0)
     })
   }
 

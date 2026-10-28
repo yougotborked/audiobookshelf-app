@@ -26,7 +26,8 @@ describe('toWearQueueEntries', () => {
       podcastTitle: 'A podcast',
       coverPath: '/api/items/li-1/cover',
       durationSeconds: 1800,
-      currentTimeSeconds: 0
+      currentTimeSeconds: 0,
+      progressUpdatedAtMs: 0
     })
   })
 
@@ -49,6 +50,21 @@ describe('toWearQueueEntries', () => {
     const lookup = { server: () => ({ currentTime: 420, duration: 1800 }) }
     const [entry] = toWearQueueEntries(items([episode()]), lookup)
     expect(entry.currentTimeSeconds).toBe(420)
+  })
+
+  // The watch compares its own listening against this before reporting it to the server.
+  // Without it the watch cannot tell "I heard this on a run" from "the phone has since moved
+  // past it", and would wind the listener's position backwards.
+  it('carries when the phone last wrote that position', () => {
+    const lookup = { server: () => ({ currentTime: 420, lastUpdate: 1700000000000 }) }
+    const [entry] = toWearQueueEntries(items([episode()]), lookup)
+    expect(entry.progressUpdatedAtMs).toBe(1700000000000)
+  })
+
+  it('reports an unknown write time as zero rather than now', () => {
+    // Defaulting to the current time would make every episode look freshly played on the
+    // phone, which would stop the watch reporting anything at all.
+    expect(toWearQueueEntries(items([episode()]))[0].progressUpdatedAtMs).toBe(0)
   })
 
   it('drops finished episodes', () => {
