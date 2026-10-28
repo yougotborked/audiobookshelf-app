@@ -292,9 +292,13 @@ git tag v0.13.0
 git push origin v0.13.0
 ```
 
-A tag publishes to the **internal** track. Closed testing ("closed beta") is the `alpha` track,
-which a tag will not reach — run the workflow from the Actions tab and choose it. That is
-deliberate: a tag is a decision to cut a version, and which audience sees it is a separate one.
+A tag publishes to **closed testing** (`alpha`), and deliberately leaves the watch bundle out —
+see the three Play Console steps above. Run the workflow from the Actions tab to choose a
+different track, or to include the watch once its listing exists.
+
+Promoting between tracks afterwards is a Play Console action rather than a re-upload: a version
+code can only be uploaded once, so the track here decides where a release *lands*, not where it
+can ever go.
 
 The workflow builds **two** signed AABs — the phone app and the Wear OS app — derives
 `versionName 0.13.0` and `versionCode 1300` from the tag, and uploads both to the **internal**
