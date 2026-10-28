@@ -292,8 +292,9 @@ git tag v0.13.0
 git push origin v0.13.0
 ```
 
-The workflow builds a signed AAB, derives `versionName 0.13.0` and `versionCode 1300` from the
-tag, and uploads to the **internal** track.
+The workflow builds **two** signed AABs — the phone app and the Wear OS app — derives
+`versionName 0.13.0` and `versionCode 1300` from the tag, and uploads both to the **internal**
+track as one release.
 
 To send a build to another track, run the workflow manually from the Actions tab and choose the
 track and version.
@@ -307,6 +308,24 @@ each stay under 100.
 
 The first tagged build gets versionCode ≥ 1200, comfortably above the 116 the debug builds use,
 so there is no collision with anything already installed.
+
+### The watch's version code
+
+The watch app ships under the same `applicationId` and the same signing key as the phone app, so
+Play treats them as one listing with two device targets — one store page, one set of reviews, and
+the watch app installs by itself when someone with a paired watch installs Podshelf.
+
+Its version code must **not** equal the phone's. A version code has to be unique across every
+form factor in a listing, and Play rejects a release where two artifacts share one. It is also
+deliberately *higher*: a watch can match the phone artifact as well, and Play offers a device the
+highest code it qualifies for.
+
+`podshelfWearVersionCode` is therefore `podshelfVersionCode + 1000000`. A constant offset rather
+than a separate counter, so the watch's codes rise exactly as often as the phone's and neither
+can fall behind its own last release. `android/variables.gradle` fails the build outright if the
+two ever come out equal — Play's own error names the upload rather than the codes, and an `.aab`
+is not an APK, so a workflow step that tried to read the codes back out of the artifacts would
+silently pass.
 
 ---
 

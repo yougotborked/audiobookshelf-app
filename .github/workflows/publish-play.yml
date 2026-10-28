@@ -142,26 +142,33 @@ jobs:
           PODSHELF_KEY_PASSWORD: ${{ secrets.PLAY_KEY_PASSWORD }}
           PODSHELF_VERSION_CODE: ${{ steps.version.outputs.code }}
           PODSHELF_VERSION_NAME: ${{ steps.version.outputs.name }}
+        # Unqualified, so it builds :app and :wear. Both go into the same Play listing: one
+        # package name, one signature, and a device is offered whichever artifact it qualifies
+        # for.
         run: ./gradlew --no-daemon --build-cache bundleRelease
 
       # An unsigned bundle is accepted by Gradle and rejected by Play with a far less obvious
       # message, so confirm the signature exists before uploading.
-      - name: Verify the bundle is signed
+      - name: Verify both bundles are signed
         run: |
-          aab=android/app/build/outputs/bundle/release/app-release.aab
-          test -f "$aab" || { echo "::error::No bundle at $aab"; exit 1; }
-          if ! unzip -l "$aab" | grep -q 'META-INF/.*\.RSA\|META-INF/.*\.EC\|META-INF/MANIFEST.MF'; then
-            echo "::error::$aab does not look signed"
-            exit 1
-          fi
-          ls -la "$aab"
+          for aab in android/app/build/outputs/bundle/release/app-release.aab \
+                     android/wear/build/outputs/bundle/release/wear-release.aab; do
+            test -f "$aab" || { echo "::error::No bundle at $aab"; exit 1; }
+            if ! unzip -l "$aab" | grep -q 'META-INF/.*\.RSA\|META-INF/.*\.EC\|META-INF/MANIFEST.MF'; then
+              echo "::error::$aab does not look signed"
+              exit 1
+            fi
+            ls -la "$aab"
+          done
 
       - name: Upload to Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
-          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          releaseFiles: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/wear/build/outputs/bundle/release/wear-release.aab
           track: ${{ inputs.track || 'internal' }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
@@ -171,7 +178,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: podshelf-aab-${{ steps.version.outputs.name }}
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/wear/build/outputs/bundle/release/*.aab
           if-no-files-found: warn
           retention-days: 30
 
