@@ -32,10 +32,28 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
-        <!-- Declares that this watch app does not need the phone app installed to work. -->
+        <!--
+          false, because this watch app cannot be set up without the phone app.
+          
+          It said true, which conflated two different independences. The watch is independent of
+          the phone on the *network*: it streams and downloads from the server directly rather
+          than proxying audio through the phone, which is what the INTERNET and
+          ACCESS_LOCAL_NETWORK permissions above are for. This flag is about something else -
+          Google defines true as "all of its core functions, such as authentication, work
+          locally on the watch".
+          
+          Nothing authenticates here. WearServerSession is never constructed on the watch, only
+          received from the phone over the Data Layer, and with no session the UI says "Open
+          Podshelf on your phone to send your queue here". A watch whose paired phone has no
+          Podshelf would install this and find a screen it can never get past, which true
+          invites Play to do.
+          
+          Flipping this back to true means giving the watch its own sign-in, not editing this
+          line.
+        -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
-            android:value="true" />
+            android:value="false" />
 
         <service
             android:name=".player.WearPlayerService"

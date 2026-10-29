@@ -1,0 +1,10 @@
+<resources>
+    <!--
+      Debug builds carry applicationIdSuffix ".debug", so Android installs them alongside the
+      Play build rather than replacing it. Both showed up as plain "Podshelf", which makes
+      "which one am I looking at?" unanswerable - and with a Play build and a sideload on the
+      same phone and the same watch, that question comes up constantly.
+    -->
+    <string name="app_name">Podshelf debug</string>
+    <string name="title_activity_main">Podshelf debug</string>
+</resources>
