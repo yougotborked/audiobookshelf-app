@@ -257,3 +257,22 @@ describe('the watch app declares that it needs the phone', () => {
     expect(sources.trim()).toBe('')
   })
 })
+
+describe('the watch bundle is identifiable in the Play artifact picker', () => {
+  // Both modules ship under one applicationId and one Play listing, and both took the version
+  // name verbatim. Play lists a bundle by name and code, so picking the Wear artifact by hand
+  // meant choosing between two entries that read identically - the only difference being
+  // whether the code carried the 1,000,000,000 watch offset.
+  const wear = readFileSync(resolve(__dirname, '../android/wear/build.gradle'), 'utf8')
+  const phone = readFileSync(resolve(__dirname, '../android/app/build.gradle'), 'utf8')
+
+  it('gives the watch a suffixed version name', () => {
+    expect(wear).toMatch(/versionName "\$\{rootProject\.ext\.podshelfVersionName\}-wear"/)
+  })
+
+  it('leaves the phone name unsuffixed, so they differ', () => {
+    expect(phone).toMatch(/^\s*versionName podshelfVersionName\s*$/m)
+    const wearName = /versionName "([^"]*)"/.exec(wear)?.[1]
+    expect(wearName).not.toBe('${rootProject.ext.podshelfVersionName}')
+  })
+})
