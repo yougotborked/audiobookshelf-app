@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -139,5 +139,52 @@ describe('app-version.sh', () => {
   it('rejects a minor or patch that would overflow its two digits', () => {
     git('tag', 'v0.13.100')
     expect(versionFails()).toMatch(/must each be <= 99/)
+  })
+})
+
+describe('nuxt.config.ts version derivation', () => {
+  // The drawer's version string comes from here, and it used to run its own `git describe`.
+  // That looked equivalent to the script and was not: the script appends the commit count, so
+  // the drawer read "0.13.0" on a build whose versionName was "0.13.0-dev.79" - 79 commits
+  // newer than the number it displayed. This is a guard against that third definition coming
+  // back, which is the kind of drift nothing else here would notice.
+  const config = readFileSync(resolve(__dirname, '../nuxt.config.ts'), 'utf8')
+
+  it('asks scripts/app-version.sh rather than deriving its own', () => {
+    expect(config).toMatch(/scripts\/app-version\.sh --name/)
+  })
+
+  it('does not call git describe itself', () => {
+    // Matches an invocation, not the words: the comment above the function names `git describe`
+    // to explain why it is gone, and a bare /git describe/ flagged that prose as the bug.
+    expect(config).not.toMatch(/execSync\(\s*['"`][^'"`]*git describe/)
+  })
+
+  it('still lets PODSHELF_VERSION_NAME win, so CI can pin what it is building', () => {
+    expect(config).toMatch(/process\.env\.PODSHELF_VERSION_NAME/)
+  })
+})
+
+describe('the workflows build the web with the version already in the environment', () => {
+  // nuxt.config reads PODSHELF_VERSION_NAME at `npm run generate` time. Both workflows used to
+  // set it afterwards - publish-play passed it only to Gradle - which is what left the drawer
+  // and Android's app info disagreeing on a shipped build.
+  const order = (file: string, a: RegExp, b: RegExp) => {
+    const text = readFileSync(resolve(__dirname, '..', file), 'utf8')
+    const ia = text.search(a)
+    const ib = text.search(b)
+    expect(ia, `${a} not found in ${file}`).toBeGreaterThan(-1)
+    expect(ib, `${b} not found in ${file}`).toBeGreaterThan(-1)
+    return { ia, ib }
+  }
+
+  it('build-apk derives the version before generating', () => {
+    const { ia, ib } = order('.github/workflows/build-apk.yml', /scripts\/app-version\.sh >> "\$GITHUB_ENV"/, /run: npm run generate/)
+    expect(ia).toBeLessThan(ib)
+  })
+
+  it('publish-play puts the version in GITHUB_ENV, not only in step outputs', () => {
+    const { ia, ib } = order('.github/workflows/publish-play.yml', /PODSHELF_VERSION_NAME=\$PODSHELF_VERSION_NAME" >> "\$GITHUB_ENV"/, /run: npm run generate/)
+    expect(ia).toBeLessThan(ib)
   })
 })

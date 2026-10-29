@@ -109,6 +109,13 @@ jobs:
 
           echo "name=$PODSHELF_VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$PODSHELF_VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+          # Also into the environment, so `npm run generate` picks it up. Passing it only to
+          # Gradle left the webview to re-derive its own version, and nuxt.config fell back to
+          # the bare tag - so the drawer read 0.13.0 on a build whose versionName was
+          # 0.13.0-dev.79.
+          echo "PODSHELF_VERSION_NAME=$PODSHELF_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "PODSHELF_VERSION_CODE=$PODSHELF_VERSION_CODE" >> "$GITHUB_ENV"
           echo "Publishing $PODSHELF_VERSION_NAME as versionCode $PODSHELF_VERSION_CODE"
 
       - name: Decide which track this goes to

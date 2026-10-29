@@ -93,6 +93,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Before the web build, not after it. nuxt.config.ts reads PODSHELF_VERSION_NAME when
+      # `npm run generate` runs, and this step used to sit after it - so the webview re-derived
+      # its own version and the drawer showed the bare tag while Android's versionName carried
+      # the commit count. Same derivation either way; only the order was wrong.
+      - name: Derive the app version from the newest tag
+        run: scripts/app-version.sh >> "$GITHUB_ENV"
+
       - name: Build Nuxt project (static)
         run: npm run generate
 
@@ -112,9 +119,6 @@ jobs:
       # older sdkmanager cannot even see - the minor-versioned SDKs introduced version 4 of the
       # remote repository XML. The script updates the command-line tools when that is the case,
       # and is the same one a bare container runs, so CI and a laptop install the same packages.
-      - name: Derive the app version from the newest tag
-        run: scripts/app-version.sh >> "$GITHUB_ENV"
-
       - name: Install the Android SDK packages the build needs
         run: scripts/install-android-sdk.sh
 
