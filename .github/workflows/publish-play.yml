@@ -209,17 +209,40 @@ jobs:
         run: |
           phone=android/app/build/outputs/bundle/release/app-release.aab
           wear=android/wear/build/outputs/bundle/release/wear-release.aab
-          {
-            echo 'files<<EOF'
-            echo "$phone"
-            if [ "$INCLUDE_WEAR" = "true" ]; then
-              echo "$wear"
-              echo "::notice::Uploading the phone and Wear OS bundles"
-            else
-              echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
-            fi
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
+
+          # Comma-separated, on one line, and the notices kept out of the value.
+          #
+          # Both halves of that were wrong and neither had run: this step arrived with the
+          # tag-publishes-closed-testing change, whose only two paths are "phone and watch"
+          # (never taken, because the Wear form factor does not exist yet) and "phone only"
+          # (taken for the first time by the first automatic publish, which is how it surfaced).
+          #
+          # 1. upload-google-play splits releaseFiles on *commas* only - `?.split(',')` in its
+          #    main.ts - so a newline-separated list is one pattern with a newline in it and
+          #    matches nothing. The heredoc could never have worked for two bundles either.
+          #
+          # 2. `echo "::notice::..."` inside a `{ ... } >> "$GITHUB_OUTPUT"` block goes into the
+          #    file, not the log: the redirect applies to everything in the braces. The notice
+          #    became the second line of `files`, which is why the error named a path the step
+          #    before it had just confirmed existed.
+          if [ "$INCLUDE_WEAR" = "true" ]; then
+            files="$phone,$wear"
+            echo "::notice::Uploading the phone and Wear OS bundles"
+          else
+            files="$phone"
+            echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
+          fi
+
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+          # Every pattern resolves to a real file, checked here rather than by the upload action,
+          # whose own failure is a single line naming the pattern with no hint of where it came
+          # from - which cost a full release build to read.
+          IFS=',' read -ra resolved <<< "$files"
+          for f in "${resolved[@]}"; do
+            test -f "$f" || { echo "::error::releaseFiles entry does not exist: '$f'"; exit 1; }
+          done
+          echo "Uploading: $files"
 
       - name: Upload to Play
         uses: r0adkll/upload-google-play@v1
