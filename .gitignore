@@ -94,6 +94,9 @@ sw.*
 /android/app/release/
 android/.android-sdk/
 android/.jdk/
+# Kotlin compiler session files, written by any Gradle build that compiles Kotlin. Build
+# output, never source - it appeared the first time a release build ran here.
+android/.kotlin/
 
 # Keystores — store via CI secrets, not in source control
 android/debug.keystore
