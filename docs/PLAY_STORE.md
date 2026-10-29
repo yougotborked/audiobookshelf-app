@@ -7,8 +7,9 @@ What the repository already does, and what only a human with the Play Console ca
 - `.github/workflows/publish-play.yml` — builds a signed AAB and uploads it to a Play track.
   Every push to master goes to **internal testing**; a `v*` tag goes to **closed testing**.
 - `.github/workflows/sync-play-listing.yml` — pushes the title, descriptions, icon, feature
-  graphic and screenshots from `docs/store/` whenever that content changes on master. The
-  listing lives in the repo and is reviewable in a diff rather than typed into the Console.
+  graphic and screenshots from `docs/store/` **on a tag**. On master it validates the content
+  and sends nothing (see *Why committing an edit cancels a review* below). The listing lives in
+  the repo and is reviewable in a diff rather than typed into the Console.
 
 **Not automatable, because Google exposes no API for it:**
 
@@ -309,6 +310,29 @@ exists.
 Promoting between tracks afterwards is a Play Console action rather than a re-upload: a version
 code can only be uploaded once, so the track here decides where a release *lands*, not where it
 can ever go.
+
+### Why committing an edit cancels a review
+
+Committing **any** Play edit while a release is in review cancels that submission and opens a
+new one covering everything still unreviewed. It does not matter that the edit is unrelated: a
+listing-only edit, which never mentions a track, still gets the pending Closed testing release
+folded into it.
+
+This is not theoretical. Between Oct 23 and Oct 29 the listing sync ran eight times on master
+and produced eight submissions, each reading *"Closed testing - Alpha, Store Listing, App
+Content, Store settings"* — seven cancelled, one in review. versionCode 1300 never finished
+review, because every push to master restarted it.
+
+Two rules follow, and both are enforced in the workflows:
+
+- **The listing is only *sent* on a tag.** A push to master validates it and stops.
+- **An internal publish commits with `changesNotSentForReview: true`.** Internal testing does
+  not need review to reach its testers, so publishing on every master push does not touch the
+  review queue. A tag going to a reviewed track sends normally.
+
+If something ever does need review that an internal publish left pending, Play Console's
+**Publishing overview** lists it with a *Send for review* button. Worth a glance after the
+first few automatic publishes to confirm nothing is piling up there.
 
 ### Version numbering
 
