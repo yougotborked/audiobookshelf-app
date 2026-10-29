@@ -111,6 +111,39 @@ jobs:
           echo "code=$PODSHELF_VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "Publishing $PODSHELF_VERSION_NAME as versionCode $PODSHELF_VERSION_CODE"
 
+      - name: Decide which track this goes to
+        id: track
+        run: |
+          # A tag is a release and goes to closed testing, which Google reviews. A push to
+          # master is for the internal list, which it does not. A hand dispatch wins over both.
+          track='${{ inputs.track }}'
+          if [ -z "$track" ]; then
+            if [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+              track=alpha
+            else
+              track=internal
+            fi
+          fi
+
+          # Whether this upload is sent for review, which is not the cosmetic flag it looks
+          # like. Committing a Play edit while a release is in review CANCELS that submission
+          # and opens a new one covering everything unreviewed - so an internal build published
+          # on every push to master would restart the Closed testing review every time, and it
+          # would never finish. That already happened eight times from the listing sync alone
+          # between Oct 23 and Oct 29, which is why versionCode 1300 sat in review for days.
+          #
+          # Internal testing does not need review to reach its testers, so an internal upload
+          # commits without sending. A tag going to a reviewed track sends, as it must.
+          if [ "$track" = "internal" ]; then
+            not_for_review=true
+          else
+            not_for_review=false
+          fi
+
+          echo "name=$track"                      >> "$GITHUB_OUTPUT"
+          echo "notForReview=$not_for_review"     >> "$GITHUB_OUTPUT"
+          echo "::notice::Publishing to $track (changesNotSentForReview=$not_for_review)"
+
       - name: Use Node.js 24.x with npm cache
         uses: actions/setup-node@v4
         with:
@@ -209,17 +242,40 @@ jobs:
         run: |
           phone=android/app/build/outputs/bundle/release/app-release.aab
           wear=android/wear/build/outputs/bundle/release/wear-release.aab
-          {
-            echo 'files<<EOF'
-            echo "$phone"
-            if [ "$INCLUDE_WEAR" = "true" ]; then
-              echo "$wear"
-              echo "::notice::Uploading the phone and Wear OS bundles"
-            else
-              echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
-            fi
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
+
+          # Comma-separated, on one line, and the notices kept out of the value.
+          #
+          # Both halves of that were wrong and neither had run: this step arrived with the
+          # tag-publishes-closed-testing change, whose only two paths are "phone and watch"
+          # (never taken, because the Wear form factor does not exist yet) and "phone only"
+          # (taken for the first time by the first automatic publish, which is how it surfaced).
+          #
+          # 1. upload-google-play splits releaseFiles on *commas* only - `?.split(',')` in its
+          #    main.ts - so a newline-separated list is one pattern with a newline in it and
+          #    matches nothing. The heredoc could never have worked for two bundles either.
+          #
+          # 2. `echo "::notice::..."` inside a `{ ... } >> "$GITHUB_OUTPUT"` block goes into the
+          #    file, not the log: the redirect applies to everything in the braces. The notice
+          #    became the second line of `files`, which is why the error named a path the step
+          #    before it had just confirmed existed.
+          if [ "$INCLUDE_WEAR" = "true" ]; then
+            files="$phone,$wear"
+            echo "::notice::Uploading the phone and Wear OS bundles"
+          else
+            files="$phone"
+            echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
+          fi
+
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+          # Every pattern resolves to a real file, checked here rather than by the upload action,
+          # whose own failure is a single line naming the pattern with no hint of where it came
+          # from - which cost a full release build to read.
+          IFS=',' read -ra resolved <<< "$files"
+          for f in "${resolved[@]}"; do
+            test -f "$f" || { echo "::error::releaseFiles entry does not exist: '$f'"; exit 1; }
+          done
+          echo "Uploading: $files"
 
       - name: Upload to Play
         uses: r0adkll/upload-google-play@v1
@@ -227,20 +283,16 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
           releaseFiles: ${{ steps.bundles.outputs.files }}
-          # Where a tag publishes to, when no track was chosen by hand.
-          #
-          # alpha is Play's closed testing track, which is where Podshelf's testers are. It was
-          # internal while there were none; internal caps at a list of individual email
-          # addresses and is the wrong shape for a beta someone can be invited to.
+          # Decided in the "Decide which track this goes to" step above, along with whether
+          # this upload is sent for review. Both are there rather than inline here because the
+          # two answers have to agree: an internal push that sent for review would cancel the
+          # Closed testing submission on every commit.
           #
           # Promoting between tracks afterwards is a Play Console action, not a re-upload: a
-          # version code can only be uploaded once, so this chooses where it lands, not where it
-          # can ever go.
-          #
-          # A tag is a release and goes to closed testing; a master push is for the internal
-          # list. `inputs.track` is empty unless this was dispatched by hand, so the dispatch
-          # choice wins where there is one.
-          track: ${{ inputs.track || (startsWith(github.ref, 'refs/tags/') && 'alpha' || 'internal') }}
+          # version code can only be uploaded once, so this chooses where it lands, not where
+          # it can ever go.
+          track: ${{ steps.track.outputs.name }}
+          changesNotSentForReview: ${{ steps.track.outputs.notForReview }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 

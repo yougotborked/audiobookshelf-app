@@ -4,14 +4,23 @@ name: Sync Play listing
 # docs/store/ and pushed to Play from here, so it is reviewable in a diff rather than typed
 # into the Console and silently drifting from the app.
 #
-# Runs when that content changes on master, and on demand. Deliberately not part of the release
-# workflow: listing copy and app binaries change for different reasons and at different times.
+# It only *sends* on a tag. On master it validates and sends nothing, and that distinction is
+# the whole point of this file's shape:
+#
+# Committing any Play edit while a release is in review cancels that submission and opens a new
+# one covering everything still unreviewed. The listing edit does not mention a track - the
+# script never touches tracks - but Play folds the pending Closed testing release into it
+# anyway. So eight listing syncs on master between Oct 23 and Oct 29 produced eight
+# "Closed testing - Alpha, Store Listing, App Content, Store settings" submissions, seven
+# cancelled and one in review, and versionCode 1300 never finished review because every push
+# to master restarted it.
+#
+# Validating on master is still worth the twenty seconds: the script checks Play's length
+# limits, and finding out at tag time that a description is 40 characters over is worse.
 on:
   push:
     branches: [master]
-    paths:
-      - 'docs/store/**'
-      - 'scripts/sync-play-listing.mjs'
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       dry_run:
@@ -48,6 +57,16 @@ jobs:
             node scripts/sync-play-listing.mjs --dry-run
             exit 0
           fi
+
+          # A plain push to master validates and stops. Sending here is what was restarting the
+          # Closed testing review on every commit; the listing now goes up with the release it
+          # belongs to.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ startsWith(github.ref, 'refs/tags/') }}" != "true" ]; then
+            echo "::notice::Push to master - validating the listing, sending nothing. A tag sends it."
+            node scripts/sync-play-listing.mjs --dry-run
+            exit 0
+          fi
+
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             node scripts/sync-play-listing.mjs --dry-run
           else
