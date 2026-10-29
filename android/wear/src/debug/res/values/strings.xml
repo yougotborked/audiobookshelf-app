@@ -1,0 +1,9 @@
+<resources>
+    <!--
+      Debug builds install alongside the Play build rather than replacing it - they carry
+      applicationIdSuffix ".debug", so Android treats them as a different app - and until this
+      file existed both showed up in the watch's launcher as plain "Podshelf". With no way to
+      tell them apart, "did the Play build land on my watch?" was unanswerable by looking.
+    -->
+    <string name="app_name">Podshelf debug</string>
+</resources>

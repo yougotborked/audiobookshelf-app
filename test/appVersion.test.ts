@@ -232,3 +232,28 @@ describe('the watch bundle declares the feature its track requires', () => {
     expect(manifest).toMatch(/android:name="android\.hardware\.type\.watch"[\s\S]{0,80}android:required="true"/)
   })
 })
+
+describe('the watch app declares that it needs the phone', () => {
+  // Google defines standalone=true as "all of its core functions, such as authentication, work
+  // locally on the watch". Nothing authenticates on the watch: WearServerSession is never
+  // constructed there, only received from the phone, and without one the UI says "Open Podshelf
+  // on your phone to send your queue here".
+  //
+  // It was declared true. The cost of that is a watch whose paired phone has no Podshelf being
+  // offered an app that shows a screen it can never get past.
+  const manifest = readFileSync(resolve(__dirname, '../android/wear/src/main/AndroidManifest.xml'), 'utf8')
+  const wearSrc = resolve(__dirname, '../android/wear/src/main/java/com/podshelf/wear')
+
+  it('is not declared standalone', () => {
+    expect(manifest).toMatch(/com\.google\.android\.wearable\.standalone"[\s\S]{0,60}android:value="false"/)
+  })
+
+  it('and that is still true: the watch never builds a session of its own', () => {
+    // The assertion behind the flag, so the two cannot drift apart silently. If the watch ever
+    // does gain its own sign-in, this fails and points at the manifest.
+    const sources = execFileSync('bash', ['-c', `grep -rn 'WearServerSession(' ${wearSrc} || true`], {
+      encoding: 'utf8'
+    })
+    expect(sources.trim()).toBe('')
+  })
+})
