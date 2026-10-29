@@ -23,7 +23,7 @@ fi
 # weeks after 0.13.0 shipped.
 if [[ -z "$name" ]]; then
   name="0.0.0-untagged"
-  code="0"
+  code="1"  # AGP rejects a versionCode of 0
 else
   IFS='.' read -r major minor patch <<< "${name%%-*}"
   # Same arithmetic as the publish workflow, so a debug build never looks newer than the

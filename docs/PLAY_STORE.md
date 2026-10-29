@@ -326,15 +326,29 @@ unconfigured watch listing blocks the phone release with it.
 1. **Add the Wear OS form factor.** Test and release → Advanced settings → Form factors →
    **+ Add form factor** → Wear OS. Until this is done there is nowhere to put a watch build or
    its screenshots.
-2. **At least one Wear OS screenshot**, taken on a real watch or an emulator: 1:1, at least
-   384 × 384, the app interface only — no device frame, no added text or graphics, no
-   transparency. These cannot be generated from the repository's screenshot harness, which
-   drives the web app in a browser; the watch app is native Compose and needs a device.
-3. **Mention "Wear OS" in the listing**, in `docs/store/listing.en-US.json`.
+2. ~~At least one Wear OS screenshot~~ — **done, and generated here.**
+   `./gradlew :wear:recordRoborazziDebug` renders the watch's real composables at 384 × 384 into
+   `docs/store/wear/`, and `sync-play-listing.mjs` uploads them as `wearScreenshots`.
 
-Until all three are in place, publish the phone alone: run the workflow from the Actions tab
-with **include_wear** unchecked. The watch bundle is still built and still has to be signed and
-version-correct — it is simply not sent.
+   Roborazzi draws them through Robolectric rather than a device, which is what makes this
+   possible at all: there is no Wear emulator here (no KVM, so one would be software-rendered)
+   and the web screenshot harness cannot help, since it drives the Nuxt app in a browser while
+   this module is native Compose. The previews render the *same* composables the watch draws -
+   `QueueRow`, `NowPlayingContent` - so the screenshot stays evidence about the real screen
+   rather than a picture of a mock-up.
+3. ~~Mention "Wear OS" in the listing~~ — **done**, in `docs/store/listing.en-US.json`.
+
+So only the form factor is left, and only step 1 needs a human. Until it is added, publish the
+phone alone: run the workflow from the Actions tab with **include_wear** unchecked. The watch
+bundle is still built and still has to be signed and version-correct — it is simply not sent.
+
+### Looking at the watch screens
+
+`./gradlew :wear:recordRoborazziDebug` writes them; `verifyRoborazziDebug` fails if they have
+drifted. They are worth looking at after any change to the watch UI, for the same reason the web
+screenshots are: the first render of the now-playing screen had "Queue" clipped to "Queu" and
+both bottom controls running off the edge of a round display. Nothing else catches that — a
+384 px circle is not a shape any assertion describes.
 
 ### The watch's version code
 

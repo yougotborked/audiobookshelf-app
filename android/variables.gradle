@@ -17,7 +17,10 @@ ext {
     //
     // Hoisted here rather than left in app/build.gradle because the wear module ships under the
     // same applicationId and derives its own code from this one.
-    podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '0') as Integer
+    // 1 rather than 0 for the fallback: AGP rejects a versionCode of 0 outright, so a bare
+    // `./gradlew assembleDebug` with nothing exported failed to configure at all. CI always
+    // exports one, which is exactly why that went unnoticed until a local build hit it.
+    podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '1') as Integer
     podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.0.0-untagged') as String
 
     // The watch's version code, which must NOT equal the phone's.
