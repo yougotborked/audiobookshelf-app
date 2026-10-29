@@ -434,9 +434,13 @@ unconfigured watch listing blocks the phone release with it.
    rather than a picture of a mock-up.
 3. ~~Mention "Wear OS" in the listing~~ — **done**, in `docs/store/listing.en-US.json`.
 
-So only the form factor is left, and only step 1 needs a human. Until it is added, publish the
-phone alone: run the workflow from the Actions tab with **include_wear** unchecked. The watch
-bundle is still built and still has to be signed and version-correct — it is simply not sent.
+So only the form factor is left, and only step 1 needs a human. Until it is added, every
+automatic publish sends the phone alone, because the repository variable `PUBLISH_WEAR` is
+unset. The watch bundle is still built and still has to be signed and version-correct — it is
+simply not sent.
+
+The moment step 1 is done, set `PUBLISH_WEAR` to `true` (*Settings → Secrets and variables →
+Actions → Variables*) and the next push to master ships the watch with the phone.
 
 ### Looking at the watch screens
 
