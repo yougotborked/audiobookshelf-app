@@ -142,6 +142,15 @@ jobs:
           # master - now tag-gated in sync-play-listing.yml. The upload action always passes
           # this flag to the API, so it stays at its default of false.
 
+          # Never let this reach the upload action empty. Given neither `track` nor `tracks`,
+          # upload-google-play defaults to **production** - `return ['production']` at the end
+          # of its validateTracks - so a typo upstream here would not fail, it would ship to
+          # everyone. Checking the value against the list costs nothing and removes that.
+          case "$track" in
+            internal|alpha|beta|production) ;;
+            *) echo "::error::Refusing to publish to an unrecognised track: '$track'"; exit 1 ;;
+          esac
+
           echo "name=$track" >> "$GITHUB_OUTPUT"
           echo "::notice::Publishing to $track"
 
@@ -285,12 +294,17 @@ jobs:
           packageName: com.podshelf.app
           releaseFiles: ${{ steps.bundles.outputs.files }}
           # Decided in the "Decide which track this goes to" step above, which also records
-          # why there is no changesNotSentForReview alongside it.
+          # why there is no changesNotSentForReview alongside it, and rejects a track name it
+          # does not recognise rather than letting the action fall back to production.
+          #
+          # `tracks`, not `track`: the singular is deprecated and warns on every run. Setting
+          # both is a hard error in the action, so this is a replacement, not an addition. It
+          # takes a comma-separated list; one entry is fine.
           #
           # Promoting between tracks afterwards is a Play Console action, not a re-upload: a
           # version code can only be uploaded once, so this chooses where it lands, not where
           # it can ever go.
-          track: ${{ steps.track.outputs.name }}
+          tracks: ${{ steps.track.outputs.name }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 
