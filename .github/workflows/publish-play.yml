@@ -244,12 +244,31 @@ jobs:
       - name: Decide which bundles to upload
         id: bundles
         env:
-          # Off for a tag until the watch listing exists in Play Console - the Wear form factor
-          # and at least one Wear screenshot. Play fails the WHOLE release if a Wear artifact
-          # arrives before those, so leaving this on would make every tag take the phone release
-          # down with it. Flip to `true` once docs/PLAY_STORE.md's three steps are done.
-          INCLUDE_WEAR: ${{ github.event_name == 'workflow_dispatch' && inputs.include_wear || false }}
+          # Whether the watch bundle goes up, as a repository variable rather than a line in
+          # this file.
+          #
+          # Play fails the WHOLE release if a Wear artifact arrives before the Wear form factor
+          # and a Wear screenshot exist, so this cannot simply be on - it would take the phone
+          # release down with it. But it is a Play Console state, not a code change: once the
+          # three steps in docs/PLAY_STORE.md are done, the switch should flip without a pull
+          # request and without another full release build to merge it.
+          #
+          # So: set the repository variable PUBLISH_WEAR to `true` under
+          # Settings -> Secrets and variables -> Actions -> Variables, and the next push to
+          # master ships the watch to internal testing along with the phone.
+          DISPATCHED: ${{ github.event_name == 'workflow_dispatch' }}
+          DISPATCH_WEAR: ${{ inputs.include_wear }}
+          REPO_WEAR: ${{ vars.PUBLISH_WEAR }}
         run: |
+          # A hand dispatch says explicitly; everything else asks the variable. Written out
+          # rather than folded into one `&&`/`||` expression because the dispatch case has to be
+          # able to say *no*, and `false || vars.PUBLISH_WEAR` cannot.
+          if [ "$DISPATCHED" = "true" ]; then
+            INCLUDE_WEAR="$DISPATCH_WEAR"
+          else
+            INCLUDE_WEAR="$REPO_WEAR"
+          fi
+
           phone=android/app/build/outputs/bundle/release/app-release.aab
           wear=android/wear/build/outputs/bundle/release/wear-release.aab
 

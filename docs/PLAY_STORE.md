@@ -311,6 +311,43 @@ Promoting between tracks afterwards is a Play Console action rather than a re-up
 code can only be uploaded once, so the track here decides where a release *lands*, not where it
 can ever go.
 
+### The Play build is a different app from the one you sideloaded
+
+`applicationId` is `com.podshelf.app`, and debug builds carry `applicationIdSuffix ".debug"`.
+So a build installed from Play is `com.podshelf.app` and every APK ever sideloaded from the
+Releases page is `com.podshelf.app.debug` — **two separate applications**, installed side by
+side, sharing nothing.
+
+Installing the Play build therefore gives a *fresh* app: no server connection, no library, no
+downloads, no queue, no settings. Nothing is missing from the build — the web assets are built
+the same way in both workflows (`npm run generate` then `cap sync`), and `minifyEnabled` is
+false for release, so nothing is stripped either. It is simply a first run. Sign in again and
+it has everything master has.
+
+The watch does not bridge the two either, for two independent reasons:
+
+- The Wearable Data Layer only delivers between apps sharing **both** an applicationId and a
+  signing certificate. A sideloaded watch app is `com.podshelf.app.debug` signed with the debug
+  key; a Play phone app is `com.podshelf.app` signed with the upload key. They cannot see each
+  other.
+- The Play build carries no watch bundle at all until `PUBLISH_WEAR` is set — see below.
+
+For watch testing, keep the sideloaded debug pair together, or get the watch onto Play and use
+that pair. Mixing one of each will not work and is not a bug.
+
+### Shipping the watch through Play
+
+`INCLUDE_WEAR` comes from the repository variable **`PUBLISH_WEAR`**, under
+*Settings → Secrets and variables → Actions → Variables*. It is off because Play fails the
+**whole** release if a Wear artifact arrives before the Wear form factor exists — a phone
+release would be taken down by an unconfigured watch listing.
+
+Once the Wear steps below are done in Play Console, set `PUBLISH_WEAR` to `true`. The next push
+to master ships the watch to internal testing alongside the phone, with no pull request and no
+release build spent on merging a one-line change.
+
+A hand dispatch still decides for itself, and can say no while the variable says yes.
+
 ### Why committing an edit cancels a review
 
 Committing **any** Play edit while a release is in review cancels that submission and opens a
