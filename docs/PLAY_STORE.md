@@ -326,13 +326,19 @@ review, because every push to master restarted it.
 Two rules follow, and both are enforced in the workflows:
 
 - **The listing is only *sent* on a tag.** A push to master validates it and stops.
-- **An internal publish commits with `changesNotSentForReview: true`.** Internal testing does
-  not need review to reach its testers, so publishing on every master push does not touch the
-  review queue. A tag going to a reviewed track sends normally.
+**An internal upload does not create a submission at all**, which the same timings show from
+the other direction: the internal upload finished at 2:11 PM and the internal release reads
+2:10 PM, with no submission for it. Submission #1 is 2:25 PM, one minute after the 2:24 PM
+Closed testing release. So internal-track changes do not go to review, and automatic publishing
+on master leaves the review queue alone once the listing sync is tag-gated.
 
-If something ever does need review that an internal publish left pending, Play Console's
-**Publishing overview** lists it with a *Send for review* button. Worth a glance after the
-first few automatic publishes to confirm nothing is piling up there.
+`changesNotSentForReview: true` is **not** the lever for this, and is not available here. Play
+rejects it for this app:
+
+```
+Changes are sent for review automatically.
+The query parameter changesNotSentForReview must not be set.
+```
 
 ### Version numbering
 

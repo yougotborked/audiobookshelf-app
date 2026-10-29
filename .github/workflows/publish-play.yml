@@ -125,24 +125,25 @@ jobs:
             fi
           fi
 
-          # Whether this upload is sent for review, which is not the cosmetic flag it looks
-          # like. Committing a Play edit while a release is in review CANCELS that submission
-          # and opens a new one covering everything unreviewed - so an internal build published
-          # on every push to master would restart the Closed testing review every time, and it
-          # would never finish. That already happened eight times from the listing sync alone
-          # between Oct 23 and Oct 29, which is why versionCode 1300 sat in review for days.
+          # There is deliberately no changesNotSentForReview here. Setting it true was an
+          # attempt to keep automatic internal publishes away from the review queue, and Play
+          # rejected it outright:
           #
-          # Internal testing does not need review to reach its testers, so an internal upload
-          # commits without sending. A tag going to a reviewed track sends, as it must.
-          if [ "$track" = "internal" ]; then
-            not_for_review=true
-          else
-            not_for_review=false
-          fi
+          #   Changes are sent for review automatically.
+          #   The query parameter changesNotSentForReview must not be set.
+          #
+          # It was also unnecessary, which the Oct 26 timings show: the internal upload finished
+          # at 2:11 PM and the internal release reads 2:10 PM, and no submission exists for it.
+          # The first submission is 2:25 PM, one minute after the 2:24 PM Closed testing
+          # release. Submissions 3 through 8 each line up with a listing sync.
+          #
+          # So an internal-track upload does not go to review, and what was restarting the
+          # Closed testing review was the listing sync committing an edit on every push to
+          # master - now tag-gated in sync-play-listing.yml. The upload action always passes
+          # this flag to the API, so it stays at its default of false.
 
-          echo "name=$track"                      >> "$GITHUB_OUTPUT"
-          echo "notForReview=$not_for_review"     >> "$GITHUB_OUTPUT"
-          echo "::notice::Publishing to $track (changesNotSentForReview=$not_for_review)"
+          echo "name=$track" >> "$GITHUB_OUTPUT"
+          echo "::notice::Publishing to $track"
 
       - name: Use Node.js 24.x with npm cache
         uses: actions/setup-node@v4
@@ -283,16 +284,13 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
           releaseFiles: ${{ steps.bundles.outputs.files }}
-          # Decided in the "Decide which track this goes to" step above, along with whether
-          # this upload is sent for review. Both are there rather than inline here because the
-          # two answers have to agree: an internal push that sent for review would cancel the
-          # Closed testing submission on every commit.
+          # Decided in the "Decide which track this goes to" step above, which also records
+          # why there is no changesNotSentForReview alongside it.
           #
           # Promoting between tracks afterwards is a Play Console action, not a re-upload: a
           # version code can only be uploaded once, so this chooses where it lands, not where
           # it can ever go.
           track: ${{ steps.track.outputs.name }}
-          changesNotSentForReview: ${{ steps.track.outputs.notForReview }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 
