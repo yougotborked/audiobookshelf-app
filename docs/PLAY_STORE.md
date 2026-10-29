@@ -4,8 +4,8 @@ What the repository already does, and what only a human with the Play Console ca
 
 **Automated:**
 
-- `.github/workflows/publish-play.yml` — on a `v*` tag, builds a signed AAB, derives the version
-  from the tag, uploads it to a Play track.
+- `.github/workflows/publish-play.yml` — builds a signed AAB and uploads it to a Play track.
+  Every push to master goes to **internal testing**; a `v*` tag goes to **closed testing**.
 - `.github/workflows/sync-play-listing.yml` — pushes the title, descriptions, icon, feature
   graphic and screenshots from `docs/store/` whenever that content changes on master. The
   listing lives in the repo and is reviewable in a diff rather than typed into the Console.
@@ -285,37 +285,66 @@ significant feature changes.
 
 ## 9. Publish
 
-Everything above is one-time. After that:
+Everything above is one-time. After that there are two cadences, because "can my testers have
+this" and "this is a release" are different decisions.
+
+**Every push to master publishes to internal testing, automatically.** Nothing to run. Internal
+testing reaches the accounts on the internal list within minutes and **skips Google's review
+entirely**, so there is nothing to weigh up per commit — the same build already goes to the
+Releases page as a debug APK, and this just puts it somewhere a phone can install from Play
+instead of sideloading.
+
+**A tag publishes to closed testing (`alpha`),** which *is* reviewed by Google before testers
+see it. That review is the reason this stays deliberate:
 
 ```shell
-git tag v0.13.0
-git push origin v0.13.0
+git tag v0.14.0
+git push origin v0.14.0
 ```
 
-A tag publishes to **closed testing** (`alpha`), and deliberately leaves the watch bundle out —
-see the three Play Console steps above. Run the workflow from the Actions tab to choose a
-different track, or to include the watch once its listing exists.
+Both paths leave the watch bundle out — see the three Play Console steps below. Run the workflow
+from the Actions tab to choose a different track, or to include the watch once its form factor
+exists.
 
 Promoting between tracks afterwards is a Play Console action rather than a re-upload: a version
 code can only be uploaded once, so the track here decides where a release *lands*, not where it
 can ever go.
 
-The workflow builds **two** signed AABs — the phone app and the Wear OS app — derives
-`versionName 0.13.0` and `versionCode 1300` from the tag, and uploads both to the **internal**
-track as one release.
-
-To send a build to another track, run the workflow manually from the Actions tab and choose the
-track and version.
-
 ### Version numbering
 
-The tag must be `vMAJOR.MINOR.PATCH`; anything else is rejected before a build starts. The
-versionCode is `major × 10000 + minor × 100 + patch`, so it always increases with the version —
-Play refuses a versionCode it has already seen, and refuses to go backwards. Minor and patch must
-each stay under 100.
+One implementation, `scripts/app-version.sh`, used by the publish workflow, the debug builds and
+local Gradle alike. It asks git for the newest `v*` tag and counts the commits since it:
 
-The first tagged build gets versionCode ≥ 1200, comfortably above the 116 the debug builds use,
-so there is no collision with anything already installed.
+| HEAD | versionName | versionCode |
+|------|-------------|-------------|
+| no tag at all | `0.0.0-untagged` | `1` |
+| exactly `v0.13.0` | `0.13.0` | `1300000` |
+| 72 commits later | `0.13.0-dev.72` | `1300072` |
+| exactly `v0.14.0` | `0.14.0` | `1400000` |
+
+```
+code = (major × 10000 + minor × 100 + patch) × 1000 + commits-since-tag
+```
+
+The tag must be `vMAJOR.MINOR.PATCH`, and minor and patch must each stay under 100; anything else
+fails before a build starts, because a malformed tag would otherwise produce a nonsense code that
+Play would accept and then never let us go below.
+
+**Why a build component exists at all.** Play rejects a versionCode it has already seen, and
+refuses one lower than what a track already holds. Publishing on every master push means far more
+uploads than there are tags, so each needs a code of its own. Multiplying the semver part by 1000
+leaves room for 999 builds between tags while keeping the ordering that matters: a master build
+always sorts above the tag it follows, and the next tag always sorts above every master build
+before it. Past 999 commits without a tag the script fails rather than wrapping — wrapping would
+hand Play a number it has seen, which cannot be undone.
+
+`test/appVersion.test.ts` drives the script against real throwaway git repositories and asserts
+that ordering directly, because the failures that actually happened were about what git reported
+on a shallow clone, not about the arithmetic.
+
+> The codes jumped by a factor of 1000 when this scheme arrived — `0.13.0` was `1300` under the
+> old one and would be `1300000` now. That direction is safe (Play only needs each upload to be
+> higher), but it is why the watch's offset had to move too; see below.
 
 ### Before the watch can go to Play at all
 
@@ -361,12 +390,23 @@ form factor in a listing, and Play rejects a release where two artifacts share o
 deliberately *higher*: a watch can match the phone artifact as well, and Play offers a device the
 highest code it qualifies for.
 
-`podshelfWearVersionCode` is therefore `podshelfVersionCode + 1000000`. A constant offset rather
-than a separate counter, so the watch's codes rise exactly as often as the phone's and neither
-can fall behind its own last release. `android/variables.gradle` fails the build outright if the
-two ever come out equal — Play's own error names the upload rather than the codes, and an `.aab`
-is not an APK, so a workflow step that tried to read the codes back out of the artifacts would
-silently pass.
+`podshelfWearVersionCode` is therefore `podshelfVersionCode + 1000000000`. A constant offset
+rather than a separate counter, so the watch's codes rise exactly as often as the phone's and
+neither can fall behind its own last release.
+
+**The offset has to clear the phone's whole range, not just its current value.** It was
+`1000000`, which was fine while a phone code was the semver part alone (`0.13.0` → `1300`). Once
+the build component arrived and phone codes became seven digits, the watch's `0.13.0` code landed
+on `2300072` — which is exactly what the phone's `v0.23.0-dev.72` would ask for a few releases
+later. Reserving a clear decade above every phone code the scheme can produce is the only version
+of this that cannot come back.
+
+`android/variables.gradle` fails the build if the phone's code ever reaches the reserved range, or
+if the watch's exceeds the 2100000000 that Play and the platform allow. It used to check whether
+the two codes were *equal*, which a constant non-zero offset makes impossible — that check could
+not fail, and so it did not notice the overlap above. Play's own error names the upload rather
+than the codes, and an `.aab` is not an APK, so a workflow step that tried to read the codes back
+out of the artifacts would silently pass.
 
 ---
 

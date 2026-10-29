@@ -23,7 +23,7 @@ ext {
     podshelfVersionCode = (System.getenv('PODSHELF_VERSION_CODE') ?: '1') as Integer
     podshelfVersionName = (System.getenv('PODSHELF_VERSION_NAME') ?: '0.0.0-untagged') as String
 
-    // The watch's version code, which must NOT equal the phone's.
+    // The watch's version code, which must NOT collide with any phone code, ever.
     //
     // Play treats the two artifacts as one listing with several device targets, and a version
     // code has to be unique across every form factor in the app - two bundles sharing one is
@@ -33,17 +33,34 @@ ext {
     // A constant offset rather than a separate counter: it keeps the watch's codes increasing
     // exactly as often as the phone's, so neither can quietly fall behind its own last release,
     // and the phone code is still readable inside it.
-    podshelfWearVersionCode = podshelfVersionCode + 1_000_000
+    //
+    // The offset has to clear the phone's whole *range*, not just its current value. It was
+    // 1_000_000, which was fine while a phone code was the semver part alone (0.13.0 -> 1300):
+    // once scripts/app-version.sh started appending a build number (0.13.0 -> 1300000), the
+    // watch's 0.13.0 code landed on 2300072 - which is exactly what the phone's v0.23.0-dev.72
+    // would later ask for. Reserving a decade above every phone code it can produce is the
+    // only version of this that cannot come back.
+    podshelfWearOffset = 1_000_000_000
+    podshelfWearVersionCode = podshelfVersionCode + podshelfWearOffset
 
     // Enforced here rather than by inspecting the built bundles, because nothing downstream
     // can see it clearly: Play's rejection names the upload rather than the codes, and an .aab
     // is not an APK - aapt2 cannot read one, so a workflow step that tries looks like it
-    // passed. A collision can only arise from someone editing the line above, and this fails
-    // the build the moment they do.
-    if (podshelfWearVersionCode == podshelfVersionCode) {
+    // passed.
+    //
+    // Checking the offset rather than this one pair of numbers. The old check asked whether
+    // the two codes were equal, which a constant non-zero offset makes impossible - it could
+    // not fail, and so it did not notice the overlap above. These two can.
+    if (podshelfVersionCode >= podshelfWearOffset) {
         throw new GradleException(
-                'The watch and phone version codes must differ: Play treats both artifacts as ' +
-                        'one listing and rejects a release where they collide.')
+                "Phone versionCode ${podshelfVersionCode} has reached the range reserved for " +
+                        "the watch (${podshelfWearOffset}). Raise podshelfWearOffset, and note " +
+                        'that every watch release so far used the old one.')
+    }
+    if (podshelfWearVersionCode > 2_100_000_000) {
+        throw new GradleException(
+                "Watch versionCode ${podshelfWearVersionCode} exceeds the 2100000000 Play and " +
+                        'the Android platform allow.')
     }
     minSdkVersion = 26
     compileSdkVersion = 37

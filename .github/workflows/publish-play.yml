@@ -1,19 +1,29 @@
 name: Publish to Play
 
-# Deliberately on tags, not on every push to master.
+# Two cadences, because "can my testers have this" and "this is a release" are different
+# decisions:
 #
-# master already ships a debug APK to the Releases page and the test page on every commit, which
-# is the right cadence for "is this fixed yet". Putting something in front of Play testers is a
-# different decision and should be a deliberate one, so it takes a tag.
+#   push to master -> internal testing. Automatic, every commit. Internal testing goes live to
+#       the handful of accounts on the list within minutes and skips Google's review entirely,
+#       so there is nothing to weigh up per commit - the same build already goes to the Releases
+#       page as a debug APK, and this just puts it somewhere a phone can install it from Play
+#       without sideloading.
 #
-#   git tag v0.13.0 && git push origin v0.13.0
+#   push a tag     -> closed testing (alpha). Deliberate, and reviewed by Google before testers
+#       see it, which is the reason it stays tag-gated.
 #
-# The tag is also where the version comes from: v1.2.3 becomes versionName 1.2.3 and versionCode
-# 10203. Play rejects a versionCode it has seen before, so it has to move forward every time, and
-# deriving it from the tag keeps it monotonic and reproducible rather than depending on a counter
-# that resets when a workflow is renamed.
+#       git tag v0.14.0 && git push origin v0.14.0
+#
+# workflow_dispatch can send any ref to any track for the off-cycle case.
+#
+# The version comes from scripts/app-version.sh in every case - see that script for the
+# versionCode scheme and why master builds need a build component of their own. The short
+# version: Play rejects a versionCode it has seen before, and publishing on every master push
+# means a lot more uploads than there are tags.
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
@@ -24,10 +34,6 @@ on:
         default: internal
         type: choice
         options: [internal, alpha, beta, production]
-      version:
-        description: 'Version, without the leading v (e.g. 0.13.0)'
-        required: true
-        type: string
       include_wear:
         description: 'Upload the Wear OS bundle too (needs the Wear form factor set up in Play Console first)'
         required: false
@@ -37,9 +43,12 @@ on:
 permissions:
   contents: read
 
+# Grouped per ref rather than one global queue, so a tag never waits behind a backlog of
+# master builds. Within master, a superseded internal build is worth nothing - the next commit
+# is already building - so those cancel; a tag release never does.
 concurrency:
-  group: publish-play
-  cancel-in-progress: false
+  group: publish-play-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/master' }}
 
 jobs:
   publish:
@@ -52,6 +61,12 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v5
+        with:
+          # Full history and tags, because scripts/app-version.sh derives the version by asking
+          # git for the newest tag and counting commits since it. The default shallow clone has
+          # neither, and the script would fall back to 0.0.0-untagged / versionCode 1 - which
+          # Play would reject, after a full release build, with nothing to point at.
+          fetch-depth: 0
 
       # Fail here rather than three minutes into a Gradle build with an opaque signing error,
       # or - worse - succeed and upload something unsigned.
@@ -74,33 +89,27 @@ jobs:
             exit 1
           fi
 
-      - name: Derive version from the tag
+      - name: Derive the version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            version="${{ inputs.version }}"
-          else
-            version="${GITHUB_REF_NAME#v}"
-          fi
+          # Captured into a variable first, then eval'd. `eval "$(scripts/app-version.sh)"`
+          # reads better and silently ignores a failure: eval reports its own exit status, not
+          # the substitution's, so even under `set -e` a script that bailed would leave both
+          # variables empty and the build would carry on and upload versionCode "" - whereas a
+          # plain assignment propagates the status and stops the job here.
+          derived=$(scripts/app-version.sh)
+          eval "$derived"
 
-          # Reject anything that is not major.minor.patch - a malformed tag would otherwise
-          # produce a nonsense versionCode that Play would accept and then never let us go below.
-          if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::Version '$version' is not major.minor.patch (tag should look like v0.13.0)"
+          # Belt and braces: an empty code is the one value that would get past the above and
+          # still be wrong, and the error Play returns for it names nothing useful.
+          if [ -z "${PODSHELF_VERSION_NAME:-}" ] || [ -z "${PODSHELF_VERSION_CODE:-}" ]; then
+            echo "::error::scripts/app-version.sh produced no version: $derived"
             exit 1
           fi
-          major="${BASH_REMATCH[1]}"; minor="${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
 
-          # Two digits each for minor and patch, so 1.2.3 -> 10203 and ordering follows semver.
-          if [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ]; then
-            echo "::error::minor and patch must each be <= 99 for the versionCode scheme"
-            exit 1
-          fi
-          code=$(( major * 10000 + minor * 100 + patch ))
-
-          echo "name=$version" >> "$GITHUB_OUTPUT"
-          echo "code=$code"    >> "$GITHUB_OUTPUT"
-          echo "Publishing $version as versionCode $code"
+          echo "name=$PODSHELF_VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$PODSHELF_VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Publishing $PODSHELF_VERSION_NAME as versionCode $PODSHELF_VERSION_CODE"
 
       - name: Use Node.js 24.x with npm cache
         uses: actions/setup-node@v4
@@ -117,6 +126,23 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # A gate, because publishing is now automatic.
+      #
+      # When a tag was the only way to reach Play, a human had decided the commit was good
+      # before this workflow ran. Every push to master publishing to internal testing removes
+      # that judgement, and Play's internal track has no review of its own - a broken commit
+      # would be on testers' phones minutes later. So the same checks that gate a pull request
+      # gate a publish.
+      #
+      # Lint, typecheck and the JS tests only: the Kotlin tests are left to the Build APK
+      # workflow on the same commit, because running them here would install a 400MB SDK that
+      # the release build does not otherwise need.
+      - name: Run the checks that gate a publish
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run test:unit
 
       - name: Build Nuxt project (static)
         run: npm run generate
@@ -210,7 +236,11 @@ jobs:
           # Promoting between tracks afterwards is a Play Console action, not a re-upload: a
           # version code can only be uploaded once, so this chooses where it lands, not where it
           # can ever go.
-          track: ${{ inputs.track || 'alpha' }}
+          #
+          # A tag is a release and goes to closed testing; a master push is for the internal
+          # list. `inputs.track` is empty unless this was dispatched by hand, so the dispatch
+          # choice wins where there is one.
+          track: ${{ inputs.track || (startsWith(github.ref, 'refs/tags/') && 'alpha' || 'internal') }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 
