@@ -101,9 +101,9 @@ button.icon-num-btn:disabled {
   cursor: not-allowed;
 }
 button.icon-num-btn:disabled::before {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgb(var(--md-scrim) / 0.2);
 }
 button.icon-num-btn:disabled span {
-  color: #777;
+  color: rgb(var(--md-outline));
 }
 </style>

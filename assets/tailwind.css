@@ -147,6 +147,15 @@
     --md-on-surface:           236 228 218;  /* primary text, warm off-white */
     --md-on-surface-variant:   208 195 180;  /* secondary text */
 
+    /* ── M3 Scrim + Shadow ──
+       Black in every theme, which is the point: a scrim darkens whatever is under it and a
+       shadow is cast by light, so neither is a hue that a theme gets to re-tune. They are
+       tokens anyway so that components never need a raw rgba() - a literal in a component is
+       how the player ended up with a hardcoded green that no theme could reach, and it is
+       the raw value, not the colour, that the checker can police. */
+    --md-scrim:  0 0 0;
+    --md-shadow: 0 0 0;
+
     /* ── Dynamic colour (set by fast-average-color on Now Playing) ── */
 
     /* ── M3 Shape ── */
@@ -194,6 +203,15 @@
     --md-surface-5: 29 27 24;
     --md-on-surface: 240 234 226;
     --md-on-surface-variant: 168 158 146;
+
+    /* ── M3 Scrim + Shadow ──
+       Black in every theme, which is the point: a scrim darkens whatever is under it and a
+       shadow is cast by light, so neither is a hue that a theme gets to re-tune. They are
+       tokens anyway so that components never need a raw rgba() - a literal in a component is
+       how the player ended up with a hardcoded green that no theme could reach, and it is
+       the raw value, not the colour, that the checker can police. */
+    --md-scrim:  0 0 0;
+    --md-shadow: 0 0 0;
     --md-outline: 128 118 106;
     --md-outline-variant: 58 53 47;
     --color-track-buffered: 18 17 15;
@@ -245,6 +263,15 @@
 
     --md-on-surface:         31 27 22;
     --md-on-surface-variant: 82 73 62;
+
+    /* ── M3 Scrim + Shadow ──
+       Black in every theme, which is the point: a scrim darkens whatever is under it and a
+       shadow is cast by light, so neither is a hue that a theme gets to re-tune. They are
+       tokens anyway so that components never need a raw rgba() - a literal in a component is
+       how the player ended up with a hardcoded green that no theme could reach, and it is
+       the raw value, not the colour, that the checker can police. */
+    --md-scrim:  0 0 0;
+    --md-shadow: 0 0 0;
     --md-outline:            132 122 108;
     --md-outline-variant:    215 203 188;
     --color-track-cursor:   125 87 0;

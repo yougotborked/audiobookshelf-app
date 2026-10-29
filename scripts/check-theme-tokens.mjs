@@ -10,6 +10,11 @@
 //   - Raw Tailwind palette colours (text-gray-400, bg-slate-200 …). These are fixed values that
 //     do not change between themes, so they look deliberate in dark and wrong in light. That is
 //     exactly how the light theme ended up with unreadable secondary text.
+//   - Raw colour values in CSS (#fb8c00, rgb(26, 214, 145), rgba(0,0,0,.3) …). Both rules above
+//     match Tailwind *class names*, so a colour written as a CSS value was invisible to this
+//     script by construction - which is how the player's seek bar kept a hardcoded green that
+//     no theme could reach. Worse than a palette class, because those declarations carried
+//     !important and so actively beat the token rather than merely sitting beside it.
 //
 //   node scripts/check-theme-tokens.mjs
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -25,11 +30,31 @@ const PREFIX = 'text|bg|border|ring|from|to|via|divide|placeholder|fill|stroke|o
 const retiredRe = new RegExp(`\\b(${PREFIX})-(${RETIRED.join('|')})\\b`, 'g')
 const paletteRe = /\b(text|bg|border|ring|from|to|via|divide|fill|stroke)-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/g
 
+// A colour written as a value rather than a class. rgb()/rgba() only when the first argument is
+// a digit, so `rgb(var(--md-primary) / 0.3)` - the correct form - is not flagged.
+const literalRe = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d[^)]*\)|hsla?\(\s*\d[^)]*\)/g
+
 // Deliberate exceptions, each with a reason.
 const ALLOW = new Map([
   // Chosen against the cover art's own lightness, not against the theme - the pairing is the
   // point, and no token can express "whatever contrasts with this artwork".
-  ['components/app/AudioPlayer.vue', [/text-gray-800/]]
+  ['components/app/AudioPlayer.vue', [
+    /text-gray-800/,
+    // The fallback until fast-average-color reports the artwork's own colour. A token cannot
+    // stand in for "whatever this cover happens to be".
+    /rgb\(55, 56, 56\)/
+  ]],
+
+  // Rendered into a shareable image. It should look the same in everyone's feed rather than
+  // following whichever theme the person who generated it happened to be using.
+  ['components/stats/YearInReview.vue', [/^#[0-9a-fA-F]{3,8}$/]],
+  ['components/stats/YearInReviewServer.vue', [/^#[0-9a-fA-F]{3,8}$/]],
+  ['components/stats/YearInReviewShort.vue', [/^#[0-9a-fA-F]{3,8}$/]],
+
+  // The reader carries its own themes - white, sepia, dark - chosen for reading rather than to
+  // match the app chrome, so its colours are deliberately independent of the Material set.
+  ['components/readers/EpubReader.vue', [/^#[0-9a-fA-F]{3,8}$/, /^rgba?\(\s*\d[^)]*\)$/]],
+  ['components/readers/Reader.vue', [/^#[0-9a-fA-F]{3,8}$/, /^rgba?\(\s*\d[^)]*\)$/]]
 ])
 
 function* walk(dir) {
@@ -49,7 +74,7 @@ for (const base of SCAN) {
     const allowed = ALLOW.get(rel) || []
     const source = readFileSync(path, 'utf8')
     source.split('\n').forEach((line, i) => {
-      for (const re of [retiredRe, paletteRe]) {
+      for (const re of [retiredRe, paletteRe, literalRe]) {
         re.lastIndex = 0
         for (const match of line.matchAll(re)) {
           if (allowed.some((a) => a.test(match[0]))) continue
@@ -61,11 +86,15 @@ for (const base of SCAN) {
 }
 
 if (!problems.length) {
-  console.log('✓ no retired or off-palette colour classes')
+  console.log('✓ no retired classes, palette classes or raw colour values')
   process.exit(0)
 }
 
-console.error(`✗ ${problems.length} off-palette colour class(es):\n`)
+console.error(`✗ ${problems.length} colour(s) outside the token set:\n`)
 for (const p of problems) console.error(`  ${p.rel}:${p.line}  ${p.token}`)
-console.error('\nUse the Material tokens in assets/tailwind.css (md-surface-*, md-on-surface*, md-outline*, md-primary*).')
+console.error(
+  '\nUse the Material tokens in assets/tailwind.css (md-surface-*, md-on-surface*, md-outline*,\n' +
+    'md-primary*, md-scrim, md-shadow). In CSS that is rgb(var(--md-primary) / 0.3), not a literal.\n' +
+    'If a colour genuinely must not follow the theme, add it to ALLOW in this file with the reason.'
+)
 process.exit(1)

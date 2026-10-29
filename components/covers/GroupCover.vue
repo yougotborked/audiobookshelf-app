@@ -87,7 +87,7 @@ async function buildCoverImg(coverData: { id: string; coverUrl: string }, bgCove
   imgdiv.style.zIndex = String(zIndex)
   imgdiv.dataset.audiobookId = coverData.id
   imgdiv.className = 'absolute top-0 box-shadow-book transition-transform'
-  imgdiv.style.boxShadow = '4px 0px 4px #11111166'
+  imgdiv.style.boxShadow = '4px 0px 4px rgb(var(--md-scrim) / 0.4)'
 
   if (showCoverBgResult) {
     const coverbgwrapper = document.createElement('div')
@@ -116,8 +116,8 @@ function createSeriesNameCover(offsetLeft: number): HTMLElement {
   imgdiv.style.width = (props.height || 0) / (props.bookCoverAspectRatio || 1.6) + 'px'
   imgdiv.style.left = offsetLeft + 'px'
   imgdiv.className = 'absolute top-0 box-shadow-book transition-transform flex items-center justify-center'
-  imgdiv.style.boxShadow = '4px 0px 4px #11111166'
-  imgdiv.style.backgroundColor = '#111'
+  imgdiv.style.boxShadow = '4px 0px 4px rgb(var(--md-scrim) / 0.4)'
+  imgdiv.style.backgroundColor = 'rgb(var(--md-scrim))'
 
   const innerP = document.createElement('p')
   innerP.textContent = props.name || ''

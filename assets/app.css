@@ -49,18 +49,18 @@ textarea {
 }
 
 /* M3 elevation shadows — tinting is the primary elevation signal in dark theme */
-.elevation-1 { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15); }
-.elevation-2 { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15); }
-.elevation-3 { box-shadow: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3); }
-.elevation-4 { box-shadow: 0 6px 10px 4px rgba(0,0,0,.15), 0 2px 3px rgba(0,0,0,.3); }
+.elevation-1 { box-shadow: 0 1px 2px rgb(var(--md-shadow) / .3), 0 1px 3px 1px rgb(var(--md-shadow) / .15); }
+.elevation-2 { box-shadow: 0 1px 2px rgb(var(--md-shadow) / .3), 0 2px 6px 2px rgb(var(--md-shadow) / .15); }
+.elevation-3 { box-shadow: 0 4px 8px 3px rgb(var(--md-shadow) / .15), 0 1px 3px rgb(var(--md-shadow) / .3); }
+.elevation-4 { box-shadow: 0 6px 10px 4px rgb(var(--md-shadow) / .15), 0 2px 3px rgb(var(--md-shadow) / .3); }
 
 /* Legacy aliases — kept so existing components don't break during transition */
-.box-shadow-sm      { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15); }
-.box-shadow-md      { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15); }
-.box-shadow-lg-up   { box-shadow: 0 -8px 12px rgba(0,0,0,.4); }
-.box-shadow-xl      { box-shadow: 0 6px 10px 4px rgba(0,0,0,.15), 0 2px 3px rgba(0,0,0,.3); }
-.box-shadow-book    { box-shadow: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3); }
-.box-shadow-progressbar { box-shadow: 0 -1px 4px rgba(62, 50, 2, 0.3); }
+.box-shadow-sm      { box-shadow: 0 1px 2px rgb(var(--md-shadow) / .3), 0 1px 3px 1px rgb(var(--md-shadow) / .15); }
+.box-shadow-md      { box-shadow: 0 1px 2px rgb(var(--md-shadow) / .3), 0 2px 6px 2px rgb(var(--md-shadow) / .15); }
+.box-shadow-lg-up   { box-shadow: 0 -8px 12px rgb(var(--md-shadow) / .4); }
+.box-shadow-xl      { box-shadow: 0 6px 10px 4px rgb(var(--md-shadow) / .15), 0 2px 3px rgb(var(--md-shadow) / .3); }
+.box-shadow-book    { box-shadow: 0 4px 8px 3px rgb(var(--md-shadow) / .15), 0 1px 3px rgb(var(--md-shadow) / .3); }
+.box-shadow-progressbar { box-shadow: 0 -1px 4px rgb(var(--md-shadow) / 0.3); }
 
 .shadow-height {
   height: calc(100% - 4px);
@@ -73,12 +73,12 @@ textarea {
 
 .bookshelfDivider {
   background-color: rgb(var(--md-surface-2));
-  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  box-shadow: 0 2px 6px rgb(var(--md-shadow) / .25);
 }
 
 .altBookshelfDivider {
   background: rgb(var(--md-surface-2));
-  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  box-shadow: 0 2px 6px rgb(var(--md-shadow) / .25);
 }
 
 /* Bookshelf label placard */
@@ -88,7 +88,7 @@ textarea {
 
 .shinyBlack {
   background-color: rgb(var(--md-surface-2));
-  border-color: rgba(255, 244, 182, 0.4);
+  border-color: rgb(var(--md-on-primary-container) / 0.4);
   border-style: solid;
   color: rgb(var(--md-on-surface));
 }

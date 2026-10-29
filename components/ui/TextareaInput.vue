@@ -44,7 +44,7 @@ textarea {
   border-style: inherit !important;
 }
 textarea:read-only {
-  color: #aaa;
-  background-color: #444;
+  color: rgb(var(--md-on-surface-variant));
+  background-color: rgb(var(--md-outline-variant));
 }
 </style>

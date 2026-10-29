@@ -4,7 +4,7 @@
     <div v-if="showFullscreen" class="w-full h-full z-10 absolute top-0 left-0 pointer-events-none" :style="{ backgroundColor: coverRgb }">
       <div class="w-full h-full absolute top-0 left-0 pointer-events-none" style="background: var(--gradient-audio-player)" />
       <!-- Darkening overlay: always applied for contrast, heavier for light cover art -->
-      <div class="w-full h-full absolute top-0 left-0 pointer-events-none" :style="{ background: coverBgIsLight && theme !== 'black' ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.4)' }" />
+      <div class="w-full h-full absolute top-0 left-0 pointer-events-none" :style="{ background: coverBgIsLight && theme !== 'black' ? 'rgb(var(--md-scrim) / 0.65)' : 'rgb(var(--md-scrim) / 0.4)' }" />
     </div>
 
     <!-- Fullscreen top controls: z-40 so they sit above #playerContent (z-20) in all orientations -->
@@ -53,7 +53,7 @@
       <p class="author-text text-md-on-surface/75 truncate">{{ authorName }}</p>
     </div>
 
-    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden" :class="{ 'bg-md-surface-4': !showFullscreen }" :style="showFullscreen ? { background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 60%, transparent 100%)' } : {}" @click="clickContainer">
+    <div id="playerContent" class="playerContainer w-full z-20 absolute bottom-0 left-0 right-0 p-2 pointer-events-auto transition-all rounded-t-md-lg overflow-hidden" :class="{ 'bg-md-surface-4': !showFullscreen }" :style="showFullscreen ? { background: 'linear-gradient(0deg, rgb(var(--md-scrim) / 0.85) 60%, transparent 100%)' } : {}" @click="clickContainer">
       <div v-if="showFullscreen" class="absolute bottom-4 left-0 right-0 w-full pb-4 pt-2 mx-auto px-5" style="max-width: 414px">
         <div class="flex items-center justify-between pointer-events-auto">
           <span v-if="!isPodcast && serverLibraryItemId && socketConnected" class="material-symbols text-3xl text-md-on-surface-variant cursor-pointer tap-area" :class="{ fill: bookmarks.length }" @click="$emit('showBookmarks')">bookmark</span>
@@ -1412,7 +1412,7 @@ defineExpose({
   height: 200px;
 }
 #playerContent {
-  box-shadow: 0px -8px 8px #11111155;
+  box-shadow: 0px -8px 8px rgb(var(--md-shadow) / 0.33);
 }
 .fullscreen #playerContent {
   box-shadow: none;
@@ -1488,21 +1488,22 @@ defineExpose({
   bottom: 22px;
 }
 
-/* Fullscreen seek bar: taller and explicit color so it's always visible on dark backgrounds */
+/* Fullscreen seek bar: taller, and themed - it used to hardcode a green that beat the
+   token with !important, so no theme could reach it. */
 .fullscreen #playerTrack > div:last-child {
   height: 10px;
-  background: rgba(178, 204, 192, 0.5);
+  background: rgb(var(--color-track) / 0.5);
 }
 .fullscreen #playerTrack .bg-track-cursor {
-  background-color: rgb(26, 214, 145) !important;
+  background-color: rgb(var(--color-track-cursor)) !important;
   border-radius: 5px;
 }
 .fullscreen #playerTrack .bg-track-buffered {
-  background-color: rgba(30, 30, 30, 0.6) !important;
+  background-color: rgb(var(--color-track-buffered) / 0.6) !important;
   border-radius: 5px;
 }
 .fullscreen #playerTrack .bg-track {
-  background-color: rgba(178, 204, 192, 0.3) !important;
+  background-color: rgb(var(--color-track) / 0.3) !important;
   border-radius: 5px;
 }
 
@@ -1757,16 +1758,16 @@ defineExpose({
     background: transparent;
   }
 
-  /* Played fill: semi-transparent primary green wash */
+  /* Played fill: semi-transparent wash of the accent */
   #streamContainer:not(.fullscreen) #playerTrack .bg-track-cursor {
-    background-color: rgba(26, 214, 145, 0.22) !important;
+    background-color: rgb(var(--color-track-cursor) / 0.22) !important;
     border-radius: 0;
   }
 
   /* Buffer/ready fills: barely-visible tint */
   #streamContainer:not(.fullscreen) #playerTrack .bg-track-buffered,
   #streamContainer:not(.fullscreen) #playerTrack .bg-track {
-    background-color: rgba(26, 214, 145, 0.07) !important;
+    background-color: rgb(var(--color-track-cursor) / 0.07) !important;
     border-radius: 0;
   }
 
@@ -1811,15 +1812,15 @@ defineExpose({
   #streamContainer:not(.fullscreen) #playerTrack > div:last-child {
     height: 5px !important;
     border-radius: 0 !important;
-    background: rgba(178, 204, 192, 0.35) !important;
+    background: rgb(var(--color-track) / 0.35) !important;
   }
   #streamContainer:not(.fullscreen) #playerTrack .bg-track-cursor {
-    background-color: rgba(26, 214, 145, 0.9) !important;
+    background-color: rgb(var(--color-track-cursor) / 0.9) !important;
     border-radius: 0 !important;
   }
   #streamContainer:not(.fullscreen) #playerTrack .bg-track-buffered,
   #streamContainer:not(.fullscreen) #playerTrack .bg-track {
-    background-color: rgba(26, 214, 145, 0.25) !important;
+    background-color: rgb(var(--color-track-cursor) / 0.25) !important;
     border-radius: 0 !important;
   }
   #streamContainer:not(.fullscreen) #playerTrack .h-7.w-7.rounded-full {

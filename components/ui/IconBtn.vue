@@ -62,16 +62,16 @@ button.icon-btn::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0);
+  background-color: rgb(var(--md-on-surface) / 0);
   transition: all 0.1s ease-in-out;
 }
 button.icon-btn:hover:not(:disabled)::before {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgb(var(--md-on-surface) / 0.1);
 }
 button.icon-btn:disabled::before {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgb(var(--md-scrim) / 0.2);
 }
 button.icon-btn:disabled span {
-  color: #777;
+  color: rgb(var(--md-outline));
 }
 </style>
