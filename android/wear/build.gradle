@@ -18,7 +18,19 @@ android {
         minSdkVersion 30
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode rootProject.ext.podshelfWearVersionCode
-        versionName rootProject.ext.podshelfVersionName
+
+        // Suffixed, so the two artifacts can be told apart by name and not only by number.
+        //
+        // Both modules ship under one applicationId and one Play listing, and both used this
+        // same version name verbatim. Play's artifact picker lists a bundle by its version
+        // name and code, so creating a Wear release by hand meant choosing between two entries
+        // that read identically - the only difference being whether the code carried the
+        // 1,000,000,000 watch offset, which you have to already know to decode.
+        //
+        // "0.13.0-dev.86-wear" next to "0.13.0-dev.86" needs no decoding. Nothing compares the
+        // two names, so the suffix costs nothing: Play requires version *codes* to be unique
+        // across form factors, not names to match.
+        versionName "${rootProject.ext.podshelfVersionName}-wear"
     }
 
     // The Wearable Data Layer only delivers between apps that share BOTH an applicationId and a
