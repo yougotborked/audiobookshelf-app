@@ -9,6 +9,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+      Required by ExoPlayer's setWakeMode. Without it the player cannot hold a partial wake lock
+      or a Wi-Fi lock, so playback stops a few seconds after the screen goes off - see
+      player/WakeMode.kt.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!--
       Android 17 stopped letting INTERNET cover a private address: reaching a server on the

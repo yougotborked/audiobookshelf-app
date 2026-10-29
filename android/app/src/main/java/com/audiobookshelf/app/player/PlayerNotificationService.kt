@@ -584,6 +584,10 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
         )
         mediaSource = HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItems[0])
       }
+      // Before prepare, so the locks are held for the whole of playback rather than from
+      // whenever the first buffer happens to complete.
+      mPlayer.setWakeMode(wakeModeFor(playbackSession.isLocal))
+
       mPlayer.setMediaSource(mediaSource)
 
       // Add remaining media items if multi-track
