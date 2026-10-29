@@ -175,7 +175,11 @@ jobs:
       - name: Decide which bundles to upload
         id: bundles
         env:
-          INCLUDE_WEAR: ${{ github.event_name != 'workflow_dispatch' || inputs.include_wear }}
+          # Off for a tag until the watch listing exists in Play Console - the Wear form factor
+          # and at least one Wear screenshot. Play fails the WHOLE release if a Wear artifact
+          # arrives before those, so leaving this on would make every tag take the phone release
+          # down with it. Flip to `true` once docs/PLAY_STORE.md's three steps are done.
+          INCLUDE_WEAR: ${{ github.event_name == 'workflow_dispatch' && inputs.include_wear || false }}
         run: |
           phone=android/app/build/outputs/bundle/release/app-release.aab
           wear=android/wear/build/outputs/bundle/release/wear-release.aab
@@ -197,7 +201,16 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
           releaseFiles: ${{ steps.bundles.outputs.files }}
-          track: ${{ inputs.track || 'internal' }}
+          # Where a tag publishes to, when no track was chosen by hand.
+          #
+          # alpha is Play's closed testing track, which is where Podshelf's testers are. It was
+          # internal while there were none; internal caps at a list of individual email
+          # addresses and is the wrong shape for a beta someone can be invited to.
+          #
+          # Promoting between tracks afterwards is a Play Console action, not a re-upload: a
+          # version code can only be uploaded once, so this chooses where it lands, not where it
+          # can ever go.
+          track: ${{ inputs.track || 'alpha' }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 
