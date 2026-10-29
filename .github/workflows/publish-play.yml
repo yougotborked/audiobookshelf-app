@@ -34,11 +34,6 @@ on:
         default: internal
         type: choice
         options: [internal, alpha, beta, production]
-      include_wear:
-        description: 'Upload the Wear OS bundle too (needs the Wear form factor set up in Play Console first)'
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -109,6 +104,13 @@ jobs:
 
           echo "name=$PODSHELF_VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$PODSHELF_VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+          # Also into the environment, so `npm run generate` picks it up. Passing it only to
+          # Gradle left the webview to re-derive its own version, and nuxt.config fell back to
+          # the bare tag - so the drawer read 0.13.0 on a build whose versionName was
+          # 0.13.0-dev.79.
+          echo "PODSHELF_VERSION_NAME=$PODSHELF_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "PODSHELF_VERSION_CODE=$PODSHELF_VERSION_CODE" >> "$GITHUB_ENV"
           echo "Publishing $PODSHELF_VERSION_NAME as versionCode $PODSHELF_VERSION_CODE"
 
       - name: Decide which track this goes to
@@ -141,6 +143,15 @@ jobs:
           # Closed testing review was the listing sync committing an edit on every push to
           # master - now tag-gated in sync-play-listing.yml. The upload action always passes
           # this flag to the API, so it stays at its default of false.
+
+          # Never let this reach the upload action empty. Given neither `track` nor `tracks`,
+          # upload-google-play defaults to **production** - `return ['production']` at the end
+          # of its validateTracks - so a typo upstream here would not fail, it would ship to
+          # everyone. Checking the value against the list costs nothing and removes that.
+          case "$track" in
+            internal|alpha|beta|production) ;;
+            *) echo "::error::Refusing to publish to an unrecognised track: '$track'"; exit 1 ;;
+          esac
 
           echo "name=$track" >> "$GITHUB_OUTPUT"
           echo "::notice::Publishing to $track"
@@ -232,65 +243,64 @@ jobs:
       # app in Play Console and the listing carries at least one Wear screenshot - and it fails
       # the whole release, not just that artifact, so a phone release would be blocked by an
       # unconfigured watch listing. Leaving the watch out is therefore a supported way to ship.
-      - name: Decide which bundles to upload
+      - name: Locate the bundles
         id: bundles
-        env:
-          # Off for a tag until the watch listing exists in Play Console - the Wear form factor
-          # and at least one Wear screenshot. Play fails the WHOLE release if a Wear artifact
-          # arrives before those, so leaving this on would make every tag take the phone release
-          # down with it. Flip to `true` once docs/PLAY_STORE.md's three steps are done.
-          INCLUDE_WEAR: ${{ github.event_name == 'workflow_dispatch' && inputs.include_wear || false }}
         run: |
           phone=android/app/build/outputs/bundle/release/app-release.aab
           wear=android/wear/build/outputs/bundle/release/wear-release.aab
 
-          # Comma-separated, on one line, and the notices kept out of the value.
-          #
-          # Both halves of that were wrong and neither had run: this step arrived with the
-          # tag-publishes-closed-testing change, whose only two paths are "phone and watch"
-          # (never taken, because the Wear form factor does not exist yet) and "phone only"
-          # (taken for the first time by the first automatic publish, which is how it surfaced).
-          #
-          # 1. upload-google-play splits releaseFiles on *commas* only - `?.split(',')` in its
-          #    main.ts - so a newline-separated list is one pattern with a newline in it and
-          #    matches nothing. The heredoc could never have worked for two bundles either.
-          #
-          # 2. `echo "::notice::..."` inside a `{ ... } >> "$GITHUB_OUTPUT"` block goes into the
-          #    file, not the log: the redirect applies to everything in the braces. The notice
-          #    became the second line of `files`, which is why the error named a path the step
-          #    before it had just confirmed existed.
-          if [ "$INCLUDE_WEAR" = "true" ]; then
-            files="$phone,$wear"
-            echo "::notice::Uploading the phone and Wear OS bundles"
-          else
-            files="$phone"
-            echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
-          fi
+          test -f "$phone" || { echo "::error::No phone bundle at $phone"; exit 1; }
+          test -f "$wear"  || { echo "::error::No watch bundle at $wear";  exit 1; }
 
-          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "phone=$phone" >> "$GITHUB_OUTPUT"
+          echo "wear=$wear"   >> "$GITHUB_OUTPUT"
 
-          # Every pattern resolves to a real file, checked here rather than by the upload action,
-          # whose own failure is a single line naming the pattern with no hint of where it came
-          # from - which cost a full release build to read.
-          IFS=',' read -ra resolved <<< "$files"
-          for f in "${resolved[@]}"; do
-            test -f "$f" || { echo "::error::releaseFiles entry does not exist: '$f'"; exit 1; }
-          done
-          echo "Uploading: $files"
-
-      - name: Upload to Play
+      # Both bundles go up, every time. There is no switch for the watch.
+      #
+      # There used to be, and the reason it existed stopped being true when these became two
+      # uploads: while both bundles went to one track, Play failed the WHOLE release if a Wear
+      # artifact arrived before the Wear form factor existed, so the watch could take the phone
+      # release down with it and had to be held back until the Console was ready.
+      #
+      # Separate tracks means separate edits. The phone upload below has already committed by
+      # the time the watch one runs, so a watch failure is a failed step and a red run - not a
+      # phone release that never happened. Nothing is left to protect, and internal testing is
+      # meant to be master's tip on both devices rather than master's tip on one of them.
+      #
+      # The two artifacts go to two different tracks, which is the part that is easy to get
+      # wrong and expensive to find out about.
+      #
+      # Play gives the Wear OS form factor dedicated tracks, named by prefixing the mobile one:
+      # `internal` for the phone, `wear:internal` for the watch
+      # (https://developers.google.com/android-publisher/tracks). They are not interchangeable
+      # and Play checks the manifest against the track:
+      #
+      #   - a watch bundle sent to the phone track is rejected for requiring
+      #     android.hardware.type.watch
+      #   - a phone bundle sitting in a Wear track is rejected for NOT requiring it:
+      #     "APKs or Android App Bundles in this track must require the following features:
+      #     android.hardware.type.watch"
+      #
+      # So this is two uploads rather than one call with both files. The upload action sends
+      # every releaseFiles entry to every track it is given, which cannot express "this one
+      # there, that one here".
+      - name: Upload the phone bundle to Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
-          releaseFiles: ${{ steps.bundles.outputs.files }}
-          # Decided in the "Decide which track this goes to" step above, which also records
-          # why there is no changesNotSentForReview alongside it.
-          #
-          # Promoting between tracks afterwards is a Play Console action, not a re-upload: a
-          # version code can only be uploaded once, so this chooses where it lands, not where
-          # it can ever go.
-          track: ${{ steps.track.outputs.name }}
+          releaseFiles: ${{ steps.bundles.outputs.phone }}
+          tracks: ${{ steps.track.outputs.name }}
+          status: completed
+          releaseName: ${{ steps.version.outputs.name }}
+
+      - name: Upload the watch bundle to Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.podshelf.app
+          releaseFiles: ${{ steps.bundles.outputs.wear }}
+          tracks: wear:${{ steps.track.outputs.name }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 

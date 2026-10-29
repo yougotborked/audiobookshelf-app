@@ -1,12 +1,17 @@
 import { execSync } from 'node:child_process'
 
 /**
- * The app's version, from the newest release tag.
+ * The app's version, from scripts/app-version.sh - the same derivation the Android build and
+ * both workflows use, so the number in the drawer and the number in Android's app info agree.
  *
- * The drawer shows this, and it used to be a literal that rotted: every sideloaded build said
- * 0.12.0-beta for weeks after 0.13.0 shipped, which makes "what version are you on" unanswerable
- * during testing - exactly when it gets asked. The Android build reads the same tag, so the
- * number in the drawer and the number in Android's app info agree.
+ * It calls the script rather than repeating `git describe` here, which is what it used to do.
+ * That looked equivalent and was not: the script appends the commit count since the tag, so the
+ * drawer said "0.13.0" while the installed build was versionName 0.13.0-dev.79 - a build 79
+ * commits newer than the number it displayed. Three definitions of "the version" is two too
+ * many, and this was the one nobody was looking at.
+ *
+ * PODSHELF_VERSION_NAME still wins when set, so CI can pin the value it is building rather than
+ * re-deriving it.
  *
  * Failures are swallowed: a source archive, a shallow clone with no tags and a machine without
  * git are all normal, and none should stop a build.
@@ -14,10 +19,9 @@ import { execSync } from 'node:child_process'
 function appVersion(): string {
   if (process.env.PODSHELF_VERSION_NAME) return process.env.PODSHELF_VERSION_NAME
   try {
-    return execSync('git describe --tags --abbrev=0 --match="v[0-9]*"', { stdio: ['ignore', 'pipe', 'ignore'] })
+    return execSync('bash scripts/app-version.sh --name', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim()
-      .replace(/^v/, '')
   } catch {
     return '0.0.0-untagged'
   }
