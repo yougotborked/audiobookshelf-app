@@ -34,11 +34,11 @@
       <!-- Placeholder Cover Title & Author -->
       <div v-if="!hasCover" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full flex items-center justify-center" :style="{ padding: placeholderCoverPadding + 'rem' }">
         <div>
-          <p class="text-center" style="color: rgb(247 223 187)" :style="{ fontSize: titleFontSize + 'rem' }">{{ titleCleaned }}</p>
+          <p class="text-center" style="color: rgb(var(--md-on-primary-container))" :style="{ fontSize: titleFontSize + 'rem' }">{{ titleCleaned }}</p>
         </div>
       </div>
       <div v-if="!hasCover" class="absolute left-0 right-0 w-full flex items-center justify-center" :style="{ padding: placeholderCoverPadding + 'rem', bottom: authorBottom + 'rem' }">
-        <p class="text-center" style="color: rgb(247 223 187); opacity: 0.75" :style="{ fontSize: authorFontSize + 'rem' }">{{ authorCleaned }}</p>
+        <p class="text-center" style="color: rgb(var(--md-on-primary-container)); opacity: 0.75" :style="{ fontSize: authorFontSize + 'rem' }">{{ authorCleaned }}</p>
       </div>
 
       <div v-if="showPlayButton" class="absolute -bottom-16 -right-16 rotate-45 w-32 h-32 p-2 bg-gradient-to-r from-transparent to-black to-40% inline-flex justify-start items-center">

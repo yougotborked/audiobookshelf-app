@@ -70,7 +70,7 @@ function updateProgress() {
   stroke-width: 4;
   /* stroke-dasharray: 110;
   stroke-dashoffset: 110; */
-  stroke: #fb8c0022;
+  stroke: rgb(var(--md-primary) / 0.13);
   stroke-linecap: round;
   transform: translate(2px, 2px);
 }
@@ -82,8 +82,7 @@ function updateProgress() {
   stroke-width: 4;
   stroke-dasharray: 110;
   stroke-dashoffset: 110;
-  /* stroke: hsl(0, 0%, 100%); */
-  stroke: #fb8c00;
+  stroke: rgb(var(--md-primary));
   stroke-linecap: round;
   transform: translate(2px, 2px);
 }

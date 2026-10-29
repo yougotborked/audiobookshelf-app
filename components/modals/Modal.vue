@@ -1,5 +1,5 @@
 <template>
-  <div ref="wrapper" class="modal modal-bg w-full h-full max-h-screen fixed top-0 left-0 flex items-end justify-center z-50 opacity-0" style="background: rgba(0, 0, 0, 0.5)">
+  <div ref="wrapper" class="modal modal-bg w-full h-full max-h-screen fixed top-0 left-0 flex items-end justify-center z-50 opacity-0" style="background: rgb(var(--md-scrim) / 0.5)">
     <div class="absolute top-0 left-0 w-full h-full pointer-events-none" />
 
     <!--

@@ -29,11 +29,11 @@
 
     <div v-if="!hasCover" class="absolute top-0 left-0 right-0 bottom-0 w-full h-full flex items-center justify-center z-10" :style="{ padding: placeholderCoverPadding + 'rem' }">
       <div>
-        <p class="text-centertruncate leading-none origin-center" style="color: rgb(247 223 187); font-size: 0.8rem" :style="{ transform: `scale(${sizeMultiplier})` }">{{ titleCleaned }}</p>
+        <p class="text-centertruncate leading-none origin-center" style="color: rgb(var(--md-on-primary-container)); font-size: 0.8rem" :style="{ transform: `scale(${sizeMultiplier})` }">{{ titleCleaned }}</p>
       </div>
     </div>
     <div v-if="!hasCover" class="absolute left-0 right-0 w-full flex items-center justify-center z-10" :style="{ padding: placeholderCoverPadding + 'rem', bottom: authorBottom + 'rem' }">
-      <p class="text-centertruncate leading-none origin-center" style="color: rgb(247 223 187); opacity: 0.75; font-size: 0.6rem" :style="{ transform: `scale(${sizeMultiplier})` }">{{ authorCleaned }}</p>
+      <p class="text-centertruncate leading-none origin-center" style="color: rgb(var(--md-on-primary-container)); opacity: 0.75; font-size: 0.6rem" :style="{ transform: `scale(${sizeMultiplier})` }">{{ authorCleaned }}</p>
     </div>
   </div>
 </template>

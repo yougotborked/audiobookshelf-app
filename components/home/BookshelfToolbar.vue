@@ -166,6 +166,6 @@ onBeforeUnmount(() => {
 
 <style>
 #bookshelf-toolbar {
-  box-shadow: 0px 5px 5px #11111155;
+  box-shadow: 0px 5px 5px rgb(var(--md-scrim) / 0.33);
 }
 </style>
