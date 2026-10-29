@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-feature android:name="android.hardware.type.watch" />
+    <!--
+      required="true" stated rather than left to the default, which is already true. Play routes
+      by this: a bundle without it is rejected from a wear: track with "APKs or Android App
+      Bundles in this track must require the following features: android.hardware.type.watch",
+      and a bundle with it is rejected from the phone track. It decides which track this
+      artifact can go to, so it is worth being unambiguous about.
+    -->
+    <uses-feature
+        android:name="android.hardware.type.watch"
+        android:required="true" />
 
     <!-- Standalone: the watch talks to the server itself rather than proxying the phone. -->
     <uses-permission android:name="android.permission.INTERNET" />

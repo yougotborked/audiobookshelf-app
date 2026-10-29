@@ -188,3 +188,36 @@ describe('the workflows build the web with the version already in the environmen
     expect(ia).toBeLessThan(ib)
   })
 })
+
+describe('the phone and watch bundles go to different Play tracks', () => {
+  // Play gives the Wear OS form factor dedicated tracks, named by prefixing the mobile one:
+  // `internal` for the phone, `wear:internal` for the watch. It checks the manifest against the
+  // track in both directions - a phone bundle in a wear: track is rejected for not requiring
+  // android.hardware.type.watch, a watch bundle in the phone track for requiring it.
+  //
+  // Guarded here because the upload action sends every releaseFiles entry to every track it is
+  // given, so the obvious one-call version silently does the wrong thing, and finding out costs
+  // a full release build.
+  const workflow = readFileSync(resolve(__dirname, '../.github/workflows/publish-play.yml'), 'utf8')
+
+  it('sends the watch bundle to a wear: track', () => {
+    expect(workflow).toMatch(/tracks: wear:\$\{\{ steps\.track\.outputs\.name \}\}/)
+  })
+
+  it('sends the phone bundle to the unprefixed track', () => {
+    expect(workflow).toMatch(/tracks: \$\{\{ steps\.track\.outputs\.name \}\}/)
+  })
+
+  it('uploads them separately, rather than both files in one call', () => {
+    const uploads = workflow.match(/uses: r0adkll\/upload-google-play/g) ?? []
+    expect(uploads.length).toBe(2)
+  })
+})
+
+describe('the watch bundle declares the feature its track requires', () => {
+  const manifest = readFileSync(resolve(__dirname, '../android/wear/src/main/AndroidManifest.xml'), 'utf8')
+
+  it('requires android.hardware.type.watch', () => {
+    expect(manifest).toMatch(/android:name="android\.hardware\.type\.watch"[\s\S]{0,80}android:required="true"/)
+  })
+})

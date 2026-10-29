@@ -343,10 +343,31 @@ that pair. Mixing one of each will not work and is not a bug.
 release would be taken down by an unconfigured watch listing.
 
 Once the Wear steps below are done in Play Console, set `PUBLISH_WEAR` to `true`. The next push
-to master ships the watch to internal testing alongside the phone, with no pull request and no
-release build spent on merging a one-line change.
+to master ships the watch to Wear OS internal testing alongside the phone, with no pull request
+and no release build spent on merging a one-line change.
 
 A hand dispatch still decides for itself, and can say no while the variable says yes.
+
+**The two bundles go to two different tracks.** Adding the Wear OS form factor gives it
+dedicated tracks, named by prefixing the mobile one — `internal` for the phone,
+`wear:internal` for the watch ([track naming][tracks], [dedicated form factor tracks][ff]).
+They are not interchangeable, and Play checks each bundle's manifest against the track it
+arrives on:
+
+| Bundle | Track | Result |
+|---|---|---|
+| phone | `internal` | fine |
+| phone | `wear:internal` | *"APKs or Android App Bundles in this track must require the following features: android.hardware.type.watch"* |
+| watch | `wear:internal` | fine |
+| watch | `internal` | rejected for requiring that feature |
+
+So the workflow calls the upload action **twice**, once per bundle. It sends every
+`releaseFiles` entry to every track it is given, which cannot express "this one there, that one
+here". `android/wear/src/main/AndroidManifest.xml` states `android:required="true"` on the
+watch feature explicitly — it is already the default, but it is what the routing turns on.
+
+[tracks]: https://developers.google.com/android-publisher/tracks
+[ff]: https://support.google.com/googleplay/android-developer/answer/13295490
 
 ### Why committing an edit cancels a review
 
