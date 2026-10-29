@@ -330,23 +330,16 @@ The watch does not bridge the two either, for two independent reasons:
   signing certificate. A sideloaded watch app is `com.podshelf.app.debug` signed with the debug
   key; a Play phone app is `com.podshelf.app` signed with the upload key. They cannot see each
   other.
-- The Play build carries no watch bundle at all until `PUBLISH_WEAR` is set — see below.
+- Until the Wear OS form factor exists in Play Console there is no `wear:` track to publish
+  the watch to, so a Play install is the phone app alone.
 
 For watch testing, keep the sideloaded debug pair together, or get the watch onto Play and use
 that pair. Mixing one of each will not work and is not a bug.
 
 ### Shipping the watch through Play
 
-`INCLUDE_WEAR` comes from the repository variable **`PUBLISH_WEAR`**, under
-*Settings → Secrets and variables → Actions → Variables*. It is off because Play fails the
-**whole** release if a Wear artifact arrives before the Wear form factor exists — a phone
-release would be taken down by an unconfigured watch listing.
-
-Once the Wear steps below are done in Play Console, set `PUBLISH_WEAR` to `true`. The next push
-to master ships the watch to Wear OS internal testing alongside the phone, with no pull request
-and no release build spent on merging a one-line change.
-
-A hand dispatch still decides for itself, and can say no while the variable says yes.
+Both bundles go up on every publish. There is no switch for the watch, and there deliberately
+isn't one: internal testing is master's tip on *both* devices or it is not doing its job.
 
 **The two bundles go to two different tracks.** Adding the Wear OS form factor gives it
 dedicated tracks, named by prefixing the mobile one — `internal` for the phone,
@@ -365,6 +358,12 @@ So the workflow calls the upload action **twice**, once per bundle. It sends eve
 `releaseFiles` entry to every track it is given, which cannot express "this one there, that one
 here". `android/wear/src/main/AndroidManifest.xml` states `android:required="true"` on the
 watch feature explicitly — it is already the default, but it is what the routing turns on.
+
+That split is also why the watch needs no gate. There used to be one, because while both
+bundles shared a track Play failed the **whole** release if a Wear artifact arrived before the
+Wear form factor existed — the watch could take the phone release down with it. Separate tracks
+are separate edits: the phone upload has already committed by the time the watch one runs, so a
+watch problem is a failed step and a red run rather than a phone release that never happened.
 
 [tracks]: https://developers.google.com/android-publisher/tracks
 [ff]: https://support.google.com/googleplay/android-developer/answer/13295490
@@ -455,13 +454,11 @@ unconfigured watch listing blocks the phone release with it.
    rather than a picture of a mock-up.
 3. ~~Mention "Wear OS" in the listing~~ — **done**, in `docs/store/listing.en-US.json`.
 
-So only the form factor is left, and only step 1 needs a human. Until it is added, every
-automatic publish sends the phone alone, because the repository variable `PUBLISH_WEAR` is
-unset. The watch bundle is still built and still has to be signed and version-correct — it is
-simply not sent.
+So only the form factor is left, and only step 1 needs a human. Once it exists, nothing else has
+to be turned on: every publish sends the watch to its `wear:` track alongside the phone.
 
-The moment step 1 is done, set `PUBLISH_WEAR` to `true` (*Settings → Secrets and variables →
-Actions → Variables*) and the next push to master ships the watch with the phone.
+Before it exists there is no `wear:internal` to upload to, and the watch step fails — loudly,
+and without affecting the phone release, which has already committed by then.
 
 ### Looking at the watch screens
 

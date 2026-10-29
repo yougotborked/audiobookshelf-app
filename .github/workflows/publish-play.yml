@@ -34,11 +34,6 @@ on:
         default: internal
         type: choice
         options: [internal, alpha, beta, production]
-      include_wear:
-        description: 'Upload the Wear OS bundle too (needs the Wear form factor set up in Play Console first)'
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -248,54 +243,35 @@ jobs:
       # app in Play Console and the listing carries at least one Wear screenshot - and it fails
       # the whole release, not just that artifact, so a phone release would be blocked by an
       # unconfigured watch listing. Leaving the watch out is therefore a supported way to ship.
-      - name: Decide which bundles to upload
+      - name: Locate the bundles
         id: bundles
-        env:
-          # Whether the watch bundle goes up, as a repository variable rather than a line in
-          # this file.
-          #
-          # Play fails an upload if a Wear artifact arrives before the Wear form factor exists,
-          # so this cannot simply be on. But it is a Play Console state, not a code decision:
-          # once the form factor is added, the switch should flip without a pull request and
-          # without a full release build spent on merging a one-line change.
-          #
-          # So: set the repository variable PUBLISH_WEAR to `true` under
-          # Settings -> Secrets and variables -> Actions -> Variables, and the next push to
-          # master ships the watch to Wear OS internal testing along with the phone.
-          DISPATCHED: ${{ github.event_name == 'workflow_dispatch' }}
-          DISPATCH_WEAR: ${{ inputs.include_wear }}
-          REPO_WEAR: ${{ vars.PUBLISH_WEAR }}
         run: |
-          # A hand dispatch says explicitly; everything else asks the variable. Written out
-          # rather than folded into one `&&`/`||` expression because the dispatch case has to be
-          # able to say *no*, and `false || vars.PUBLISH_WEAR` cannot.
-          if [ "$DISPATCHED" = "true" ]; then
-            include_wear="$DISPATCH_WEAR"
-          else
-            include_wear="$REPO_WEAR"
-          fi
-          [ "$include_wear" = "true" ] || include_wear=false
-
           phone=android/app/build/outputs/bundle/release/app-release.aab
           wear=android/wear/build/outputs/bundle/release/wear-release.aab
 
           test -f "$phone" || { echo "::error::No phone bundle at $phone"; exit 1; }
-          if [ "$include_wear" = "true" ]; then
-            test -f "$wear" || { echo "::error::No watch bundle at $wear"; exit 1; }
-            echo "::notice::Uploading the phone and Wear OS bundles"
-          else
-            echo "::notice::Uploading the phone bundle only; the Wear OS bundle was built but not sent"
-          fi
+          test -f "$wear"  || { echo "::error::No watch bundle at $wear";  exit 1; }
 
-          echo "phone=$phone"             >> "$GITHUB_OUTPUT"
-          echo "wear=$wear"               >> "$GITHUB_OUTPUT"
-          echo "includeWear=$include_wear" >> "$GITHUB_OUTPUT"
+          echo "phone=$phone" >> "$GITHUB_OUTPUT"
+          echo "wear=$wear"   >> "$GITHUB_OUTPUT"
 
+      # Both bundles go up, every time. There is no switch for the watch.
+      #
+      # There used to be, and the reason it existed stopped being true when these became two
+      # uploads: while both bundles went to one track, Play failed the WHOLE release if a Wear
+      # artifact arrived before the Wear form factor existed, so the watch could take the phone
+      # release down with it and had to be held back until the Console was ready.
+      #
+      # Separate tracks means separate edits. The phone upload below has already committed by
+      # the time the watch one runs, so a watch failure is a failed step and a red run - not a
+      # phone release that never happened. Nothing is left to protect, and internal testing is
+      # meant to be master's tip on both devices rather than master's tip on one of them.
+      #
       # The two artifacts go to two different tracks, which is the part that is easy to get
       # wrong and expensive to find out about.
       #
-      # Once the Wear OS form factor exists, Play gives it its own dedicated tracks, named by
-      # prefixing the mobile one: `internal` for the phone, `wear:internal` for the watch
+      # Play gives the Wear OS form factor dedicated tracks, named by prefixing the mobile one:
+      # `internal` for the phone, `wear:internal` for the watch
       # (https://developers.google.com/android-publisher/tracks). They are not interchangeable
       # and Play checks the manifest against the track:
       #
@@ -319,7 +295,6 @@ jobs:
           releaseName: ${{ steps.version.outputs.name }}
 
       - name: Upload the watch bundle to Play
-        if: steps.bundles.outputs.includeWear == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}

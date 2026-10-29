@@ -212,6 +212,17 @@ describe('the phone and watch bundles go to different Play tracks', () => {
     const uploads = workflow.match(/uses: r0adkll\/upload-google-play/g) ?? []
     expect(uploads.length).toBe(2)
   })
+
+  it('always sends the watch, with no switch gating it', () => {
+    // There was a switch, and the reason for it died when these became two uploads: while both
+    // bundles shared a track, a Wear artifact arriving before the form factor existed failed
+    // the whole release and took the phone down with it. Separate tracks are separate edits,
+    // so there is nothing left to protect, and internal is meant to be master's tip on both
+    // devices.
+    expect(workflow).not.toMatch(/PUBLISH_WEAR|include_wear|includeWear/)
+    const watchStep = workflow.slice(workflow.indexOf('Upload the watch bundle to Play'))
+    expect(watchStep.slice(0, 200)).not.toMatch(/^\s*if:/m)
+  })
 })
 
 describe('the watch bundle declares the feature its track requires', () => {
