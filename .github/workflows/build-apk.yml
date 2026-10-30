@@ -289,16 +289,30 @@ jobs:
         run: |
           gh release delete latest --yes 2>/dev/null || true
           git push --delete origin latest 2>/dev/null || true
+          # The local one as well. This checkout uses fetch-depth: 0, so it already has
+          # `latest` from the previous run; deleting only the remote leaves a local tag with
+          # no counterpart, and `gh release create` refuses that outright:
+          #
+          #   tag latest exists locally but has not been pushed ... please push it before
+          #   continuing or specify the `--target` flag
+          #
+          # A race, which is why it passed for weeks before biting: it depends on whether the
+          # checkout happened to fetch the tag before this step removed it.
+          git tag -d latest 2>/dev/null || true
       - name: Create 'latest' release and attach APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          printf 'Debug builds from `master` at %s\n\nCommit: [%s](https://github.com/%s/commit/%s)\n\n| File | Install on |\n| --- | --- |\n| `podshelf-*.apk` | Your phone |\n| `podshelf-wear-*.apk` | Your Wear OS watch |\n\nThe watch app is standalone - it talks to your Audiobookshelf server itself - but it is the\nphone app that sends it your queue, so install both.\n\n> This release is automatically overwritten on every push to master.\n' \
+          printf 'Debug builds from `master` at %s\n\nCommit: [%s](https://github.com/%s/commit/%s)\n\n| File | Install on |\n| --- | --- |\n| `podshelf-*.apk` | Your phone |\n| `podshelf-wear-*.apk` | Your Wear OS watch |\n\nThe watch app streams and downloads from your Audiobookshelf server directly, but the phone\napp is what sends it your server details and your queue, so install both - the watch cannot\nbe set up on its own.\n\n> This release is automatically overwritten on every push to master.\n' \
             "${{ steps.info.outputs.date }}" \
             "${{ steps.info.outputs.sha }}" \
             "${{ github.repository }}" \
             "${{ github.sha }}" > release-notes.md
+          # --target pins the release to this commit, so creating it does not depend on local
+          # tag state at all. Belt and braces with the delete above: either alone fixes today's
+          # failure, together the step is idempotent whatever the checkout fetched.
           gh release create latest \
+            --target "${{ github.sha }}" \
             --title "Latest build (${{ steps.info.outputs.sha }})" \
             --notes-file release-notes.md \
             --prerelease \
