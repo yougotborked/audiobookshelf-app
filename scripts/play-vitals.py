@@ -13,6 +13,7 @@ Watch builds are told apart by version code: they carry the +1,000,000,000 offse
 import json
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 
 import requests
 from google.auth.transport.requests import Request
@@ -22,6 +23,9 @@ PACKAGE = 'com.podshelf.app'
 BASE = f'https://playdeveloperreporting.googleapis.com/v1beta1/apps/{PACKAGE}'
 WEAR_OFFSET = 1_000_000_000
 TRACE_LINES = 60
+# Left unset, the search covers roughly the last day, and vitals lag a day or two behind - so
+# the first run against a real crash came back empty. Thirty days is as far back as it goes.
+WINDOW_DAYS = 30
 
 
 def token() -> str:
@@ -45,6 +49,15 @@ def get(path: str, auth: str, **params) -> dict:
     return r.json()
 
 
+def window() -> dict:
+    params = {}
+    now = datetime.now(timezone.utc)
+    for edge, at in (('startTime', now - timedelta(days=WINDOW_DAYS)), ('endTime', now)):
+        for field in ('year', 'month', 'day', 'hours'):
+            params[f'interval.{edge}.{field}'] = getattr(at, 'hour' if field == 'hours' else field)
+    return params
+
+
 def is_watch(version_code) -> bool:
     try:
         return int(version_code) >= WEAR_OFFSET
@@ -55,14 +68,20 @@ def is_watch(version_code) -> bool:
 def main() -> None:
     auth = token()
 
-    issues = get('errorIssues:search', auth, pageSize=50).get('errorIssues', [])
+    # How far the data reaches. An empty result older than this is "no crashes"; anything newer
+    # simply has not been processed yet.
+    fresh = get('crashRateMetricSet', auth).get('freshnessInfo', {}).get('freshnesses', [])
+    for f in fresh:
+        print(f"Crash data ({f.get('aggregationPeriod')}) is complete up to {f.get('latestEndTime')}")
+
+    issues = get('errorIssues:search', auth, pageSize=50, **window()).get('errorIssues', [])
     print(f'\n=== {len(issues)} error issue(s) ===')
     for i in issues:
         print(f"- {i.get('type')} | {i.get('cause', '?')} | at {i.get('location', '?')}"
               f" | reports {i.get('errorReportCount')} | users {i.get('distinctUsers')}"
               f" | versions {i.get('firstAppVersion', {}).get('versionCode')}..{i.get('lastAppVersion', {}).get('versionCode')}")
 
-    reports = get('errorReports:search', auth, pageSize=100).get('errorReports', [])
+    reports = get('errorReports:search', auth, pageSize=100, **window()).get('errorReports', [])
     watch = [r for r in reports if is_watch(r.get('appVersion', {}).get('versionCode'))]
     print(f'\n=== {len(reports)} recent report(s), {len(watch)} from the watch ===')
 
