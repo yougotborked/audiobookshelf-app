@@ -1,0 +1,28 @@
+name: Play vitals
+
+# Reads crash reports for the app from the Play Developer Reporting API and prints them, so a
+# crash on a device nobody can attach adb to can still be diagnosed - the same data as Android
+# vitals in Play Console, with stack traces deobfuscated by the uploaded mapping file.
+#
+# Read-only, and run by hand. It uses the publish workflow's service account, so it lives in the
+# same `play` environment to reach the secret.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vitals:
+    runs-on: ubuntu-latest
+    environment: play
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet google-auth requests
+      - name: Print recent crashes
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: python3 scripts/play-vitals.py
