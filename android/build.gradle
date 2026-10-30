@@ -33,6 +33,28 @@ allprojects {
     }
 }
 
+// Capacitor 9.0.0-beta.0 split Cordova support out of :capacitor-android into its own module,
+// and the new module lost a dependency in the move. Its sources import AppCompatActivity, and
+// its build file even defines `androidxAppCompatVersion` - but never adds AppCompat to its
+// dependencies. In 8 the same code sat inside :capacitor-android, which had it. The build fails:
+//
+//   MockCordovaInterfaceImpl.java:4: error: package androidx.appcompat.app does not exist
+//
+// That build file is under node_modules/ and not ours to edit, so the dependency is supplied
+// from here instead, using the same AppCompat version the rest of the app is forced to.
+//
+// Remove when a Capacitor 9 release adds the dependency itself - check by deleting this block
+// and running :app:assembleDebug.
+subprojects {
+    if (name == 'capacitor-cordova-android') {
+        afterEvaluate {
+            dependencies {
+                implementation "androidx.appcompat:appcompat:${rootProject.ext.androidxAppCompatVersion}"
+            }
+        }
+    }
+}
+
 tasks.register('clean', Delete) {
   delete rootProject.layout.buildDirectory
 }
