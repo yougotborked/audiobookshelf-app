@@ -176,6 +176,27 @@ mistakes it for an oversight.
 
 **Clears when** there is an unrelated reason to touch every file in the module anyway.
 
+### `noUncheckedIndexedAccess` is off, though Nuxt 4 turns it on
+
+**Where** `tsconfig.json`
+
+Nuxt 4's generated tsconfig enables `noUncheckedIndexedAccess`, which types `arr[i]` and
+`record[key]` as possibly `undefined`. It is the right setting: it catches the empty-array and
+missing-key crashes that `strict` alone lets through. Turning it on reported **102 new errors
+across ~50 files**, one to six per file, almost all in UI components with no test coverage.
+
+Fixing them means adding a guard at each site, and a guard is a behaviour decision - skip the
+row, show a placeholder, bail out - not a type annotation. Making ~100 of those across untested
+screens inside a framework upgrade is how a Nuxt bump ships a regression, so the root
+`tsconfig.json` overrides it to `false` and the upgrade lands on its own.
+
+Not added to the typecheck baseline instead, deliberately: 102 baseline entries would hide each
+one individually, where one line in `tsconfig.json` is a single visible decision.
+
+**Clears when** the 102 sites are fixed - a file at a time, each guard chosen rather than
+asserted with `!` - and the override removed. `npm run typecheck` with the line deleted lists
+them.
+
 ### 56 pre-existing type errors
 
 **Where** `scripts/typecheck-baseline.json`
