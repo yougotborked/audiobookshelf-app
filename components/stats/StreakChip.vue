@@ -34,4 +34,15 @@ async function load() {
 }
 
 onMounted(load)
+
+// The chip can mount before the server connection has loaded - on a cold start it usually does.
+// Loading only on mount meant it stayed hidden until the next visit, so it loads again as soon
+// as there is a server to ask. Without this the request used to go out anyway, relative, and
+// get the app's own index.html back as "stats".
+watch(
+  () => useUserStore().serverConnectionConfig?.address,
+  (address, previous) => {
+    if (address && address !== previous) load()
+  }
+)
 </script>
