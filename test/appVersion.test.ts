@@ -200,8 +200,23 @@ describe('the phone and watch bundles go to different Play tracks', () => {
   // a full release build.
   const workflow = readFileSync(resolve(__dirname, '../.github/workflows/publish-play.yml'), 'utf8')
 
-  it('sends the watch bundle to a wear: track', () => {
-    expect(workflow).toMatch(/tracks: wear:\$\{\{ steps\.track\.outputs\.name \}\}/)
+  it('sends the watch bundle to its own mapped track', () => {
+    expect(workflow).toMatch(/tracks: \$\{\{ steps\.track\.outputs\.wear \}\}/)
+  })
+
+  it('never asks for wear:alpha, which does not exist', () => {
+    // The first tag failed on exactly this: "Track(s) "wear:alpha" could not be found". Wear's
+    // dedicated tracks are not a mirror of the phone's, and this app has no Wear closed
+    // testing track, so the watch half of a tag goes to wear:internal.
+    // Comments stripped: the workflow quotes the Play error verbatim to explain the mapping,
+    // and that quotation is not a request for the track.
+    const code = workflow
+      .split('\n')
+      .filter((line) => !/^\s*#/.test(line))
+      .join('\n')
+    expect(code).not.toMatch(/wear:alpha/)
+    expect(code).not.toMatch(/tracks: wear:\$\{\{/)
+    expect(workflow).toMatch(/alpha\)\s+wear=wear:internal/)
   })
 
   it('sends the phone bundle to the unprefixed track', () => {
@@ -209,8 +224,19 @@ describe('the phone and watch bundles go to different Play tracks', () => {
   })
 
   it('uploads them separately, rather than both files in one call', () => {
+    // Two uploads, each with one retry behind it.
     const uploads = workflow.match(/uses: r0adkll\/upload-google-play/g) ?? []
-    expect(uploads.length).toBe(2)
+    expect(uploads.length).toBe(4)
+  })
+
+  it('retries an upload rather than failing on an expired edit', () => {
+    // Merge-then-tag runs two publishes on the same commit within seconds of each other, and
+    // whichever commits its Play edit second finds it "expired". The retry is the remedy Play
+    // names, and it only runs when the first attempt failed.
+    expect(workflow).toMatch(/id: phone\s+continue-on-error: true/)
+    expect(workflow).toMatch(/id: watch\s+continue-on-error: true/)
+    expect(workflow).toMatch(/- name: Retry the phone bundle\s+if: steps\.phone\.outcome == 'failure'/)
+    expect(workflow).toMatch(/- name: Retry the watch bundle\s+if: steps\.watch\.outcome == 'failure'/)
   })
 
   it('always sends the watch, with no switch gating it', () => {
