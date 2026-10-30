@@ -92,43 +92,27 @@ narrow, so it is recorded rather than done.
 
 **Where** `android/gradle.properties`
 
-AGP 9 turned `getDefaultProguardFile('proguard-android.txt')` from a no-op into a hard
-configuration error, because that file carries `-dontoptimize`. Our own modules were moved to
-the `-optimize` variant, but twelve Capacitor plugin build files under `node_modules/` still
-call the old one, and those are not ours to edit. The flag restores the old behaviour for the
-whole build.
+AGP 9 turned `getDefaultProguardFile('proguard-android.txt')` from a no-op into a hard error,
+because that file carries `-dontoptimize`. Our own modules use the `-optimize` variant; the
+flag exists for plugin build files under `node_modules/`, which are not ours to edit.
 
-It changes nothing for Podshelf today: neither build type enables minification, so no R8
-optimization is being given up. The risk is the flag disappearing in a later AGP, which would
-make the build un-configurable until the plugins are updated.
+Capacitor 8 cleared almost all of it. This was a dozen plugin build files; it is now **exactly
+one**, and not an official plugin:
 
-**Clears when** every Capacitor plugin we depend on ships an AGP 9 compatible build file. Check
-with:
-
-```bash
-grep -rl "getDefaultProguardFile('proguard-android.txt')" node_modules/*/android/build.gradle \
-  node_modules/*/*/android/build.gradle node_modules/@capacitor/android/capacitor/build.gradle
+```
+node_modules/@capacitor-community/volume-buttons/android/build.gradle
 ```
 
-An empty result means the flag can go.
+Verified rather than assumed — removing the line and building fails on that file and nothing
+else. Note this corrects the entry that used to live here, which blamed
+`@webnativellc/capacitor-filesharer`. Filesharer is gone now and the flag was still needed, so
+it was either never the only caller or never a caller at all.
 
-### Capacitor is pinned to 7.x
+It changes nothing for Podshelf either way: `:app` does not enable minification on either build
+type.
 
-**Where** `package.json`
-
-Capacitor 8 fixed the proguard call above in core and in the official plugins, so upgrading
-would clear most of the entry above on its own. It is not done yet because
-`@webnativellc/capacitor-filesharer` has no 8.x release — 7.1.0 is the newest — and its own
-build file still calls the removed proguard default. A Capacitor 8 upgrade therefore does not
-remove the flag, only shrinks what depends on it.
-
-`FileSharer` is used in exactly three places (`components/stats/YearInReview*.vue`), all
-`FileSharer.share()` of a base64 PNG. The replacement, if the plugin stays abandoned, is
-`@capacitor/filesystem` to write the file plus `@capacitor/share` to hand off its URI — both
-official, both on 8.x.
-
-**Clears when** either filesharer ships an 8.x release, or the three call sites move to
-filesystem + share.
+**Clears when** volume-buttons ships a build file that does not call the removed default, or
+its uses are replaced — a far smaller job than when a dozen plugins needed it.
 
 ### Local network access is asked for at startup, not when it is needed
 

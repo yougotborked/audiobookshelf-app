@@ -63,3 +63,13 @@ export const Dialog = {
 }
 
 export default { Capacitor, StatusBar, Style, Clipboard, AbsFileSystem, AbsAudioPlayer, AbsLogger }
+
+// @capacitor/filesystem + @capacitor/share, which replaced the abandoned filesharer. Only the
+// shapes useShareImage touches: a writeFile that reports a uri, and a share that accepts it.
+export const Directory = { Cache: 'CACHE', Documents: 'DOCUMENTS', Data: 'DATA' }
+export const Filesystem = {
+  writeFile: async (_options: unknown) => ({ uri: 'file:///stub/shared.png' })
+}
+export const Share = {
+  share: async (_options: unknown) => ({ activityType: '' })
+}
