@@ -28,6 +28,8 @@ export default defineConfig({
       '@capacitor/core': capacitorStub,
       '@capacitor/status-bar': capacitorStub,
       '@capacitor/clipboard': capacitorStub,
+      '@capacitor/filesystem': capacitorStub,
+      '@capacitor/share': capacitorStub,
       '@capacitor/dialog': capacitorStub,
       // Both import prefixes are in use across the components.
       '~/plugins/capacitor': capacitorStub,

@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { FileSharer } from '@webnativellc/capacitor-filesharer'
+import { isShareCancellation, shareImage } from '~/composables/useShareImage'
 
 const props = defineProps<{
   processing: boolean
@@ -157,19 +157,16 @@ async function initCanvas() {
   dataUrl.value = c.toDataURL('png')
 }
 
-function share() {
+async function share() {
   if (!dataUrl.value) return
-  const base64Data = dataUrl.value.split(';base64,').pop()!
-  FileSharer.share({
-    filename: `podshelf_my_${props.year}_short.png`,
-    contentType: 'image/png',
-    base64Data
-  }).catch((error: Error) => {
-    if (error.message !== 'USER_CANCELLED') {
-      console.error('Failed to share', error.message)
-      toast.error('Failed to share: ' + error.message)
-    }
-  })
+  try {
+    await shareImage(dataUrl.value, `podshelf_my_${props.year}_short.png`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (isShareCancellation(message)) return
+    console.error('Failed to share', message)
+    toast.error('Failed to share: ' + message)
+  }
 }
 
 function refresh() {
