@@ -153,8 +153,30 @@ jobs:
             *) echo "::error::Refusing to publish to an unrecognised track: '$track'"; exit 1 ;;
           esac
 
+          # The watch's track, which is not simply "wear:" + the phone's.
+          #
+          # Play gives the Wear form factor its own dedicated tracks, and they are not a mirror
+          # of the phone's. This app has wear:internal, wear:beta and wear:production - and no
+          # closed testing track at all, which is what the phone's `alpha` is. The first tag
+          # found that out the hard way:
+          #
+          #   Track(s) "wear:alpha" could not be found. Available tracks are:
+          #   production,beta,alpha,internal,wear:beta,wear:internal,wear:production
+          #
+          # So a tag sends the watch to wear:internal rather than nowhere. Not wear:beta: that is
+          # *open* testing, anyone can join it, which is a bigger audience than a closed-testing
+          # tag is meant to reach. Once a Wear closed testing track exists in Play Console, map
+          # `alpha` to it here.
+          case "$track" in
+            internal)   wear=wear:internal ;;
+            alpha)      wear=wear:internal ;;
+            beta)       wear=wear:beta ;;
+            production) wear=wear:production ;;
+          esac
+
           echo "name=$track" >> "$GITHUB_OUTPUT"
-          echo "::notice::Publishing to $track"
+          echo "wear=$wear" >> "$GITHUB_OUTPUT"
+          echo "::notice::Publishing the phone to $track and the watch to $wear"
 
       - name: Use Node.js 24.x with npm cache
         uses: actions/setup-node@v4
@@ -284,7 +306,40 @@ jobs:
       # So this is two uploads rather than one call with both files. The upload action sends
       # every releaseFiles entry to every track it is given, which cannot express "this one
       # there, that one here".
+      # Each upload gets one retry, after a pause.
+      #
+      # A Play upload is an *edit*: opened, filled, committed. Committing one invalidates any
+      # other edit opened for the app before it, and the loser fails with
+      #
+      #   This edit has expired, please create a new Edit.
+      #
+      # That happens whenever two publishes overlap, and the usual way they overlap is the
+      # ordinary release motion: merge to master, then tag that same commit. Both runs build
+      # for ~6 minutes and reach Play within seconds of each other. The concurrency groups do
+      # not stop it - they are per ref, deliberately, so a tag never queues behind master - and
+      # the remedy Play names is simply a new edit, which is what the retry is.
+      #
+      # A retry that fails again is a real failure and fails the job. One that fails because
+      # the first attempt actually committed (version code already used) also fails, loudly,
+      # which is right: that is not something to paper over.
       - name: Upload the phone bundle to Play
+        id: phone
+        continue-on-error: true
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.podshelf.app
+          releaseFiles: ${{ steps.bundles.outputs.phone }}
+          tracks: ${{ steps.track.outputs.name }}
+          status: completed
+          releaseName: ${{ steps.version.outputs.name }}
+
+      - name: Wait out the competing edit (phone)
+        if: steps.phone.outcome == 'failure'
+        run: sleep 90
+
+      - name: Retry the phone bundle
+        if: steps.phone.outcome == 'failure'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -295,12 +350,29 @@ jobs:
           releaseName: ${{ steps.version.outputs.name }}
 
       - name: Upload the watch bundle to Play
+        id: watch
+        continue-on-error: true
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.podshelf.app
           releaseFiles: ${{ steps.bundles.outputs.wear }}
-          tracks: wear:${{ steps.track.outputs.name }}
+          tracks: ${{ steps.track.outputs.wear }}
+          status: completed
+          releaseName: ${{ steps.version.outputs.name }}
+
+      - name: Wait out the competing edit (watch)
+        if: steps.watch.outcome == 'failure'
+        run: sleep 90
+
+      - name: Retry the watch bundle
+        if: steps.watch.outcome == 'failure'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.podshelf.app
+          releaseFiles: ${{ steps.bundles.outputs.wear }}
+          tracks: ${{ steps.track.outputs.wear }}
           status: completed
           releaseName: ${{ steps.version.outputs.name }}
 
