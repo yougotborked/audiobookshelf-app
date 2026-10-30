@@ -254,3 +254,93 @@ export function localEpisodesAsQueueCandidates(localLibraryItems: LocalLibraryIt
 export function restrictToDownloaded(episodes: ListeningEpisode[] = [], isDownloaded: (episode: ListeningEpisode) => boolean): ListeningEpisode[] {
   return episodes.filter((episode) => !!episode && isDownloaded(episode))
 }
+
+/**
+ * How much of an episode is left to hear, in seconds.
+ *
+ * Not its duration: a budget is about what remains. An episode forty minutes long with
+ * thirty-five already heard is a five minute item, and treating it as forty is how a
+ * "fits your commute" queue ends up holding one thing.
+ *
+ * null rather than a guess when the duration is unknown. A podcast feed that omits it is
+ * common enough, and a queue built on invented lengths is worse than one that leaves the
+ * episode out and says so.
+ */
+export function episodeRemainingSeconds(
+  episode: ListeningEpisode | null | undefined,
+  lookup: ProgressLookup = {}
+): number | null {
+  const duration = typeof episode?.duration === 'number' ? episode.duration : null
+  if (duration === null || !Number.isFinite(duration) || duration <= 0) return null
+
+  // Through isEpisodeFinished rather than reading the flag, so "finished" means here exactly
+  // what it means to the rest of the queue - including the rule that finished on any one
+  // device wins over a stale server record saying otherwise.
+  if (isEpisodeFinished(episode, lookup)) return 0
+
+  const progress = episodeProgress(episode, lookup)
+  const played = typeof progress?.currentTime === 'number' && Number.isFinite(progress.currentTime) ? progress.currentTime : 0
+  return Math.max(0, duration - Math.max(0, played))
+}
+
+export interface TimeBudgetOptions {
+  lookup?: ProgressLookup
+  /**
+   * Below this, what is left of the budget is not worth filling. Default a minute: queueing a
+   * twenty second tail to round out a commute is noise, not service.
+   */
+  minimumFitSeconds?: number
+}
+
+export interface TimeBudgetQueue {
+  episodes: ListeningEpisode[]
+  /** What the chosen episodes add up to. */
+  totalSeconds: number
+  /** Budget left over. Never negative - nothing here overruns the budget. */
+  remainingSeconds: number
+}
+
+/**
+ * The longest run of episodes that fits inside a stretch of time.
+ *
+ * "Fill my forty minute commute" is the thing podcasts can answer and music cannot, because an
+ * episode has a length the listener already cares about. The roadmap lists it as one of the
+ * four things worth taking from Plexamp that need no inference, and this is all of the
+ * mechanism.
+ *
+ * Three judgements, all of which could reasonably have gone the other way:
+ *
+ * - **It keeps the order it was given.** Packing optimally would fit more minutes, and would
+ *   do it by handing over an episode chosen for its length rather than because it is what you
+ *   would have played next. The queue order is the recommendation; this only decides where to
+ *   stop.
+ * - **It skips rather than stops.** One four-hour episode near the top should not empty the
+ *   rest of a commute, so an item that does not fit is passed over and the walk continues.
+ * - **Nothing overruns.** An episode is included only if what remains of it fits in what
+ *   remains of the budget, so the queue can be handed over as "this fits" without an asterisk.
+ *   An episode that runs past arrival is fine in life and wrong in a promise.
+ */
+export function fillTimeBudget(
+  episodes: ListeningEpisode[] = [],
+  budgetSeconds: number,
+  { lookup = {}, minimumFitSeconds = 60 }: TimeBudgetOptions = {}
+): TimeBudgetQueue {
+  const budget = Number.isFinite(budgetSeconds) ? Math.max(0, budgetSeconds) : 0
+  const chosen: ListeningEpisode[] = []
+  let used = 0
+
+  for (const episode of episodes) {
+    const left = budget - used
+    if (left < minimumFitSeconds) break
+
+    const remaining = episodeRemainingSeconds(episode, lookup)
+    // Unknown length, or nothing left to hear: not a candidate either way.
+    if (remaining === null || remaining <= 0) continue
+    if (remaining > left) continue
+
+    chosen.push(episode)
+    used += remaining
+  }
+
+  return { episodes: chosen, totalSeconds: used, remainingSeconds: Math.max(0, budget - used) }
+}
