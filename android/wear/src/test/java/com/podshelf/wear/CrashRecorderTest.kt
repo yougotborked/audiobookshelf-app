@@ -33,4 +33,15 @@ class CrashRecorderTest {
     assertTrue(report.contains("IllegalStateException: boom on launch"))
     assertTrue("Android's own handler must still run", passedOn)
   }
+
+  @Test
+  fun `every start leaves a line saying which build it was`() {
+    val app = RuntimeEnvironment.getApplication()
+    CrashRecorder.install(app)
+    CrashRecorder.note(app, "MainActivity resumed")
+
+    val trail = File(app.filesDir, "launch-trail.txt").readText()
+    assertTrue(trail.contains("process start - "))
+    assertTrue(trail.trimEnd().endsWith("MainActivity resumed"))
+  }
 }

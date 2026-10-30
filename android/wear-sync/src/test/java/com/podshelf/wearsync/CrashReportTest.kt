@@ -31,4 +31,20 @@ class CrashReportTest {
     assertTrue(report.length < 100 * 1024)
     assertTrue(report.startsWith("Watch app crashed - 0.13.0-dev.90-wear"))
   }
+
+  @Test
+  fun `a launch with no crash is reported but not as a crash`() {
+    val report = CrashReport.combine("12:00:01 process start\n12:00:02 MainActivity resumed\n", null)
+    assertEquals("12:00:01 process start\n12:00:02 MainActivity resumed", report)
+    assertTrue(!CrashReport.isCrash(report))
+  }
+
+  @Test
+  fun `a crash rides after the trail that led to it`() {
+    val crash = CrashReport.format("v", 0, "main", "java.lang.IllegalStateException: boom")
+    val report = CrashReport.combine("12:00:02 MainActivity resumed", crash)
+    assertTrue(report.startsWith("12:00:02 MainActivity resumed"))
+    assertTrue(report.endsWith("boom"))
+    assertTrue(CrashReport.isCrash(report))
+  }
 }

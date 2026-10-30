@@ -11,13 +11,14 @@ import com.podshelf.wearsync.CrashReport
 import com.podshelf.wearsync.WearSync
 
 /**
- * Puts a crash the watch app sent into the phone's log screen, where it can be copied.
+ * Puts what the watch app reported - its launch trail, and any crash - into the phone's log
+ * screen, where it can be copied.
  *
  * Started by the Data Layer, usually with the phone app closed, so the database is initialised
  * here rather than assumed. The item is deleted once logged: it has been read, and leaving it
  * would only redeliver it.
  */
-class WatchCrashListenerService : WearableListenerService() {
+class WatchReportListenerService : WearableListenerService() {
   override fun onDataChanged(dataEvents: DataEventBuffer) {
     val reports =
             dataEvents
@@ -31,7 +32,8 @@ class WatchCrashListenerService : WearableListenerService() {
     DbManager.initialize(applicationContext)
     val dataClient = Wearable.getDataClient(this)
     reports.forEach { (uri, report) ->
-      AbsLogger.error("WatchCrash", report)
+      if (CrashReport.isCrash(report)) AbsLogger.error("WatchCrash", report)
+      else AbsLogger.info("Watch", report)
       dataClient.deleteDataItems(uri)
     }
   }
