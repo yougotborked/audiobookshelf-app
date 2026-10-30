@@ -129,13 +129,13 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- Crashes the watch app recorded, delivered into the log screen. See CrashReport. -->
+        <!-- What the watch app recorded - launches and crashes - delivered into the log screen. See CrashReport. -->
         <service
-            android:name=".services.WatchCrashListenerService"
+            android:name=".services.WatchReportListenerService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*" android:path="/podshelf/watch-crash" />
+                <data android:scheme="wear" android:host="*" android:path="/podshelf/watch-report" />
             </intent-filter>
         </service>
 
