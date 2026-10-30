@@ -1,0 +1,20 @@
+# Dependabot security updates are switched on in the repository settings; this file exists to
+# carry the rule below, and adds nothing else.
+#
+# open-pull-requests-limit: 0 turns *version* updates off for npm, so behaviour stays what it was
+# before this file existed - security updates only. Ignore conditions here apply to those too.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    ignore:
+      # epubjs 0.4.x is not newer than 0.3.x. 0.4.2 was published 2018-03-23 from a branch that
+      # was abandoned; 0.3.93 followed on 2022-02-16 and is the newest real release. Semver sorts
+      # 0.4.2 higher, so Dependabot keeps "upgrading" to it - #164 and #170 both did - and it is a
+      # four-year downgrade that also ships no type declarations, which fails typecheck. If a
+      # genuinely newer epubjs ever appears, delete this.
+      - dependency-name: epubjs
+        versions: [">=0.4.0"]
